@@ -23,3 +23,6 @@
 hs_err_pid*
 /.idea/workspace.xml
 /.idea/
+/eureka/.mvn/
+/omega-engine/.settings/
+/omega-engine/target/
