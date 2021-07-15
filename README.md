@@ -1,6 +1,6 @@
 # Omega-AI
 
-##介绍
+## 介绍
 Omega-AI：为java平台打造的深度学习
 
 ## 架构
