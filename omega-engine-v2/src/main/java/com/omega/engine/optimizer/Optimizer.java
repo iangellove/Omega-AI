@@ -1,6 +1,7 @@
 package com.omega.engine.optimizer;
 
 import com.omega.common.task.TaskEngine;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.LabelUtils;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.data.Blob;
@@ -147,7 +148,7 @@ public abstract class Optimizer {
 			String predictLabel = LabelUtils.vectorTolabel(output.maxtir[0][0][0], testData.labelSet);
 			
 			if(!label.equals(predictLabel)) {
-//				System.out.println("index:"+i+"::"+JsonUtils.toJson(output)+"==>predictLabel:"+predictLabel+"==label:"+label+":"+label.equals(predictLabel));
+//				System.out.println("index:"+n+"::"+JsonUtils.toJson(output)+"==>predictLabel:"+predictLabel+"==label:"+label+":"+label.equals(predictLabel));
 			}else {
 				trueCount++;
 			}
@@ -160,5 +161,29 @@ public abstract class Optimizer {
 		
 		return error;
 	}
+	
+	public double accuracy(Blob output,double[][] labels,String[] labelSet) {
+		
+		double error = 0.0d;
+		double trueCount = 0;
+		
+		for(int n = 0;n<output.number;n++) {
 
+			String label = LabelUtils.vectorTolabel(labels[n], labelSet);
+			
+			String predictLabel = LabelUtils.vectorTolabel(output.maxtir[n][0][0], labelSet);
+			
+			if(label.equals(predictLabel)) {
+				trueCount++;
+			}
+			
+		}
+		
+		error = trueCount / output.number * 100;
+//		
+//		System.out.println("准确率:"+ error * 100 +"%");
+//		
+		return error;
+	}
+	
 }

@@ -42,54 +42,66 @@ public class MBSGDOptimizer extends Optimizer {
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				
-				this.trainIndex = i;
-				
-				if(this.currentError <= this.error && this.trainIndex >= this.minTrainTime) {
+				if(this.trainIndex >= this.minTrainTime) {
 					break;
 				}
 				
-				this.loss.clear();
+				this.trainIndex = i;
 				
-				this.lossDiff.clear();
+				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					if(this.currentError <= this.error) {
+						break;
+					}
+					
+					long start = System.currentTimeMillis();
 
-				/**
-				 * random data index
-				 */
-				int[] dataSetIndexs = MathUtils.randomInt(trainingData.number - 1, this.batchSize);
+					this.loss.clear();
+					
+					this.lossDiff.clear();
 
-				Blob input = trainingData.getRandomData(dataSetIndexs); 
-				
-				/**
-				 * forward
-				 */
-				Blob output = this.network.forward(input);
-				
-				/**
-				 * loss
-				 */
-				this.loss = this.network.loss(output, input.labels);
-				
-				/**
-				 * loss diff
-				 */
-				this.lossDiff = this.network.lossDiff(output, input.labels);
-				
-				/**
-				 * current time error
-				 */
-				this.currentError = MatrixOperation.sum(this.loss.maxtir) / this.batchSize;
-				
+					Blob input = trainingData.getRandomData(indexs[it]); 
+					
+					/**
+					 * forward
+					 */
+					Blob output = this.network.forward(input);
+					
+					/**
+					 * loss
+					 */
+					this.loss = this.network.loss(output, input.labels);
+					
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = this.network.lossDiff(output, input.labels);
+					
+					/**
+					 * current time error
+					 */
+					this.currentError = MatrixOperation.sum(this.loss.maxtir) / this.batchSize;
+					
+					/**
+					 * back
+					 */
+					this.network.back(this.lossDiff);
+
+					double error = this.accuracy(output, input.labels, trainingData.labelSet);
+					
+					System.out.println("training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} currentError:"+this.currentError + " [costTime:"+(System.currentTimeMillis() - start)+"]");
+					
+				}
+
 				/**
 				 * update learning rate
 				 */
 				this.updateLR();
-				
-				/**
-				 * back
-				 */
-				this.network.back(this.lossDiff);
-				
-				System.out.println("training["+this.trainIndex+"] (lr:"+this.network.learnRate+") currentError:"+this.currentError);
 				
 			}
 			

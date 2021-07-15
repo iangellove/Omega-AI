@@ -1,5 +1,9 @@
 package com.omega.common.utils;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -10,6 +14,56 @@ import java.util.Random;
 public class MathUtils {
 	
 	public static Random random;
+	
+	/**
+	 * 生成随机数
+	 * @param length
+	 * @return
+	 */
+	public static Integer[] randomInts(int length) {
+		
+		Integer[] tmp = new Integer[length];
+		
+		List<Integer> list = new ArrayList<Integer>();  
+		
+		for(int i = 0;i<length;i++) {
+			list.add(i);
+		}
+		
+		Collections.shuffle(list);
+		
+		tmp = list.toArray(tmp);
+		
+		return tmp;
+	}
+	
+	/**
+	 * 生成随机数组
+	 * @param length
+	 * @return
+	 */
+	public static int[][] randomInts(int length,int batchSize) {
+		
+		int itc = new BigDecimal(length).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_DOWN).intValue();
+		
+		int[][] tmp = new int[itc][batchSize];
+		
+		List<Integer> list = new ArrayList<Integer>();  
+		
+		for(int i = 0;i<length;i++) {
+			list.add(i);
+		}
+		
+		Collections.shuffle(list);
+		
+		for(int i = 0;i<tmp.length;i++) {
+			for(int j = 0;j<tmp[i].length;j++) {		
+				tmp[i][j] = list.get(i * batchSize + j);
+			}
+		}
+		
+		return tmp;
+	}
 	
 	/**
 	 * 整形随机数(范围)

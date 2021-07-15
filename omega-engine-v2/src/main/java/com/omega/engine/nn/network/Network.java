@@ -6,6 +6,9 @@ import java.util.List;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.model.NetworkInit;
+import com.omega.engine.updater.UpdaterFactory;
+import com.omega.engine.updater.UpdaterType;
 
 /**
  * base network
@@ -14,6 +17,14 @@ import com.omega.engine.nn.layer.Layer;
  *
  */
 public abstract class Network {
+	
+	private int threadNum = 8;
+	
+	public NetworkType networkType;
+	
+	public UpdaterType updater = UpdaterType.none;
+	
+	public RunModel RUN_MODEL = RunModel.TRAIN;
 	
 	public boolean GRADIENT_CHECK = false;
 	
@@ -67,7 +78,9 @@ public abstract class Network {
 	public abstract Blob loss(Blob output,double[][] label);
 	
 	public abstract Blob lossDiff(Blob output,double[][] label);
-
+	
+	public abstract NetworkType getNetworkType();
+	
 	public void setNumber(int number) {
 		this.number = number;
 	}
@@ -112,7 +125,24 @@ public abstract class Network {
 	public void addLayer(Layer layer) {
 		layer.setNetwork(this);
 		layer.setIndex(this.layerList.size());
+		layer.setUpdater(UpdaterFactory.create(this.updater));
 		this.layerList.add(layer);
 	}
+	
+	public NetworkInit save() {
+		NetworkInit init = new NetworkInit(this);
+		for (Layer layer:this.layerList) {
+			init.getLayers().add(layer.save());
+		}
+		return init;
+	}
 
+	public int getThreadNum() {
+		return threadNum;
+	}
+
+	public void setThreadNum(int threadNum) {
+		this.threadNum = threadNum;
+	}
+	
 }

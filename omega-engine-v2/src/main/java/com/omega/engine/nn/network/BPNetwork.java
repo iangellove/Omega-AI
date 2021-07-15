@@ -6,6 +6,7 @@ import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
+import com.omega.engine.updater.UpdaterType;
 
 /**
  * BackPropagation Neuron NetWok
@@ -17,6 +18,11 @@ public class BPNetwork extends Network{
 	
 	public BPNetwork(LossFunction lossFunction) {
 		this.lossFunction = lossFunction;
+	}
+	
+	public BPNetwork(LossFunction lossFunction,UpdaterType updater) {
+		this.lossFunction = lossFunction;
+		this.updater = updater;
 	}
 	
 	@Override
@@ -125,8 +131,15 @@ public class BPNetwork extends Network{
 	@Override
 	public Blob predict(Blob input) {
 		// TODO Auto-generated method stub
+		this.RUN_MODEL = RunModel.TEST;
 		this.forward(input);
 		return this.getOuput();
+	}
+
+	@Override
+	public NetworkType getNetworkType() {
+		// TODO Auto-generated method stub
+		return NetworkType.BP;
 	}
 
 }

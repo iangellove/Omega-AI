@@ -1,6 +1,6 @@
 package com.omega.engine.nn.data;
 
-import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 
 /**
  * Blob
@@ -26,13 +26,15 @@ public class Blob {
 	
 	public double[][] labels;
 	
+	public String[] label;
+	
 	public Blob(int number,int channel,int height,int width) {
 		this.number = number;
 		this.channel = channel;
 		this.height = height;
 		this.width = width;
 		this.dataLength = number * channel * height * width;
-		this.maxtir = MatrixOperation.zero(this.number, this.channel, this.height, this.width);
+		this.maxtir = MatrixUtils.zero(this.number, this.channel, this.height, this.width);
 	}
 	
 	public Blob(int number,int channel,int height,int width,double[][] data) {
@@ -41,7 +43,7 @@ public class Blob {
 		this.height = height;
 		this.width = width;
 		this.dataLength = number * channel * height * width;
-		this.maxtir = MatrixOperation.transform(data, this.number,this.channel, this.height, this.width);
+		this.maxtir = MatrixUtils.transform(data, this.number,this.channel, this.height, this.width);
 	}
 	
 	public Blob(int number,int channel,int height,int width,double[][][][] maxtir) {
@@ -63,7 +65,7 @@ public class Blob {
 	}
 	
 	public void clear() {
-		this.maxtir = MatrixOperation.zero(this.number, this.channel, this.height, this.width);
+		this.maxtir = MatrixUtils.zero(this.number, this.channel, this.height, this.width);
 	}
 	
 }

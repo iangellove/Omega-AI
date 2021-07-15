@@ -82,7 +82,16 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 		 */
 		this.setInput();
 		
+//		System.out.println("====");
+//		
+//		MatrixOperation.printImage(this.input.maxtir[0]);
+		
 		this.output();
+		
+
+//		MatrixOperation.printImage(this.output.maxtir[0]);
+		
+		
 	}
 
 	@Override
@@ -90,6 +99,7 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 		// TODO Auto-generated method stub
 		this.initBack();
 		this.diff();
+		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
@@ -132,6 +142,25 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
 		return LayerType.softmax_cross_entropy;
+	}
+
+	@Override
+	public double[][][][] output(double[][][][] input) {
+		// TODO Auto-generated method stub
+		
+		double[][][][] output = new double[this.number][this.oChannel][this.oHeight][this.oWidth];
+		
+		for(int n = 0;n<this.number;n++) {
+			double max = MatrixOperation.max(input[n][0][0]);
+			double[] temp = MatrixOperation.subtraction(input[n][0][0], max);
+			temp = MatrixOperation.exp(temp);
+			double sum = MatrixOperation.sum(temp);
+			for(int i = 0;i<temp.length;i++) {
+				output[n][0][0][i] = temp[i] / sum;
+			}
+		}
+		
+		return output;
 	}
 
 }

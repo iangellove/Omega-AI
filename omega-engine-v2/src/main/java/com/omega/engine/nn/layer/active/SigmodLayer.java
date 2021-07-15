@@ -1,5 +1,9 @@
 package com.omega.engine.nn.layer.active;
 
+import java.util.Vector;
+
+import com.omega.common.task.Task;
+import com.omega.common.task.TaskEngine;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.layer.LayerType;
 
@@ -19,15 +23,27 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
 		for(int n = 0;n<this.number;n++) {
-			for(int c = 0;c<this.channel;c++) {
-				for(int h = 0;h<this.height;h++) {
-					for(int w = 0;w<this.width;w++) {
-						this.output.maxtir[n][c][h][w] = (double) (1d / (1d + Math.exp(-this.input.maxtir[n][c][h][w])));
+			final int index = n;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					for(int c = 0;c<channel;c++) {
+						for(int h = 0;h<height;h++) {
+							for(int w = 0;w<width;w++) {
+								output.maxtir[index][c][h][w] = (double) (1d / (1d + Math.exp(-input.maxtir[index][c][h][w])));
+							}
+						}
 					}
+					return null;
 				}
-			}
+			});
 		}
+		
+		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
 	}
 
 	@Override
@@ -101,5 +117,35 @@ public class SigmodLayer extends ActiveFunctionLayer {
 		// TODO Auto-generated method stub
 		return LayerType.sigmod;
 	}
+
+	@Override
+	public double[][][][] output(double[][][][] input) {
+		// TODO Auto-generated method stub
+		double[][][][] output = new double[this.number][this.oChannel][this.oHeight][this.oWidth];
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		for(int n = 0;n<this.number;n++) {
+			final int index = n;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					for(int c = 0;c<channel;c++) {
+						for(int h = 0;h<height;h++) {
+							for(int w = 0;w<width;w++) {
+								output[index][c][h][w] = (double) (1d / (1d + Math.exp(-input[index][c][h][w])));
+							}
+						}
+					}
+					return null;
+				}
+			});
+		}
+		
+		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
+		
+		return output;
+	}
+
 
 }

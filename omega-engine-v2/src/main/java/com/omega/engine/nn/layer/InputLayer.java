@@ -80,4 +80,10 @@ public class InputLayer extends Layer {
 		return LayerType.input;
 	}
 
+	@Override
+	public double[][][][] output(double[][][][] input) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
 }

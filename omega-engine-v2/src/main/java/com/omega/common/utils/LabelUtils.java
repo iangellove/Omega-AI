@@ -14,6 +14,25 @@ public class LabelUtils {
 	 * @param labelSet
 	 * @return
 	 */
+	public static double[] labelIndexToVector(int labelIndex,int labelSize) {
+		
+		double[] vector = new double[labelSize];
+		
+		for(int i = 0;i<labelSize;i++) {
+			if(i == labelIndex) {
+				vector[i] = 1.0d;
+			}
+		}
+		
+		return vector;
+	}
+	
+	/**
+	 * labelToVector
+	 * @param label
+	 * @param labelSet
+	 * @return
+	 */
 	public static double[] labelToVector(String label,String[] labelSet) {
 		
 		double[] vector = new double[labelSet.length];
@@ -92,6 +111,19 @@ public class LabelUtils {
 	 * @return
 	 */
 	public static String vectorTolabel(double[] vector,String[] labelSet) {
+//		System.out.println(JsonUtils.toJson(vector));
+		int index = MatrixOperation.maxIndex(vector);
+		
+		return labelSet[index];
+	}
+	
+	/**
+	 * vectorTolabel
+	 * @param label
+	 * @param labelSet
+	 * @return
+	 */
+	public static String vectorTolabel(double[][][] vector,String[] labelSet) {
 //		System.out.println(JsonUtils.toJson(vector));
 		int index = MatrixOperation.maxIndex(vector);
 		

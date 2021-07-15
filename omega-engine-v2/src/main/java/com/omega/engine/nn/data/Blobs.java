@@ -1,6 +1,6 @@
 package com.omega.engine.nn.data;
 
-import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 
 /**
  * Blob opt utils
@@ -121,7 +121,7 @@ public class Blobs {
 		if(blob.number == number && blob.channel == channel && blob.height == height && blob.width == width) {
 			return blob;
 		}else {
-			return Blobs.blob(number, channel, height, width, MatrixOperation.transform(blob.maxtir, number, channel, height, width));
+			return Blobs.blob(number, channel, height, width, MatrixUtils.transform(blob.maxtir, number, channel, height, width));
 		}
 		
 	}

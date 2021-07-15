@@ -1,49 +1,65 @@
 package com.omega.common.task;
 
-import java.util.concurrent.CountDownLatch;
+import java.util.Vector;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
-
-import com.omega.engine.optimizer.Optimizer;
-
-@Component
+/**
+ * TaskEngine
+ * @author Administrator
+ *
+ */
 public class TaskEngine {
 	
-	@Async("taskAsync")
-	public void train(Optimizer op,int index,CountDownLatch countDownLatch) {
-		
-		try {
-			
-//			synchronized (op.network) {
-//				
-//				/**
-//				 * forward
-//				 */
-//				double[] output = op.network.forward(op.network.getTrainingData().dataInput[index]);
-//
-//				/**
-//				 * loss
-//				 */
-//				op.loss = MatrixOperation.add(op.loss, op.network.loss(output, op.network.getTrainingData().dataLabel[index]));
-//				
-//				/**
-//				 * loss diff
-//				 */
-//				op.lossDiff = MatrixOperation.add(op.lossDiff, op.network.lossDiff(output, op.network.getTrainingData().dataLabel[index]));
-//				
-//			}
-			
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}finally {
-			
-			countDownLatch.countDown();
-			
+	private static TaskEngine instance;
+	
+	private int threadNum = 4;
+	
+	private ThreadPoolExecutor threadPool;
+	
+	public TaskEngine(int threadNum) {
+		if(threadNum < 1) {
+			this.threadNum = 4;
+			threadPool = new ThreadPoolExecutor(4, 4, 1000, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());
+		}else {
+			this.threadNum = threadNum;
+			threadPool = new ThreadPoolExecutor(threadNum, threadNum * 2, 1000, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());
 		}
-//		
-//		return new AsyncResult<Boolean>(true);
+	}
+	
+	public static TaskEngine getInstance(int num) {
+		synchronized(TaskEngine.class) {
+			if(instance==null) {
+				instance = new TaskEngine(num);
+			}else if(num!=instance.threadNum){
+				//线程数不相等则重新创建
+				instance = new TaskEngine(num);
+			}
+		}
+		return instance;
+	}
+	
+	public void dispatchTask(Vector<Task<Object>> workers) {
+		//接收多线程响应结果
+		Vector<Future<Object>> results = new Vector<Future<Object>>();
+        for(Task<Object> c: workers) {
+        	Future<Object> f = threadPool.submit(c);
+        	results.add(f);
+        }
+        for(int i=0;i<results.size();i++) {
+        	try {
+				results.get(i).get();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ExecutionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        }
 	}
 	
 }

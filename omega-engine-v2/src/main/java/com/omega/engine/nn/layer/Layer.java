@@ -1,7 +1,9 @@
 package com.omega.engine.nn.layer;
 
+import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
+import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.Updater;
 
@@ -49,6 +51,8 @@ public abstract class Layer {
 	
 	public double[] bias;
 	
+	public boolean hasBias = true;
+	
 	public double lambda = 0.01d;
 	
 	public double learnRate = 0.001d;
@@ -88,6 +92,8 @@ public abstract class Layer {
 	
 	public abstract LayerType getLayerType();
 	
+	public abstract double[][][][] output(double[][][][] input);
+	
 	public void setUpdater(Updater updater) {
 		this.updater = updater;
 	}
@@ -98,6 +104,11 @@ public abstract class Layer {
 	
 	public void setIndex(int index) {
 		this.index = index;
+	}
+	
+	public LayerInit save() {
+		// TODO Auto-generated method stub
+		return new LayerInit(this);
 	}
 	
 	/**
@@ -116,10 +127,16 @@ public abstract class Layer {
 	 * 转换并设置输入数据
 	 */
 	public void setDelta() {
+//		
+//		System.out.println(this.getLayerType().toString() + this.index);
+//		
+//		MatrixOperation.printImage(this.network.getNextLayer(this.index).diff.maxtir[0][0]);
+//		
 		/**
 		 * 获取上一层的输出作为当前层的输入
 		 */
 		this.delta = Blobs.transform(number, oChannel, oHeight, oWidth, this.network.getNextLayer(this.index).diff);
+		
 	}
 	
 	/**
@@ -131,7 +148,7 @@ public abstract class Layer {
 		 */
 		this.delta = delta;
 	}
-	
+
 	/**
 	 * 
 	 * @Title: gradientCheck
@@ -145,33 +162,30 @@ public abstract class Layer {
 	 * (f(x + eta) - f(x - eta)) / (2 * eta) ≈ f'(x)
 	 */
 	public double gradientCheck() {
-//		System.out.println("*******************" + this.index + "="+this.getLayerType()+" layer********************");
-//		
-//		Blob output1 = this.output(eta);
-//		Blob output2 = this.output(0-eta);
-//		
-//		double[][][][] gradientCheck = MatrixOperation.subtraction(output1.maxtir, output2.maxtir);
-//		
-//		gradientCheck = MatrixOperation.division(gradientCheck, 2 * this.eta);
-//		
-//		this.output();
-//		this.diff();
-//		
-//		Blob currentDiff = this.diff;
-//
-//		System.out.println("currentDiff:"+JsonUtils.toJson(currentDiff));
-//
-//		System.out.println("gradientCheck:"+JsonUtils.toJson(gradientCheck));
-//		
-//		double finalGCError = 0.0d;
-//		
-//		if(this.getLayerType()!=LayerType.pooling) {
-//			double[][][][] error = MatrixOperation.subtractionP(currentDiff.maxtir, gradientCheck);
-//			System.out.println(JsonUtils.toJson(error));
-//			finalGCError = MatrixOperation.sum(error);
-//		}
-//		
-//		System.out.println("finalGCError:"+finalGCError);
+		System.out.println("*******************" + this.index + "="+this.getLayerType()+" layer********************");
+		
+		if(this.index != 0) {
+
+			double[][][][] output1 = this.output(MatrixOperation.add(this.input.maxtir, this.eta));
+			
+			double[][][][] output2 = this.output(MatrixOperation.subtraction(this.input.maxtir, this.eta));
+			
+			double[][][][] gradientCheck = MatrixOperation.subtraction(output1, output2);
+			
+			gradientCheck = MatrixOperation.division(gradientCheck, 2 * this.eta);
+
+			double finalGCError = 0.0d;
+			
+			if(this.getLayerType()!=LayerType.pooling) {
+				
+				double[][][][] error = MatrixOperation.subtractionP(this.delta.maxtir, gradientCheck);
+//				System.out.println(JsonUtils.toJson(error));
+				finalGCError = MatrixOperation.sum(error);
+			}
+			
+			System.out.println("finalGCError:"+finalGCError);
+		}
+		
 		return 0.0d;
 	}
 

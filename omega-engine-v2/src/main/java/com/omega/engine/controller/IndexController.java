@@ -21,4 +21,16 @@ public class IndexController {
 		return "2DCar/AICarDefautMap";
 	}
 	
+	@RequestMapping("/role")
+	public String role(HttpServletRequest request,HttpServletResponse response) {
+		
+		return "2DRole/role";
+	}
+	
+	@RequestMapping("/mnist")
+	public String mnist(HttpServletRequest request,HttpServletResponse response) {
+		
+		return "mnist/mnist";
+	}
+	
 }

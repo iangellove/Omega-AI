@@ -6,13 +6,24 @@ import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
+import com.omega.engine.updater.UpdaterType;
 
+/**
+ * Convolutional Neural Networks
+ * @author Administrator
+ *
+ */
 public class CNN extends Network {
 	
 	public CNN(LossFunction lossFunction) {
 		this.lossFunction = lossFunction;
 	}
 	
+	public CNN(LossFunction lossFunction,UpdaterType updater) {
+		this.lossFunction = lossFunction;
+		this.updater = updater;
+	}
+
 	@Override
 	public void init() throws Exception {
 		// TODO Auto-generated method stub
@@ -32,6 +43,15 @@ public class CNN extends Network {
 			throw new Exception("The softmax function support only cross entropy loss function now.");
 		}
 		
+		Layer inputLayer = layerList.get(0);
+		Layer outputLayer = layerList.get(layerList.size() - 1);
+		this.channel = inputLayer.channel;
+		this.height = inputLayer.height;
+		this.width = inputLayer.width;
+		this.oChannel = outputLayer.oChannel;
+		this.oHeight = outputLayer.oHeight;
+		this.oWidth = outputLayer.oWidth;
+		
 		System.out.println("the network is ready.");
 	}
 
@@ -48,11 +68,11 @@ public class CNN extends Network {
 		 * forward
 		 */
 		for(int i = 0;i<layerCount;i++) {
-
+			
 			Layer layer = layerList.get(i);
 			
 			layer.forward();
-			
+
 		}
 		
 		return this.getOuput();
@@ -95,7 +115,7 @@ public class CNN extends Network {
 		this.setLossDiff(lossDiff);
 		
 		for(int i = layerCount - 1;i>=0;i--) {
-
+			
 			Layer layer = layerList.get(i);
 			
 			layer.learnRate = this.learnRate;
@@ -104,6 +124,14 @@ public class CNN extends Network {
 			
 			layer.update();
 			
+//			if(layer.getLayerType() != LayerType.input) {
+//				System.out.println("====================");
+//				System.out.println(layer.getLayerType());
+//				MatrixOperation.printImage(layer.output.maxtir[0][0]);
+//				System.out.println("--------------------");
+//				MatrixOperation.printImage(layer.diff.maxtir[0][0]);
+//			}
+			
 		}
 		
 	}
@@ -111,8 +139,15 @@ public class CNN extends Network {
 	@Override
 	public Blob predict(Blob input) {
 		// TODO Auto-generated method stub
+		this.RUN_MODEL = RunModel.TEST;
 		this.forward(input);
 		return this.getOuput();
+	}
+
+	@Override
+	public NetworkType getNetworkType() {
+		// TODO Auto-generated method stub
+		return NetworkType.CNN;
 	}
 	
 }

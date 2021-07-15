@@ -1,17 +1,19 @@
 package com.omega.engine.updater;
 
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
+import com.omega.engine.nn.layer.normalization.BNLayer;
 
 /**
  * Momentum
  * 
- * Vdw = beta * Vdw + (1 - beta) * dw
- * Vdb = beta * Vdb + (1 - beta) * db
- * W = W - learnRate * Vdw
- * b = b - learnRate * Vdb
+ * Vw = mu * Vdwi-1 - learning_rate * dwi
+ * Vb = mu * Vdbi-1 - learning_rate * dbi
+ * w = w + vw
+ * b = b + vb
  * 
  * @author Administrator
  *
@@ -21,39 +23,42 @@ public class Momentum extends Updater {
 	@Override
 	public void update(Layer layer) {
 		// TODO Auto-generated method stub
+
 		/**
 		 * init
 		 */
-		if(this.vdw == null || this.vdb == null) {
-			this.vdw = MatrixOperation.zero(layer.width, layer.oWidth);
-			this.vdb = MatrixOperation.zero(layer.oWidth);
-		}
-		
-		/**
-		 * Vdw = beta * Vdw + (1 - beta) * dw
-		 */
-		for(int i = 0;i<this.vdw.length;i++) {
-			for(int j = 0;j<this.vdw[i].length;j++) {
-				this.vdw[i][j] = this.beta * this.vdw[i][j] + (1 - this.beta) * layer.deltaW[i][j];
+		if(this.vdw == null) {
+			this.vdw = MatrixUtils.zero(layer.width, layer.oWidth);
+			if(layer.hasBias) {
+				this.vdb = MatrixUtils.zero(layer.oWidth);
 			}
 		}
-		
+			
 		/**
-		 * Vdb = beta * Vdb + (1 - beta) * db
+		 * Vdw = beta * Vdwi-1 - learning_rate * dwi
 		 */
-		for(int i = 0;i<this.vdb.length;i++) {
-			this.vdb[i] = this.beta * this.vdb[i] + (1 - this.beta) * layer.deltaB[i];
+		this.vdw = MomentumUtils.momentum(layer.deltaW, this.vdw, layer.learnRate);
+		
+		if(layer.hasBias) {
+			/**
+			 * Vdb = beta * Vdbi-1 - learning_rate * dbi
+			 */
+			this.vdb = MomentumUtils.momentum(layer.deltaB, this.vdb, layer.learnRate);
+		}
+
+		/**
+		 * W = W + vdw
+		 */
+		layer.weight = MatrixOperation.add(layer.weight, this.vdw);
+		
+		if(layer.hasBias) {
+			
+			/**
+			 * b = b + Vdb
+			 */
+			layer.bias = MatrixOperation.add(layer.bias, this.vdb);	
 		}
 		
-		/**
-		 * W = W - learnRate * Vdw
-		 */
-		layer.weight = MatrixOperation.subtraction(layer.weight, MatrixOperation.multiplication(this.vdw, layer.learnRate));
-		
-		/**
-		 * b = b - learnRate * Vdb
-		 */
-		layer.bias = MatrixOperation.subtraction(layer.bias, MatrixOperation.multiplication(this.vdb, layer.learnRate));
 	}
 
 	@Override
@@ -69,40 +74,79 @@ public class Momentum extends Updater {
 		/**
 		 * init
 		 */
-		if(this.vdmw == null || this.vdmb == null) {
-			this.vdmw = MatrixOperation.zero(conv.channel, conv.kernelNum, conv.kHeight, conv.kWidth);
-			this.vdmb = MatrixOperation.zero(conv.kernelNum);
-		}
-		
-		/**
-		 * Vdw = beta * Vdw + (1 - beta) * dw
-		 */
-		for(int c = 0;c<this.vdmw.length;c++) {
-			for(int k = 0;k<this.vdmw[c].length;k++) {
-				for(int h = 0;h<this.vdmw[c][k].length;h++) {
-					for(int w = 0;w<this.vdmw[c][k][h].length;w++) {
-						this.vdmw[c][k][h][w] = this.beta * this.vdmw[c][k][h][w] + (1 - this.beta) * conv.deltaW[c][k][h][w];
-					}
-				}
+		if(this.vdmw == null) {
+			
+			this.vdmw = MatrixUtils.zero(conv.channel, conv.kernelNum, conv.kHeight, conv.kWidth);
+
+			if(layer.hasBias) {
+				this.vdmb = MatrixUtils.zero(conv.kernelNum);
 			}
+			
+		}
+			
+		/**
+		 * Vdw = beta * Vdwi-1 - learning_rate * dwi
+		 */
+		this.vdmw = MomentumUtils.momentum(conv.deltaW, this.vdmw, conv.learnRate);
+		
+		if(layer.hasBias) {
+			/**
+			 * Vdb = beta * Vdbi-1 - learning_rate * dbi
+			 */
+			this.vdmb = MomentumUtils.momentum(conv.deltaB, this.vdmb, conv.learnRate);
+		}
+
+		
+		/**
+		 * W = W + vdw
+		 */
+		conv.kernel = MatrixOperation.add(conv.kernel, this.vdmw);
+		
+		if(layer.hasBias) {
+			/**
+			 * b = b + Vdb
+			 */
+			conv.bias = MatrixOperation.add(conv.bias, this.vdmb);
+		}
+		
+	}
+
+	@Override
+	public void updateForBN(BNLayer layer) {
+		// TODO Auto-generated method stub
+		/**
+		 * init
+		 */
+		if(this.vdgama == null || this.vdb == null) {
+			this.vdgama = MatrixUtils.zero(layer.deltaGama.length);
+			this.vdb = MatrixUtils.zero(layer.deltaBeta.length);
 		}
 		
 		/**
-		 * Vdb = beta * Vdb + (1 - beta) * db
+		 * Vdgama = beta * Vdgamai-1 - learning_rate * dgama
 		 */
-		for(int k = 0;k<this.vdmb.length;k++) {
-			this.vdmb[k] = this.beta * this.vdmb[k] + (1 - this.beta) * conv.deltaB[k];
-		}
+		this.vdgama = MomentumUtils.momentum(layer.deltaGama, this.vdgama, layer.learnRate);
 		
 		/**
-		 * W = W - learnRate * Vdw
+		 * Vdb = beta * Vdbi-1 - learning_rate * dbi
 		 */
-		conv.kernel = MatrixOperation.subtraction(conv.kernel, MatrixOperation.multiplication(this.vdmw, conv.learnRate));
+		this.vdb = MomentumUtils.momentum(layer.deltaBeta, this.vdb, layer.learnRate);
 		
 		/**
-		 * b = b - learnRate * Vdb
+		 * gama = gama + Vdgama
 		 */
-		conv.bias = MatrixOperation.subtraction(conv.bias, MatrixOperation.multiplication(this.vdmb, conv.learnRate));
+		layer.gama = MatrixOperation.add(layer.gama, this.vdgama);
+		
+		/**
+		 * b = b + Vdb
+		 */
+		layer.beta = MatrixOperation.add(layer.beta, this.vdb);
+	}
+
+	@Override
+	public UpdaterType getUpdaterType() {
+		// TODO Auto-generated method stub
+		return UpdaterType.momentum;
 	}
 
 }

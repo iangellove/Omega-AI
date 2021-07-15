@@ -25,4 +25,17 @@ public class DataSet extends BaseData{
 		this.input = Blobs.blob(number, channel, height, width, dataInput);
 	}
 	
+	public DataSet(int number,int channel,int height,int width,int labelSize,double[][][][] dataInput,double[][] dataLabel,String[] labels,String[] labelSet) {
+		this.dataLabel = dataLabel;
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.inputSize = number * channel * height * width;
+		this.labelSize = labelSize;
+		this.labels = labels;
+		this.labelSet = labelSet;
+		this.input = Blobs.blob(number, channel, height, width, dataInput);
+	}
+	
 }

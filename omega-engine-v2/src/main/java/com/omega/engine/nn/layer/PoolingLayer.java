@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.pooling.PoolingType;
@@ -41,7 +42,7 @@ public class PoolingLayer extends Layer {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
-		this.mask = MatrixOperation.zero(this.number,this.channel, this.oHeight * this.oWidth, this.pHeight, this.pWidth);
+		this.mask = MatrixUtils.zero(this.number,this.channel, this.oHeight * this.oWidth, this.pHeight, this.pWidth);
 	}
 
 	@Override
@@ -81,6 +82,7 @@ public class PoolingLayer extends Layer {
 	@Override
 	public void forward() {
 		// TODO Auto-generated method stub
+		
 		/**
 		 * 参数初始化
 		 */
@@ -93,11 +95,13 @@ public class PoolingLayer extends Layer {
 		 * 计算输出
 		 */
 		this.output();
+		
 	}
 
 	@Override
 	public void back() {
 		// TODO Auto-generated method stub
+		
 		this.initBack();
 		/**
 		 * 设置梯度
@@ -110,6 +114,7 @@ public class PoolingLayer extends Layer {
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
+		
 	}
 
 	@Override
@@ -138,6 +143,13 @@ public class PoolingLayer extends Layer {
 //		MatrixOperation.printImage(this.diff);
 //		
 //		System.out.println("pooling layer["+this.index+"]diff end.");
+	}
+
+	@Override
+	public double[][][][] output(double[][][][] input) {
+		// TODO Auto-generated method stub
+		double[][][][] output = MatrixOperation.poolingAndMask(input, this.mask,this.pWidth, this.pHeight, this.stride, this.poolingType);
+		return output;
 	}
 	
 }

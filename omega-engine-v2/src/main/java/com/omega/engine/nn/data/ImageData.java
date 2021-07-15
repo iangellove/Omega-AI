@@ -12,6 +12,8 @@ public class ImageData {
 	
 	private int[][] b;
 	
+	private int[][] gray; 
+	
 	private String label;
 	
 	private String fileName;
@@ -120,6 +122,14 @@ public class ImageData {
 
 	public void setExtName(String extName) {
 		this.extName = extName;
+	}
+
+	public int[][] getGray() {
+		return gray;
+	}
+
+	public void setGray(int[][] gray) {
+		this.gray = gray;
 	}
 
 }

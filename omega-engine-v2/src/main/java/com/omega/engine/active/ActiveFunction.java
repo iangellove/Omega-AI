@@ -2,6 +2,7 @@ package com.omega.engine.active;
 
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 
 /**
  * base active function
@@ -64,7 +65,7 @@ public abstract class ActiveFunction {
 	 * (f(x + eta) - f(x - eta)) / (2 * eta) ≈ f'(x)
 	 */
 	public double gradientCheck(double[] x) {
-		this.input = MatrixOperation.clone(x);
+		this.input = MatrixUtils.clone(x);
 		double[] diff = this.diff();
 		double[] f1 = this.active(MatrixOperation.add(x, eta));		
 		double[] f2 = this.active(MatrixOperation.subtraction(x, eta));

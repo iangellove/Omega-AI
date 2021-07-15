@@ -1,7 +1,7 @@
 package com.omega.engine.active;
 
 import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 
 /**
  * 
@@ -27,8 +27,8 @@ public class Relu extends ActiveFunction{
 	@Override
 	public double[] active(double[] x) {
 		// TODO Auto-generated method stub
-		this.input = MatrixOperation.clone(x);
-		this.output = MatrixOperation.zero(x.length);
+		this.input = MatrixUtils.clone(x);
+		this.output = MatrixUtils.zero(x.length);
 		for(int i = 0;i<x.length;i++) {
 			if(x[i] > 0) {
 				this.output[i] = x[i];
@@ -42,7 +42,7 @@ public class Relu extends ActiveFunction{
 	@Override
 	public double[] diff() {
 		// TODO Auto-generated method stub
-		this.diff = MatrixOperation.zero(this.input.length);
+		this.diff = MatrixUtils.zero(this.input.length);
 		for(int i = 0;i<this.input.length;i++) {
 			if(this.input[i] > 0) {
 				this.diff[i] = 1;
@@ -56,7 +56,7 @@ public class Relu extends ActiveFunction{
 	@Override
 	public double[] activeTemp(double[] x) {
 		// TODO Auto-generated method stub
-		double[] output = MatrixOperation.zero(x.length);
+		double[] output = MatrixUtils.zero(x.length);
 		for(int i = 0;i<x.length;i++) {
 			if(x[i] > 0) {
 				output[i] = x[i];
@@ -70,7 +70,7 @@ public class Relu extends ActiveFunction{
 	@Override
 	public double[] diffTemp(double[] x) {
 		// TODO Auto-generated method stub
-		double[] diff = MatrixOperation.zero(x.length);
+		double[] diff = MatrixUtils.zero(x.length);
 		for(int i = 0;i<x.length;i++) {
 			if(x[i] > 0) {
 				diff[i] = 1;
@@ -84,8 +84,8 @@ public class Relu extends ActiveFunction{
 	@Override
 	public double[][][] active(double[][][] x) {
 		// TODO Auto-generated method stub
-		this.input2d = MatrixOperation.clone(x);
-		this.output2d = MatrixOperation.zero(x.length,x[0].length,x[0][0].length);
+		this.input2d = MatrixUtils.clone(x);
+		this.output2d = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
 		for(int c = 0;c<x.length;c++) {
 			for(int i = 0;i<x[c].length;i++) {
 				for(int j = 0;j<x[c][i].length;j++) {
@@ -103,7 +103,7 @@ public class Relu extends ActiveFunction{
 	@Override
 	public double[][][] diff2d() {
 		// TODO Auto-generated method stub
-		this.diff2d = MatrixOperation.zero(this.input2d.length,this.input2d[0].length,this.input2d[0][0].length);
+		this.diff2d = MatrixUtils.zero(this.input2d.length,this.input2d[0].length,this.input2d[0][0].length);
 		for(int c = 0;c<this.diff2d.length;c++) {
 			for(int i = 0;i<this.diff2d[c].length;i++) {
 				for(int j = 0;j<this.diff2d[c][i].length;j++) {
@@ -121,7 +121,7 @@ public class Relu extends ActiveFunction{
 	@Override
 	public double[][][] activeTemp(double[][][] x) {
 		// TODO Auto-generated method stub
-		double[][][] output2d = MatrixOperation.zero(x.length,x[0].length,x[0][0].length);
+		double[][][] output2d = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
 		for(int c = 0;c<x.length;c++) {
 			for(int i = 0;i<x[c].length;i++) {
 				for(int j = 0;j<x[c][i].length;j++) {
@@ -139,7 +139,7 @@ public class Relu extends ActiveFunction{
 	@Override
 	public double[][][] diffTemp(double[][][] x) {
 		// TODO Auto-generated method stub
-		double[][][] diff2d = MatrixOperation.zero(x.length,x[0].length,x[0][0].length);
+		double[][][] diff2d = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
 		for(int c = 0;c<diff2d.length;c++) {
 			for(int i = 0;i<diff2d[c].length;i++) {
 				for(int j = 0;j<diff2d[c][i].length;j++) {

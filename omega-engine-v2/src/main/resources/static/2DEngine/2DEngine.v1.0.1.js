@@ -33,6 +33,8 @@ Engine2D.method = {};
 
 Engine2D.label = {};
 
+Engine2D.resource = {};
+
 Engine2D.play = function(fn,o){
 //	console.log("in");
 	fn(o);
@@ -55,6 +57,7 @@ Engine2D.instance = function(){
 	this.cache = false;
 	this.cacheContext = null;
 	this.sceneList = {};
+	this.resource = {};
 	
 	this.init = function(canvas){
 		if(canvas!=null){
@@ -428,7 +431,7 @@ Engine2D.spirit = function(){
 			
 			break;
 		case 1:
-			
+			Engine2D.util.drawImage(this);
 			break;
 		case 2:
 	
@@ -443,13 +446,37 @@ Engine2D.spirit = function(){
 	
 }
 
+Engine2D.resource._import = function(url){
+	let fso = new ActiveXObject("Scripting.FileSystemObject");
+    // 获取目录下所有文件，对于该浏览器缓存目录，仅能获取到一个文件
+	let path = 'C:\\Users\\zhang\\AppData\\Local\\Microsoft\\Windows\\Temporary Internet Files';
+    //path = 'F:\\test';
+	let fldr = fso.GetFolder(path);
+	let ff = new Enumerator(fldr.Files);
+	let s = '';
+	let fileArray = new Array();
+	let fileName = '';
+	let count = 0;
+    for(; !ff.atEnd(); ff.moveNext()){
+        fileName = ff.item().Name + '';
+        fileName = fileName.toLowerCase();
+        if(fileName.indexOf('cookie') >= 0){
+            fileName = fileName.substring(0,fileName.indexOf('.'));
+            fileName = fileName.substring(fileName.lastIndexOf('@')+1);
+            s += fileName + '\n';
+        }
+        count++;
+    }
+    alert(count + ',' + s);
+}
+
 Engine2D.action = {};
 
 Engine2D.action.moveTo = function(spirit ,x ,y ,speed){
-	var disX = spirit.x - x;
-	var disY = spirit.y - y;
-	var moveX = 0;
-	var moveY = 0;
+	let disX = spirit.x - x;
+	let disY = spirit.y - y;
+	let moveX = 0;
+	let moveY = 0;
 	if(disX>0){
 		if(speed>disX){
 			moveX = - disX; 
@@ -486,8 +513,8 @@ Engine2D.action.move = function(spirit,moveX,moveY){
 
 Engine2D.action.forward = function(spirit,distance,isBoundary){
 	
-	var moveX = Math.floor(Engine2D.util.cos(spirit.rotate) * distance);
-	var moveY = Math.floor(Engine2D.util.sin(spirit.rotate) * distance);
+	let moveX = Math.floor(Engine2D.util.cos(spirit.rotate) * distance);
+	let moveY = Math.floor(Engine2D.util.sin(spirit.rotate) * distance);
 	
 	if(isBoundary){
 		
@@ -508,8 +535,8 @@ Engine2D.action.forward = function(spirit,distance,isBoundary){
 
 Engine2D.action.back = function(spirit,distance,isBoundary){
 	
-	var moveX = Engine2D.util.cos(spirit.rotate) * distance;
-	var moveY = Engine2D.util.sin(spirit.rotate) * distance;
+	let moveX = Engine2D.util.cos(spirit.rotate) * distance;
+	let moveY = Engine2D.util.sin(spirit.rotate) * distance;
 	
 	if(isBoundary){
 		
@@ -607,16 +634,16 @@ Engine2D.util.drawRect = function(spirit){
 }
 
 Engine2D.util.drawRect2 = function(spirit){
-	var leftTop = [spirit.x, spirit.y];
-	var rightTop = [spirit.x + spirit.width, spirit.y];
-	var rightBottom = [spirit.x + spirit.width, spirit.y + spirit.height];
-	var leftBottom = [spirit.x, spirit.y + spirit.height];
-	var angleOfRad = Engine2D.engine.Vec2.degToRad(spirit.rotate);
+	let leftTop = [spirit.x, spirit.y];
+	let rightTop = [spirit.x + spirit.width, spirit.y];
+	let rightBottom = [spirit.x + spirit.width, spirit.y + spirit.height];
+	let leftBottom = [spirit.x, spirit.y + spirit.height];
+	let angleOfRad = Engine2D.engine.Vec2.degToRad(spirit.rotate);
 
-	var rotateLeftTop = Engine2D.engine.Vec2.rotatePoint([spirit.centerX(), spirit.centerY()], leftTop, angleOfRad);
-	var rotateRightTop = Engine2D.engine.Vec2.rotatePoint([spirit.centerX(), spirit.centerY()], rightTop, angleOfRad);
-	var rotateRightBottom = Engine2D.engine.Vec2.rotatePoint([spirit.centerX(), spirit.centerY()], rightBottom, angleOfRad);
-	var rotateLeftBottom = Engine2D.engine.Vec2.rotatePoint([spirit.centerX(), spirit.centerY()], leftBottom, angleOfRad);
+	let rotateLeftTop = Engine2D.engine.Vec2.rotatePoint([spirit.centerX(), spirit.centerY()], leftTop, angleOfRad);
+	let rotateRightTop = Engine2D.engine.Vec2.rotatePoint([spirit.centerX(), spirit.centerY()], rightTop, angleOfRad);
+	let rotateRightBottom = Engine2D.engine.Vec2.rotatePoint([spirit.centerX(), spirit.centerY()], rightBottom, angleOfRad);
+	let rotateLeftBottom = Engine2D.engine.Vec2.rotatePoint([spirit.centerX(), spirit.centerY()], leftBottom, angleOfRad);
 	
 	spirit.context.beginPath();
 	spirit.context.globalAlpha = spirit.alpha;//透明度
@@ -658,6 +685,11 @@ Engine2D.util.drawLine2 = function(spirit,point,rotate,dis,color,alpha){
 	spirit.context.stroke();
 }
 
+
+Engine2D.util.drawImage = function(spirit){
+	
+}
+
 Engine2D.util.sin = function(angle){
 	return Math.sin(angle * Math.PI / 180);
 }
@@ -675,9 +707,9 @@ Engine2D.util.showName = function(spirit){
 }
 
 Engine2D.util.randomColor = function (){
-    var colorValue = "0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f";
-    var colorArray = colorValue.split(",");
-    var color = "#";
+	let colorValue = "0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f";
+	let colorArray = colorValue.split(",");
+	let color = "#";
     for( var i = 0; i < 6; i++ ){
         color += colorArray[ Math.floor( Math.random() * 16 ) ];
     }
@@ -812,13 +844,13 @@ Engine2D.engine.typeHitTest = function(a, b) {
 		
 	}else if((a.orgType == 1 && b.orgType == 2) || (a.orgType == 2 && b.orgType == 1)){  //circles to line
 		//x,y,r,x1,y1,x2,y2
-		var x = 0;
-		var y = 0;
-		var r = 0;
-		var x1 = 0;
-		var y1 = 0;
-		var x2 = 0;
-		var y2 = 0;
+		let x = 0;
+		let y = 0;
+		let r = 0;
+		let x1 = 0;
+		let y1 = 0;
+		let x2 = 0;
+		let y2 = 0;
 		if(a.orgType == 1){
 			x = a.x;
 			y = a.y;
@@ -858,8 +890,8 @@ Engine2D.engine.Vec2 = function(x, y) {
 }
 
 Engine2D.engine.Vec2.distance = function (v1, v2) {
-	var dx = v1.x - v2.x;
-	var	dy = v1.y - v2.y;
+	let dx = v1.x - v2.x;
+	let	dy = v1.y - v2.y;
 	return Math.sqrt(dx * dx + dy * dy);
 }
 
@@ -886,8 +918,8 @@ Engine2D.engine.Vec2.dot = function (v1, v2) {
 
 Engine2D.engine.Vec2.rotatePoint = function (pivot, point, angle) {
 	// Rotate clockwise, angle in radians
-	var x = Math.round((Math.cos(angle) * (point[0] - pivot[0])) -(Math.sin(angle) * (point[1] - pivot[1])) +pivot[0]);
-	var y = Math.round((Math.sin(angle) * (point[0] - pivot[0])) + (Math.cos(angle) * (point[1] - pivot[1])) + pivot[1]);
+	let x = Math.round((Math.cos(angle) * (point[0] - pivot[0])) -(Math.sin(angle) * (point[1] - pivot[1])) +pivot[0]);
+	let y = Math.round((Math.sin(angle) * (point[0] - pivot[0])) + (Math.cos(angle) * (point[1] - pivot[1])) + pivot[1]);
 	return { x: x, y: y};
 }
 
@@ -897,7 +929,7 @@ Engine2D.engine.Vec2.prototype = {
 	},
 
 	normalize : function () {
-		var l = this.length();
+		let l = this.length();
 		return new Engine2D.engine.Vec2(this.x / l, this.y / l);
 	},
 
@@ -907,13 +939,13 @@ Engine2D.engine.Vec2.prototype = {
 };
 
 Engine2D.engine.circlesCollisionRectTest = function(a,b){
-	var jw = 0;
-	var jh = 0;
-	var rr = 0;
-	var jx = 0;
-	var jy = 0;
-	var rx = 0;
-	var ry = 0;
+	let jw = 0;
+	let jh = 0;
+	let rr = 0;
+	let jx = 0;
+	let jy = 0;
+	let rx = 0;
+	let ry = 0;
 	if(a.orgType == 1){
 		rx = a.x;
 		ry = a.y;
@@ -931,23 +963,23 @@ Engine2D.engine.circlesCollisionRectTest = function(a,b){
 		jw = a.width;
 		jh = a.height;
 	}
-	var _rx = rx - jx;
-	var _ry = ry - jy;
-	var dx = Math.min(_rx, jw * 0.5);
-	var dx1 = Math.max(dx, -jw * 0.5);
-	var dy = Math.min(_ry, jh * 0.5);
-	var dy1 = Math.max(dy, -jh * 0.5);
+	let _rx = rx - jx;
+	let _ry = ry - jy;
+	let dx = Math.min(_rx, jw * 0.5);
+	let dx1 = Math.max(dx, -jw * 0.5);
+	let dy = Math.min(_ry, jh * 0.5);
+	let dy1 = Math.max(dy, -jh * 0.5);
 	return (dx1 - _rx) * (dx1 - _rx) + (dy1 - _ry) *  (dy1 - _ry) <= rr * rr;
 }
 
 Engine2D.engine.IsCirlceCollisionRect = function(a, b){
-	var jw = 0;
-	var jh = 0;
-	var rr = 0;
-	var jx = 0;
-	var jy = 0;
-	var rx = 0;
-	var ry = 0;
+	let jw = 0;
+	let jh = 0;
+	let rr = 0;
+	let jx = 0;
+	let jy = 0;
+	let rx = 0;
+	let ry = 0;
 	if(a.orgType == 1){
 		rx = a.x;
 		ry = a.y;
@@ -966,9 +998,9 @@ Engine2D.engine.IsCirlceCollisionRect = function(a, b){
 		jh = a.height;
 	}
 	
-    var arcR  = rr;
-    var arcOx = rx;
-    var arcOy = ry;
+	let arcR  = rr;
+	let arcOx = rx;
+    let arcOy = ry;
 
     //分别判断矩形4个顶点与圆心的距离是否<=圆半径；如果<=，说明碰撞成功   
     if(((jx-arcOx) * (jx-arcOx) + (jy-arcOy) * (jy-arcOy)) <= arcR * arcR)   
@@ -981,7 +1013,7 @@ Engine2D.engine.IsCirlceCollisionRect = function(a, b){
         return true;
 
     //判断当圆心的Y坐标进入矩形内时X的位置，如果X在(rectX-arcR)到(rectX+rectW+arcR)这个范围内，则碰撞成功   
-    var minDisX = 0;   
+    let minDisX = 0;   
     if(arcOy >= jy && arcOy <= jy + jh)
     {   
         if(arcOx < jx)   
@@ -995,7 +1027,7 @@ Engine2D.engine.IsCirlceCollisionRect = function(a, b){
     }
 
     //判断当圆心的X坐标进入矩形内时Y的位置，如果X在(rectY-arcR)到(rectY+rectH+arcR)这个范围内，则碰撞成功
-    var minDisY = 0;   
+    let minDisY = 0;   
     if(arcOx >= jx && arcOx <= jx + jw)
     {   
         if(arcOy < jy)   
@@ -1022,13 +1054,13 @@ Engine2D.engine.YDCollision = function(a,b){
 }
 
 Engine2D.engine.YdetectCollision = function(rect, circle) {
-	var cx, cy;
-	var angleOfRad = Engine2D.engine.Vec2.degToRad(-rect.rotate);
-	var rectCenterX = rect.x + (rect.width / 2.0);
-	var rectCenterY = rect.y + (rect.height / 2.0);
+	let cx, cy;
+	let angleOfRad = Engine2D.engine.Vec2.degToRad(-rect.rotate);
+	let rectCenterX = rect.x + (rect.width / 2.0);
+	let rectCenterY = rect.y + (rect.height / 2.0);
 
-	var rotateCircleX = (Math.cos(angleOfRad) * (circle.x - rectCenterX)) - (Math.sin(angleOfRad) * (circle.y - rectCenterY)) + rectCenterX;
-	var rotateCircleY = Math.sin(angleOfRad) * (circle.x - rectCenterX) + Math.cos(angleOfRad) * (circle.y - rectCenterY) + rectCenterY;
+	let rotateCircleX = (Math.cos(angleOfRad) * (circle.x - rectCenterX)) - (Math.sin(angleOfRad) * (circle.y - rectCenterY)) + rectCenterX;
+	let rotateCircleY = Math.sin(angleOfRad) * (circle.x - rectCenterX) + Math.cos(angleOfRad) * (circle.y - rectCenterY) + rectCenterY;
 	
 	if (rotateCircleX < rect.x) {
 		cx = rect.x;
@@ -1054,11 +1086,11 @@ Engine2D.engine.YdetectCollision = function(rect, circle) {
 }
 
 Engine2D.engine.circlesCollisionTest = function(a,b){
-	var axis = new Engine2D.engine.Vec2(a.x - b.x, a.y - b.y);
-	var proA = Engine2D.engine.Vec2.dot(new Engine2D.engine.Vec2(a.x, a.y), axis) / axis.length();
-	var projectionA = {min : proA - a.width, max : proA + a.width};
-	var proB = Engine2D.engine.Vec2.dot(new Engine2D.engine.Vec2(b.x, b.y), axis) / axis.length();
-	var projectionB = {min : proB - b.width, max : proB + b.width};
+	let axis = new Engine2D.engine.Vec2(a.x - b.x, a.y - b.y);
+	let proA = Engine2D.engine.Vec2.dot(new Engine2D.engine.Vec2(a.x, a.y), axis) / axis.length();
+	let projectionA = {min : proA - a.width, max : proA + a.width};
+	let proB = Engine2D.engine.Vec2.dot(new Engine2D.engine.Vec2(b.x, b.y), axis) / axis.length();
+	let projectionB = {min : proB - b.width, max : proB + b.width};
 	if (Engine2D.engine.isOverlay(projectionA, projectionB)) {
 		return false;
 	}
@@ -1069,26 +1101,26 @@ Engine2D.engine.circlesCollisionTest = function(a,b){
 //圆心p(x, y), 半径r, 线段两端点p1(x1, y1)和p2(x2, y2)
 Engine2D.engine.circlesToLineCollisionNewTest = function(x,y,r,x1,y1,x2,y2){
 	
-	var disP1 = Math.sqrt((x - x1) * (x - x1) + (y - y1) * (y - y1));
-	var disP2 = Math.sqrt((x - x2) * (x - x2) + (y - y2) * (y - y2));
+	let disP1 = Math.sqrt((x - x1) * (x - x1) + (y - y1) * (y - y1));
+	let disP2 = Math.sqrt((x - x2) * (x - x2) + (y - y2) * (y - y2));
 	
-	var axisX1 = x1;
-	var axisY1 = y1;
+	let axisX1 = x1;
+	let axisY1 = y1;
 	
 	if(disP1>disP2){
 		axisX1 = x2;
 		axisY1 = y2;
 	}
 	
-	var axisX = x - axisX1;
-	var axisY = y - axisY1;
+	let axisX = x - axisX1;
+	let axisY = y - axisY1;
 	
-	var axis = new Engine2D.engine.Vec2(axisX, axisY);
+	let axis = new Engine2D.engine.Vec2(axisX, axisY);
 	
-	var proA = Engine2D.engine.Vec2.dot(new Engine2D.engine.Vec2(axisX1, axisY1), axis) / axis.length();
-	var projectionA = {min : proA, max : proA};
-	var proB = Engine2D.engine.Vec2.dot(new Engine2D.engine.Vec2(x, y), axis) / axis.length();
-	var projectionB = {min : proB - r, max : proB + r};
+	let proA = Engine2D.engine.Vec2.dot(new Engine2D.engine.Vec2(axisX1, axisY1), axis) / axis.length();
+	let projectionA = {min : proA, max : proA};
+	let proB = Engine2D.engine.Vec2.dot(new Engine2D.engine.Vec2(x, y), axis) / axis.length();
+	let projectionB = {min : proB - r, max : proB + r};
 	
 	if (Engine2D.engine.isOverlay(projectionA, projectionB)) {
 		return false;
@@ -1098,34 +1130,34 @@ Engine2D.engine.circlesToLineCollisionNewTest = function(x,y,r,x1,y1,x2,y2){
 }
 
 Engine2D.engine.RectToLineTestV2 = function(a,b){
-	var leftTop = [a.x, a.y];
-	var rightTop = [a.x + a.width, a.y];
-	var rightBottom = [a.x + a.width, a.y + a.height];
-	var leftBottom = [a.x, a.y + a.height];
-	var angleOfRad = Engine2D.engine.Vec2.degToRad(a.rotate);
+	let leftTop = [a.x, a.y];
+	let rightTop = [a.x + a.width, a.y];
+	let rightBottom = [a.x + a.width, a.y + a.height];
+	let leftBottom = [a.x, a.y + a.height];
+	let angleOfRad = Engine2D.engine.Vec2.degToRad(a.rotate);
 
-	var rotateLeftTop = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], leftTop, angleOfRad);
-	var rotateRightTop = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], rightTop, angleOfRad);
-	var rotateRightBottom = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], rightBottom, angleOfRad);
-	var rotateLeftBottom = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], leftBottom, angleOfRad);
+	let rotateLeftTop = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], leftTop, angleOfRad);
+	let rotateRightTop = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], rightTop, angleOfRad);
+	let rotateRightBottom = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], rightBottom, angleOfRad);
+	let rotateLeftBottom = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], leftBottom, angleOfRad);
 	
-	var lineA = {x:b.x,y:b.y};
-	var lineB = {x:b.x + Engine2D.util.cos(b.rotate) * b.width,y:b.y + Engine2D.util.sin(b.rotate) * b.width};
+	let lineA = {x:b.x,y:b.y};
+	let lineB = {x:b.x + Engine2D.util.cos(b.rotate) * b.width,y:b.y + Engine2D.util.sin(b.rotate) * b.width};
 
-	var hitResult = false;
+	let hitResult = false;
 	
-	var minDis = null;
+	let minDis = null;
 	
-	var result1 = Engine2D.engine.LineToLineTestV3(lineA,lineB,rotateLeftTop,rotateLeftBottom);
+	let result1 = Engine2D.engine.LineToLineTestV3(lineA,lineB,rotateLeftTop,rotateLeftBottom);
 
-	var result2 = Engine2D.engine.LineToLineTestV3(lineA,lineB,rotateLeftTop,rotateRightTop);
+	let result2 = Engine2D.engine.LineToLineTestV3(lineA,lineB,rotateLeftTop,rotateRightTop);
 
-	var result3 = Engine2D.engine.LineToLineTestV3(lineA,lineB,rotateRightTop,rotateRightBottom);
+	let result3 = Engine2D.engine.LineToLineTestV3(lineA,lineB,rotateRightTop,rotateRightBottom);
 
-	var result4 = Engine2D.engine.LineToLineTestV3(lineA,lineB,rotateLeftBottom,rotateRightBottom);
+	let result4 = Engine2D.engine.LineToLineTestV3(lineA,lineB,rotateLeftBottom,rotateRightBottom);
 	
 	if(result1){
-		var onceDis = Engine2D.engine.Vec2.distance(lineA,result1);
+		let onceDis = Engine2D.engine.Vec2.distance(lineA,result1);
 		if(minDis == null){
 			minDis = onceDis;
 			hitResult = result1;
@@ -1136,7 +1168,7 @@ Engine2D.engine.RectToLineTestV2 = function(a,b){
 	}
 	
 	if(result2){
-		var onceDis = Engine2D.engine.Vec2.distance(lineA,result2);
+		let onceDis = Engine2D.engine.Vec2.distance(lineA,result2);
 		if(minDis == null){
 			minDis = onceDis;
 			hitResult = result2;
@@ -1147,7 +1179,7 @@ Engine2D.engine.RectToLineTestV2 = function(a,b){
 	}
 	
 	if(result3){
-		var onceDis = Engine2D.engine.Vec2.distance(lineA,result3);
+		let onceDis = Engine2D.engine.Vec2.distance(lineA,result3);
 		if(minDis == null){
 			minDis = onceDis;
 			hitResult = result3;
@@ -1158,7 +1190,7 @@ Engine2D.engine.RectToLineTestV2 = function(a,b){
 	}
 	
 	if(result4){
-		var onceDis = Engine2D.engine.Vec2.distance(lineA,result4);
+		let onceDis = Engine2D.engine.Vec2.distance(lineA,result4);
 		if(minDis == null){
 			minDis = onceDis;
 			hitResult = result4;
@@ -1172,23 +1204,23 @@ Engine2D.engine.RectToLineTestV2 = function(a,b){
 }
 
 Engine2D.engine.RectToLineTest = function(a,b){
-	var leftTop = [a.x, a.y];
-	var rightTop = [a.x + a.width, a.y];
-	var rightBottom = [a.x + a.width, a.y + a.height];
-	var leftBottom = [a.x, a.y + a.height];
-	var angleOfRad = Engine2D.engine.Vec2.degToRad(a.rotate);
+	let leftTop = [a.x, a.y];
+	let rightTop = [a.x + a.width, a.y];
+	let rightBottom = [a.x + a.width, a.y + a.height];
+	let leftBottom = [a.x, a.y + a.height];
+	let angleOfRad = Engine2D.engine.Vec2.degToRad(a.rotate);
 
-	var rotateLeftTop = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], leftTop, angleOfRad);
-	var rotateRightTop = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], rightTop, angleOfRad);
-	var rotateRightBottom = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], rightBottom, angleOfRad);
-	var rotateLeftBottom = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], leftBottom, angleOfRad);
+	let rotateLeftTop = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], leftTop, angleOfRad);
+	let rotateRightTop = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], rightTop, angleOfRad);
+	let rotateRightBottom = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], rightBottom, angleOfRad);
+	let rotateLeftBottom = Engine2D.engine.Vec2.rotatePoint([a.centerX(), a.centerY()], leftBottom, angleOfRad);
 	
-	var x1 = b.x;
-	var y1 = b.y;
-	var x2 = b.x + Engine2D.util.cos(b.rotate) * b.width;
-	var y2 = b.y + Engine2D.util.sin(b.rotate) * b.width;
+	let x1 = b.x;
+	let y1 = b.y;
+	let x2 = b.x + Engine2D.util.cos(b.rotate) * b.width;
+	let y2 = b.y + Engine2D.util.sin(b.rotate) * b.width;
 	
-	var result = false;
+	let result = false;
 	
 	result = Engine2D.engine.LineToLineTest(x1,y1,x2,y2,rotateLeftTop.x,rotateLeftTop.y,rotateLeftBottom.x,rotateLeftBottom.y);
 	
@@ -1209,18 +1241,18 @@ Engine2D.engine.RectToLineTest = function(a,b){
 
 Engine2D.engine.RectToRectTest = function(a,b){
 
-	var sidesA = Engine2D.engine.getRectSides(a);
-	var sidesB = Engine2D.engine.getRectSides(b);
+	let sidesA = Engine2D.engine.getRectSides(a);
+	let sidesB = Engine2D.engine.getRectSides(b);
 
-	var result = false;
+	let result = false;
 	
 	for(var i=0;i<sidesA.length;i++){
 		
-		var sideA = sidesA[i];
+		let sideA = sidesA[i];
 		
 		for(var j=0;j<sidesB.length;j++){
 			
-			var sideB = sidesB[j];
+			let sideB = sidesB[j];
 			
 			result = Engine2D.engine.LineToLineTestV4(sideA,sideB);
 
@@ -1236,18 +1268,18 @@ Engine2D.engine.RectToRectTest = function(a,b){
 }
 
 Engine2D.engine.getRectSides = function(r){
-	var leftTop = [r.x, r.y];
-	var rightTop = [r.x + r.width, r.y];
-	var rightBottom = [r.x + r.width, r.y + r.height];
-	var leftBottom = [r.x, r.y + r.height];
-	var angleOfRad = Engine2D.engine.Vec2.degToRad(r.rotate);
+	let leftTop = [r.x, r.y];
+	let rightTop = [r.x + r.width, r.y];
+	let rightBottom = [r.x + r.width, r.y + r.height];
+	let leftBottom = [r.x, r.y + r.height];
+	let angleOfRad = Engine2D.engine.Vec2.degToRad(r.rotate);
 
-	var rotateLeftTop = Engine2D.engine.Vec2.rotatePoint([r.centerX(), r.centerY()], leftTop, angleOfRad);
-	var rotateRightTop = Engine2D.engine.Vec2.rotatePoint([r.centerX(), r.centerY()], rightTop, angleOfRad);
-	var rotateRightBottom = Engine2D.engine.Vec2.rotatePoint([r.centerX(), r.centerY()], rightBottom, angleOfRad);
-	var rotateLeftBottom = Engine2D.engine.Vec2.rotatePoint([r.centerX(), r.centerY()], leftBottom, angleOfRad);
+	let rotateLeftTop = Engine2D.engine.Vec2.rotatePoint([r.centerX(), r.centerY()], leftTop, angleOfRad);
+	let rotateRightTop = Engine2D.engine.Vec2.rotatePoint([r.centerX(), r.centerY()], rightTop, angleOfRad);
+	let rotateRightBottom = Engine2D.engine.Vec2.rotatePoint([r.centerX(), r.centerY()], rightBottom, angleOfRad);
+	let rotateLeftBottom = Engine2D.engine.Vec2.rotatePoint([r.centerX(), r.centerY()], leftBottom, angleOfRad);
 	
-	var sides = new Array();
+	let sides = new Array();
 	sides.push([rotateLeftTop.x,rotateLeftTop.y,rotateLeftBottom.x,rotateLeftBottom.y]);
 	sides.push([rotateLeftTop.x,rotateLeftTop.y,rotateRightTop.x,rotateRightTop.y]);
 	sides.push([rotateRightTop.x,rotateRightTop.y,rotateRightBottom.x,rotateRightBottom.y]);
@@ -1256,17 +1288,17 @@ Engine2D.engine.getRectSides = function(r){
 }
 
 Engine2D.engine.LineToLineTestV2 = function(lineA,lineB){
-	var x_start_1 = lineA[0];
-	var	y_start_1 = lineA[1]; 
-	var	x_end_1 = lineA[2];
-	var y_end_1 = lineA[3];
-	var x_start_2 = lineB[0];
-	var y_start_2 = lineB[1]; 
-	var x_end_2 = lineB[2];
-	var y_end_2 = lineB[3];
-	var temp = ((y_end_2-y_start_2)*(x_end_1-x_start_1) - (x_end_2-x_start_2)*(y_end_1-y_start_1));
-	var t1 = ((x_end_2-x_start_2)*(y_start_1-y_start_2) - (y_end_2-y_start_2)*(x_start_1-x_start_2)) / temp;
-	var t2 = ((x_end_1-x_start_1)*(y_start_1-y_start_2) - (y_end_1-y_start_1)*(x_start_1-x_start_2)) / temp;
+	let x_start_1 = lineA[0];
+	let	y_start_1 = lineA[1]; 
+	let	x_end_1 = lineA[2];
+	let y_end_1 = lineA[3];
+	let x_start_2 = lineB[0];
+	let y_start_2 = lineB[1]; 
+	let x_end_2 = lineB[2];
+	let y_end_2 = lineB[3];
+	let temp = ((y_end_2-y_start_2)*(x_end_1-x_start_1) - (x_end_2-x_start_2)*(y_end_1-y_start_1));
+	let t1 = ((x_end_2-x_start_2)*(y_start_1-y_start_2) - (y_end_2-y_start_2)*(x_start_1-x_start_2)) / temp;
+	let t2 = ((x_end_1-x_start_1)*(y_start_1-y_start_2) - (y_end_1-y_start_1)*(x_start_1-x_start_2)) / temp;
 
     if (t1 >= 0 && t1 <= 1 && t2 >= 0 && t2 <= 1) {
        return {point:{x:t1*x_end_1,y:t1*y_end_1}};
@@ -1276,11 +1308,11 @@ Engine2D.engine.LineToLineTestV2 = function(lineA,lineB){
 }
 
 Engine2D.engine.LineToLineTest = function(x_start_1,y_start_1,x_end_1,y_end_1,x_start_2,y_start_2,x_end_2,y_end_2){
-	var temp = ((y_end_2-y_start_2)*(x_end_1-x_start_1) - (x_end_2-x_start_2)*(y_end_1-y_start_1));
-	var t1 = ((x_end_2-x_start_2)*(y_start_1-y_start_2) - (y_end_2-y_start_2)*(x_start_1-x_start_2)) / temp;
-	var t2 = ((x_end_1-x_start_1)*(y_start_1-y_start_2) - (y_end_1-y_start_1)*(x_start_1-x_start_2)) / temp;
+	let temp = ((y_end_2-y_start_2)*(x_end_1-x_start_1) - (x_end_2-x_start_2)*(y_end_1-y_start_1));
+	let t1 = ((x_end_2-x_start_2)*(y_start_1-y_start_2) - (y_end_2-y_start_2)*(x_start_1-x_start_2)) / temp;
+	let t2 = ((x_end_1-x_start_1)*(y_start_1-y_start_2) - (y_end_1-y_start_1)*(x_start_1-x_start_2)) / temp;
 	
-	var denominator = (b.y - a.y)*(d.x - c.x) - (a.x - b.x)*(c.y - d.y);  
+	let denominator = (b.y - a.y)*(d.x - c.x) - (a.x - b.x)*(c.y - d.y);  
 	
     if (t1 >= 0 && t1 <= 1 && t2 >= 0 && t2 <= 1) {
 
@@ -1293,10 +1325,10 @@ Engine2D.engine.LineToLineTest = function(x_start_1,y_start_1,x_end_1,y_end_1,x_
 Engine2D.engine.LineToLineTestV3 = function segmentsIntr(a, b, c, d){  
 	  
     // 三角形abc 面积的2倍  
-    var area_abc = (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x);  
+	let area_abc = (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x);  
   
     // 三角形abd 面积的2倍  
-    var area_abd = (a.x - d.x) * (b.y - d.y) - (a.y - d.y) * (b.x - d.x);   
+	let area_abd = (a.x - d.x) * (b.y - d.y) - (a.y - d.y) * (b.x - d.x);   
   
     // 面积符号相同则两点在线段同侧,不相交 (对点在线段上的情况,本例当作不相交处理);  
     if ( area_abc*area_abd>=0 ) {  
@@ -1304,39 +1336,39 @@ Engine2D.engine.LineToLineTestV3 = function segmentsIntr(a, b, c, d){
     }  
   
     // 三角形cda 面积的2倍  
-    var area_cda = (c.x - a.x) * (d.y - a.y) - (c.y - a.y) * (d.x - a.x);  
+    let area_cda = (c.x - a.x) * (d.y - a.y) - (c.y - a.y) * (d.x - a.x);  
     // 三角形cdb 面积的2倍  
     // 注意: 这里有一个小优化.不需要再用公式计算面积,而是通过已知的三个面积加减得出.  
-    var area_cdb = area_cda + area_abc - area_abd ;  
+    let area_cdb = area_cda + area_abc - area_abd ;  
     if (  area_cda * area_cdb >= 0 ) {  
         return false;  
     }  
   
     //计算交点坐标  
-    var t = area_cda / ( area_abd- area_abc );  
-    var dx= t*(b.x - a.x),  
+    let t = area_cda / ( area_abd- area_abc );  
+    let dx= t*(b.x - a.x),  
         dy= t*(b.y - a.y);  
     return { x: a.x + dx , y: a.y + dy };  
 }
 
 Engine2D.engine.LineToLineTestV4 = function(lineA,lineB){
-	var a = {x:lineA[0],y:lineA[1]};
-	var b = {x:lineA[2],y:lineA[3]};
-	var c = {x:lineB[0],y:lineB[1]};
-	var d = {x:lineB[2],y:lineB[3]};
+	let a = {x:lineA[0],y:lineA[1]};
+	let b = {x:lineA[2],y:lineA[3]};
+	let c = {x:lineB[0],y:lineB[1]};
+	let d = {x:lineB[2],y:lineB[3]};
 	return Engine2D.engine.LineToLineTestV3(a,b,c,d);
 }
 
 //圆与线段碰撞检测
 //圆心p(x, y), 半径r, 线段两端点p1(x1, y1)和p2(x2, y2)
 Engine2D.engine.circlesToLineCollisionTest = function(x,y,r,x1,y1,x2,y2){
-	var vx1 = x - x1;
-	var vy1 = y - y1;
-	var vx2 = x2 - x1;
-	var vy2 = y2 - y1;
+	let vx1 = x - x1;
+	let vy1 = y - y1;
+	let vx2 = x2 - x1;
+	let vy2 = y2 - y1;
 	
 	// len = v2.length()
-	var len = Math.sqrt(vx2 * vx2 + vy2 * vy2);
+	let len = Math.sqrt(vx2 * vx2 + vy2 * vy2);
 
 	// v2.normalize()
 	vx2 /= len;
@@ -1344,11 +1376,11 @@ Engine2D.engine.circlesToLineCollisionTest = function(x,y,r,x1,y1,x2,y2){
 
 	// u = v1.dot(v2)
 	// u is the vector projection length of vector v1 onto vector v2.
-	var u = vx1 * vx2 + vy1 * vy2;
+	let u = vx1 * vx2 + vy1 * vy2;
 
 	// determine the nearest point on the lineseg
-	var x0 = 0;
-	var y0 = 0;
+	let x0 = 0;
+	let y0 = 0;
 	if (u <= 0){
 		// p is on the left of p1, so p1 is the nearest point on lineseg
 		x0 = x1;

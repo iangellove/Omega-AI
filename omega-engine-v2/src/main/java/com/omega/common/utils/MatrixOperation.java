@@ -1,8 +1,11 @@
 package com.omega.common.utils;
 
-import java.util.Random;
+import java.util.Vector;
 
-import com.omega.engine.active.Relu;
+import org.ejml.simple.SimpleMatrix;
+
+import com.omega.common.task.Task;
+import com.omega.common.task.TaskEngine;
 import com.omega.engine.pooling.PoolingType;
 
 /**
@@ -19,6 +22,8 @@ import com.omega.engine.pooling.PoolingType;
  */
 public class MatrixOperation {
 	
+	private static final int threadNum = 8;
+	
 	/**
 	 * 
 	 * @Title: exp
@@ -32,9 +37,51 @@ public class MatrixOperation {
 	 * @throws
 	 */
 	public static double[] exp(double[] x) {
-		double[] temp = MatrixOperation.zero(x.length);
+		double[] temp = MatrixUtils.zero(x.length);
 		for(int i = 0;i<x.length;i++) {
 			temp[i] = Math.exp(x[i]);
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: exp
+	 *
+	 * @param x
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[] pow(double[] x,double e) {
+		double[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = Math.pow(x[i],e);
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: exp
+	 *
+	 * @param x
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][] pow(double[][] x,double e) {
+		double[][] temp = MatrixUtils.zero(x.length,x[0].length);
+		for(int i = 0;i<x.length;i++) {
+			for(int j = 0;j<x[i].length;j++) {
+				temp[i][j] = Math.pow(x[i][j],e);
+			}
 		}
 		return temp;
 	}
@@ -53,7 +100,7 @@ public class MatrixOperation {
 	 * @throws
 	 */
 	public static double[] add(double[] x,double b) {
-		double[] temp = MatrixOperation.zero(x.length);
+		double[] temp = MatrixUtils.zero(x.length);
 		for(int i = 0;i<x.length;i++) {
 			temp[i] = x[i] + b;
 		}
@@ -77,7 +124,7 @@ public class MatrixOperation {
 		if(x == null) {
 			new RuntimeException("matrix is null.");
 		}
-		double[][] temp = MatrixOperation.zero(x.length,x[0].length);
+		double[][] temp = MatrixUtils.zero(x.length,x[0].length);
 		for(int i = 0;i<x.length;i++) {
 			for(int j = 0;j<x[i].length;j++) {
 				temp[i][j] = x[i][j] + b;
@@ -99,20 +146,20 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
-	public static double[][][][] add(double[][][][] x,double b) {
+	public static double[][][] add(double[][][] x,double b) {
 		if(x == null) {
 			new RuntimeException("matrix is null.");
 		}
-		double[][][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
-		for(int n = 0;n<x.length;n++) {
-			for(int c = 0;c<x[n].length;c++) {
-				for(int h = 0;h<x[n][c].length;h++) {
-					for(int w = 0;w<x[n][c][h].length;w++) {
-						temp[n][c][h][w] = x[n][c][h][w] + b;
-					}
+		double[][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
+		
+		for(int i = 0;i<x.length;i++) {
+			for(int j = 0;j<x[i].length;j++) {
+				for(int n = 0;n<x[i][j].length;n++) {
+					temp[i][j][n] = x[i][j][n] + b;
 				}
 			}
 		}
+
 		return temp;
 	}
 	
@@ -129,16 +176,16 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
-	public static double[][][][] add(double[][][][] x,double b[][][][]) {
+	public static double[][][][] add(double[][][][] x,double b) {
 		if(x == null) {
 			new RuntimeException("matrix is null.");
 		}
-		double[][][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
 		for(int n = 0;n<x.length;n++) {
 			for(int c = 0;c<x[n].length;c++) {
 				for(int h = 0;h<x[n][c].length;h++) {
 					for(int w = 0;w<x[n][c][h].length;w++) {
-						temp[n][c][h][w] = x[n][c][h][w] + b[n][c][h][w];
+						temp[n][c][h][w] = x[n][c][h][w] + b;
 					}
 				}
 			}
@@ -146,273 +193,6 @@ public class MatrixOperation {
 		return temp;
 	}
 	
-	/**
-	 * 
-	 * @Title: subtraction
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[] subtraction(double[] x,double b) {
-		double[] temp = MatrixOperation.zero(x.length);
-		for(int i = 0;i<x.length;i++) {
-			temp[i] = x[i] - b;
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: subtraction
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][] subtraction(double[][] x,double b) {
-		if(x == null) {
-			new RuntimeException("matrix is null.");
-		}
-		double[][] temp = MatrixOperation.zero(x.length,x[0].length);
-		for(int i = 0;i<x.length;i++) {
-			for(int j = 0;j<x[i].length;j++) {
-				temp[i][j] = x[i][j] - b;
-			}
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: subtraction
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][][][] subtraction(double[][][][] x,double b) {
-		if(x == null) {
-			new RuntimeException("matrix is null.");
-		}
-		double[][][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
-		for(int n = 0;n<x.length;n++) {
-			for(int c = 0;c<x[n].length;c++) {
-				for(int h = 0;h<x[n][c].length;h++) {
-					for(int w = 0;w<x[n][c][h].length;w++) {
-						temp[n][c][h][w] = x[n][c][h][w] - b;
-					}
-				}
-			}
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: multiplication
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[] multiplication(double[] x,double b) {
-		double[] temp = MatrixOperation.zero(x.length);
-		for(int i = 0;i<x.length;i++) {
-			temp[i] = x[i] * b;
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: multiplication
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][] multiplication(double[][] x,double b) {
-		if(x == null) {
-			new RuntimeException("matrix is null.");
-		}
-		double[][] temp = MatrixOperation.zero(x.length,x[0].length);
-		for(int i = 0;i<x.length;i++) {
-			for(int j = 0;j<x[i].length;j++) {
-				temp[i][j] = x[i][j] * b;
-			}
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: multiplication
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][][] multiplication(double[][][] x,double b) {
-		
-		if(x == null) {
-			new RuntimeException("matrix is null.");
-		}
-		
-		double[][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length);
-		for(int c = 0;c<x.length;c++) {
-			for(int i = 0;i<x[c].length;i++) {
-				for(int j = 0;j<x[c][i].length;j++) {
-					temp[c][i][j] = x[c][i][j] * b;
-				}
-			}
-			
-		}
-		
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: multiplication
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][][][] multiplication(double[][][][] x,double b) {
-		
-		if(x == null) {
-			new RuntimeException("matrix is null.");
-		}
-		
-		double[][][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
-		for(int c = 0;c<x.length;c++) {
-			for(int k = 0;k<x[c].length;k++) {
-				for(int i = 0;i<x[c][k].length;i++) {
-					for(int j = 0;j<x[c][k][i].length;j++) {
-						temp[c][k][i][j] = x[c][k][i][j] * b;
-					}
-				}
-			}
-			
-		}
-		
-		return temp;
-	}
-	
-	
-	/**
-	 * 
-	 * @Title: division
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[] division(double[] x,double b) {
-		double[] temp = MatrixOperation.zero(x.length);
-		for(int i = 0;i<x.length;i++) {
-			temp[i] = x[i] / b;
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: division
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][] division(double[][] x,double b) {
-		if(x == null) {
-			new RuntimeException("matrix is null.");
-		}
-		double[][] temp = MatrixOperation.zero(x.length,x[0].length);
-		for(int i = 0;i<x.length;i++) {
-			for(int j = 0;j<x[i].length;j++) {
-				temp[i][j] = x[i][j] / b;
-			}
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: division
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][][][] division(double[][][][] x,double b) {
-		if(x == null) {
-			new RuntimeException("matrix is null.");
-		}
-		double[][][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
-		for(int n = 0;n<x.length;n++) {
-			for(int m = 0;m<x[n].length;m++) {
-				for(int i = 0;i<x[n][m].length;i++) {
-					for(int j = 0;j<x[n][m][i].length;j++) {
-						temp[n][m][i][j] = x[n][m][i][j] / b;
-					}
-				}
-			}
-		}
-		return temp;
-	}
 	
 	/**
 	 * 
@@ -428,7 +208,7 @@ public class MatrixOperation {
 	 * @throws
 	 */
 	public static double[] add(double[] x,double[] b) {
-		double[] temp = MatrixOperation.zero(x.length);
+		double[] temp = MatrixUtils.zero(x.length);
 		for(int i = 0;i<x.length;i++) {
 			temp[i] = x[i] + b[i];
 		}
@@ -437,7 +217,7 @@ public class MatrixOperation {
 	
 	/**
 	 * 
-	 * @Title: subtraction
+	 * @Title: add
 	 *
 	 * @param x
 	 * @param b
@@ -448,78 +228,16 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
-	public static double[] subtraction(double[] x,double[] b) {
-		double[] temp = MatrixOperation.zero(x.length);
-		for(int i = 0;i<x.length;i++) {
-			temp[i] = x[i] - b[i];
+	public static double[][][][] add(double[][][][] x,double[][][][] b) {
+		if(x == null) {
+			new RuntimeException("matrix is null.");
 		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: subtraction
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[] subtractionP(double[] x,double[] b) {
-		double[] temp = MatrixOperation.zero(x.length);
-		for(int i = 0;i<x.length;i++) {
-			temp[i] = x[i] - b[i];
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: subtraction
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][] subtractionP(double[][] x,double[][] b) {
-		double[][] temp = MatrixOperation.zero(x.length,x[0].length);
-		for(int m = 0;m<x.length;m++) {
-			for(int i = 0;i<x[m].length;i++) {
-				temp[m][i] = x[m][i] - b[m][i];
-			}
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: subtraction
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][][][] subtractionP(double[][][][] x,double[][][][] b) {
-		double[][][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
-		for(int m = 0;m<x.length;m++) {
-			for(int i = 0;i<x[m].length;i++) {
-				for(int j = 0;j<x[m][i].length;j++) {
-					for(int n = 0;n<x[m][i][j].length;n++) {
-						temp[m][i][j][n] = x[m][i][j][n] - b[m][i][j][n];
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		for(int n = 0;n<x.length;n++) {
+			for(int c = 0;c<x[n].length;c++) {
+				for(int h = 0;h<x[n][c].length;h++) {
+					for(int w = 0;w<x[n][c][h].length;w++) {
+						temp[n][c][h][w] = x[n][c][h][w] + b[n][c][h][w];
 					}
 				}
 			}
@@ -527,48 +245,7 @@ public class MatrixOperation {
 		return temp;
 	}
 	
-	/**
-	 * 
-	 * @Title: multiplication
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[] multiplication(double[] x,double[] b) {
-		double[] temp = MatrixOperation.zero(x.length);
-		for(int i = 0;i<x.length;i++) {
-			temp[i] = x[i] * b[i];
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: division
-	 *
-	 * @param x
-	 * @param b
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[] division(double[] x,double[] b) {
-		double[] temp = MatrixOperation.zero(x.length);
-		for(int i = 0;i<x.length;i++) {
-			temp[i] = x[i] / b[i];
-		}
-		return temp;
-	}
-	
+
 	/**
 	 * 
 	 * @Title: add
@@ -589,7 +266,7 @@ public class MatrixOperation {
 		if(x.length != b.length || x[0].length != b[0].length) {
 			new RuntimeException("x size must equals b.");
 		}
-		double[][] temp = MatrixOperation.zero(x.length,x[0].length);
+		double[][] temp = MatrixUtils.zero(x.length,x[0].length);
 		for(int i = 0;i<x.length;i++) {
 			for(int j = 0;j<x[i].length;j++) {
 				temp[i][j] = x[i][j] + b[i][j];
@@ -620,7 +297,7 @@ public class MatrixOperation {
 			new RuntimeException("x size must equals b.");
 		}
 		
-		double[][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length);
+		double[][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
 		
 		for(int c = 0;c<x.length;c++) {
 			for(int i = 0;i<x[c].length;i++) {
@@ -655,7 +332,7 @@ public class MatrixOperation {
 			new RuntimeException("x size must equals b.");
 		}
 		
-		double[][][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
 		
 		for(int n = 0;n<x.length;n++) {
 
@@ -663,6 +340,50 @@ public class MatrixOperation {
 				for(int i = 0;i<x[n][c].length;i++) {
 					for(int j = 0;j<x[n][c][i].length;j++) {
 						temp[n][c][i][j] = x[n][c][i][j] + b[c];
+					}
+				}
+			}
+			
+		}
+		
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: add
+	 *
+	 * @param x
+	 * @param b
+	 * @param type
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] addByBN(double[][][][] x,double[] b, int type) {
+		if(x == null || b == null) {
+			new RuntimeException("matrix is null.");
+		}
+		
+		if(x.length != b.length) {
+			new RuntimeException("x size must equals b.");
+		}
+		
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		
+		for(int n = 0;n<x.length;n++) {
+
+			for(int c = 0;c<x[n].length;c++) {
+				for(int i = 0;i<x[n][c].length;i++) {
+					for(int j = 0;j<x[n][c][i].length;j++) {
+						if(type == 0) {
+							temp[n][c][i][j] = x[n][c][i][j] + b[j];
+						}else {
+							temp[n][c][i][j] = x[n][c][i][j] + b[c];
+						}
 					}
 				}
 			}
@@ -694,7 +415,7 @@ public class MatrixOperation {
 			new RuntimeException("x size must equals b.");
 		}
 		
-		double[][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length);
+		double[][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
 		
 		for(int c = 0;c<x.length;c++) {
 			for(int i = 0;i<x[c].length;i++) {
@@ -720,6 +441,289 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
+	public static double[] subtraction(double[] x,double b) {
+		double[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = x[i] - b;
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[] subtractionForOne(double[][][] x,double b) {
+		double[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = x[i][0][0] - b;
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][] subtraction(double[][] x,double b) {
+		if(x == null) {
+			new RuntimeException("matrix is null.");
+		}
+		double[][] temp = MatrixUtils.zero(x.length,x[0].length);
+		for(int i = 0;i<x.length;i++) {
+			for(int j = 0;j<x[i].length;j++) {
+				temp[i][j] = x[i][j] - b;
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] subtraction(double[][][][] x,double b) {
+		if(x == null) {
+			new RuntimeException("matrix is null.");
+		}
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		for(int n = 0;n<x.length;n++) {
+			for(int c = 0;c<x[n].length;c++) {
+				for(int h = 0;h<x[n][c].length;h++) {
+					for(int w = 0;w<x[n][c][h].length;w++) {
+						temp[n][c][h][w] = x[n][c][h][w] - b;
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[] subtraction(double[] x,double[] b) {
+		double[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = x[i] - b[i];
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[] subtractionP(double[] x,double[] b) {
+		double[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = x[i] - b[i];
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][] subtractionP(double[][] x,double[][] b) {
+		double[][] temp = MatrixUtils.zero(x.length,x[0].length);
+		for(int m = 0;m<x.length;m++) {
+			for(int i = 0;i<x[m].length;i++) {
+				temp[m][i] = x[m][i] - b[m][i];
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] subtractionP(double[][][][] x,double[][][][] b) {
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		for(int m = 0;m<x.length;m++) {
+			for(int i = 0;i<x[m].length;i++) {
+				for(int j = 0;j<x[m][i].length;j++) {
+					for(int n = 0;n<x[m][i][j].length;n++) {
+						temp[m][i][j][n] = x[m][i][j][n] - b[m][i][j][n];
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] subtractionP(double[][][][] x,double[][][] b) {
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		for(int m = 0;m<x.length;m++) {
+			for(int i = 0;i<x[m].length;i++) {
+				for(int j = 0;j<x[m][i].length;j++) {
+					for(int n = 0;n<x[m][i][j].length;n++) {
+						temp[m][i][j][n] = x[m][i][j][n] - b[i][j][n];
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @param type 0:fully,1:conv
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] subtraction(double[][][][] x,double[] b,int type) {
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		
+		for(int m = 0;m<x.length;m++) {
+			for(int i = 0;i<x[m].length;i++) {
+				for(int j = 0;j<x[m][i].length;j++) {
+					for(int n = 0;n<x[m][i][j].length;n++) {
+						if(type == 0) {
+							temp[m][i][j][n] = x[m][i][j][n] - b[n];
+						}else {
+							temp[m][i][j][n] = x[m][i][j][n] - b[i];
+						}
+						
+					}
+				}
+			}
+		}
+		
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] subtractionForConv(double[][][][] x,double[] b) {
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		
+		for(int m = 0;m<x.length;m++) {
+			for(int i = 0;i<x[m].length;i++) {
+				for(int j = 0;j<x[m][i].length;j++) {
+					for(int n = 0;n<x[m][i][j].length;n++) {
+						temp[m][i][j][n] = x[m][i][j][n] - b[i];
+					}
+				}
+			}
+		}
+		
+		return temp;
+	}
+	
+
+	/**
+	 * 
+	 * @Title: subtraction
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static double[][] subtraction(double[][] x,double[][] b) {
 		if(x == null || b == null) {
 			new RuntimeException("matrix is null.");
@@ -727,7 +731,7 @@ public class MatrixOperation {
 		if(x.length != b.length || x[0].length != b[0].length) {
 			new RuntimeException("x size must equals b.");
 		}
-		double[][] temp = MatrixOperation.zero(x.length,x[0].length);
+		double[][] temp = MatrixUtils.zero(x.length,x[0].length);
 		for(int i = 0;i<x.length;i++) {
 			for(int j = 0;j<x[i].length;j++) {
 				temp[i][j] = x[i][j] - b[i][j];
@@ -756,7 +760,7 @@ public class MatrixOperation {
 		if(x.length != b.length || x[0].length != b[0].length) {
 			new RuntimeException("x size must equals b.");
 		}
-		double[][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length);
+		double[][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
 		for(int k = 0;k<x.length;k++) {
 			for(int i = 0;i<x[k].length;i++) {
 				for(int j = 0;j<x[k][i].length;j++) {
@@ -788,7 +792,7 @@ public class MatrixOperation {
 		if(x.length != b.length || x[0].length != b[0].length) {
 			new RuntimeException("x size must equals b.");
 		}
-		double[][][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
 		for(int c = 0;c<x.length;c++) {
 			for(int k = 0;k<x[c].length;k++) {
 				for(int i = 0;i<x[c][k].length;i++) {
@@ -802,6 +806,184 @@ public class MatrixOperation {
 		return temp;
 	}
 	
+	
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[] multiplication(double[] x,double b) {
+		double[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = x[i] * b;
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][] multiplication(double[][] x,double b) {
+		if(x == null) {
+			new RuntimeException("matrix is null.");
+		}
+		double[][] temp = MatrixUtils.zero(x.length,x[0].length);
+		for(int i = 0;i<x.length;i++) {
+			for(int j = 0;j<x[i].length;j++) {
+				temp[i][j] = x[i][j] * b;
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][] multiplication(double[][][] x,double b) {
+		
+		if(x == null) {
+			new RuntimeException("matrix is null.");
+		}
+		
+		double[][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
+		for(int c = 0;c<x.length;c++) {
+			for(int i = 0;i<x[c].length;i++) {
+				for(int j = 0;j<x[c][i].length;j++) {
+					temp[c][i][j] = x[c][i][j] * b;
+				}
+			}
+			
+		}
+		
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] multiplication(double[][][][] x,double b) {
+		
+		if(x == null) {
+			new RuntimeException("matrix is null.");
+		}
+		
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		for(int c = 0;c<x.length;c++) {
+			for(int k = 0;k<x[c].length;k++) {
+				for(int i = 0;i<x[c][k].length;i++) {
+					for(int j = 0;j<x[c][k][i].length;j++) {
+						temp[c][k][i][j] = x[c][k][i][j] * b;
+					}
+				}
+			}
+			
+		}
+		
+		return temp;
+	}
+
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[] multiplication(double[] x,double[] b) {
+		double[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = x[i] * b[i];
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @param type 0:fully,1:conv
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] multiplicationByBN(double[][][][] x,double[] gama,int type) {
+		if(x == null || gama == null) {
+			new RuntimeException("matrix is null.");
+		}
+		
+		if(x.length != gama.length) {
+			new RuntimeException("x size must equals b.");
+		}
+		
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		
+		for(int n = 0;n<x.length;n++) {
+			for(int c = 0;c<x[n].length;c++) {
+				for(int i = 0;i<x[n][c].length;i++) {
+					for(int j = 0;j<x[n][c][i].length;j++) {
+						if(type == 0) {
+							temp[n][c][i][j] = x[n][c][i][j] * gama[j];
+						}else {
+							temp[n][c][i][j] = x[n][c][i][j] * gama[c];
+						}
+					}
+				}
+			}
+		}
+		
+		return temp;
+	}
+	
+
 	/**
 	 * 
 	 * @Title: multiplication
@@ -822,10 +1004,67 @@ public class MatrixOperation {
 		if(x.length != b.length || x[0].length != b[0].length) {
 			new RuntimeException("x size must equals b.");
 		}
-		double[][] temp = MatrixOperation.zero(x.length,x[0].length);
+		double[][] temp = MatrixUtils.zero(x.length,x[0].length);
 		for(int i = 0;i<x.length;i++) {
 			for(int j = 0;j<x[i].length;j++) {
 				temp[i][j] = x[i][j] * b[i][j];
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][] multiplicationForMatrix(double[][] x,double[][] b) {
+		if(x == null || b == null) {
+			new RuntimeException("matrix is null.");
+		}
+		if(x.length != b.length || x[0].length != b[0].length) {
+			new RuntimeException("x size must equals b.");
+		}
+		double[][] temp = MatrixUtils.zero(x.length,b[0].length);
+		for(int i = 0; i < x.length; i++){
+			for(int j = 0; j < b[0].length; j++){
+				for(int k = 0; k < x[0].length; k++){
+					temp[i][j] += x[i][k] * b[k][j];
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][] multiplicationByEjml(double[][] x,double[][] z) {
+		double[][] temp = MatrixUtils.zero(x.length,z[0].length);
+		SimpleMatrix a = new SimpleMatrix(x);
+		SimpleMatrix b = new SimpleMatrix(z);
+		SimpleMatrix c = a.mult(b);
+		for(int i = 0;i<temp.length;i++) {
+			for(int j = 0;j<temp[i].length;j++) {
+				temp[i][j] = c.get(i, j);
 			}
 		}
 		return temp;
@@ -851,7 +1090,7 @@ public class MatrixOperation {
 		if(x.length != b.length || x[0].length != b[0].length || x[0][0].length != b[0][0].length) {
 			new RuntimeException("x size must equals b.");
 		}
-		double[][][] temp = MatrixOperation.zero(x.length,x[0].length,x[0][0].length);
+		double[][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
 		for(int c = 0;c<x.length;c++) {
 			for(int i = 0;i<x[c].length;i++) {
 				for(int j = 0;j<x[c][i].length;j++) {
@@ -860,6 +1099,201 @@ public class MatrixOperation {
 			}
 		}
 		
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] multiplication(double[][][][] x,double[][][][] b) {
+		if(x == null || b == null) {
+			new RuntimeException("matrix is null.");
+		}
+		if(x.length != b.length || x[0].length != b[0].length || x[0][0].length != b[0][0].length) {
+			new RuntimeException("x size must equals b.");
+		}
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		for(int c = 0;c<x.length;c++) {
+			for(int i = 0;i<x[c].length;i++) {
+				for(int j = 0;j<x[c][i].length;j++) {
+					for(int l = 0;l<x[c][i][j].length;l++) {
+						temp[c][i][j][l] = x[c][i][j][l] * b[c][i][j][l];
+					}
+				}
+			}
+		}
+		
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: division
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[] division(double[] x,double b) {
+		double[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = x[i] / b;
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: division
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][] division(double[][] x,double b) {
+		if(x == null) {
+			new RuntimeException("matrix is null.");
+		}
+		double[][] temp = MatrixUtils.zero(x.length,x[0].length);
+		for(int i = 0;i<x.length;i++) {
+			for(int j = 0;j<x[i].length;j++) {
+				temp[i][j] = x[i][j] / b;
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: division
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][] division(double[][][] x,double b) {
+		if(x == null) {
+			new RuntimeException("matrix is null.");
+		}
+		double[][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
+		for(int n = 0;n<x.length;n++) {
+			for(int m = 0;m<x[n].length;m++) {
+				for(int i = 0;i<x[n][m].length;i++) {
+					temp[n][m][i] = x[n][m][i] / b;
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: division
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] division(double[][][][] x,double b) {
+		if(x == null) {
+			new RuntimeException("matrix is null.");
+		}
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		for(int n = 0;n<x.length;n++) {
+			for(int m = 0;m<x[n].length;m++) {
+				for(int i = 0;i<x[n][m].length;i++) {
+					for(int j = 0;j<x[n][m][i].length;j++) {
+						temp[n][m][i][j] = x[n][m][i][j] / b;
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: division
+	 *
+	 * @param x
+	 * @param b
+	 * @param type 0:fully,1:conv
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][][][] division(double[][][][] x,double b[],int type) {
+		if(x == null) {
+			new RuntimeException("matrix is null.");
+		}
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		for(int n = 0;n<x.length;n++) {
+			for(int m = 0;m<x[n].length;m++) {
+				for(int i = 0;i<x[n][m].length;i++) {
+					for(int j = 0;j<x[n][m][i].length;j++) {
+						if(type == 0) {
+							temp[n][m][i][j] = x[n][m][i][j] / b[j];
+						}else {
+							temp[n][m][i][j] = x[n][m][i][j] / b[m];
+						}
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: division
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[] division(double[] x,double[] b) {
+		double[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = x[i] / b[i];
+		}
 		return temp;
 	}
 	
@@ -883,7 +1317,7 @@ public class MatrixOperation {
 		if(x.length != b.length || x[0].length != b[0].length) {
 			new RuntimeException("x size must equals b.");
 		}
-		double[][] temp = MatrixOperation.zero(x.length,x[0].length);
+		double[][] temp = MatrixUtils.zero(x.length,x[0].length);
 		for(int i = 0;i<x.length;i++) {
 			for(int j = 0;j<x[0].length;j++) {
 				temp[i][j] = x[i][j] / b[i][j];
@@ -894,9 +1328,10 @@ public class MatrixOperation {
 	
 	/**
 	 * 
-	 * @Title: clone
+	 * @Title: subtraction
 	 *
 	 * @param x
+	 * @param b
 	 * @return
 	 *
 	 * @Description:
@@ -904,19 +1339,26 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
-	public static double[] clone(double[] x) {
-		double[] temp = new double[x.length];
-		for(int i = 0;i<x.length;i++) {
-			temp[i] = x[i];
+	public static double[][][][] division(double[][][][] x,double[][][] b) {
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		for(int m = 0;m<x.length;m++) {
+			for(int i = 0;i<x[m].length;i++) {
+				for(int j = 0;j<x[m][i].length;j++) {
+					for(int n = 0;n<x[m][i][j].length;n++) {
+						temp[m][i][j][n] = x[m][i][j][n] / b[i][j][n];
+					}
+				}
+			}
 		}
 		return temp;
 	}
 	
 	/**
 	 * 
-	 * @Title: clone
+	 * @Title: subtraction
 	 *
 	 * @param x
+	 * @param b
 	 * @return
 	 *
 	 * @Description:
@@ -924,163 +1366,18 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
-	public static double[][] clone(double[][] x) {
-		double[][] temp = new double[x.length][x[0].length];
-		for(int i = 0;i<x.length;i++) {
-			for(int j = 0;j<x[i].length;j++) {
-				temp[i][j] = x[i][j];
-			}
-		}
-		return temp;
-	}
-	
-	/**
-	 * 
-	 * @Title: clone
-	 *
-	 * @param x
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][][] clone(double[][][] x) {
-		double[][][] temp = new double[x.length][x[0].length][x[0][0].length];
-		for(int c = 0;c<x.length;c++) {
-			for(int i = 0;i<x[c].length;i++) {
-				for(int j = 0;j<x[c][i].length;j++) {
-					temp[c][i][j] = x[c][i][j];
+	public static double[][][][] division(double[][][][] x,double[][][][] b) {
+		double[][][][] temp = MatrixUtils.zero(x.length,x[0].length,x[0][0].length,x[0][0][0].length);
+		for(int m = 0;m<x.length;m++) {
+			for(int i = 0;i<x[m].length;i++) {
+				for(int j = 0;j<x[m][i].length;j++) {
+					for(int n = 0;n<x[m][i][j].length;n++) {
+						temp[m][i][j][n] = x[m][i][j][n] / b[m][i][j][n];
+					}
 				}
 			}
 		}
 		return temp;
-	}
-	
-	/**
-	 * transform
-	 * @param x  c * h * w
-	 * @index ci * h * w + hi * w + wi
-	 * @return
-	 */
-	public static double[] transform(double[][][] x) {
-		
-		double[] result = new double[x.length * x[0].length * x[0][0].length];
-		
-		for(int c = 0;c<x.length;c++) {
-			
-			for(int h = 0;h<x[c].length;h++) {
-				
-				for(int w = 0;w<x[c][h].length;w++) {
-					result[c*x[c].length*x[c][h].length + h*x[c][h].length + w] = x[c][h][w];
-				}
-			}
-			
-		}
-		
-		return result;
-	}
-	
-	/**
-	 * 
-	 * @param x
-	 * @index ni * c * h * w + ci * h * w + hi * w + wi
-	 * @return
-	 */
-	public static double[] transform(double[][][][] x){
-		
-		double[] y = new double[x.length * x[0].length * x[0][0].length * x[0][0][0].length];
-		
-		for(int n = 0;n<x.length;n++) {
-			for(int c = 0;c<x[n].length;c++) {
-				for(int h = 0;h<x[n][c].length;h++) {
-					for(int w = 0;w<x[n][c][h].length;w++) {
-						y[n*x[n].length*x[n][c].length*x[n][c][h].length + c*x[n][c].length*x[n][c][h].length + h*x[n][c][h].length + w] = x[n][c][h][w];
-					}
-				}
-				
-			}
-		}
-		return y;
-	}
-	
-	/**
-	 * transform
-	 * @param x
-	 * @return
-	 */
-	public static double[][][] transform(double[] x,int c,int h,int w) {
-		
-		double[][][] y = new double[c][h][w];
-		
-		for(int ci = 0;ci<c;ci++) {
-			for(int hi = 0;hi<h;hi++) {
-				for(int wi = 0;wi<w;wi++) {
-					y[ci][hi][wi] = x[ci * h * w + hi * w + wi];
-				}
-			}
-		}
-		
-		return y;
-	}
-	
-	/**
-	 * transform
-	 * @param x
-	 * @index ni * c * h * w + ci * h * w + hi * w + wi
-	 * @return
-	 */
-	public static double[][][][] transform(double[] x,int n,int c,int h,int w) {
-		
-		double[][][][] y = new double[n][c][h][w];
-		for(int ni = 0;ni<n;ni++) {
-			for(int ci = 0;ci<c;ci++) {
-				for(int hi = 0;hi<h;hi++) {
-					for(int wi = 0;wi<w;wi++) {
-						y[ni][ci][hi][wi] = x[ni * c * h * w + ci * h * w + hi * w + wi];
-					}
-				}
-			}
-		}
-		
-		return y;
-	}
-	
-	/**
-	 * transform
-	 * @param x
-	 * @return
-	 */
-	public static double[][][][] transform(double[][] x,int n,int c,int h,int w) {
-		
-		double[][][][] y = new double[n][c][h][w];
-		
-		for(int ni = 0;ni<n;ni++) {
-			for(int ci = 0;ci<c;ci++) {
-				for(int hi = 0;hi<h;hi++) {
-					for(int wi = 0;wi<w;wi++) {
-						y[ni][ci][hi][wi] = x[ni][ci * h * w + hi * w + wi];
-					}
-				}
-			}
-		}
-
-		return y;
-	}
-	
-	/**
-	 * transform
-	 * @param x
-	 * @return
-	 * @remark 
-	 * 数据长度必须对等
-	 */
-	public static double[][][][] transform(double[][][][] x,int n,int c,int h,int w) {
-		
-		double[] temp = MatrixOperation.transform(x);
-		
-		return MatrixOperation.transform(temp, n, c, h, w);
 	}
 	
 	/**
@@ -1164,6 +1461,33 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
+	public static double[][][] sumByBn(double[][][][] x) {
+		double[][][] temp = new double[x[0].length][x[0][0].length][x[0][0][0].length];
+		for(int i = 0;i<x.length;i++) {
+			for(int j = 0;j<x[i].length;j++) {
+				for(int n = 0;n<x[i][j].length;n++) {
+					for(int m = 0;m<x[i][j][n].length;m++) {
+						temp[j][n][m] += x[i][j][n][m];
+					}
+				}
+			}
+			
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: count
+	 *
+	 * @param x
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static double[] sumBias(double[][][] x) {
 		double[] temp = new double[x.length];
 		for(int i = 0;i<x.length;i++) {
@@ -1202,85 +1526,6 @@ public class MatrixOperation {
 		return temp;
 	}
 	
-	/**
-	 * 
-	 * @Title: zero
-	 *
-	 * @param size
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[] zero(int size) {
-		return new double[size];
-	}
-	
-	/**
-	 * 
-	 * @Title: zero
-	 *
-	 * @param size
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][] zero(int x,int y) {
-		return new double[x][y];
-	}
-	
-	/**
-	 * 
-	 * @Title: zero
-	 *
-	 * @param size
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][][] zero(int x,int y,int z) {
-		return new double[x][y][z];
-	}
-	
-	/**
-	 * 
-	 * @Title: zero
-	 *
-	 * @param size
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][][][] zero(int x,int y,int z,int n) {
-		return new double[x][y][z][n];
-	}
-	
-	/**
-	 * 
-	 * @Title: zero
-	 *
-	 * @param size
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][][][][] zero(int x,int y,int z,int n,int m) {
-		return new double[x][y][z][n][m];
-	}
 	
 	/**
 	 * isZero
@@ -1339,6 +1584,33 @@ public class MatrixOperation {
 	
 	/**
 	 * 
+	 * @Title: max
+	 *
+	 * @return
+	 *
+	 * @Description:
+	 *
+	 * @throws
+	 */
+	public static double max(double[][][] x) {
+		double max = 0.0d;
+		if(x.length > 0) {
+			max = x[0][0][0];
+			for(int c= 0;c<x.length;c++) {
+				for(int h = 0;h<x[c].length;h++) {
+					for(int w = 0;w<x[c][h].length;w++) {
+						if(max <= x[c][h][w]) {
+							max = x[c][h][w];
+						}
+					}
+				}
+			}
+		}
+		return max;
+	}
+	
+	/**
+	 * 
 	 * @Title: maxIndex
 	 *
 	 * @return
@@ -1360,6 +1632,331 @@ public class MatrixOperation {
 		}
 		return index;
 	}
+	
+	/**
+	 * 
+	 * @Title: maxIndex
+	 *
+	 * @return
+	 *
+	 * @Description:
+	 *
+	 * @throws
+	 */
+	public static int maxIndex(double[][][] x) {
+		int index = 0;
+		if(x.length > 0) {
+			double max = x[0][0][0];
+			for(int i= 0;i<x.length;i++) {
+				if(max <= x[i][0][0]) {
+					max = x[i][0][0];
+					index = i;
+				}
+			}
+		}
+		return index;
+	}
+	
+	/**
+	 * mean
+	 * @param x
+	 * @return
+	 */
+	public static double[][][] mean(double[][][][] x){
+		
+		double[][][] mean = new double[x[0].length][x[0][0].length][x[0][0][0].length];
+		
+		for(int m = 0;m<x.length;m++) {
+			for(int c = 0;c<x[m].length;c++) {
+				for(int h = 0;h<x[m][c].length;h++) {
+					for(int  w = 0;w<x[m][c][h].length;w++) {
+						mean[c][h][w] += x[m][c][h][w] / x.length;
+					}
+				}
+			}
+		}
+		
+		return mean;
+	}
+	
+	/**
+	 * mean
+	 * @param x
+	 * @param type 0:fully,1:conv
+	 * @return
+	 */
+	public static double[] mean(double[][][][] x,int type){
+		
+		int count = 0;
+
+		if(type == 0) {
+			count = x[0][0][0].length;
+		}else {
+			count = x[0].length;
+		}
+		
+		double[] mean = new double[count];
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		for(int m = 0;m<x.length;m++) {
+			final int index = m;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					for(int c = 0;c<x[index].length;c++) {
+						for(int h = 0;h<x[index][c].length;h++) {
+							for(int  w = 0;w<x[index][c][h].length;w++) {
+								if(type == 0) {
+									mean[w] += x[index][c][h][w] / x.length;
+								}else {
+									mean[c] += x[index][c][h][w] / x.length / x[0][0].length / x[0][0][0].length;
+								}
+							}
+						}
+					}
+					return null;
+				}
+			});
+		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+		
+		return mean;
+	}
+	
+	/**
+	 * standard deviation
+	 * @param x
+	 * @return
+	 */
+	public static double[][][] std(double[][][][] x){
+		
+		double[][][] std = new double[x[0].length][x[0][0].length][x[0][0][0].length];
+		
+		std = MatrixOperation.var(x);
+		
+		for(int c = 0;c<std.length;c++) {
+			for(int h = 0;h<std[c].length;h++) {
+				for(int  w = 0;w<std[c][h].length;w++) {
+					std[c][h][w] = Math.sqrt(std[c][h][w]);
+				}
+			}
+		}
+
+		return std;
+	}
+	
+	/**
+	 * standard deviation
+	 * @param x
+	 * @param type 0:fully,1:conv
+	 * @return
+	 */
+	public static double[] std(double[][][][] x,int eta,int type){
+		
+		double[] std = MatrixOperation.var(x, type);
+		
+		for(int c = 0;c<std.length;c++) {
+			std[c] = Math.sqrt(std[c] + eta);
+		}
+
+		return std;
+	}
+	
+	/**
+	 * standard deviation
+	 * @param x
+	 * @param type 0:fully,1:conv
+	 * @return
+	 */
+	public static double[] std(double[] x){
+		
+		double[] std = new double[x.length];
+		
+		for(int c = 0;c<std.length;c++) {
+			std[c] = Math.sqrt(x[c]);
+		}
+
+		return std;
+	}
+	
+	/**
+	 * standard deviation
+	 * @param x
+	 * @return
+	 */
+	public static double[][][] var(double[][][][] x){
+		
+		double[][][] mean = MatrixOperation.mean(x);
+		
+		double[][][] std = new double[x[0].length][x[0][0].length][x[0][0][0].length];
+		
+		for(int m = 0;m<x.length;m++) {
+			for(int c = 0;c<x[m].length;c++) {
+				for(int h = 0;h<x[m][c].length;h++) {
+					for(int  w = 0;w<x[m][c][h].length;w++) {
+						std[c][h][w] += ((x[m][c][h][w] - mean[c][h][w]) * (x[m][c][h][w] - mean[c][h][w])) / x.length;
+					}
+				}
+			}
+		}
+		
+		return std;
+	}
+	
+	/**
+	 * standard deviation
+	 * @param x
+	 * @param type 0:fully,1:conv
+	 * @return
+	 */
+	public static double[] var(double[][][][] x, int type){
+		
+		double[] mean = MatrixOperation.mean(x, type);
+		
+		double[] std = new double[mean.length];
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		for(int m = 0;m<x.length;m++) {
+			final int index = m;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					for(int c = 0;c<x[index].length;c++) {
+						for(int h = 0;h<x[index][c].length;h++) {
+							for(int  w = 0;w<x[index][c][h].length;w++) {
+								if(type == 0) {
+									std[w] += ((x[index][c][h][w] - mean[w]) * (x[index][c][h][w] - mean[w])) / x.length;
+								}else {
+									std[c] += ((x[index][c][h][w] - mean[c]) * (x[index][c][h][w] - mean[c])) / x.length;
+								}
+							}
+						}
+					}
+					return null;
+				}
+			});
+		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+		
+		return std;
+	}
+	
+	/**
+	 * pow
+	 * @return
+	 */
+	public static double[][][] pow(double[][][] x,double exponent){
+		
+		double[][][] y = new double[x.length][x[0].length][x[0][0].length];
+		
+		for(int k = 0;k<x.length;k++) {
+			for(int i = 0;i<x[k].length;i++) {
+				for(int j = 0;j<x[k][i].length;j++) {
+					y[k][i][j] = Math.pow(x[k][i][j], exponent);
+				}
+			}
+		}
+		
+		return y;
+	}
+	
+	/**
+	 * pow
+	 * @return
+	 */
+	public static double[][][][] pow(double[][][][] x,double exponent){
+		
+		double[][][][] y = new double[x.length][x[0].length][x[0][0].length][x[0][0][0].length];
+		
+		for(int k = 0;k<x.length;k++) {
+			for(int i = 0;i<x[k].length;i++) {
+				for(int j = 0;j<x[k][i].length;j++) {
+					for(int l = 0;l<x[k][i][j].length;l++) {
+						y[k][i][j][l] = Math.pow(x[k][i][j][l], exponent);
+					}
+				}
+			}
+		}
+		
+		return y;
+	}
+	
+	/**
+	 * sqrt
+	 * @return
+	 */
+	public static double[] sqrt(double[] x){
+		
+		double[] y = new double[x.length];
+		
+		for(int i = 0;i<x.length;i++) {
+			y[i] = Math.sqrt(x[i]);
+		}
+
+		return y;
+	}
+	
+	/**
+	 * sqrt
+	 * @return
+	 */
+	public static double[][] sqrt(double[][] x){
+		
+		double[][] y = new double[x.length][x[0].length];
+		
+		for(int i = 0;i<x.length;i++) {
+			for(int j = 0;j<x[i].length;j++) {
+				y[i][j] = Math.sqrt(x[i][j]);
+			}
+		}
+
+		return y;
+	}
+	
+	/**
+	 * sqrt
+	 * @return
+	 */
+	public static double[][][] sqrt(double[][][] x){
+		
+		double[][][] y = new double[x.length][x[0].length][x[0][0].length];
+		
+		for(int k = 0;k<x.length;k++) {
+			for(int i = 0;i<x[k].length;i++) {
+				for(int j = 0;j<x[k][i].length;j++) {
+					y[k][i][j] = Math.sqrt(x[k][i][j]);
+				}
+			}
+		}
+		
+		return y;
+	}
+	
+	/**
+	 * sqrt
+	 * @return
+	 */
+	public static double[][][][] sqrt(double[][][][] x){
+		
+		double[][][][] y = new double[x.length][x[0].length][x[0][0].length][x[0][0][0].length];
+		
+		for(int k = 0;k<x.length;k++) {
+			for(int i = 0;i<x[k].length;i++) {
+				for(int j = 0;j<x[k][i].length;j++) {
+					for(int l = 0;l<x[k][i][j].length;l++) {
+						y[k][i][j][l] = Math.sqrt(x[k][i][j][l]);
+					}
+				}
+			}
+		}
+		
+		return y;
+	}
+	
 	
 	/**
 	 * rotate90
@@ -1478,7 +2075,6 @@ public class MatrixOperation {
 				}
 			}
 		}
-		
 		return temp;
 	}
 	
@@ -1678,7 +2274,7 @@ public class MatrixOperation {
 		int oWidth = ((x[0][0].length - k[0][0][0].length) / stride) + 1;
 
 		double[][][] result = new double[kNum][oHeight][oWidth];
-		
+
 		for(int kn = 0;kn<kNum;kn++) {
 			
 			for(int i = 0;i<oHeight;i++) {
@@ -1704,56 +2300,268 @@ public class MatrixOperation {
 			}
 			
 		}
+
+		return result;
+	}
+	
+	/**
+	 * im2col2
+	 * @param x
+	 * @param kh
+	 * @param kw
+	 * @param stride
+	 * @return
+	 */
+	public static double[][] im2col2(double[][][] x,int kh,int kw,int stride){
+		
+		int oHeight = ((x[0].length - kh ) / stride) + 1;
+		
+		int oWidth = ((x[0][0].length - kw) / stride) + 1;
+		
+		int ow = x.length * kh * kw;
+		
+		int oh = oHeight * oWidth;
+		
+		int kSize = kh * kw;
+		
+		double[][] result = new double[oh][ow];
+		
+		for(int i = 0;i<oh;i++) {
+			
+			int startH = i / oHeight * stride;
+			
+			int startW = i % oWidth * stride;
+			
+			for(int j = 0;j<ow;j++) {
+				
+				int c = j / kSize;
+				
+				int xSize = j - (c * kSize);
+				
+				int xh = startH + xSize / kw;
+				
+				int xw = startW + xSize % kw;
+				
+				result[i][j] = x[c][xh][xw];
+
+			}
+			
+		}
 		
 		return result;
 	}
 	
 	/**
-	 * convnVail
-	 * @param x  c * h * w
-	 * @param k  c * kn * kh * kw
+	 * im2col
+	 * @param x
+	 * @param kh
+	 * @param kw
 	 * @param stride
 	 * @return
-	 * 
-	 * o = (W - K) / S + 1
 	 */
-	public static double[][][] convnVail(double[][][][] k,double[][][] x,int stride){
+	public static double[][] im2col(double[][][] x,int kh,int kw,int stride){
 		
-		int channel = k.length;
+		int oHeight = ((x[0].length - kh ) / stride) + 1;
 		
-		int kNum = k[0].length;
+		int oWidth = ((x[0][0].length - kw) / stride) + 1;
+		
+		int channel = x.length;
+		
+		double[][] result = new double[oHeight * oWidth][channel * kh * kw];
+		
+		int hIndex = 0;
+		
+		for(int oh = 0;oh<oHeight;oh++) {
+			
+			for(int ow = 0;ow<oWidth;ow++) {
+
+				int wIndex = 0;
+				
+				for(int c = 0;c<channel;c++) {
+
+					for(int h = 0;h<kh;h++) {
+						
+						for(int w = 0;w<kw;w++) {
+							
+							result[hIndex][wIndex] = x[c][oh * stride + h][ow * stride + w];
+							
+							wIndex++;
+						}
+						
+					}
+					
+				}
+
+				hIndex++;
+			}
+			
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * im2col
+	 * @param x
+	 * @param kh
+	 * @param kw
+	 * @param stride
+	 * @return
+	 */
+	public static double[][] kernel2col(double[][][][] k,int kh,int kw){
+		
+		int ic = k.length;
+				
+		int oc = k[0].length;
+		
+		double[][] result = new double[ic * kh * kw][oc];
+		
+		int hIndex = 0;
+		
+		for(int c = 0;c<ic;c++) {
+			
+			for(int h = 0;h<kh;h++) {
+				
+				for(int w = 0;w<kw;w++) {
+					
+					for(int n = 0;n<oc;n++) {
+						
+						result[hIndex][n] = k[c][n][h][w];
+
+					}
+					hIndex++;
+				}
+				
+			}
+			
+		}
+
+		return result;
+	}
+	
+	/**
+	 * im2col
+	 * @param x
+	 * @param kh
+	 * @param kw
+	 * @param stride
+	 * @return
+	 */
+	public static double[][] kernel2colToBack(double[][][][] k,int kh,int kw){
+		
+		int ic = k.length;
+				
+		int oc = k[0].length;
+		
+		double[][] result = new double[oc * kh * kw][ic];
+		
+		int hIndex = 0;
+		
+		for(int n = 0;n<oc;n++) {
+			
+			for(int h = 0;h<kh;h++) {
+				
+				for(int w = 0;w<kw;w++) {
+					
+					for(int c = 0;c<ic;c++) {
+						
+						result[hIndex][c] = k[c][n][h][w];
+
+					}
+					hIndex++;
+				}
+				
+			}
+			
+		}
+
+		return result;
+	}
+	
+	public static double[][][][] convnVailByIm2Col(double[][][][] x,double[][][][] k,int stride,boolean isBack){
+		
+		int ko = k[0].length;
+		
+		if(isBack) {
+			ko = k.length;
+		}
+		
+		int kh = k[0][0].length;
+		
+		int kw = k[0][0][0].length;
+		
+		int oHeight = ((x[0][0].length - k[0][0].length ) / stride) + 1;
+		
+		int oWidth = ((x[0][0][0].length - k[0][0][0].length) / stride) + 1;
+
+		double[][][][] result = new double[x.length][ko][oHeight][oWidth];
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		for(int bn = 0;bn<x.length;bn++) {
+			
+			final int index = bn;
+			
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+
+					double[][] col = MatrixOperation.im2col(x[index], kh, kw, stride);
+					
+					double[][] colK = MatrixOperation.kernel2col(k, kh, kw);
+					
+					if(isBack) {
+						colK = MatrixOperation.kernel2colToBack(k, kh, kw);
+					}
+
+//					double[][] output = MatrixOperation.multiplicationForMatrix(col, colK);
+
+					double[][] output = MatrixOperation.multiplicationByEjml(col, colK);
+					
+					result[index] = MatrixUtils.transform(output, oHeight, oWidth);
+
+					return null;
+				}
+			});
+			
+		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+		
+		return result;
+	}
+	
+	public static double[][][] convnVailByIm2Col(double[][][] x,double[][][][] k,int stride,boolean isBack){
+		
+		int ko = k[0].length;
+		
+		if(isBack) {
+			ko = k.length;
+		}
+		
+		int kh = k[0][0].length;
+		
+		int kw = k[0][0][0].length;
 		
 		int oHeight = ((x[0].length - k[0][0].length ) / stride) + 1;
 		
 		int oWidth = ((x[0][0].length - k[0][0][0].length) / stride) + 1;
 
-		double[][][] diff = new double[channel][oHeight][oWidth];
+		double[][][] result = new double[ko][oHeight][oWidth];
 
-		for(int c = 0;c<channel;c++) {
-			
-			for(int kn = 0;kn<kNum;kn++) {
-				
-				for(int i = 0;i<oHeight;i++) {
-					
-					for(int j = 0;j<oWidth;j++) {
-						
-						for(int m = 0;m<k[c][kn].length;m++) {
-								
-							for(int n = 0;n<k[c][kn][m].length;n++) {
-									
-								diff[c][i][j] += x[kn][i * stride + m][j * stride + n] * k[c][kn][m][n];
-	
-							}
-								
-						}
-							
-					}
-						
-				}
-			}
-		}
+		double[][] col = MatrixOperation.im2col(x, kh, kw, stride);
 		
-		return diff;
+		double[][] colK = MatrixOperation.kernel2col(k, kh, kw);
+		
+		if(isBack) {
+			colK = MatrixOperation.kernel2colToBack(k, kh, kw);
+		}
+
+		double[][] output = MatrixOperation.multiplicationForMatrix(col, colK);
+		
+		result = MatrixUtils.transform(output, oHeight, oWidth);
+
+		return result;
 	}
 	
 	/**
@@ -1778,21 +2586,21 @@ public class MatrixOperation {
 		double[][][][] result = new double[x.length][kNum][oHeight][oWidth];
 		
 		for(int b = 0;b<x.length;b++) {
-
+			double[][][] bo = new double[kNum][oHeight][oWidth];
 			for(int kn = 0;kn<kNum;kn++) {
-				
-				for(int i = 0;i<oHeight;i++) {
+
+				for(int c = 0;c<channel;c++) {
 					
-					for(int j = 0;j<oWidth;j++) {
+					for(int i = 0;i<oHeight;i++) {
+					
+						for(int j = 0;j<oWidth;j++) {
 						
-						for(int c = 0;c<channel;c++) {
-							
 							for(int m = 0;m<k[c][kn].length;m++) {
 								
 								for(int n = 0;n<k[c][kn][m].length;n++) {
 									
-									result[b][kn][i][j] += x[b][c][i * stride + m][j * stride + n] * k[c][kn][m][n];
-
+									bo[kn][i][j] += x[b][c][i * stride + m][j * stride + n] * k[c][kn][m][n];
+									
 								}
 								
 							}
@@ -1804,9 +2612,9 @@ public class MatrixOperation {
 				}
 				
 			}
-				
+			result[b] = bo;
 		}
-		
+
 		return result;
 	}
 	
@@ -1933,35 +2741,51 @@ public class MatrixOperation {
 		
 		double[][][][] result = new double[channel][kNum][oHeight][oWidth];
 		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
 		for(int b = 0;b<x.length;b++) {
-
-			for(int c = 0;c<channel;c++) {
+			
+			int index = b;
+			
+			workers.add(new Task<Object>(index) {
 				
-				for(int kn = 0;kn<kNum;kn++) {
-					
-					for(int i = 0;i<oHeight;i++) {
-						
-						for(int j = 0;j<oWidth;j++) {
-							
-							for(int m = 0;m<d[b][kn].length;m++) {
-									
-								for(int n = 0;n<d[b][kn][m].length;n++) {
-									
-									result[c][kn][i][j] += x[b][c][i * stride + m][j * stride + n] * d[b][kn][m][n];
+				@Override
+			    public Object call() throws Exception {
 
-								}
+					for(int c = 0;c<channel;c++) {
+						
+						for(int kn = 0;kn<kNum;kn++) {
+							
+							for(int i = 0;i<oHeight;i++) {
 								
+								for(int j = 0;j<oWidth;j++) {
+									
+									for(int m = 0;m<d[index][kn].length;m++) {
+											
+										for(int n = 0;n<d[index][kn][m].length;n++) {
+											
+											result[c][kn][i][j] += x[index][c][i * stride + m][j * stride + n] * d[index][kn][m][n];
+
+										}
+										
+									}
+									
+								}
+									
 							}
-							
+								
 						}
-							
-					}
 						
+					}
+
+					return null;
 				}
-				
-			}
+			
+			});
 			
 		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
 		
 		return result;
 	}
@@ -2139,63 +2963,79 @@ public class MatrixOperation {
 
 		double[][][][] result = new double[number][channel][oHeight][oWidth];
 		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
 		for(int b = 0;b<number;b++) {
-
-			for(int c = 0;c<channel;c++) {
+			
+			final int index = b;
+			
+			workers.add(new Task<Object>(index) {
 				
-				int maskIndex = 0;
-				
-				for(int i = 0;i<oHeight;i++) {
+				@Override
+				public Object call() {
 					
-					for(int j = 0;j<oWidth;j++) {
+					for(int c = 0;c<channel;c++) {
 						
-						int maxH = 0;
+						int maskIndex = 0;
 						
-						int maxW = 0;
-						
-						for(int m = 0;m<pHeight;m++) {
+						for(int i = 0;i<oHeight;i++) {
 							
-							for(int n = 0;n<pWidth;n++) {
+							for(int j = 0;j<oWidth;j++) {
+								
+								int maxH = 0;
+								
+								int maxW = 0;
+								
+								for(int m = 0;m<pHeight;m++) {
+									
+									for(int n = 0;n<pWidth;n++) {
+										
+										switch (poolingType) {
+										case MAX_POOLING:
+											
+											if(m == 0 && n == 0) {
+												result[index][c][i][j] = x[index][c][i * stride + m][j * stride + n];
+											}else if(result[index][c][i][j] <= x[index][c][i * stride + m][j * stride + n]) {
+												result[index][c][i][j] = x[index][c][i * stride + m][j * stride + n];
+												maxH = m;
+												maxW = n;
+											}
+
+											break;
+										case MEAN_POOLING:
+											result[index][c][i][j] += x[index][c][i * stride + m][j * stride + n];
+											mask[index][c][maskIndex][m][n] = 1.0d / pWidth / pHeight;
+											break;
+										}
+										
+									}
+									
+								}
 								
 								switch (poolingType) {
 								case MAX_POOLING:
-									
-									if(m == 0 && n == 0) {
-										result[b][c][i][j] = x[b][c][i * stride + m][j * stride + n];
-									}else if(result[b][c][i][j] <= x[b][c][i * stride + m][j * stride + n]) {
-										result[b][c][i][j] = x[b][c][i * stride + m][j * stride + n];
-										maxH = m;
-										maxW = n;
-									}
-
+									mask[index][c][maskIndex][maxH][maxW] = 1;
 									break;
 								case MEAN_POOLING:
-									result[b][c][i][j] += x[b][c][i * stride + m][j * stride + n];
-									mask[b][c][maskIndex][m][n] = 1.0d / pWidth / pHeight;
+									result[index][c][i][j] /= pWidth * pHeight;
 									break;
 								}
 								
+								maskIndex++;
 							}
 							
 						}
 						
-						switch (poolingType) {
-						case MAX_POOLING:
-							mask[b][c][maskIndex][maxH][maxW] = 1;
-							break;
-						case MEAN_POOLING:
-							result[b][c][i][j] /= pWidth * pHeight;
-							break;
-						}
-						
-						maskIndex++;
 					}
 					
+					return null;
 				}
 				
-			}
-
+			});
+			
 		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
 		
 		return result;
 	}
@@ -2259,590 +3099,52 @@ public class MatrixOperation {
 		
 		int oWidth = ((diff[0][0][0].length - pWidth) / stride) + 1;
 		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
 		for(int b = 0;b<number;b++) {
+			
+			final int index = b;
+			
+			workers.add(new Task<Object>(index) {
+				
+				@Override
+			    public Object call() throws Exception {
 
-			for(int c = 0;c<channel;c++) {
-				
-				int maskIndex = 0;
-				
-				for(int i = 0;i<oHeight;i++) {
-					
-					for(int j = 0;j<oWidth;j++) {
+					for(int c = 0;c<channel;c++) {
 						
-						for(int m = 0;m<pHeight;m++) {
+						int maskIndex = 0;
+						
+						for(int i = 0;i<oHeight;i++) {
 							
-							for(int n = 0;n<pWidth;n++) {
+							for(int j = 0;j<oWidth;j++) {
 								
-								diff[b][c][i * stride + m][j * stride + n] += delta[b][c][i][j] * mask[b][c][maskIndex][m][n];
+								for(int m = 0;m<pHeight;m++) {
+									
+									for(int n = 0;n<pWidth;n++) {
+										
+										diff[index][c][i * stride + m][j * stride + n] += delta[index][c][i][j] * mask[index][c][maskIndex][m][n];
+										
+									}
+									
+								}
+								
+								maskIndex++;
 								
 							}
 							
 						}
 						
-						maskIndex++;
-						
 					}
 					
+					return null;
 				}
-				
-			}
+			});
 			
 		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
 		
 		return diff;
-	}
-	
-	/**
-	 * he随机数
-	 * @param x
-	 * @return
-	 */
-	public static double[][] heRandom(int x,int y,double n){
-		double[][] temp = new double[x][y];
-		Random r = new Random();
-		for(int i = 0;i<x;i++) {
-			for(int j = 0;j<y;j++) {
-				temp[i][j] = r.nextGaussian() * Math.sqrt(2.0d / n);
-			}
-		}
-		return temp;
-	}
-	
-	/**
-	 * he随机数
-	 * @param x
-	 * @return
-	 */
-	public static double[][][][] heRandom(int c,int n,int x,int y,double nn){
-		double[][][][] temp = new double[c][n][x][y];
-		Random r = new Random();
-		for(int k = 0;k<c;k++) {
-			for(int l = 0;l<n;l++) {
-				for(int i = 0;i<x;i++) {
-					for(int j = 0;j<y;j++) {
-						temp[k][l][i][j] = r.nextGaussian() * Math.sqrt(2.0d / nn);
-					}
-				}
-			}
-		}
-		return temp;
-	}
-	
-	/**
-	 * 高斯随机数
-	 * @param x
-	 * @return
-	 */
-	public static double[] gaussianRandom(int x,double ratio){
-		double[] temp = new double[x];
-		Random r = new Random();
-		for(int i = 0;i<x;i++) {
-			temp[i] = r.nextGaussian() / Math.sqrt(x);
-		}
-		return temp;
-	}
-	
-	/**
-	 * 高斯随机数
-	 * @param x
-	 * @return
-	 */
-	public static double[][] gaussianRandom(int x,int y,double ratio){
-		double[][] temp = new double[x][y];
-		Random r = new Random();
-		for(int i = 0;i<x;i++) {
-			for(int j = 0;j<y;j++) {
-				temp[i][j] = r.nextGaussian() / Math.sqrt(x);
-			}
-		}
-		return temp;
-	}
-	
-	/**
-	 * 高斯随机数
-	 * @param x
-	 * @return
-	 */
-	public static double[][][][] gaussianRandom(int c,int n,int x,int y,double ratio){
-		double[][][][] temp = new double[c][n][x][y];
-		Random r = new Random();
-		for(int k = 0;k<c;k++) {
-			for(int l = 0;l<n;l++) {
-				for(int i = 0;i<x;i++) {
-					for(int j = 0;j<y;j++) {
-						temp[k][l][i][j] = r.nextGaussian() / Math.sqrt(x);
-					}
-				}
-			}
-		}
-		return temp;
-	}
-	
-	public static double[] x2Random(int x) {
-		double[] temp = new double[x];
-		double scale = Math.sqrt(1.0 / x);
-        Random r = new Random();
-        for(int i=0; i<x; i++) {
-        	temp[i] = r.nextDouble() * scale;
-        }
-        return temp;
-	}
-	
-	public static double[][] x2Random(int x,int y){
-		double[][] temp = new double[x][y];
-		double scale = Math.sqrt(1.0 / x);
-		Random r = new Random();
-		for(int i = 0;i<x;i++) {
-			for(int j = 0;j<y;j++) {
-				temp[i][j] = r.nextDouble() * scale;
-			}
-		}
-		return temp;
-	}
-	
-	public static double[][][][] x2Random(int c,int n,int x,int y) {
-		double[][][][] temp = new double[c][n][x][y];
-		double scale = Math.sqrt(1.0 / x);
-        Random r = new Random();
-        
-        for(int k = 0;k<c;k++) {
-			for(int l = 0;l<n;l++) {
-				for(int i = 0;i<x;i++) {
-					for(int j = 0;j<y;j++) {
-						temp[k][l][i][j] = r.nextDouble() * scale;
-					}
-				}
-			}
-		}
-        
-        return temp;
-	}
-	
-	/**
-	 * xavier随机数
-	 * @param x
-	 * @return
-	 */
-	public static double[] xavierRandom(int x,double ratio){
-		double[] temp = new double[x];
-		Random r = new Random();
-		for(int i = 0;i<x;i++) {
-			temp[i] = r.nextGaussian() / Math.sqrt(x);
-		}
-		return temp;
-	}
-	
-	/**
-	 * xavier随机数
-	 * @param x
-	 * @return
-	 */
-	public static double[][] xavierRandom(int x,int y,double ratio){
-		double[][] temp = new double[x][y];
-		Random r = new Random();
-		for(int i = 0;i<x;i++) {
-			for(int j = 0;j<y;j++) {
-				temp[i][j] = r.nextGaussian() / Math.sqrt(x);
-			}
-		}
-		return temp;
-	}
-	 
-	/**
-	 * 
-	 * @Title: zero
-	 *
-	 * @param size
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[] clear(double[] x) {
-		if(x != null) {
-			x = MatrixOperation.zero(x.length);
-		}
-		return x;
-	}
-	
-	/**
-	 * 
-	 * @Title: zero
-	 *
-	 * @param size
-	 * @return
-	 *
-	 * @Description:
-	 * TODO(这里用一句话描述这个方法的作用)
-	 *
-	 * @throws
-	 */
-	public static double[][] clear(double[][] x) {
-		if(x != null) {
-			x = MatrixOperation.zero(x.length,x[0].length);
-		}
-		return x;
-	}
-	
-	/**
-	 * print matrix
-	 * @param data
-	 */
-	public static void printImage(double[] data) {
-		
-		for(int i = 0;i<data.length;i++) {
-			System.out.print(data[i]+" ");
-		}
-		
-	}
-	
-	/**
-	 * print matrix
-	 * @param data
-	 */
-	public static void printImage(double[][] data) {
-		
-		for(int i = 0;i<data.length;i++) {
-			for(int j = 0;j<data[i].length;j++) {
-				System.out.print(data[i][j]+" ");
-			}
-			System.out.println("");
-		}
-		
-	}
-	
-	public static void printImage(double[][][] data) {
-		
-		for(int c = 0;c<data.length;c++) {
-			
-			for(int i = 0;i<data[c].length;i++) {
-				for(int j = 0;j<data[c][i].length;j++) {
-					System.out.print(data[c][i][j]+" ");
-				}
-				System.out.println("");
-			}
-			
-			System.out.println("-------------------------");
-			
-		}
-		
-	}
-	
-	public static void printImageToOne(double[][][] data) {
-		
-		for(int c = 0;c<data.length;c++) {
-			
-			for(int i = 0;i<data[c].length;i++) {
-				for(int j = 0;j<data[c][i].length;j++) {
-					if(data[c][i][j] == 0.0) {
-						System.out.print("0 ");
-					}else {
-						System.out.print("1 ");
-					}
-				}
-				System.out.println("");
-			}
-			
-			System.out.println("-------------------------");
-			
-		}
-		
-	}
-	
-	public static void printImage(double[][][][] data) {
-		
-		for(int m = 0;m<data.length;m++) {
-		
-			for(int c = 0;c<data[m].length;c++) {
-				
-				for(int i = 0;i<data[m][c].length;i++) {
-					for(int j = 0;j<data[m][c][i].length;j++) {
-						System.out.print(data[m][c][i][j]+" ");
-					}
-					System.out.println("");
-				}
-				
-				System.out.println("-------------------------");
-				
-			}
-
-			System.out.println("=============================");
-			
-		}
-	}
-	
-	public static void main(String[] args) {
-		
-//		double[][] image = {
-//                        {0,2,4,2},
-//                        {1,2,6,4},
-//                        {9,0,2,5},
-//                        {6,3,2,6}
-//                        };
-//		
-//		double[][] kernel = {
-//				{1,1,1},
-//				{2,0,3},
-//				{1,0,1}
-//		};
-//		
-//		double[][] result = MatrixOperation.convn(image, kernel, 1, ConvnType.SAME);
-//		
-//		MatrixOperation.printImage(result);
-//		
-//		System.out.println();
-//		
-//		MatrixOperation.printImage(MatrixOperation.rotate180(kernel));
-
-		
-//		double[] test = {0.0012059797803661777,1.9300205425211106E-4,0.0012743763716464667,0.2089237171602954,2.0094831831138366E-6,0.16176585639610447,1.845016637757435E-6,0.006165115979960441,0.6197898450559284,6.78252701625735E-4};
-//		
-//		System.out.println(MatrixOperation.max(test));
-//		System.out.println(MatrixOperation.maxIndex(test));
-
-//		double[][] image = {
-//			{7,2,4,2},
-//			{1,2,6,4},
-//			{9,0,2,5},
-//			{6,3,2,6}
-//		};
-//		
-//		double[][] pInput = MatrixOperation.zeroPadding(image, 1);
-//		
-//		MatrixOperation.printImage(image);
-//		
-//		System.out.println();
-//		
-//		MatrixOperation.printImage(pInput);
-//		
-//		double[][] kernel = {
-//				{1,1,1},
-//				{2,0,3},
-//				{1,0,1}
-//		};
-//		
-//		System.out.println();
-//		
-//		MatrixOperation.printImage(kernel);
-//		
-//		double[][] temp = MatrixOperation.convnVail(pInput, kernel, 2);
-//
-//		System.out.println();
-//		
-//		MatrixOperation.printImage(temp);
-		
-		
-		double[][][] image = {
-				{
-					{7,2,4,2},
-					{1,2,6,4},
-					{9,0,2,5},
-					{6,3,2,6}
-				},
-				{
-					{2,2,4,2},
-					{3,0,0,4},
-					{-9,-1,0,5},
-					{-1,-3,0,6}
-				},
-				{
-					{1,1,1,4},
-					{3,1,0,1},
-					{4,1,0,1},
-					{0,1,1,6}
-				}
-				};
-			
-			double[][][] pInput = MatrixOperation.zeroPadding(image, 1);
-			
-			MatrixOperation.printImage(image);
-			
-			System.out.println();
-			
-			MatrixOperation.printImage(pInput);
-			
-			double[][][][] kernel = {
-					{
-						{
-							{3,-1,1},
-							{2,0,3},
-							{1,0,1}
-						},
-						{
-							{1,0,3},
-							{0,1,0},
-							{1,0,1}
-						},
-						{
-							{3,3,2},
-							{-2,0,3},
-							{1,1,2}
-						},
-						{
-							{3,3,2},
-							{-2,0,3},
-							{1,1,3}
-						}
-					},
-					{
-						{
-							{2,-1,1},
-							{2,0,3},
-							{1,0,1}
-						},
-						{
-							{-1,2,1},
-							{0,1,0},
-							{1,0,1}
-						},
-						{
-							{2,-3,2},
-							{2,0,-3},
-							{1,1,2}
-						},
-						{
-							{3,3,2},
-							{-2,1,3},
-							{1,1,2}
-						}
-					},
-					{
-						{
-							{0,-1,1},
-							{2,0,3},
-							{-1,0,1}
-						},
-						{
-							{-1,0,0},
-							{0,1,0},
-							{1,0,-1}
-						},
-						{
-							{1,-3,2},
-							{2,0,3},
-							{-1,1,2}
-						},
-						{
-							{3,2,2},
-							{-2,0,3},
-							{1,1,2}
-						}
-					}
-			};
-			
-			double[] bias = {0.1,0.2,0.3,0.5};
-			
-			double[][][] temp = MatrixOperation.convnVail(pInput, kernel, 1);
-			
-			System.out.println("conv");
-
-			MatrixOperation.printImage(temp);
-			
-			double[][][] tempB = MatrixOperation.add(temp, bias);
-			
-			System.out.println("bias:");
-
-			MatrixOperation.printImage(tempB);
-			
-			Relu relu = new Relu();
-			
-			double[][][] aTemp = relu.activeTemp(tempB);
-			
-			System.out.println("active:");
-
-			MatrixOperation.printImage(aTemp);
-			
-			double[][][][] mask = new double[4][9][2][2];
-			
-			double[][][] poolingTemp = MatrixOperation.poolingAndMask(aTemp, mask, 2, 2, 2, PoolingType.MAX_POOLING);
-			
-			System.out.println("pooling:");
-
-			MatrixOperation.printImage(poolingTemp);
-			
-			System.out.println("pooling-mask:");
-
-			MatrixOperation.printImage(mask);
-			
-			double[][][] delta = {
-					{
-						{0.1,0.3,0.5},
-						{0.2,-0.5,0.7},
-						{-0.4,0.8,0.9}
-					},
-					{
-						{0.1,0.1,0.2},
-						{-0.1,0.5,-0.9},
-						{0.2,0.5,0.3}
-					},
-					{
-						{0.1,0.1,0.1},
-						{0.2,0.2,0.2},
-						{0.5,0.5,0.4}
-					},
-					{
-						{0.1,0.1,0.1},
-						{0.2,0.3,0.3},
-						{0.4,0.1,0.1}
-					}
-			};
-			
-			double[][][] diff = new double[4][4][4];
-			
-			diff = MatrixOperation.poolingDiff(delta, mask, diff, 2, 2, 2);
-			
-			System.out.println("pooling-diff:");
-
-			MatrixOperation.printImage(diff);
-			
-			double[][][] adiffTemp = relu.diffTemp(tempB);
-			
-			System.out.println("adiffTemp:");
-			
-			/**
-			 * adiffTemp
-			 */
-			MatrixOperation.printImage(adiffTemp);
-			
-			double[][][] deltaTemp = MatrixOperation.multiplication(diff, adiffTemp);
-			
-			System.out.println("deltaTemp:");
-			
-			/**
-			 * deltaTemp
-			 */
-			MatrixOperation.printImage(deltaTemp);
-			
-			System.out.println("deltaW:");
-			
-			/**
-			 * 计算deltaW
-			 */
-			MatrixOperation.printImage(MatrixOperation.convnVail(pInput, deltaTemp, 1));
-			
-			/**
-			 * 梯度添加zeroPadding使得size与卷积输入一致
-			 */
-			double[][][] deltaP = MatrixOperation.zeroPadding(deltaTemp, 1);
-			
-			/**
-			 * 计算当前层梯度
-			 */
-			double[][][] diffP = MatrixOperation.convnVail(kernel, deltaP, 1);
-			
-			System.out.println("diff:");
-			
-			MatrixOperation.printImage(diffP);
-			
-//			System.out.println("diff-nozero:");
-//			
-//			/**
-//			 * 去除输入层zeroPadding
-//			 */
-//			MatrixOperation.printImage(MatrixOperation.dislodgeZeroPadding(diffP, 1));
-			
 	}
 	
 }

@@ -1,7 +1,7 @@
 package com.omega.engine.active;
 
 import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 
 /**
  * 
@@ -37,8 +37,8 @@ public class Sigmoid extends ActiveFunction {
 	@Override
 	public double[] active(double[] x) {
 		// TODO Auto-generated method stub
-		this.input = MatrixOperation.clone(x);
-		this.output = MatrixOperation.zero(x.length);
+		this.input = MatrixUtils.clone(x);
+		this.output = MatrixUtils.zero(x.length);
 		for(int i = 0;i<x.length;i++) {
 			this.output[i] = (double) (1d / (1d + Math.exp(-x[i])));
 		}
@@ -59,7 +59,7 @@ public class Sigmoid extends ActiveFunction {
 	@Override
 	public double[] diff() {
 		// TODO Auto-generated method stub
-		this.diff = MatrixOperation.clone(this.active(this.input));
+		this.diff = MatrixUtils.clone(this.active(this.input));
 		for(int i = 0;i<this.output.length;i++) {
 			this.diff[i] = (double) this.output[i] * (1d - this.output[i]);
 		}
@@ -69,7 +69,7 @@ public class Sigmoid extends ActiveFunction {
 	@Override
 	public double[] activeTemp(double[] x) {
 		// TODO Auto-generated method stub
-		double[] output = MatrixOperation.zero(x.length);
+		double[] output = MatrixUtils.zero(x.length);
 		for(int i = 0;i<x.length;i++) {
 			output[i] = (double) (1d / (1d + Math.exp(-x[i])));
 		}
@@ -89,8 +89,8 @@ public class Sigmoid extends ActiveFunction {
 	@Override
 	public double[][][] active(double[][][] x) {
 		// TODO Auto-generated method stub
-		this.input2d = MatrixOperation.clone(x);
-		this.output2d = MatrixOperation.zero(x.length,x[0].length,x[0][0].length);
+		this.input2d = MatrixUtils.clone(x);
+		this.output2d = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
 		for(int c = 0;c<x.length;c++) {
 			for(int i = 0;i<x[c].length;i++) {
 				for(int j = 0;j<x[c][i].length;j++) {
@@ -104,7 +104,7 @@ public class Sigmoid extends ActiveFunction {
 	@Override
 	public double[][][] diff2d() {
 		// TODO Auto-generated method stub
-		this.diff2d = MatrixOperation.clone(this.active(this.input2d));
+		this.diff2d = MatrixUtils.clone(this.active(this.input2d));
 		for(int c = 0;c<this.output2d.length;c++) {
 			for(int i = 0;i<this.output2d[c].length;i++) {
 				for(int j = 0;j<this.output2d[c][i].length;j++) {
@@ -118,7 +118,7 @@ public class Sigmoid extends ActiveFunction {
 	@Override
 	public double[][][] activeTemp(double[][][] x) {
 		// TODO Auto-generated method stub
-		double[][][] output2d = MatrixOperation.zero(x.length,x[0].length,x[0][0].length);
+		double[][][] output2d = MatrixUtils.zero(x.length,x[0].length,x[0][0].length);
 		for(int c = 0;c<x.length;c++) {
 			for(int i = 0;i<x[c].length;i++) {
 				for(int j = 0;j<x[c][i].length;j++) {
@@ -132,7 +132,7 @@ public class Sigmoid extends ActiveFunction {
 	@Override
 	public double[][][] diffTemp(double[][][] x) {
 		// TODO Auto-generated method stub
-		double[][][] diff2d = MatrixOperation.clone(this.active(x));
+		double[][][] diff2d = MatrixUtils.clone(this.active(x));
 		for(int c = 0;c<diff2d.length;c++) {
 			for(int i = 0;i<diff2d[c].length;i++) {
 				for(int j = 0;j<diff2d[c][i].length;j++) {

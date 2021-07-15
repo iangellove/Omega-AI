@@ -16,6 +16,8 @@ public class CrossEntropyLoss extends LossFunction {
 
 	public final LossType lossType = LossType.cross_entropy;
 	
+	private final double eta = 0.0000000001;
+	
 	private static CrossEntropyLoss instance;
 	
 	public static CrossEntropyLoss operation() {
@@ -37,11 +39,15 @@ public class CrossEntropyLoss extends LossFunction {
 		Blob temp = Blobs.blob(x.number,x.channel,x.height,x.width);
 		
 		for(int n = 0;n<x.number;n++) {
-			for(int w = 0;w<x.width;w++) {
-				temp.maxtir[n][0][0][w] = - label[n][w] * Math.log(x.maxtir[n][0][0][w]);
+			for(int o = 0;o<x.width;o++) {
+				if(x.maxtir[n][0][0][o] == 0) {
+					temp.maxtir[n][0][0][o] = label[n][o] * Math.log(eta) + (1.0d - label[n][o]) * Math.log(1.0d - eta);
+				}else {
+					temp.maxtir[n][0][0][o] = label[n][o] * Math.log(x.maxtir[n][0][0][o]) + (1.0d - label[n][o]) * Math.log(1.0d - x.maxtir[n][0][0][o]);
+				}
 			}
 		}
-
+//		System.out.println(JsonUtils.toJson(temp.maxtir));
 		return temp;
 	}
 
@@ -50,15 +56,15 @@ public class CrossEntropyLoss extends LossFunction {
 		// TODO Auto-generated method stub
 		Blob temp = Blobs.blob(x.number,x.channel,x.height,x.width);
 		for(int n = 0;n<x.number;n++) {
-			for(int w = 0;w<x.width;w++) {
-				temp.maxtir[n][0][0][w] = - label[n][w] / x.maxtir[n][0][0][w];
+			for(int o = 0;o<x.width;o++) {
+				temp.maxtir[n][0][0][o] = label[n][o] / x.maxtir[n][0][0][o] - (1.0d - label[n][o]) / (1.0d - x.maxtir[n][0][0][o]);
 			}
 		}
 		return temp;
 	}
 	
 	public static void main(String[] args) {
-		double[][] x = new double[][] {{0.2,0.7,0.1},{0.8,0.1,0.1},{0.5,0.4,0.1},{0.3,0.3,0.4}};
+		double[][] x = new double[][] {{0.2,0.3,0.5},{0.1,0.1,0.8},{0.3,0.1,0.6},{0.9,0.01,0.09}};
 		Blob xb = Blobs.blob(4, 1, 1, 3, x);
 		double[][] label = new double[][] {{0,1,0},{1,0,0},{1,0,0},{0,0,1}};
 		double error = CrossEntropyLoss.operation().gradientCheck(xb,label);
