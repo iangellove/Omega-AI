@@ -2,54 +2,97 @@
 
 ##介绍
 Omega-AI：为java平台打造的深度学习
+
 ## 架构
+
 框架目前支持BP神经网络和卷积神经网络的构建
+
 支持多线程计算
-###支持的网络层类型：
+
+### 支持的网络层类型：
+
 Fullylayer 全连接层
+
 ConvolutionLayer 卷积层
+
 PoolingLayer 池化层
-####激活函数层
+
+#### 激活函数层
+
 SoftmaxLayer (softmax激活函)
+
 ReluLayer
+
 LeakyReluLayer
+
 TanhLayer
+
 SigmodLayer
-####归一化层
+
+#### 归一化层
+
 BNLayer (Batch Normalization)
+
 DropoutLayer
-###优化器
+
+### 优化器
+
 Momentum
+
 Adam
-###训练器
+
+### 训练器
+
 BGDOptimizer (批量梯度下降法)
+
 MBSGDOptimizer (小批量随机梯度下降)
+
 SGDOptimizer（随机梯度下降算法）
-###损失函数(loss function)
+
+### 损失函数(loss function)
+
 SquareLoss (平方差损失函数)
+
 CrossEntropyLoss (交叉熵损失函数)
-###学习率更新器（LearnRateUpdate）
+
+### 学习率更新器（LearnRateUpdate）
+
 NONE (固定学习率)
+
 LR_DECAY (decay)
+
 GD_GECAY (gd_decay)
-###数据加载器
+
+### 数据加载器
+
 .bin (二进制数据文件)
+
 .idx3-ubyte
+
 .txt
 
 ## 使用说明
-###自带的数据集
+
+### 自带的数据集
+
 iris（鸢尾花数据集）
+
 mnist（手写数字数据集）
+
 cifat_10 （cifat_10数据集）
-###demo成绩
+
+### demo成绩
+
 iris 训练次数8   准确率100%
+
 mnist 训练次数8 准确率98.6%
+
 cifat_10 训练次数8 准确率76.6%
 
 #### JAVA代码
 
-###bp iris demo
+### bp iris demo
+
 ```
 public void bpNetwork_iris() {
 		// TODO Auto-generated method stub
@@ -108,7 +151,8 @@ public void bpNetwork_iris() {
 	}
 ```
 
-###cnn mnist demo
+### cnn mnist demo
+
 ```
 public void cnnNetwork_mnist() {
 		// TODO Auto-generated method stub
@@ -219,7 +263,8 @@ public void cnnNetwork_mnist() {
 		
 	}
 ```
-###cnn cifar10 demo
+### cnn cifar10 demo
+
 ```
 public void cnnNetwork_cifar10() {
 		// TODO Auto-generated method stub
@@ -330,16 +375,19 @@ public void cnnNetwork_cifar10() {
 		
 	}
 ```
-##未来可期
+## 未来可期
 
-###可视化
+### 可视化
+
 基于已训练模型实现手写数字识别
-###训练情况可视化
+
+### 训练情况可视化
+
 ...
 
 ## 欢迎打扰
 
-###QQ：465973119
-###电子邮箱：465973119@qq.com
+### QQ：465973119
+### 电子邮箱：465973119@qq.com
 
 
