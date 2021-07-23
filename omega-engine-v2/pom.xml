@@ -20,6 +20,13 @@
 		<swagger.version>2.9.2</swagger.version>
 	</properties>
 	
+	<licenses>
+	   <license>
+	     <name>The Apache Software License, Version 2.0</name>
+	     <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+	   </license>
+	</licenses>
+	
 	<dependencies>
 	
 		<dependency>
@@ -85,13 +92,6 @@
 		  <artifactId>ejml-all</artifactId>
 		  <version>0.40</version>
 		</dependency>
- 		
- 		
-		<dependency>
-			<groupId>javax</groupId>
-			<artifactId>javaee-api</artifactId>
-			<version>7.0</version>
-		</dependency>
 
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
@@ -103,7 +103,6 @@
 		    <artifactId>commons-httpclient</artifactId>
 		    <version>3.1</version>
 		</dependency>
-		
 		
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
