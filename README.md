@@ -11,6 +11,13 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 [https://github.com/iangellove/Omega-AI](https://github.com/iangellove/Omega-AI)
 
+### 版本更新
+#### omega-engine-1.0.3
+添加gup支持，使用jcuda调用cuda的cublasSgemm矩阵乘法，参考了caffe的卷积操作已将卷积操作优化成im2col+gemm实现，计算效率得到大大提高
+添加vgg16 demo，该模型在cifar10数据集上表现为测试数据集准确率78.2%
+利用jdk ForkJoin框架实现任务拆分，充分利用cpu多线程，提高对数组操作与计算速度
+参考darknet对学习率更新机制进行升级，目前已支持RANDOM、POLY、STEP、EXP、SIG等多种学习率更新方法，并且实现学习率warmup功能
+
 ### Demo展示
 [基于卷积神经网络mnist手写数字识别](http://120.237.148.121:8011/mnist)
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/b9b5846af6624bdf8f5d570c5052bc64.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTMyODMzMDQ=,size_1,color_FFFFFF,t_70#pic_center)
@@ -68,6 +75,18 @@ NONE (固定学习率)
 LR_DECAY (decay)
 
 GD_GECAY (gd_decay)
+
+CONSTANT(gd_decay)
+
+RANDOM [Math.pow(RandomUtils.getInstance().nextFloat(), power) * this.lr]
+
+POLY [this.lr * Math.pow((1.0f - (batchIndex * 1.0f / trainTime / dataSize * batchSize)), power)]
+
+STEP [this.lr * Math.pow(this.scale, batchIndex / step)]
+
+EXP [this.lr * Math.pow(this.gama, batchIndex)]
+
+SIG [this.lr / (1 + Math.pow(Math.E, this.gama * (batchIndex - step)))]
 
 #### 数据加载器
 
@@ -383,7 +402,7 @@ public void cnnNetwork_cifar10() {
 ````
 ## 未来可期
 
-实现vgg16、rcnn、rnn、yolo等算法
+实现rcnn、rnn、yolo等算法
 
 ### 训练情况可视化
 
