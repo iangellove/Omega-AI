@@ -9,7 +9,7 @@ package com.omega.engine.updater;
  */
 public class MWAUtils {
 	
-	public static float alpha = 0.9f;
+	public static float alpha = 0.1f;
 	
 	public static float[] mwa(float[] x,float[] runing){
 		

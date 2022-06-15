@@ -38,9 +38,10 @@ public class RandomUtils {
 	 */
 	public static float[][] heRandom(int x,int y,float n){
 		float[][] temp = new float[x][y];
+		float t = (float) Math.sqrt(2.0d / n);
 		for(int i = 0;i<x;i++) {
 			for(int j = 0;j<y;j++) {
-				temp[i][j] = (float) (getInstance().nextGaussian() * Math.sqrt(2.0d / n));
+				temp[i][j] = (float) (Math.abs(getInstance().nextGaussian()) * t);
 			}
 		}
 		return temp;
@@ -53,11 +54,12 @@ public class RandomUtils {
 	 */
 	public static float[][][][] heRandom(int c,int n,int x,int y,float nn){
 		float[][][][] temp = new float[c][n][x][y];
+		float t = (float) Math.sqrt(2.0d / nn);
 		for(int k = 0;k<c;k++) {
 			for(int l = 0;l<n;l++) {
 				for(int i = 0;i<x;i++) {
 					for(int j = 0;j<y;j++) {
-						temp[k][l][i][j] = (float)(getInstance().nextGaussian() * Math.sqrt(2.0d / nn));
+						temp[k][l][i][j] = (float)(getInstance().nextGaussian() * t);
 					}
 				}
 			}
@@ -183,9 +185,105 @@ public class RandomUtils {
 	 * @param x
 	 * @return
 	 */
+	public static float[][] xavierRandomCaffe(int x,int y,int fanIn,int fanOut){
+		float[][] temp = new float[x][y];
+		float t = (float) 2.0f/(fanIn+fanOut);
+		for(int i = 0;i<x;i++) {
+			for(int j = 0;j<y;j++) {
+				temp[i][j] = (float) (getInstance().nextGaussian() * t);
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
 	public static float[][][][] xavierRandom(int c,int n,int x,int y,int fanIn,int fanOut){
 		float[][][][] temp = new float[c][n][x][y];
 		float t = (float) Math.sqrt(2.0d/(fanIn+fanOut));
+		for(int k = 0;k<c;k++) {
+			for(int l = 0;l<n;l++) {
+				for(int i = 0;i<x;i++) {
+					for(int j = 0;j<y;j++) {
+						temp[k][l][i][j] = (float) (getInstance().nextGaussian() * t);
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[][][][] heRandom(int c,int n,int x,int y,int fanIn){
+		float[][][][] temp = new float[c][n][x][y];
+		float t = (float) Math.sqrt(2.0d/fanIn);
+		for(int k = 0;k<c;k++) {
+			for(int l = 0;l<n;l++) {
+				for(int i = 0;i<x;i++) {
+					for(int j = 0;j<y;j++) {
+						temp[k][l][i][j] = (float) (Math.abs(getInstance().nextGaussian()) * t);
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[][][][] xavierRandomCaffeIn(int c,int n,int x,int y,int fanIn,int fanOut){
+		float[][][][] temp = new float[c][n][x][y];
+		float t = (float) 1.0f / fanIn;
+		for(int k = 0;k<c;k++) {
+			for(int l = 0;l<n;l++) {
+				for(int i = 0;i<x;i++) {
+					for(int j = 0;j<y;j++) {
+						temp[k][l][i][j] = (float) (getInstance().nextGaussian() * t);
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[][][][] xavierRandomCaffeOut(int c,int n,int x,int y,int fanIn,int fanOut){
+		float[][][][] temp = new float[c][n][x][y];
+		float t = (float) 1.0f / fanOut;
+		for(int k = 0;k<c;k++) {
+			for(int l = 0;l<n;l++) {
+				for(int i = 0;i<x;i++) {
+					for(int j = 0;j<y;j++) {
+						temp[k][l][i][j] = (float) (getInstance().nextGaussian() * t);
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[][][][] xavierRandomCaffe(int c,int n,int x,int y,int fanIn,int fanOut){
+		float[][][][] temp = new float[c][n][x][y];
+		float t = (float) 2.0d / (fanIn+fanOut);
 		for(int k = 0;k<c;k++) {
 			for(int l = 0;l<n;l++) {
 				for(int i = 0;i<x;i++) {

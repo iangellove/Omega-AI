@@ -2544,7 +2544,7 @@ public class MatrixOperation {
 	 * @param stride
 	 * @return
 	 */
-	public static float[][] im2col2(float[][][][] x,int kh,int kw,int stride){
+	public static float[][] im2col4d(float[][][][] x,int kh,int kw,int stride){
 		
 		int N = x.length;
 		
@@ -2573,6 +2573,59 @@ public class MatrixOperation {
 				int c = j / kSize;
 				
 				int xSize = j - (c * kSize);
+				
+				int xh = startH + xSize / kw;
+				
+				int xw = startW + xSize % kw;
+				
+				result[i][j] = x[n][c][xh][xw];
+
+			}
+			
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * im2col2
+	 * @param x
+	 * @param kh
+	 * @param kw
+	 * @param stride
+	 * @return
+	 */
+	public static float[][] im2col4d2(float[][][][] x,int kh,int kw,int stride){
+		
+		int N = x.length;
+		
+		int C = x[0].length;
+		
+		int oHeight = ((x[0][0].length - kh ) / stride) + 1;
+		
+		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
+		
+		int ow = N * kh * kw;
+		
+		int oh = C * oHeight * oWidth;
+		
+		int kSize = kh * kw;
+		
+		float[][] result = new float[oh][ow];
+		
+		for(int i = 0;i<oh;i++) {
+
+			int c = i / oHeight / oWidth;
+			
+			int startH = (i - (c * oHeight * oWidth)) / oHeight * stride;
+			
+			int startW = (i - (c * oHeight * oWidth)) % oWidth * stride;
+			
+			for(int j = 0;j<ow;j++) {
+				
+				int n = j / kSize;
+				
+				int xSize = j - (n * kSize);
 				
 				int xh = startH + xSize / kw;
 				
@@ -2834,16 +2887,13 @@ public class MatrixOperation {
 		int oHeight = ((x[0][0].length - kh) / stride) + 1;
 		
 		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
-
-//		long start = System.nanoTime();
 		
 		/**
 		 * input im2col
 		 */
-		float[][] input2d = Im2colUtils.im2col(x, ko, kh, kw, stride);
+		float[][] input2d = Im2colUtils.im2col(x, kh, kw, stride);
 
-//		System.out.println((System.nanoTime() - start) / 1e6);
-		
+//		long start = System.nanoTime();
 		/**
 		 * kernel im2col
 		 */
@@ -2853,11 +2903,47 @@ public class MatrixOperation {
 		
 		GPUOP.getInstance().multiplyFloat(input2d.length, kt.length, kt[0].length, MatrixUtils.transform(input2d), MatrixUtils.transform(kt), r);
 
-		float[][][][] tmp = MatrixUtils.col2img(r, N, ko, oHeight, oWidth);
-
+		float[][][][] tmp = MatrixUtils.col2imgV2(r, N, ko, oHeight, oWidth);
+//		System.out.println((System.nanoTime() - start) / 1e6);
 		return tmp;
 	}
 	
+	public static float[][][][] convnDeltaByIm2ColGPU(float[][][][] d,float[][][][] k,int stride){
+
+		int kc = k[0].length;
+		int kh = k[0][0].length;
+		int kw = k[0][0][0].length;
+		
+		int N = d.length;
+		
+		int oHeight = ((d[0][0].length - kh) / stride) + 1;
+		
+		int oWidth = ((d[0][0][0].length - kw) / stride) + 1;
+
+//		long start = System.nanoTime();
+		
+		/**
+		 * input im2col
+		 */
+
+		float[][] input2d = Im2colUtils.im2col(d, kh, kw, stride);
+		
+//		System.out.println((System.nanoTime() - start) / 1e6);
+		
+		/**
+		 * kernel im2col
+		 */
+		float[][] kt = Im2colUtils.kernalTo2d(k);
+
+		float[] r = new float[N * kc * oHeight * oWidth];
+		
+		GPUOP.getInstance().multiplyFloat(input2d.length, kt.length, kt[0].length, MatrixUtils.transform(input2d), MatrixUtils.transform(kt), r);
+
+		float[][][][] tmp = MatrixUtils.col2imgV2(r, N, kc, oHeight, oWidth);
+
+		return tmp;
+	}
+
 	public static float[][][] convnVailByIm2Col(float[][][] x,float[][][][] k,int stride,boolean isBack){
 		
 		int ko = k[0].length;

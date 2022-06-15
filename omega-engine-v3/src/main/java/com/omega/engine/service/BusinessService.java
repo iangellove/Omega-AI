@@ -18,6 +18,8 @@ public interface BusinessService {
 	
 	public void cnnNetwork_vgg16_cifar10();
 	
+	public void vgg16_cifar10();
+	
 	public void showImage();
 	
 }

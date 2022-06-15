@@ -1,6 +1,8 @@
 package com.omega.engine.nn.layer;
 
+import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
 
@@ -130,6 +132,11 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 //		MatrixOperation.printImage(this.diff);
 ////		
 //		System.out.println("softmax with cross layer["+this.index+"]diff end.");
+
+		float[] x = MatrixUtils.transform(this.diff.maxtir);
+		
+		System.out.println("softmax layer["+this.index+"]diff-max:"+MathUtils.max(x)+" min:"+MathUtils.min(x));
+		
 	}
 
 	@Override

@@ -15,6 +15,8 @@ public abstract class Updater {
 	
 	public float beta = 0.9f;
 	
+	public float lr = 0.0001f;
+	
 	public float[][] vdw;
 	
 	public float[] vdgama;

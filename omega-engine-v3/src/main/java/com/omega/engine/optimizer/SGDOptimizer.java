@@ -16,16 +16,16 @@ import com.omega.engine.optimizer.lr.LearnRateUpdate;
  */
 public class SGDOptimizer extends Optimizer {
 	
-	public SGDOptimizer(Network network, int trainTime, float error) throws Exception {
-		super(network, 1, trainTime, error);
+	public SGDOptimizer(Network network, int trainTime, float error,boolean warmUp) throws Exception {
+		super(network, 1, trainTime, error, warmUp);
 		// TODO Auto-generated constructor stub
 		this.batchSize = 1;
 		this.loss = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
 		this.lossDiff = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
 	}
 	
-	public SGDOptimizer(Network network, int trainTime, float error,LearnRateUpdate learnRateUpdate) throws Exception {
-		super(network, 1, trainTime, error);
+	public SGDOptimizer(Network network, int trainTime, float error,LearnRateUpdate learnRateUpdate,boolean warmUp) throws Exception {
+		super(network, 1, trainTime, error, warmUp);
 		// TODO Auto-generated constructor stub
 		this.batchSize = 1;
 		this.loss = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);

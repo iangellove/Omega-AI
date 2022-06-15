@@ -39,7 +39,7 @@ public class Im2col extends RecursiveAction {
 		// TODO Auto-generated method stub
 		int length = end - start + 1;
 		
-		if (length < 4 || length <= x.length / 4) {
+		if (length < 8 || length <= x.length / 8) {
 			
 			toCol();
 
@@ -92,36 +92,36 @@ public class Im2col extends RecursiveAction {
 
 		ForkJoinPool forkJoinPool = new ForkJoinPool();
 		int pad = 0;
-//
-//		float[][][][] x = new float[][][][] {
-//			{
-//				{
-//					{1.1f,1.2f,1.3f},
-//					{1.4f,1.5f,1.6f},
-//					{1.7f,1.8f,1.9f}
-//				},
-//				{
-//					{1.101f,1.11f,1.12f},
-//					{1.13f,1.14f,1.15f},
-//					{1.16f,1.17f,1.18f}
-//				},
-//				{
-//					{1.19f,1.201f,1.21f},
-//					{1.22f,1.23f,1.24f},
-//					{1.25f,1.26f,1.27f}
-//				}
-//			},
-//			{{{2.1f,2.2f,2.3f},{2.4f,2.5f,2.6f},{2.7f,2.8f,2.9f}},{{2.101f,2.11f,2.12f},{2.13f,2.14f,2.15f},{2.16f,2.17f,2.18f}},{{2.19f,2.201f,2.21f},{2.22f,2.23f,2.24f},{2.25f,2.26f,2.27f}}},
-//			{{{3.1f,3.2f,3.3f},{3.4f,3.5f,3.6f},{3.7f,3.8f,3.9f}},{{3.101f,3.11f,3.12f},{3.13f,3.14f,3.15f},{3.16f,3.17f,3.18f}},{{3.19f,3.201f,3.21f},{3.22f,3.23f,3.24f},{3.25f,3.26f,3.27f}}},
-//			{{{4.1f,4.2f,4.3f},{4.4f,4.5f,4.6f},{4.7f,4.8f,4.9f}},{{4.101f,4.11f,4.12f},{4.13f,4.14f,4.15f},{4.16f,4.17f,4.18f}},{{4.19f,4.201f,4.21f},{4.22f,4.23f,4.24f},{4.25f,4.26f,4.27f}}},
-//			};
+
+		float[][][][] x = new float[][][][] {
+			{
+				{
+					{1.1f,1.2f,1.3f},
+					{1.4f,1.5f,1.6f},
+					{1.7f,1.8f,1.9f}
+				},
+				{
+					{1.101f,1.11f,1.12f},
+					{1.13f,1.14f,1.15f},
+					{1.16f,1.17f,1.18f}
+				},
+				{
+					{1.19f,1.201f,1.21f},
+					{1.22f,1.23f,1.24f},
+					{1.25f,1.26f,1.27f}
+				}
+			},
+			{{{2.1f,2.2f,2.3f},{2.4f,2.5f,2.6f},{2.7f,2.8f,2.9f}},{{2.101f,2.11f,2.12f},{2.13f,2.14f,2.15f},{2.16f,2.17f,2.18f}},{{2.19f,2.201f,2.21f},{2.22f,2.23f,2.24f},{2.25f,2.26f,2.27f}}},
+			{{{3.1f,3.2f,3.3f},{3.4f,3.5f,3.6f},{3.7f,3.8f,3.9f}},{{3.101f,3.11f,3.12f},{3.13f,3.14f,3.15f},{3.16f,3.17f,3.18f}},{{3.19f,3.201f,3.21f},{3.22f,3.23f,3.24f},{3.25f,3.26f,3.27f}}},
+			{{{4.1f,4.2f,4.3f},{4.4f,4.5f,4.6f},{4.7f,4.8f,4.9f}},{{4.101f,4.11f,4.12f},{4.13f,4.14f,4.15f},{4.16f,4.17f,4.18f}},{{4.19f,4.201f,4.21f},{4.22f,4.23f,4.24f},{4.25f,4.26f,4.27f}}},
+			};
 
 		int N = 4;
 		int C = 3;
 		int H = 3;
 		int W = 3;
 		
-		float[][][][] x = RandomUtils.gaussianRandom(N, C, H, W, 0.1f);
+//		float[][][][] x = RandomUtils.gaussianRandom(N, C, H, W, 0.1f);
 		
 		int stride = 1;
 
@@ -142,7 +142,7 @@ public class Im2col extends RecursiveAction {
 		
 		System.out.println("time1:"+(System.nanoTime() - start1) / 1e6 + "ms.["+col[0][0]+","+col[col.length - 1][col[0].length - 1]+"]");
 		
-		PrintUtils.printImage(col);
+		//PrintUtils.printImage(col);
 		
 		System.out.println("===========================>");
 		
@@ -158,12 +158,22 @@ public class Im2col extends RecursiveAction {
 		
 		long start3 = System.nanoTime();
 		
-		float[][] col3 = MatrixOperation.im2col2(x, fh, fw, stride);
+		float[][] col3 = MatrixOperation.im2col4d(x, fh, fw, stride);
 		
 		System.out.println("time3:"+(System.nanoTime() - start3) / 1e6 + "ms.["+col3[0][0]+","+col3[col3.length - 1][col3[0].length - 1]+"]");
 		
-		PrintUtils.printImage(col3);
+		//PrintUtils.printImage(col3);
 
+		float[][] col4 = MatrixOperation.im2col4d2(x, fh, fw, stride);
+		
+		PrintUtils.printImage(col4);
+		
+		System.out.println("===========================>");
+		
+		float[][] col5 = MatrixUtils.transpose(Im2colUtils.im2col(x, fh, fw, stride));
+		
+		PrintUtils.printImage(col5);
+		
 	}
 	
 	public static void main(String[] args) {

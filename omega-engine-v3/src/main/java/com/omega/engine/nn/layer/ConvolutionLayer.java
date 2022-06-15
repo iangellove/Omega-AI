@@ -1,8 +1,11 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.utils.Im2colUtils;
+import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.PrintUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
@@ -101,9 +104,10 @@ public class ConvolutionLayer extends Layer {
 		this.oChannel = this.kernelNum;
 		this.oWidth = (this.width + this.padding * 2 - kWidth) / this.stride + 1;
 		this.oHeight = (this.height + this.padding * 2 - kHeight) / this.stride + 1;
-//		this.kernel = MatrixOperation.gaussianRandom(this.channel, this.kernelNum, this.kHeight, this.kWidth, 0.01d);
-//		this.kernel = MatrixOperation.heRandom(this.channel, this.kernelNum, this.kHeight, this.kWidth, this.width * this.height);
-		this.kernel = RandomUtils.xavierRandom(this.kernelNum, this.channel, this.kHeight, this.kWidth, this.channel, this.oChannel);
+//		this.kernel = MatrixOperation.gaussianRandom(this.kernelNum, this.channel, this.kHeight, this.kWidth, 0.01d);
+//		this.kernel = RandomUtils.heRandom(this.kernelNum, this.channel, this.kHeight, this.kWidth, this.width * this.height);
+		this.kernel = RandomUtils.xavierRandom(this.kernelNum, this.channel, this.kHeight, this.kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth);
+//		this.kernel = RandomUtils.heRandom(this.kernelNum, this.channel, this.kHeight, this.kWidth, this.channel * this.oChannel * this.height * this.width);
 		this.bias = MatrixUtils.zero(this.kernelNum);
 		this.diffPadding = ((this.height - 1) * this.stride + this.kHeight - this.oHeight) / 2;
 	}
@@ -144,8 +148,6 @@ public class ConvolutionLayer extends Layer {
 //		System.out.println("");
 //		System.out.println("=================end====================");
 //		
-//		PrintUtils.printImage(this.output.maxtir[0][0][0]);
-
 		
 		if(this.hasBias) {
 //			long start3 = System.nanoTime();
@@ -173,12 +175,13 @@ public class ConvolutionLayer extends Layer {
 		/**
 		 * 计算deltaW
 		 */
-//		float[][][][] deltaWT = MatrixOperation.convnVailForDelta(this.pInput.maxtir, this.delta.maxtir, 1);
+//		float[][][][] deltaWT2 = MatrixOperation.convnVailForDelta(this.pInput.maxtir, this.delta.maxtir, 1);
 //		long start = System.nanoTime();
+		
 		/**
 		 * input im2col
 		 */
-		float[][] pinput2d = Im2colUtils.im2col(this.pInput.maxtir, this.kernelNum, this.kHeight, this.kWidth, this.stride);
+		float[][] pinput2d = Im2colUtils.im2col(this.pInput.maxtir, this.kHeight, this.kWidth, this.stride);
 		
 		float[][] pInputT = MatrixUtils.transpose(pinput2d);
 		
@@ -189,11 +192,13 @@ public class ConvolutionLayer extends Layer {
 		float[][][][] deltaWT = Im2colUtils.to4d(dw2d, this.kernelNum, this.channel, this.kHeight, this.kWidth);
 		
 		this.deltaW = MatrixOperation.division(deltaWT, this.number);
+//		System.out.println((System.nanoTime() - start) / 1e6);
+//		this.deltaW = deltaWT;
 		
 		if(this.hasBias) {
 			
 			this.deltaB = MatrixOperation.division(MatrixOperation.sumBias(this.delta.maxtir),this.number);
-			
+//			this.deltaB = MatrixOperation.sumBias(this.delta.maxtir);
 		}
 
 		/**
@@ -209,9 +214,8 @@ public class ConvolutionLayer extends Layer {
 		/**
 		 * 计算当前层梯度
 		 */
-//		this.diff.maxtir = MatrixOperation.convnVailByIm2Col(deltaP, kernel180, 1, true);
-
-		this.diff.maxtir = MatrixOperation.convnVailByIm2ColGPU(deltaP, kernel180, 1);
+		
+		this.diff.maxtir = MatrixOperation.convnDeltaByIm2ColGPU(deltaP, kernel180, 1);
 
 //		System.out.println((System.nanoTime() - start) / 1e6+"ms->all back========>");
 	}
@@ -239,6 +243,7 @@ public class ConvolutionLayer extends Layer {
 	public void back() {
 		// TODO Auto-generated method stub
 //		long start = System.nanoTime();
+//		System.out.println("back start.");
 		initBack();
 		/**
 		 * 设置梯度
@@ -299,10 +304,11 @@ public class ConvolutionLayer extends Layer {
 	@Override
 	public void showDiff() {
 		// TODO Auto-generated method stub
-//		System.out.println("conv layer["+this.index+"]diff start:");
-//		
-//		
-//		System.out.println("conv layer["+this.index+"]diff end.");
+
+		float[] x = MatrixUtils.transform(this.diff.maxtir);
+		
+		System.out.println("conv layer["+this.index+"]diff-max:"+MathUtils.max(x)+" min:"+MathUtils.min(x));
+		
 	}
 
 	@Override

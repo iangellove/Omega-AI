@@ -4,7 +4,6 @@ import java.util.Vector;
 
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
@@ -103,6 +102,9 @@ public class Adam extends Updater {
 	@Override
 	public void updateForBN(BNLayer layer) {
 		// TODO Auto-generated method stub
+		
+//		this.lr = layer.learnRate / layer.number;
+		
 		/**
 		 * init
 		 */
@@ -170,6 +172,7 @@ public class Adam extends Updater {
 								vmw[index][c][h][w] = beta2 * vmw[index][c][h][w] + (1 - beta2) * deltaW[index][c][h][w] * deltaW[index][c][h][w];
 								float mhat = mmw[index][c][h][w] / (1 - beta1);
 								float vhat = vmw[index][c][h][w] / (1 - beta2);
+								
 								conv.kernel[index][c][h][w] = conv.kernel[index][c][h][w] - conv.learnRate * mhat / ((float)Math.sqrt(vhat) + eta);
 							}
 						}
@@ -220,7 +223,7 @@ public class Adam extends Updater {
 	public void updateB(Layer layer) {
 		
 		float[] deltaB = layer.deltaB;
-		
+
 		for(int i = 0;i<deltaB.length;i++){
 			this.mb[i] = this.beta1 * this.mb[i] + (1 - this.beta1) * deltaB[i];
 			this.vb[i] = this.beta2 * this.vb[i] + (1 - this.beta2) * deltaB[i] * deltaB[i];

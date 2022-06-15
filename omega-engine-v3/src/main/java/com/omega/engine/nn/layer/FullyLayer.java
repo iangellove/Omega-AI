@@ -4,6 +4,7 @@ import java.util.Vector;
 
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
+import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.data.Blob;
@@ -57,9 +58,9 @@ public class FullyLayer extends Layer{
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub
-//		this.weight = MatrixOperation.heRandom(this.width, this.oWidth, this.width);
 //		this.weight = MatrixOperation.gaussianRandom(this.width, this.oWidth, 0.01);
 		this.weight = RandomUtils.xavierRandom(this.width, this.oWidth, this.width, this.oWidth);
+//		this.weight = RandomUtils.heRandom(this.width, this.oWidth, this.width * this.oWidth);
 		this.bias = MatrixUtils.zero(this.oWidth);
 //		this.bias = MatrixOperation.gaussianRandom(this.outputNum, 0.1);
 	}
@@ -124,35 +125,7 @@ public class FullyLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		
-		/**
-		 * 计算当前层weight梯度
-		 * deltaW(i) = 1/m * ∑ delta(j) * input(i)
-		 * 计算deltaW平均值
-		 */
-		for(int m = 0;m<this.number;m++) {
-			for(int i = 0;i<this.deltaW.length;i++) {
-				for(int j = 0;j<this.deltaW[i].length;j++) {
-					this.deltaW[i][j] += this.delta.maxtir[m][0][0][j] * this.input.maxtir[m][0][0][i] / this.number;
-				}
-			}
-		}
-		
-		if(hasBias) {
 
-			/**
-			 * 计算当前层weight梯度
-			 * deltaB(i) = 1/m * ∑ delta(i) * input(i)
-			 * 计算deltaB平均值
-			 */
-			for(int m = 0;m<this.number;m++) {
-				for(int i = 0;i<this.deltaB.length;i++) {
-					this.deltaB[i] += this.delta.maxtir[m][0][0][i] / this.number;
-				}
-			}
-
-		}
-		
 		/**
 		 * 计算当前层误差
 		 */
@@ -162,9 +135,23 @@ public class FullyLayer extends Layer{
 			workers.add(new Task<Object>(index) {
 				@Override
 			    public Object call() throws Exception {
-					for(int i = 0;i<width;i++) {
-						for(int j = 0;j<oWidth;j++) {
-							diff.maxtir[index][0][0][i] += delta.maxtir[index][0][0][j] * weight[i][j];
+					for(int ow = 0;ow<oWidth;ow++) {
+						for(int w = 0;w<width;w++) {
+							/**
+							 * 计算当前层weight梯度
+							 * deltaW(i) = 1/m * ∑ delta(j) * input(i)
+							 * 计算deltaW平均值
+							 */
+							deltaW[w][ow] += delta.maxtir[index][0][0][ow] * input.maxtir[index][0][0][w] / number;
+							diff.maxtir[index][0][0][w] += delta.maxtir[index][0][0][ow] * weight[w][ow];
+						}
+						if(hasBias) {
+							/**
+							 * 计算当前层weight梯度
+							 * deltaB(i) = 1/m * ∑ delta(i) * input(i)
+							 * 计算deltaB平均值
+							 */
+							deltaB[ow] += delta.maxtir[index][0][0][ow] / number;
 						}
 					}
 					return null;
@@ -207,6 +194,7 @@ public class FullyLayer extends Layer{
 		 * 计算梯度
 		 */
 		this.diff();
+		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
@@ -246,11 +234,11 @@ public class FullyLayer extends Layer{
 	@Override
 	public void showDiff() {
 		// TODO Auto-generated method stub
-//		System.out.println("fully layer["+this.index+"]diff start:");
-//		
-//		MatrixOperation.printImage(this.active);
-//		
-//		System.out.println("fully layer["+this.index+"]diff end.");
+
+		float[] x = MatrixUtils.transform(this.diff.maxtir);
+		
+		System.out.println("fully layer["+this.index+"]diff-max:"+MathUtils.max(x)+" min:"+MathUtils.min(x));
+		
 	}
 
 	@Override

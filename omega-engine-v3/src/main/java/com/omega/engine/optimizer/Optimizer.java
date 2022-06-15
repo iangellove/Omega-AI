@@ -1,8 +1,8 @@
 package com.omega.engine.optimizer;
 
 import com.omega.common.task.TaskEngine;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.LabelUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.network.Network;
@@ -19,7 +19,9 @@ import com.omega.engine.optimizer.lr.LearnRateUpdate;
  */
 public abstract class Optimizer {
 	
-	public int trainIndex = 0;
+	public int batchIndex = 1;
+	
+	public int trainIndex = 1;
 	
 	public int batchSize = 1;
 	
@@ -29,9 +31,9 @@ public abstract class Optimizer {
 	
 	public Blob lossDiff;
 	
-	public int trainTime = 1000;
+	public int trainTime = 10;
 	
-	public int minTrainTime = 1000;
+	public int minTrainTime = 100;
 	
 	public float currentError = 1.0f;
 	
@@ -47,6 +49,20 @@ public abstract class Optimizer {
 	
 	private BaseData testData;
 	
+	private boolean warmUp = false;
+	
+	public int burnIn = 300;
+	
+	public int power = 4;
+	
+	public float scale = 0.1f;
+	
+	public int step = 500;
+	
+	public float gama = 0.9999f;
+	
+	public float lr = 0.1f;
+	
 	public abstract void train(BaseData trainingData);
 	
 	/**
@@ -56,10 +72,12 @@ public abstract class Optimizer {
 	 * @param error
 	 * @throws Exception 
 	 */
-	public Optimizer(Network network,int batchSize,int trainTime,float error) throws Exception {
+	public Optimizer(Network network,int batchSize,int trainTime,float error,boolean warmUp) throws Exception {
 		this.network = network;
 		this.trainTime = trainTime;
 		this.error = error;
+		this.lr = network.learnRate;
+		this.warmUp = warmUp;
 		this.network.init();
 	}
 	
@@ -70,11 +88,13 @@ public abstract class Optimizer {
 	 * @param error
 	 * @throws Exception 
 	 */
-	public Optimizer(Network network,int batchSize,int trainTime,int minTrainTime,float error) throws Exception {
+	public Optimizer(Network network,int batchSize,int trainTime,int minTrainTime,float error,boolean warmUp) throws Exception {
 		this.network = network;
 		this.trainTime = trainTime;
 		this.minTrainTime = minTrainTime;
 		this.error = error;
+		this.warmUp = warmUp;
+		this.lr = network.learnRate;
 		this.network.init();
 	}
 	
@@ -85,12 +105,14 @@ public abstract class Optimizer {
 	 * @param error
 	 * @throws Exception 
 	 */
-	public Optimizer(Network network,int batchSize,int trainTime,int minTrainTime,float error,LearnRateUpdate learnRateUpdate) throws Exception {
+	public Optimizer(Network network,int batchSize,int trainTime,int minTrainTime,float error,boolean warmUp,LearnRateUpdate learnRateUpdate) throws Exception {
 		this.network = network;
 		this.trainTime = trainTime;
 		this.minTrainTime = minTrainTime;
 		this.error = error;
+		this.warmUp = warmUp;
 		this.learnRateUpdate = learnRateUpdate;
+		this.lr = network.learnRate;
 		this.network.init();
 	}
 	
@@ -119,16 +141,43 @@ public abstract class Optimizer {
 	}
 	
 	public void updateLR() {
-		switch (this.learnRateUpdate) {
-		case LR_DECAY:
-			this.network.learnRate = LRDecay.decayedLR(this.network.learnRate, this.trainIndex);
-			break;
-		case GD_GECAY:
-			this.network.learnRate = GDDecay.decayedLR(this.network.learnRate, this.trainIndex);
-			break;
-		case NONE:
-			break;
+		
+		if(warmUp && batchIndex < burnIn) {
+			this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+		}else {
+
+			switch (this.learnRateUpdate) {
+			case LR_DECAY:
+				this.network.learnRate = LRDecay.decayedLR(this.network.learnRate, this.trainIndex);
+				break;
+			case GD_GECAY:
+				this.network.learnRate = GDDecay.decayedLR(this.network.learnRate, this.trainIndex);
+				break;
+			case NONE:
+				break;
+			case CONSTANT:
+				break;
+			case RANDOM:
+				this.network.learnRate = (float) Math.pow(RandomUtils.getInstance().nextFloat(), power) * this.lr;
+				break;
+			case POLY:
+				float t = batchIndex * 1.0f / trainTime / dataSize * batchSize;
+				
+				this.network.learnRate = (float) (this.lr * Math.pow((1.0f - t), power));
+				break;
+			case STEP:
+				this.network.learnRate = (float) (this.lr * Math.pow(this.scale, batchIndex / step));
+				break;
+			case EXP:
+				this.network.learnRate = (float) (this.lr * Math.pow(this.gama, batchIndex));
+				break;
+			case SIG:
+				this.network.learnRate = (float) (this.lr / (1 + Math.pow(Math.E, this.gama * (batchIndex - step))));
+				break;
+			}
+			
 		}
+		
 	}
 	
 	public float test(BaseData testData) {
@@ -184,6 +233,14 @@ public abstract class Optimizer {
 //		System.out.println("准确率:"+ error * 100 +"%");
 //		
 		return error;
+	}
+
+	public boolean isWarmUp() {
+		return warmUp;
+	}
+
+	public void setWarmUp(boolean warmUp) {
+		this.warmUp = warmUp;
 	}
 	
 }

@@ -8,6 +8,6 @@ package com.omega.engine.optimizer.lr;
  */
 public enum LearnRateUpdate {
 	
-	NONE,LR_DECAY,GD_GECAY
+	NONE,LR_DECAY,GD_GECAY,CONSTANT,RANDOM,POLY,STEP,EXP,SIG
 	
 }

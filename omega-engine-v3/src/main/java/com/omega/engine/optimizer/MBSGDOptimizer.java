@@ -1,5 +1,8 @@
 package com.omega.engine.optimizer;
 
+import java.math.BigDecimal;
+
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.nn.data.BaseData;
@@ -17,16 +20,16 @@ import com.omega.engine.optimizer.lr.LearnRateUpdate;
  */
 public class MBSGDOptimizer extends Optimizer {
 	
-	public MBSGDOptimizer(Network network, int trainTime, float error,int batchSize) throws Exception {
-		super(network, batchSize, trainTime, error);
+	public MBSGDOptimizer(Network network, int trainTime, float error,int batchSize,boolean warmUp) throws Exception {
+		super(network, batchSize, trainTime, error, warmUp);
 		// TODO Auto-generated constructor stub
 		this.batchSize = batchSize;
 		this.loss = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
 		this.lossDiff = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
 	}
 
-	public MBSGDOptimizer(Network network, int trainTime, float error,int batchSize,LearnRateUpdate learnRateUpdate) throws Exception {
-		super(network, batchSize, trainTime, error);
+	public MBSGDOptimizer(Network network, int trainTime, float error,int batchSize,LearnRateUpdate learnRateUpdate,boolean warmUp) throws Exception {
+		super(network, batchSize, trainTime, error, warmUp);
 		// TODO Auto-generated constructor stub
 		this.batchSize = batchSize;
 		this.loss = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
@@ -39,6 +42,12 @@ public class MBSGDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 
 		try {
+			
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				
@@ -64,14 +73,14 @@ public class MBSGDOptimizer extends Optimizer {
 					this.loss.clear();
 					
 					this.lossDiff.clear();
-
+					
 					Blob input = trainingData.getRandomData(indexs[it]); 
 					
 					/**
 					 * forward
 					 */
 					Blob output = this.network.forward(input);
-					
+
 					/**
 					 * loss
 					 */
@@ -91,18 +100,25 @@ public class MBSGDOptimizer extends Optimizer {
 					 * back
 					 */
 					this.network.back(this.lossDiff);
-
+					
 					float error = this.accuracy(output, input.labels, trainingData.labelSet);
 					
 					System.out.println("training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} currentError:"+this.currentError + " [costTime:"+(System.currentTimeMillis() - start)+"]");
-					
-				}
-
-				/**
-				 * update learning rate
-				 */
-				this.updateLR();
 				
+
+//					/**
+//					 * update learning rate
+//					 */
+//					this.updateLR();
+					
+					this.batchIndex++;
+				}
+//
+//				/**
+//				 * update learning rate
+//				 */
+				this.updateLR();
+//				
 			}
 			
 			/**

@@ -609,8 +609,9 @@ public class DataLoader {
         			for(int h = 0;h<height;h++) {
         				for(int w = 0;w<width;w++) {
         					if(normalization) {
-        						x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
-//        						x[n][c][h][w] = bin.read() / 255.0d;
+//        						x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
+//        						x[n][c][h][w] = (float) (bin.read() / 255.0d) - 0.5f;
+        						x[n][c][h][w] = (float) (bin.read() / 255.0d);
                     		}else{
                     			x[n][c][h][w] = bin.read();
                     		}
@@ -657,8 +658,9 @@ public class DataLoader {
             			for(int h = 0;h<height;h++) {
             				for(int w = 0;w<width;w++) {
             					if(normalization) {
-            						x[index][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
-//            						x[index][c][h][w] = (bin.read() / 255.0d) - 0.5;
+//            						x[index][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
+//            						x[index][c][h][w] = (float) ((bin.read() / 255.0d) - 0.5);
+            						x[index][c][h][w] = (float) (bin.read() / 255.0d) ;
                         		}else{
                         			x[index][c][h][w] = bin.read();
                         		}

@@ -1,5 +1,6 @@
 package com.omega.engine.nn.layer;
 
+import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.nn.model.LayerInit;
@@ -161,30 +162,30 @@ public abstract class Layer {
 	 * (f(x + eta) - f(x - eta)) / (2 * eta) ≈ f'(x)
 	 */
 	public float gradientCheck() {
-//		System.out.println("*******************" + this.index + "="+this.getLayerType()+" layer********************");
-//		
-//		if(this.index != 0) {
-//
-//			float[][][][] output1 = this.output(MatrixOperation.add(this.input.maxtir, this.eta));
-//			
-//			float[][][][] output2 = this.output(MatrixOperation.subtraction(this.input.maxtir, this.eta));
-//			
-//			float[][][][] gradientCheck = MatrixOperation.subtraction(output1, output2);
-//			
-//			gradientCheck = MatrixOperation.division(gradientCheck, 2 * this.eta);
-//
-//			float finalGCError = 0.0d;
-//			
-//			if(this.getLayerType()!=LayerType.pooling) {
-//				
-//				float[][][][] error = MatrixOperation.subtractionP(this.delta.maxtir, gradientCheck);
-////				System.out.println(JsonUtils.toJson(error));
-//				finalGCError = MatrixOperation.sum(error);
-//			}
-//			
-//			System.out.println("finalGCError:"+finalGCError);
-//		}
-//		
+		System.out.println("*******************" + this.index + "="+this.getLayerType()+" layer********************");
+		
+		if(this.index != 0) {
+
+			float[][][][] output1 = this.output(MatrixOperation.add(this.input.maxtir, this.eta));
+			
+			float[][][][] output2 = this.output(MatrixOperation.subtraction(this.input.maxtir, this.eta));
+			
+			float[][][][] gradientCheck = MatrixOperation.subtraction(output1, output2);
+			
+			gradientCheck = MatrixOperation.division(gradientCheck, 2 * this.eta);
+
+			float finalGCError = 0.0f;
+			
+			if(this.getLayerType()!=LayerType.pooling) {
+				
+				float[][][][] error = MatrixOperation.subtractionP(this.delta.maxtir, gradientCheck);
+//				System.out.println(JsonUtils.toJson(error));
+				finalGCError = MatrixOperation.sum(error);
+			}
+			
+			System.out.println("finalGCError:"+finalGCError);
+		}
+		
 		return 0.0f;
 	}
 

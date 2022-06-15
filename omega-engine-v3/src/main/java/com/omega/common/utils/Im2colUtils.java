@@ -15,17 +15,17 @@ public class Im2colUtils {
 	
 	private static final int threadNum = 8;
 	
-	public static float[][] im2col(float[][][][] x,int ko,int kh,int kw,int stride){
+	public static float[][] im2col(float[][][][] x,int kh,int kw,int stride){
 		
-		int kc = x[0].length;
-
 		int N = x.length;
-		
+
+		int C = x[0].length;
+
 		int oHeight = ((x[0][0].length - kh) / stride) + 1;
 		
 		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
 		
-		float[][] col = new float[N * oHeight * oWidth][kh * kw * kc];
+		float[][] col = new float[N * oHeight * oWidth][kh * kw * C];
 		
 		Im2col task = new Im2col(x, kh, kw, oHeight, oWidth, stride, 0, col, 0, N - 1);
 		
@@ -51,6 +51,21 @@ public class Im2colUtils {
 		ForkJobEngine.run(task);
 		
 		return col;
+	}
+	
+	public static float[][] kernalTo2d(float[][][][] x){
+		int N = x.length;
+		int C = x[0].length;
+		int H = x[0][0].length;
+		int W = x[0][0][0].length;
+		
+		float[][] y = new float[N * H * W][C];
+		
+		KernalTo2d job = new KernalTo2d(x, y, 0, N * H * W - 1);
+		
+		ForkJobEngine.run(job);
+		
+		return y;
 	}
 	
 	public static float[][] to2d(float[][][][] x){

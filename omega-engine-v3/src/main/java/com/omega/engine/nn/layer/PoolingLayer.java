@@ -1,7 +1,9 @@
 package com.omega.engine.nn.layer;
 
+import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.PrintUtils;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.pooling.PoolingType;
@@ -63,6 +65,7 @@ public class PoolingLayer extends Layer {
 	public void output() {
 		// TODO Auto-generated method stub
 		this.output.maxtir = MatrixOperation.poolingAndMask(this.input.maxtir, this.mask,this.pWidth, this.pHeight, this.stride, this.poolingType);
+		
 	}
 
 	@Override
@@ -70,7 +73,7 @@ public class PoolingLayer extends Layer {
 		// TODO Auto-generated method stub
 		
 		this.diff.maxtir =  MatrixOperation.poolingDiff(this.delta.maxtir, this.mask, this.diff.maxtir, this.pWidth, this.pHeight, this.stride);
-		
+//		PrintUtils.printImage(this.diff.maxtir);
 //		System.out.println("pooling layer ["+this.index+"]");
 //		
 //		MatrixOperation.printImage(this.nextDiff);
@@ -111,6 +114,7 @@ public class PoolingLayer extends Layer {
 		 * 计算梯度
 		 */
 		this.diff();
+		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
@@ -143,6 +147,11 @@ public class PoolingLayer extends Layer {
 //		MatrixOperation.printImage(this.diff);
 //		
 //		System.out.println("pooling layer["+this.index+"]diff end.");
+
+		float[] x = MatrixUtils.transform(this.diff.maxtir);
+		
+		System.out.println("pooling layer["+this.index+"]diff-max:"+MathUtils.max(x)+" min:"+MathUtils.min(x));
+		
 	}
 
 	@Override

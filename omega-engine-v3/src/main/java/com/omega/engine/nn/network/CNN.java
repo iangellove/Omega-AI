@@ -144,6 +144,8 @@ public class CNN extends Network {
 			
 			layer.update();
 			
+//			layer.showDiff();
+			
 //			System.out.println("["+layer.getClass().toString()+"]back:"+(System.nanoTime() - start) / 1e6 + "ms");
 //			uct += System.nanoTime() - uStart;
 			

@@ -158,6 +158,20 @@
 		
 		<!-- jcuda -->
 		
+		<!-- nd4j-cuda-11.2 -->
+		<dependency>
+		  <groupId>org.nd4j</groupId>
+		  <artifactId>nd4j-cuda-11.2-platform</artifactId>
+		  <version>1.0.0-M1.1</version>
+		</dependency>
+		<!-- nd4j-cuda-11.2 -->
+		
+		<dependency>
+		    <groupId>com.aparapi</groupId>
+		    <artifactId>aparapi</artifactId>
+		    <version>3.0.0</version>
+		</dependency>
+		
 		<!--引入Swagger2依赖——开始 -->
 		 <dependency>
 		   <groupId>io.springfox</groupId>

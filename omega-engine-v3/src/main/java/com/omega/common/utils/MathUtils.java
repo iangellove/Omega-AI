@@ -48,7 +48,7 @@ public class MathUtils {
 		
 		int[][] tmp = new int[itc][batchSize];
 		
-		List<Integer> list = new ArrayList<Integer>();  
+		List<Integer> list = new ArrayList<Integer>(); 
 		
 		for(int i = 0;i<length;i++) {
 			list.add(i);
@@ -130,6 +130,32 @@ public class MathUtils {
 			random = new Random();
 		}
 		return random;
+	}
+	
+	public static float max(float[] x) {
+		
+		float max = 0.0f;
+		
+		for(float t:x) {
+			if(max <= t) {
+				max = t;
+			}
+		}
+		
+		return max;
+	}
+	
+	public static float min(float[] x) {
+		
+		float min = 0.0f;
+		
+		for(float t:x) {
+			if(min >= t) {
+				min = t;
+			}
+		}
+		
+		return min;
 	}
 	
 }

@@ -4,6 +4,7 @@ import java.util.Vector;
 
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
+import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.data.Blob;
@@ -141,24 +142,71 @@ public class BNLayer extends NormalizationLayer {
 			/**
 			 * zi = (xi - mean) / (std + eta)
 			 */
-			this.z.maxtir = MatrixOperation.division(MatrixOperation.subtraction(this.input.maxtir, this.mean, mode), this.std, mode);
+//			this.z.maxtir = MatrixOperation.division(MatrixOperation.subtraction(this.input.maxtir, this.mean, mode), this.std, mode);
+			
+			this.culOutput(this.mean, this.std, mode);
 			
 		}else {
 
 			/**
 			 * zi = (xi - mean) / (std + eta)
 			 */
-			this.z.maxtir = MatrixOperation.division(MatrixOperation.subtraction(this.input.maxtir, this.runingMean, mode), this.runingStd, mode);
-
+//			this.z.maxtir = MatrixOperation.division(MatrixOperation.subtraction(this.input.maxtir, this.runingMean, mode), this.runingStd, mode);
+			
+			this.culOutput(this.runingMean, this.runingStd, mode);
+			
 		}
 
 		/**
 		 * yi = gama * zi + beta
 		 */
-		this.output.maxtir = MatrixOperation.addByBN(MatrixOperation.multiplicationByBN(this.z.maxtir, this.gama, mode), this.beta, mode);
+//		this.output.maxtir = MatrixOperation.addByBN(MatrixOperation.multiplicationByBN(this.z.maxtir, this.gama, mode), this.beta, mode);
 		
 	}
+	
+	/**
+	 * zi = (xi - mean) / (std + eta)
+	 * yi = gama * zi + beta
+	 */
+	private void culOutput(float[] m,float[] s,int mode) {
+		
+		int N = this.input.maxtir.length;
+		int C = this.input.maxtir[0].length;
+		int H = this.input.maxtir[0][0].length;
+		int W = this.input.maxtir[0][0][0].length;
 
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+
+		for(int n = 0;n<N;n++) {
+			final int index = n;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					for(int c = 0;c<C;c++) {
+						for(int h = 0;h<H;h++) {
+							for(int w = 0;w<W;w++) {
+								
+								if(mode == 0) {
+									z.maxtir[index][c][h][w] = (input.maxtir[index][c][h][w] - m[w]) / s[w];
+									output.maxtir[index][c][h][w] = z.maxtir[index][c][h][w] * gama[w] + beta[w];
+								}else {
+									z.maxtir[index][c][h][w] = (input.maxtir[index][c][h][w] - m[c]) / s[c];
+									output.maxtir[index][c][h][w] = z.maxtir[index][c][h][w] * gama[c] + beta[c];
+								}
+	
+							}
+						}
+					}
+					return null;
+				}
+			});
+			
+		}
+		
+		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
+		
+	}
+	
 	@Override
 	public Blob getOutput() {
 		// TODO Auto-generated method stub
@@ -280,16 +328,14 @@ public class BNLayer extends NormalizationLayer {
 		/**
 		 * deltaGama = ∑ deta * z
 		 * deltaBeta = ∑ deta
-		 * dz (dxhat) = dl/dxhat
-		 * dL/dVar
+		 * dxhat = deta * gama
+		 * dvar = ∑ dxhat * (xi - mean) * -1/2 * (var + eta)^-3/2
+		 * dmean = ∑ dxhat * -1 / (var + eta)^1/2 + dvar * (∑ -2 * (x - mean)) / n
+		 * dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/2
 		 */
 		float[][][][] dz = new float[this.number][this.channel][this.oHeight][this.oWidth];
 		
 		float[] dvar = new float[this.meanNum];
-		
-		float[] dmu1 = new float[this.meanNum];
-		
-		float[] dmu2 = new float[this.meanNum];
 		
 		float[] dmu = new float[this.meanNum];
 		
@@ -315,12 +361,16 @@ public class BNLayer extends NormalizationLayer {
 									ci = c;
 									bn = number * oHeight * oWidth;
 								}
-								deltaGama[ci] += delta.maxtir[index][c][h][w] * z.maxtir[index][c][h][w] / bn;
-								deltaBeta[ci] += delta.maxtir[index][c][h][w] / bn;
+								// deltaGama = ∑ deta * z
+								deltaGama[ci] += delta.maxtir[index][c][h][w] * z.maxtir[index][c][h][w];
+								// deltaBeta = ∑ deta
+								deltaBeta[ci] += delta.maxtir[index][c][h][w];
+								// dxhat = deta * gama
 								dz[index][c][h][w] = delta.maxtir[index][c][h][w] * gama[ci];
-								dvar[ci] += dz[index][c][h][w] * (input.maxtir[index][c][h][w] - mean[ci]) * -0.5 * Math.pow(std[ci], -3.0);
-								dmu1[ci] +=  -1.0d * dz[index][c][h][w] / std[ci];
-								dmu2[ci] += -2.0d * (input.maxtir[index][c][h][w] - mean[ci]) / bn;
+								// dstd = ∑ dxhat * (xi - mean) * -1/2 * (std + eta)^-3/2
+								dvar[ci] += dz[index][c][h][w] * (input.maxtir[index][c][h][w] - mean[ci]) * -0.5f * Math.pow(std[ci], -3/2);
+								// dmean = ∑ dxhat * -1 / (std + eta)^1/2 + dstd * (∑ -2 * (x - mean)) / n
+								dmu[ci] +=  -1.0f * dz[index][c][h][w] / std[ci] + -2.0f * (input.maxtir[index][c][h][w] - mean[ci]) / bn;
 							}
 						}
 					}
@@ -330,12 +380,7 @@ public class BNLayer extends NormalizationLayer {
 		}
 		
 		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
-		
-		/**
-		 * dL/dmu
-		 */
-		dmu = MatrixOperation.add(dmu1, MatrixOperation.multiplication(dvar, dmu2));
-		
+
 		/**
 		 * dl/dx
 		 */
@@ -348,6 +393,7 @@ public class BNLayer extends NormalizationLayer {
 						if(bnType == BNType.conv_bn) {
 							ci = c;
 						}
+						// dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/n
 						diff.maxtir[m][c][h][w] = dz[m][c][h][w] / std[ci] + 2 * dvar[ci] * (input.maxtir[m][c][h][w] - mean[ci]) / batchNum + dmu[ci] / batchNum;
 					}
 				}
@@ -369,6 +415,7 @@ public class BNLayer extends NormalizationLayer {
 		 * 计算梯度
 		 */
 		this.diff();
+		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
@@ -395,6 +442,10 @@ public class BNLayer extends NormalizationLayer {
 	public void showDiff() {
 		// TODO Auto-generated method stub
 
+		float[] x = MatrixUtils.transform(this.diff.maxtir);
+		
+		System.out.println("bn layer["+this.index+"]diff-max:"+MathUtils.max(x)+" min:"+MathUtils.min(x));
+		
 	}
 
 	@Override

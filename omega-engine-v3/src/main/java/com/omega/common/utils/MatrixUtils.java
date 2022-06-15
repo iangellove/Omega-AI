@@ -2,6 +2,7 @@ package com.omega.common.utils;
 
 import java.util.Vector;
 
+import com.omega.common.task.ForkJobEngine;
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
 
@@ -646,7 +647,6 @@ public class MatrixUtils {
 	 * @index ni * c * h * w + ci * h * w + hi * w + wi
 	 * @return
 	 */
-
 	public static float[][][][] col2img(float[] x, int N, int C, int H, int W){
 		
 		float[][][][] result = new float[N][C][H][W];
@@ -682,8 +682,67 @@ public class MatrixUtils {
 		
 		return result;
 	}
+	
+	/**
+	 * transform
+	 * @param x
+	 * @index ni * c * h * w + ci * h * w + hi * w + wi
+	 * @return
+	 */
+	public static float[][][][] col2imgV2(float[] x, int N, int C, int H, int W){
+		
+		float[][][][] result = new float[N][C][H][W];
 
-	private static float[][] to2DimenArray(float[] x, int n, int d){
+		float[][] mat = to2DimenArray(x, N * H * W, C);
+		
+		OP2dTo4d job = new OP2dTo4d(mat, result, 0, mat.length - 1);
+		
+		ForkJobEngine.run(job);
+		
+		return result;
+	}
+
+	/**
+	 * transform
+	 * @param x
+	 * @index ni * c * h * w + ci * h * w + hi * w + wi
+	 * @return
+	 */
+	public static float[][][][] col2img(float[][] x, int N, int C, int H, int W){
+		
+		float[][][][] result = new float[N][C][H][W];
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		for(int n = 0;n<N;n++) {
+			final int index = n;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					for(int c = 0;c<C;c++) {
+						
+						for(int h = 0;h<H;h++) {
+							
+							for(int w = 0;w<W;w++) {
+								
+								result[index][c][h][w] = x[index * H * W + h * W + w][c];
+								
+							}
+							
+						}
+
+					}
+					return null;
+				}
+			});
+		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+		
+		return result;
+	}
+	
+	public static float[][] to2DimenArray(float[] x, int n, int d){
 		float[][] result = new float[n][d];
 		
 		for(int i = 0;i<n;i++) {
@@ -691,6 +750,14 @@ public class MatrixUtils {
 		}
 		
 		return result;
+	}
+	
+	public static int[] shape(float[][][][] x) {
+		return new int[] {x.length,x[0].length,x[0][0].length,x[0][0][0].length};
+	}
+	
+	public static int[] shape(float[][] x) {
+		return new int[] {x.length,x[0].length};
 	}
 	
 }
