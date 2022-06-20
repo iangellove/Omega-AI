@@ -22,6 +22,9 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 4.参考darknet对学习率更新机制进行升级，目前已支持RANDOM、POLY、STEP、EXP、SIG等多种学习率更新方法，并且实现学习率warmup功能
 
+### 依赖
+由于omega-engine-1.0.3加入了jcuda支持，所以1.0.3需要安装与jcuda版本对应的cuda，我在该项目中使用的是jcuda-11.2.0版本的包，那么我cuda需要安装11.2.x版本
+
 ### Demo展示
 [基于卷积神经网络mnist手写数字识别](http://120.237.148.121:8011/mnist)
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/b9b5846af6624bdf8f5d570c5052bc64.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTMyODMzMDQ=,size_1,color_FFFFFF,t_70#pic_center)
