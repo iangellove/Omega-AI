@@ -149,5 +149,11 @@ public class SoftmaxLayer extends Layer {
 		
 		return output;
 	}
+
+	@Override
+	public void initCache() {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

@@ -148,5 +148,11 @@ public class RecurrentLayer extends Layer{
 		}
 		
 	}
+
+	@Override
+	public void initCache() {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

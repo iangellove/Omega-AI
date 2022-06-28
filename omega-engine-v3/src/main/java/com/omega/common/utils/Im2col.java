@@ -142,7 +142,7 @@ public class Im2col extends RecursiveAction {
 		
 		System.out.println("time1:"+(System.nanoTime() - start1) / 1e6 + "ms.["+col[0][0]+","+col[col.length - 1][col[0].length - 1]+"]");
 		
-		//PrintUtils.printImage(col);
+		PrintUtils.printImage(col);
 		
 		System.out.println("===========================>");
 		
@@ -158,21 +158,24 @@ public class Im2col extends RecursiveAction {
 		
 		long start3 = System.nanoTime();
 		
-		float[][] col3 = MatrixOperation.im2col4d(x, fh, fw, stride);
+		float[][] col3 = Im2col4d.im2col(x, fh, fw, stride);
+		
+//		float[][] col3 = MatrixOperation.im2col4d(x, fh, fw, stride);
+		MatrixOperation.im2col4d(x, fh, fw, stride);
 		
 		System.out.println("time3:"+(System.nanoTime() - start3) / 1e6 + "ms.["+col3[0][0]+","+col3[col3.length - 1][col3[0].length - 1]+"]");
 		
-		//PrintUtils.printImage(col3);
+		PrintUtils.printImage(col3);
 
-		float[][] col4 = MatrixOperation.im2col4d2(x, fh, fw, stride);
-		
-		PrintUtils.printImage(col4);
-		
-		System.out.println("===========================>");
-		
-		float[][] col5 = MatrixUtils.transpose(Im2colUtils.im2col(x, fh, fw, stride));
-		
-		PrintUtils.printImage(col5);
+//		float[][] col4 = MatrixOperation.im2col4d2(x, fh, fw, stride);
+//		
+//		PrintUtils.printImage(col4);
+//		
+//		System.out.println("===========================>");
+//		
+//		float[][] col5 = MatrixUtils.transpose(Im2colUtils.im2col(x, fh, fw, stride));
+//		
+//		PrintUtils.printImage(col5);
 		
 	}
 	

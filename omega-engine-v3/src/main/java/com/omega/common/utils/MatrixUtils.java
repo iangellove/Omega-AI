@@ -43,6 +43,44 @@ public class MatrixUtils {
 	 *
 	 * @throws
 	 */
+	public static void zero(int size,float[] x) {
+		if(x == null) {
+			x = new float[size];
+		}else {
+			MatrixUtils.zero(x);
+		}
+	}
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static void zero(float[] x) {
+		for(int i = 0;i<x.length;i++) {
+			x[i] = 0;
+		}
+	}
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static float[] one(int size) {
 		float[] temp = new float[size];
 		for(int i = 0;i<size;i++) {
@@ -200,6 +238,27 @@ public class MatrixUtils {
 	 *
 	 * @throws
 	 */
+	public static void zero(float[][] data) {
+		for(int i = 0;i<data.length;i++) {
+			for(int j = 0;j<data[i].length;j++) {
+				data[i][j] = 0;
+			}
+		}
+	}
+	
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static float[][][] zero(int x,int y,int z) {
 		return new float[x][y][z];
 	}
@@ -216,8 +275,32 @@ public class MatrixUtils {
 	 *
 	 * @throws
 	 */
-	public static float[][][][] zero(int x,int y,int z,int n) {
-		return new float[x][y][z][n];
+	public static float[][][][] zero(int n,int c,int h,int w) {
+		return new float[n][c][h][w];
+	}
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static void zero(float[][][][] x) {
+		for(int n = 0;n<x.length;n++) {
+			for(int c = 0;c<x[n].length;c++) {
+				for(int h = 0;h<x[n][c].length;h++) {
+					for(int w = 0;w<x[n][c][h].length;w++) {
+						x[n][c][h][w] = 0;
+					}
+				}
+			}
+		}
 	}
 	
 	/**
@@ -234,6 +317,33 @@ public class MatrixUtils {
 	 */
 	public static float[][][][][] zero(int x,int y,int z,int n,int m) {
 		return new float[x][y][z][n][m];
+	}
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static void zero(float[][][][][] x) {
+		for(int i = 0;i<x.length;i++) {
+			for(int j = 0;j<x[i].length;j++) {
+				for(int m = 0;m<x[i][j].length;m++) {
+					for(int n = 0;n<x[i][j][m].length;n++) {
+						for(int o = 0;o<x[i][j][m][n].length;o++) {
+							x[i][j][m][n][o] = 0;
+						}
+					}
+				}
+			}
+		}
+		
 	}
 	
 	/**
@@ -338,7 +448,7 @@ public class MatrixUtils {
 	 * @return
 	 */
 	public static int[] size(float[][][][] data) {
-		System.out.println("["+data.length+","+data[0].length+","+data[0][0].length+","+data[0][0][0].length+"]");
+//		System.out.println("["+data.length+","+data[0].length+","+data[0][0].length+","+data[0][0][0].length+"]");
 		return new int[]{data.length,data[0].length,data[0][0].length,data[0][0][0].length};
 	}
 
@@ -640,6 +750,19 @@ public class MatrixUtils {
 		return result;
 	}
 	
+	/**
+	 * 矩阵转置
+	 * @return
+	 */
+	public static float[] transpose(float[] x,int m,int n){
+		float[] y = new float[m * n];
+		
+		Transpose job = new Transpose(x, y, m, n, 0, (m * n - 1));
+		
+		ForkJobEngine.run(job);
+		
+		return y;
+	}
 
 	/**
 	 * transform
@@ -692,14 +815,29 @@ public class MatrixUtils {
 	public static float[][][][] col2imgV2(float[] x, int N, int C, int H, int W){
 		
 		float[][][][] result = new float[N][C][H][W];
-
 		float[][] mat = to2DimenArray(x, N * H * W, C);
-		
 		OP2dTo4d job = new OP2dTo4d(mat, result, 0, mat.length - 1);
 		
 		ForkJobEngine.run(job);
 		
 		return result;
+	}
+	
+	/**
+	 * transform
+	 * @param x
+	 * @index ni * c * h * w + ci * h * w + hi * w + wi
+	 * @return
+	 */
+	public static float[][][][] col2imgV2(float[] x,float[][][][] y, int N, int C, int H, int W){
+
+		float[][] mat = to2DimenArray(x, N * H * W, C);
+		
+		OP2dTo4d job = new OP2dTo4d(mat, y, 0, mat.length - 1);
+		
+		ForkJobEngine.run(job);
+		
+		return y;
 	}
 
 	/**

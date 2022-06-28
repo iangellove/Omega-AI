@@ -60,6 +60,14 @@ public class CNN extends Network {
 		// TODO Auto-generated method stub
 
 //		long start = System.nanoTime();
+//		
+//		long convTime = 0;
+//		
+//		long bnTime = 0;
+//		
+//		long fullyTime = 0;
+//		
+//		long poolingTime = 0;
 		
 		/**
 		 * 设置输入数据
@@ -73,15 +81,39 @@ public class CNN extends Network {
 			
 			Layer layer = layerList.get(i);
 			
-//			long start = System.nanoTime();
-			
+//			long start2 = System.nanoTime();
+//			
 			layer.forward();
+//			
+//			if(layer.getLayerType() == LayerType.conv) {
+//				convTime += System.nanoTime() - start2;
+//			}
+//			
+//			if(layer.getLayerType() == LayerType.bn) {
+//				bnTime += System.nanoTime() - start2;
+//			}
+//			
+//			if(layer.getLayerType() == LayerType.full) {
+//				fullyTime += System.nanoTime() - start2;
+//			}
+//			
+//			if(layer.getLayerType() == LayerType.pooling) {
+//				poolingTime += System.nanoTime() - start2;
+//			}
 			
-//			System.out.println("["+layer.getClass().toString()+"]forward:"+(System.nanoTime() - start) / 1e6 + "ms");
+//			System.out.println("["+layer.getClass().toString()+"]forward:"+(System.nanoTime() - start2) / 1e6 + "ms");
 			
 		}
 		
-//		System.out.println("forward:"+(System.nanoTime() - start) / 1e6 + "ms");
+//		System.out.println("conv forward:"+convTime / 1e6 + "ms");
+//		
+//		System.out.println("bn forward:"+bnTime / 1e6 + "ms");
+//		
+//		System.out.println("pooling forward:"+poolingTime / 1e6 + "ms");
+//		
+//		System.out.println("fully forward:"+fullyTime / 1e6 + "ms");
+//		
+//		System.out.println("all forward:"+(System.nanoTime() - start) / 1e6 + "ms");
 		
 		return this.getOuput();
 	}
@@ -117,6 +149,10 @@ public class CNN extends Network {
 		// TODO Auto-generated method stub
 
 //		long start = System.nanoTime();
+//		
+//
+//		long backTime = 0;
+		
 		
 		/**
 		 * 设置误差
@@ -124,6 +160,16 @@ public class CNN extends Network {
 		 */
 		this.setLossDiff(lossDiff);
 		
+//		long start = System.nanoTime();
+//		
+//		long convTime = 0;
+//		
+//		long bnTime = 0;
+//		
+//		long fullyTime = 0;
+//		
+//		long poolingTime = 0;
+//		
 //		long uct = 0;
 //		
 //		long bct = 0;
@@ -134,15 +180,35 @@ public class CNN extends Network {
 			
 			layer.learnRate = this.learnRate;
 			
-//			long start = System.nanoTime();
+//			long startB = System.nanoTime();
+			
+//			long start2 = System.nanoTime();
 			
 			layer.back();
 
+//			backTime += System.nanoTime() - startB;
+			
 //			bct += System.nanoTime() - bStart;
 			
 //			long uStart = System.nanoTime();
 			
 			layer.update();
+			
+//			if(layer.getLayerType() == LayerType.conv) {
+//				convTime += System.nanoTime() - start2;
+//			}
+//			
+//			if(layer.getLayerType() == LayerType.bn) {
+//				bnTime += System.nanoTime() - start2;
+//			}
+//			
+//			if(layer.getLayerType() == LayerType.full) {
+//				fullyTime += System.nanoTime() - start2;
+//			}
+//			
+//			if(layer.getLayerType() == LayerType.pooling) {
+//				poolingTime += System.nanoTime() - start2;
+//			}
 			
 //			layer.showDiff();
 			
@@ -151,11 +217,15 @@ public class CNN extends Network {
 			
 		}
 		
-//		System.out.println("all back  :"+(System.nanoTime() - start) / 1e6 + "ms");
+//		System.out.println("conv backward:"+convTime / 1e6 + "ms");
 //		
-//		System.out.println("update:"+uct / 1e6+"ms");
+//		System.out.println("bn backward:"+bnTime / 1e6 + "ms");
 //		
-//		System.out.println("back  :"+bct / 1e6+"ms");
+//		System.out.println("pooling backward:"+poolingTime / 1e6 + "ms");
+//		
+//		System.out.println("fully backward:"+fullyTime / 1e6 + "ms");
+//		
+//		System.out.println("all backward:"+(System.nanoTime() - start) / 1e6 + "ms");
 		
 	}
 

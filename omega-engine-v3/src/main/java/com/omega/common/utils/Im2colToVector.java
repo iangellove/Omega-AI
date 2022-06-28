@@ -5,7 +5,7 @@ import java.util.concurrent.RecursiveAction;
 
 import com.omega.common.task.ForkJobEngine;
 
-public class Im2col4d extends RecursiveAction {
+public class Im2colToVector extends RecursiveAction {
 
 	/**
 	 * 
@@ -18,16 +18,16 @@ public class Im2col4d extends RecursiveAction {
 	
 	private float[][][][] x;
 	
-	private float[][] y;
+	private float[] y;
 	
 	private int kh;
 	private int kw;
 	private int stride;
 	
 	
-	public Im2col4d(float[][][][] data,float[][] col,int kh,int kw,int stride,int start,int end) {
+	public Im2colToVector(float[][][][] data,float[] y,int kh,int kw,int stride,int start,int end) {
 		this.x = data;
-		this.y = col;
+		this.y = y;
 		this.start = start;
 		this.end = end;
 		this.kh = kh;
@@ -47,8 +47,8 @@ public class Im2col4d extends RecursiveAction {
 		} else {
 
 			int mid = (start + end + 1) >>> 1;
-			Im2col4d left = new Im2col4d(x, y, kh, kw, stride, start, mid - 1);
-			Im2col4d right = new Im2col4d(x, y, kh, kw, stride, mid, end);
+			Im2colToVector left = new Im2colToVector(x, y, kh, kw, stride, start, mid - 1);
+			Im2colToVector right = new Im2colToVector(x, y, kh, kw, stride, mid, end);
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -60,17 +60,13 @@ public class Im2col4d extends RecursiveAction {
 	}
 	
 	private void col() {
-		
-//		int N = x.length;
-		
+
 		int oHeight = ((x[0][0].length - kh ) / stride) + 1;
 		
 		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
 		
 		int ow = x[0].length * kh * kw;
-		
-//		int oh = N * oHeight * oWidth;
-		
+
 		int kSize = kh * kw;
 		
 		for (int i = start; i <= end; i++) {
@@ -91,7 +87,7 @@ public class Im2col4d extends RecursiveAction {
 				
 				int xw = startW + xSize % kw;
 				
-				y[i][j] = x[n][c][xh][xw];
+				y[i * ow + j] = x[n][c][xh][xw];
 
 			}
 			
@@ -99,7 +95,7 @@ public class Im2col4d extends RecursiveAction {
 		
 	}
 	
-	public static float[][] im2col(float[][][][] x,int kh,int kw,int stride){
+	public static float[] im2col(float[][][][] x,int kh,int kw,int stride){
 		
 		int N = x.length;
 		
@@ -111,20 +107,16 @@ public class Im2col4d extends RecursiveAction {
 		
 		int oh = N * oHeight * oWidth;
 		
-		long start3 = System.nanoTime();
-		    	
-		float[][] result = new float[oh][ow];
+		float[] result = new float[oh * ow];
 		
-		System.out.println((System.nanoTime() - start3) / 1e6 + "ms=============");
-		
-		Im2col4d job = new Im2col4d(x, result, kh, kw, stride, 0, oh - 1);
+		Im2colToVector job = new Im2colToVector(x, result, kh, kw, stride, 0, oh - 1);
 	
 		ForkJobEngine.run(job);
 		
 		return result;
 	}
 	
-	public static float[][] im2colV2(float[][][][] x,float[][] result,int kh,int kw,int stride){
+	public static void im2col(float[][][][] x,float[] y,int kh,int kw,int stride){
 		
 		int N = x.length;
 		
@@ -132,11 +124,47 @@ public class Im2col4d extends RecursiveAction {
 		
 		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
 		
-//		int ow = x[0].length * kh * kw;
+		int ow = x[0].length * kh * kw;
 		
 		int oh = N * oHeight * oWidth;
 		
-		Im2col4d job = new Im2col4d(x, result, kh, kw, stride, 0, oh - 1);
+		Im2colToVector job = new Im2colToVector(x, y, kh, kw, stride, 0, oh - 1);
+	
+		ForkJobEngine.run(job);
+
+	}
+	
+	public static float[] im2colKernel(float[][][][] x){
+		
+
+		int ko = x.length;
+		int kc = x[0].length;
+		int kh = x[0][0].length;
+		int kw = x[0][0][0].length;
+		
+		/**
+		 * kernel im2col
+		 */
+		float[] col = new float[ko * kh * kw * kc];
+		
+		Im2colToVector job = new Im2colToVector(x, col, kh, kw, 0, 0, ko - 1);
+	
+		ForkJobEngine.run(job);
+		
+		return col;
+	}
+	
+	public static float[] im2colV2(float[][][][] x,float[] result,int kh,int kw,int stride){
+		
+		int N = x.length;
+		
+		int oHeight = ((x[0][0].length - kh ) / stride) + 1;
+		
+		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
+
+		int oh = N * oHeight * oWidth;
+		
+		Im2colToVector job = new Im2colToVector(x, result, kh, kw, stride, 0, oh - 1);
 	
 		ForkJobEngine.run(job);
 		

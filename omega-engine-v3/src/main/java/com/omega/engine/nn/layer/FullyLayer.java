@@ -44,8 +44,8 @@ public class FullyLayer extends Layer{
 	public void initBack() {
 		// TODO Auto-generated method stub
 		this.diff = Blobs.zero(number, channel, height, width, this.diff);
-		this.deltaB = MatrixUtils.zero(this.oWidth);
-		this.deltaW = MatrixUtils.zero(this.width,this.oWidth);
+		MatrixUtils.zero(this.deltaB);
+		MatrixUtils.zero(this.deltaW);
 	}
 
 	@Override
@@ -62,31 +62,10 @@ public class FullyLayer extends Layer{
 		this.weight = RandomUtils.xavierRandom(this.width, this.oWidth, this.width, this.oWidth);
 //		this.weight = RandomUtils.heRandom(this.width, this.oWidth, this.width * this.oWidth);
 		this.bias = MatrixUtils.zero(this.oWidth);
+		this.deltaB = new float[this.oWidth];
+		this.deltaW = new float[width][oWidth];
 //		this.bias = MatrixOperation.gaussianRandom(this.outputNum, 0.1);
 	}
-	
-	
-//
-//	@Override
-//	public void output() {
-//		// TODO Auto-generated method stub
-//
-//		if(this.input != null) {
-//			for(int m = 0;m<this.number;m++) {
-//				for(int w = 0;w<this.oWidth;w++) {
-//					for(int i = 0;i<this.width;i++) {
-//						this.output.maxtir[m][0][0][w] += this.input.maxtir[m][0][0][i] * this.weight[i][w];
-//					}
-//					if(hasBias) {
-//						this.output.maxtir[m][0][0][w] += this.bias[w];
-//					}
-//				}
-//			}
-//		}
-//
-////		System.out.println(JsonUtils.toJson(this.output));
-//		
-//	}
 	
 	@Override
 	public void output() {
@@ -276,6 +255,12 @@ public class FullyLayer extends Layer{
 		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
 		
 		return output;
+	}
+
+	@Override
+	public void initCache() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

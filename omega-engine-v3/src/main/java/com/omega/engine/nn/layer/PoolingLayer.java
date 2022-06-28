@@ -3,7 +3,6 @@ package com.omega.engine.nn.layer;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
-import com.omega.common.utils.PrintUtils;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.pooling.PoolingType;
@@ -44,7 +43,11 @@ public class PoolingLayer extends Layer {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
-		this.mask = MatrixUtils.zero(this.number,this.channel, this.oHeight * this.oWidth, this.pHeight, this.pWidth);
+		if(this.mask == null || this.mask.length != this.number){
+			this.mask = MatrixUtils.zero(this.number,this.channel, this.oHeight * this.oWidth, this.pHeight, this.pWidth);
+		}else {
+			MatrixUtils.zero(this.mask);
+		}
 	}
 
 	@Override
@@ -59,20 +62,20 @@ public class PoolingLayer extends Layer {
 		this.oChannel = this.channel;
 		this.oWidth = (this.width - pWidth) / this.stride + 1;
 		this.oHeight = (this.height - pHeight) / this.stride + 1;
+		
 	}
 
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		this.output.maxtir = MatrixOperation.poolingAndMask(this.input.maxtir, this.mask,this.pWidth, this.pHeight, this.stride, this.poolingType);
-		
+		MatrixOperation.poolingAndMask(this.input.maxtir, this.mask,this.pWidth, this.pHeight, this.stride, this.poolingType, this.output.maxtir);
 	}
 
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
 		
-		this.diff.maxtir =  MatrixOperation.poolingDiff(this.delta.maxtir, this.mask, this.diff.maxtir, this.pWidth, this.pHeight, this.stride);
+		MatrixOperation.poolingDiff(this.delta.maxtir, this.mask, this.diff.maxtir, this.pWidth, this.pHeight, this.stride);
 //		PrintUtils.printImage(this.diff.maxtir);
 //		System.out.println("pooling layer ["+this.index+"]");
 //		
@@ -159,6 +162,12 @@ public class PoolingLayer extends Layer {
 		// TODO Auto-generated method stub
 		float[][][][] output = MatrixOperation.poolingAndMask(input, this.mask,this.pWidth, this.pHeight, this.stride, this.poolingType);
 		return output;
+	}
+
+	@Override
+	public void initCache() {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }

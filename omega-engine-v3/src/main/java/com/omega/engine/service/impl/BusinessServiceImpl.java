@@ -42,9 +42,9 @@ public class BusinessServiceImpl implements BusinessService {
 		/**
 		 * 读取训练数据集
 		 */
-		String iris_train = "H:/dataset\\dataset\\iris\\iris.txt";
+		String iris_train = "H:/dataset\\iris\\iris.txt";
 		
-		String iris_test = "H:/dataset\\dataset\\iris\\iris_test.txt";
+		String iris_test = "H:/dataset\\iris\\iris_test.txt";
 		
 		String[] labelSet = new String[] {"1","-1"};
 		
@@ -121,7 +121,7 @@ public class BusinessServiceImpl implements BusinessService {
 
 		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss(), UpdaterType.momentum);
 		
-		netWork.learnRate = 0.1f;
+		netWork.learnRate = 0.001f;
 		int inputCount = (int) (Math.sqrt(794)+10);
 		
 		InputLayer inputLayer = new InputLayer(1,1,784);
@@ -332,7 +332,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.1f;
+			netWork.learnRate = 0.001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, 1, 784);
 			
@@ -368,8 +368,6 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
-//			SoftmaxLayer softmax = new SoftmaxLayer(10);
-			
 			netWork.addLayer(inputLayer);
 			netWork.addLayer(conv1);
 			netWork.addLayer(bn1);
@@ -383,17 +381,12 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full1);
 			netWork.addLayer(bn3);
 			netWork.addLayer(active3);
-//			netWork.addLayer(drop2);
 			netWork.addLayer(full2);
 			netWork.addLayer(softmax);
-			
-//			SGDOptimizer optimizer = new SGDOptimizer(netWork, 20000, 0.001d);
-			
-//			BGDOptimizer optimizer = new BGDOptimizer(netWork, 20000, 0.001d);
-			
+
 //			netWork.GRADIENT_CHECK = true;
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.SIG, true);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -561,7 +554,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.0001f;
+			netWork.learnRate = 0.001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -910,7 +903,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full2);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.POLY, true);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -956,7 +949,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.0001f;
+			netWork.learnRate = 0.01f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -1023,7 +1016,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full2);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 50, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 100, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -1256,10 +1249,11 @@ public class BusinessServiceImpl implements BusinessService {
 //		bs.cnnNetwork_mnist_demo();
 //		bs.cnnNetwork_mnist();
 //		bs.cnnNetwork_cifar10();
-//		bs.cnnNetwork_vgg16_cifar10();
+
+		bs.cnnNetwork_vgg16_cifar10();
 //		bs.vgg16_cifar10();
 //		bs.alexNet_mnist();
-		bs.alexNet_cifar10();
+//		bs.alexNet_cifar10();
 	}
 
 }

@@ -37,18 +37,7 @@ public class Blobs {
 		}
 		return blob;
 	}
-	
-	/**
-	 * create zero blob
-	 * @param number
-	 * @param channel
-	 * @param height
-	 * @param width
-	 * @return
-	 */
-	public static Blob zero(Blob blob) {
-		return Blobs.blob(blob.number, blob.channel, blob.height, blob.width);
-	}
+
 	
 	/**
 	 * create blob for data

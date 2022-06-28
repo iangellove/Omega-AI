@@ -1,12 +1,19 @@
 package com.omega.test;
 
+import com.omega.engine.gpu.JNITest;
 import com.omega.engine.service.impl.BusinessServiceImpl;
 
 public class Test {
 	
+	static {
+//		System.load("H:\\omega\\omega-ai\\omega-engine-v3\\jni\\test_cuda.dll");
+	}
+	
 	public static void main(String[] args) {
 		
-		BusinessServiceImpl bs = new BusinessServiceImpl();
+//		new JNITest().max(1, 2);
+		
+//		BusinessServiceImpl bs = new BusinessServiceImpl();
 //		bs.showImage();
 //		bs.bpNetwork_iris();
 //		bs.bpNetwork_mnist();
@@ -16,7 +23,9 @@ public class Test {
 //		bs.cnnNetwork_vgg16_cifar10();
 //		bs.vgg16_cifar10();
 //		bs.alexNet_mnist();
-		bs.alexNet_cifar10();
+//		bs.alexNet_cifar10();
+		
+		System.out.println(Math.pow(10, -1.5));
 		
 	}
 	

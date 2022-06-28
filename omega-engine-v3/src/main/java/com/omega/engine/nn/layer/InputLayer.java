@@ -85,5 +85,11 @@ public class InputLayer extends Layer {
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	public void initCache() {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

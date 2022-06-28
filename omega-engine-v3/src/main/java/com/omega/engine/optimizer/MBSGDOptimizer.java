@@ -1,8 +1,5 @@
 package com.omega.engine.optimizer;
 
-import java.math.BigDecimal;
-
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.nn.data.BaseData;
@@ -64,7 +61,7 @@ public class MBSGDOptimizer extends Optimizer {
 				 */
 				for(int it = 0;it<indexs.length;it++) {
 					
-					if(this.currentError <= this.error) {
+					if(Math.abs(this.currentError) <= this.error) {
 						break;
 					}
 					
@@ -103,7 +100,7 @@ public class MBSGDOptimizer extends Optimizer {
 					
 					float error = this.accuracy(output, input.labels, trainingData.labelSet);
 					
-					System.out.println("training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} currentError:"+this.currentError + " [costTime:"+(System.currentTimeMillis() - start)+"]");
+					System.out.println("training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} currentError:"+this.currentError + " [costTime:"+(System.currentTimeMillis() - start)+"ms.]");
 				
 
 //					/**

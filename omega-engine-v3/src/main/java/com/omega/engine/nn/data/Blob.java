@@ -65,7 +65,8 @@ public class Blob {
 	}
 	
 	public void clear() {
-		this.maxtir = MatrixUtils.zero(this.number, this.channel, this.height, this.width);
+		MatrixUtils.zero(this.maxtir);
+//		this.maxtir = MatrixUtils.zero(this.number, this.channel, this.height, this.width);
 	}
 	
 }

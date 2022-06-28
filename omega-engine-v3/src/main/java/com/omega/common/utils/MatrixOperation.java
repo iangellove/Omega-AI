@@ -1,10 +1,6 @@
 package com.omega.common.utils;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Vector;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinTask;
 
 import org.ejml.simple.SimpleMatrix;
 
@@ -1321,6 +1317,18 @@ public class MatrixOperation {
 		return temp;
 	}
 	
+	public static void divisionSelf(float[][][][] x,float b) {
+		for(int n = 0;n<x.length;n++) {
+			for(int m = 0;m<x[n].length;m++) {
+				for(int i = 0;i<x[n][m].length;i++) {
+					for(int j = 0;j<x[n][m][i].length;j++) {
+						x[n][m][i][j] /= b;
+					}
+				}
+			}
+		}
+	}
+	
 	/**
 	 * 
 	 * @Title: division
@@ -1819,6 +1827,48 @@ public class MatrixOperation {
 	}
 	
 	/**
+	 * mean
+	 * @param x
+	 * @param type 0:fully,1:conv
+	 * @return
+	 */
+	public static void mean(float[][][][] x,float[] mean,int type){
+		
+		float scale = 1.0f / x.length;
+		
+		if(type != 0) {
+			scale = 1.0f / (x.length * x[0][0].length * x[0][0][0].length);
+		}
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		for(int m = 0;m<x.length;m++) {
+			final int index = m;
+			final float s = scale;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					for(int c = 0;c<x[index].length;c++) {
+						for(int h = 0;h<x[index][c].length;h++) {
+							for(int  w = 0;w<x[index][c][h].length;w++) {
+								if(type == 0) {
+									mean[w] += x[index][c][h][w] * s;
+								}else {
+									mean[c] += x[index][c][h][w] * s;
+								}
+							}
+						}
+					}
+					return null;
+				}
+			});
+		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+		
+	}
+	
+	/**
 	 * standard deviation
 	 * @param x
 	 * @return
@@ -1846,15 +1896,15 @@ public class MatrixOperation {
 	 * @param type 0:fully,1:conv
 	 * @return
 	 */
-	public static float[] std(float[][][][] x,int eta,int type){
+	public static void std(float[][][][] x,float[] var,float[] std,int eta,int type){
 		
-		float[] std = MatrixOperation.var(x, type);
+//		float[] std = MatrixOperation.var(x, type);
 		
 		for(int c = 0;c<std.length;c++) {
 			std[c] = (float)Math.sqrt(std[c] + eta);
 		}
 
-		return std;
+//		return std;
 	}
 	
 	/**
@@ -1863,15 +1913,15 @@ public class MatrixOperation {
 	 * @param type 0:fully,1:conv
 	 * @return
 	 */
-	public static float[] std(float[] x){
+	public static void std(float[] x,float[] std){
 		
-		float[] std = new float[x.length];
+//		float[] std = new float[x.length];
 		
 		for(int c = 0;c<std.length;c++) {
 			std[c] = (float)Math.sqrt(x[c]);
 		}
 
-		return std;
+//		return std;
 	}
 	
 	/**
@@ -1904,11 +1954,9 @@ public class MatrixOperation {
 	 * @param type 0:fully,1:conv
 	 * @return
 	 */
-	public static float[] var(float[][][][] x, int type){
+	public static void var(float[][][][] x, float[] mean, float[] var,int type){
 		
-		float[] mean = MatrixOperation.mean(x, type);
-		
-		float[] std = new float[mean.length];
+//		float[] std = new float[mean.length];
 		
 		Vector<Task<Object>> workers = new Vector<Task<Object>>();
 		
@@ -1921,9 +1969,9 @@ public class MatrixOperation {
 						for(int h = 0;h<x[index][c].length;h++) {
 							for(int  w = 0;w<x[index][c][h].length;w++) {
 								if(type == 0) {
-									std[w] += ((x[index][c][h][w] - mean[w]) * (x[index][c][h][w] - mean[w])) / x.length;
+									var[w] += ((x[index][c][h][w] - mean[w]) * (x[index][c][h][w] - mean[w])) / x.length;
 								}else {
-									std[c] += ((x[index][c][h][w] - mean[c]) * (x[index][c][h][w] - mean[c])) / x.length;
+									var[c] += ((x[index][c][h][w] - mean[c]) * (x[index][c][h][w] - mean[c])) / x.length;
 								}
 							}
 						}
@@ -1935,7 +1983,7 @@ public class MatrixOperation {
 		
 		TaskEngine.getInstance(threadNum).dispatchTask(workers);
 		
-		return std;
+//		return std;
 	}
 	
 	/**
@@ -2261,6 +2309,37 @@ public class MatrixOperation {
 		TaskEngine.getInstance(threadNum).dispatchTask(workers);
 		
 		return temp;
+	}
+	
+	/**
+	 * zeroPadding
+	 * @param x
+	 * @param paddingNum
+	 * @return x + padding * 2
+	 */
+	public static void zeroPadding(float[][][][] x,float[][][][] y,int paddingNum){
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		for(int n = 0;n<x.length;n++) {
+			final int index = n;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					for(int c = 0;c<x[index].length;c++) {
+						for(int i = 0;i<x[index][c].length;i++) {
+							for(int j = 0;j<x[index][c][i].length;j++) {
+								y[index][c][i+paddingNum][j+paddingNum] = x[index][c][i][j];
+							}
+						}
+					}
+					return null;
+				}
+			});
+		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+		
 	}
 	
 	/**
@@ -2595,6 +2674,60 @@ public class MatrixOperation {
 	 * @param stride
 	 * @return
 	 */
+	public static float[] im2col4d(float[] x,int N,int C,int H,int W ,int kh,int kw,int stride){
+		
+		int oHeight = ((H - kh ) / stride) + 1;
+		
+		int oWidth = ((W - kw) / stride) + 1;
+		
+		int ow = C * kh * kw;
+		
+		int oh = N * oHeight * oWidth;
+		
+		int kSize = kh * kw;
+		
+		float[] result = new float[oh  * ow];
+		
+		for(int i = 0;i<oh;i++) {
+			
+//			System.out.println(i);
+			
+			int n = i / oHeight / oWidth;
+			
+			int startH = (i - (n * oHeight * oWidth)) / oHeight * stride;
+			
+			int startW = (i - (n * oHeight * oWidth)) % oWidth * stride;
+			
+			for(int j = 0;j<ow;j++) {
+				
+				int c = j / kSize;
+				
+				int xSize = j - (c * kSize);
+				
+				int xh = startH + xSize / kw;
+				
+				int xw = startW + xSize % kw;
+				
+				int xi = n * C * H * W + c * H * W + xh * W + xw;
+				
+//				System.out.println(xi);
+				result[i * ow + j] = x[n * C * H * W + c * H * W + xh * W + xw];
+
+			}
+			
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * im2col2
+	 * @param x
+	 * @param kh
+	 * @param kw
+	 * @param stride
+	 * @return
+	 */
 	public static float[][] im2col4d2(float[][][][] x,int kh,int kw,int stride){
 		
 		int N = x.length;
@@ -2887,12 +3020,17 @@ public class MatrixOperation {
 		int oHeight = ((x[0][0].length - kh) / stride) + 1;
 		
 		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
+//		System.out.println(x.length+":"+x[0].length+":"+x[0][0].length+":"+x[0][0][0].length);
+		
+		long start = System.nanoTime();
 		
 		/**
 		 * input im2col
 		 */
 		float[][] input2d = Im2colUtils.im2col(x, kh, kw, stride);
-
+		
+//		System.out.println(input2d.length+":"+input2d[0].length);
+		
 //		long start = System.nanoTime();
 		/**
 		 * kernel im2col
@@ -2904,8 +3042,118 @@ public class MatrixOperation {
 		GPUOP.getInstance().multiplyFloat(input2d.length, kt.length, kt[0].length, MatrixUtils.transform(input2d), MatrixUtils.transform(kt), r);
 
 		float[][][][] tmp = MatrixUtils.col2imgV2(r, N, ko, oHeight, oWidth);
-//		System.out.println((System.nanoTime() - start) / 1e6);
+		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
 		return tmp;
+	}
+	
+	public static void convnVailByIm2ColGPUV2(float[] input1d,float[][][][] k,int N,int C,int H,int W,int stride, float[][][][] out){
+//		long start = System.nanoTime();
+		int ko = k.length;
+		int kh = k[0][0].length;
+		int kw = k[0][0][0].length;
+
+		int oHeight = ((H - kh) / stride) + 1;
+		
+		int oWidth = ((W - kw) / stride) + 1;
+		
+		int xm = N * oHeight * oWidth;
+		int xn = kh * kw * C;
+
+		/**
+		 * kernel im2col
+		 */
+		float[] ka = Im2colUtils.kernalToVector(k, false);
+
+//		long start3 = System.nanoTime();
+		
+		float[] r = new float[xm * ko];
+		
+		GPUOP.getInstance().multiplyFloat(xm, xn, ko, input1d, ka, r);
+		
+//		System.out.println((System.nanoTime() - start3) / 1e6 + "ms.multiplyFloat");
+//		long start = System.nanoTime();
+		MatrixUtils.col2imgV2(r, out, N, ko, oHeight, oWidth);
+//		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
+	}
+	
+	public static float[][][][] convnDeltaByIm2ColGPUV2(float[][][][] d,float[][][][] k,int stride){
+//		long start = System.nanoTime();
+		int kn = k.length;
+		int kc = k[0].length;
+		int kh = k[0][0].length;
+		int kw = k[0][0][0].length;
+		
+		int N = d.length;
+		
+		int oHeight = ((d[0][0].length - kh) / stride) + 1;
+		
+		int oWidth = ((d[0][0][0].length - kw) / stride) + 1;
+		
+		int xm = N * oHeight * oWidth;
+		int xn = kh * kw * kn;
+
+//		long start = System.nanoTime();
+		
+		/**
+		 * input im2col
+		 */
+
+		float[] input1d = Im2colToVector.im2col(d, kh, kw, stride);
+		
+//		System.out.println((System.nanoTime() - start) / 1e6);
+		
+		/**
+		 * kernel im2col
+		 */
+		float[] kt = Im2colUtils.kernalToVector(k, true);
+		
+		float[] r = new float[N * kc * oHeight * oWidth];
+		
+		GPUOP.getInstance().multiplyFloat(xm, xn, kc, input1d, kt, r);
+
+		float[][][][] tmp = MatrixUtils.col2imgV2(r, N, kc, oHeight, oWidth);
+//		
+//		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
+
+		return tmp;
+	}
+	
+	public static void convnDeltaByIm2ColGPUV2(float[][][][] d,float[][][][] k,float[][][][] diff,int stride){
+//		long start = System.nanoTime();
+		int kn = k.length;
+		int kc = k[0].length;
+		int kh = k[0][0].length;
+		int kw = k[0][0][0].length;
+		
+		int N = d.length;
+		
+		int oHeight = ((d[0][0].length - kh) / stride) + 1;
+		
+		int oWidth = ((d[0][0][0].length - kw) / stride) + 1;
+		
+		int xm = N * oHeight * oWidth;
+		int xn = kh * kw * kn;
+
+//		long start = System.nanoTime();
+		
+		/**
+		 * input im2col
+		 */
+		float[] input1d = Im2colToVector.im2col(d, kh, kw, stride);
+		
+//		System.out.println((System.nanoTime() - start) / 1e6);
+		
+		/**
+		 * kernel im2col
+		 */
+		float[] kt = Im2colUtils.kernalToVector(k, true);
+		
+		float[] r = new float[N * kc * oHeight * oWidth];
+		
+		GPUOP.getInstance().multiplyFloat(xm, xn, kc, input1d, kt, r);
+
+		MatrixUtils.col2imgV2(r, diff, N, kc, oHeight, oWidth);
+
 	}
 	
 	public static float[][][][] convnDeltaByIm2ColGPU(float[][][][] d,float[][][][] k,int stride){
@@ -2943,7 +3191,7 @@ public class MatrixOperation {
 
 		return tmp;
 	}
-
+	
 	public static float[][][] convnVailByIm2Col(float[][][] x,float[][][][] k,int stride,boolean isBack){
 		
 		int ko = k[0].length;
@@ -3453,6 +3701,102 @@ public class MatrixOperation {
 		return result;
 	}
 	
+	/**
+	 * pooling
+	 * @param x
+	 * @param pWidth
+	 * @param pHeight
+	 * @param stride
+	 * @param poolingType
+	 * @return
+	 * 
+	 * o = (W - ps) / S + 1
+	 */
+	public static void poolingAndMask(float[][][][] x,float[][][][][] mask,int pWidth,int pHeight,int stride,PoolingType poolingType,float[][][][] result){
+		
+		int number = x.length;
+		
+		int channel = x[0].length;
+		
+		int oHeight = ((x[0][0].length - pHeight ) / stride) + 1;
+		
+		int oWidth = ((x[0][0][0].length - pWidth) / stride) + 1;
+
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		for(int b = 0;b<number;b++) {
+			
+			final int index = b;
+			
+			workers.add(new Task<Object>(index) {
+				
+				@Override
+				public Object call() {
+					
+					for(int c = 0;c<channel;c++) {
+						
+						int maskIndex = 0;
+						
+						for(int i = 0;i<oHeight;i++) {
+							
+							for(int j = 0;j<oWidth;j++) {
+								
+								int maxH = 0;
+								
+								int maxW = 0;
+								
+								for(int m = 0;m<pHeight;m++) {
+									
+									for(int n = 0;n<pWidth;n++) {
+										
+										switch (poolingType) {
+										case MAX_POOLING:
+											
+											if(m == 0 && n == 0) {
+												result[index][c][i][j] = x[index][c][i * stride + m][j * stride + n];
+											}else if(result[index][c][i][j] <= x[index][c][i * stride + m][j * stride + n]) {
+												result[index][c][i][j] = x[index][c][i * stride + m][j * stride + n];
+												maxH = m;
+												maxW = n;
+											}
+
+											break;
+										case MEAN_POOLING:
+											result[index][c][i][j] += x[index][c][i * stride + m][j * stride + n];
+											mask[index][c][maskIndex][m][n] = 1.0f / pWidth / pHeight;
+											break;
+										}
+										
+									}
+									
+								}
+								
+								switch (poolingType) {
+								case MAX_POOLING:
+									mask[index][c][maskIndex][maxH][maxW] = 1;
+									break;
+								case MEAN_POOLING:
+									result[index][c][i][j] /= pWidth * pHeight;
+									break;
+								}
+								
+								maskIndex++;
+							}
+							
+						}
+						
+					}
+					
+					return null;
+				}
+				
+			});
+			
+		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+
+	}
 
 	/**
 	 * poolingDiff

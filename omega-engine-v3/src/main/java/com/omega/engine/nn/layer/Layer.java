@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.utils.MatrixOperation;
+import com.omega.engine.gpu.data.CacheDataSet;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.nn.model.LayerInit;
@@ -63,6 +64,11 @@ public abstract class Layer {
 	
 	public Updater updater;
 	
+	/**
+	 * cache data
+	 */
+	private CacheDataSet tampDataSet;
+	
 	public abstract void init();
 	
 	public abstract void initBack();
@@ -93,6 +99,8 @@ public abstract class Layer {
 	public abstract LayerType getLayerType();
 	
 	public abstract float[][][][] output(float[][][][] input);
+	
+	public abstract void initCache();
 	
 	public void setUpdater(Updater updater) {
 		this.updater = updater;
@@ -132,11 +140,11 @@ public abstract class Layer {
 //		
 //		MatrixOperation.printImage(this.network.getNextLayer(this.index).diff.maxtir[0][0]);
 //		
+
 		/**
 		 * 获取上一层的输出作为当前层的输入
 		 */
 		this.delta = Blobs.transform(number, oChannel, oHeight, oWidth, this.network.getNextLayer(this.index).diff);
-		
 	}
 	
 	/**
@@ -189,4 +197,12 @@ public abstract class Layer {
 		return 0.0f;
 	}
 
+	public CacheDataSet getTampDataSet() {
+		return tampDataSet;
 	}
+
+	public void setTampDataSet(CacheDataSet tampDataSet) {
+		this.tampDataSet = tampDataSet;
+	}
+
+}

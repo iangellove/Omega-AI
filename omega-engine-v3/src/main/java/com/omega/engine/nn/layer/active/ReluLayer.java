@@ -166,4 +166,10 @@ public class ReluLayer extends ActiveFunctionLayer {
 		return output;
 	}
 
+	@Override
+	public void initCache() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

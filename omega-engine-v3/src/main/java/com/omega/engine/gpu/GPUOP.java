@@ -13,6 +13,7 @@ import static jcuda.runtime.JCuda.cudaMalloc;
 
 import java.util.Locale;
 
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
 
@@ -51,6 +52,7 @@ public class GPUOP {
     public void multiplyFloat(int m,int n,int k, float A[],
         float B[], float C[])
     {
+    	
 //    	long start = System.nanoTime();
 //    	cublasCreate(handle);
 
@@ -71,7 +73,7 @@ public class GPUOP {
         int status = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, k, m, n, one, 
             dB, k, dA, n, zero, dC, k);
 
-//        cudaDeviceSynchronize();
+        cudaDeviceSynchronize();
         
         cublasGetVector(m * k, Sizeof.FLOAT, dC, 1, Pointer.to(C), 1);
         cudaFree(dA);
@@ -81,8 +83,7 @@ public class GPUOP {
         // Clean up
 //        cublasDestroy(handle);
 
-//        long end = System.nanoTime();
-//        System.out.println((end - start) / 1e6+"ms");
+//        System.out.println((System.nanoTime() - start) / 1e6+"ms。gpu");
          
     }
     
@@ -144,42 +145,46 @@ public class GPUOP {
     	//4:4608:512
     	
     	GPUOP.getInstance().init();
-       
-    	for(int i = 0;i<2;i++) {
-    		int m = 4 * 128;
-	        int n = 4608;
-	        int k = 512;
-	        float[] a = RandomUtils.gaussianRandom(m * n, 0.1f);
-	        
-	        // 24 * 64
-	        float[] b = RandomUtils.gaussianRandom(n * k, 0.1f);
-	        
-	        float[] c = new float [m * k];
-	        
+    	
+    	int m = 256 * 128;
+        int n = 1152;
+        int k = 128;
+        
+        float[] a = RandomUtils.gaussianRandom(m * n, 0.1f);
+        
+        // 24 * 64
+        float[] b = RandomUtils.gaussianRandom(n * k, 0.1f);
+
+        float[] c = new float [m * k];
+        
+    	for(int i = 0;i<30;i++) {
+
 	        long start = System.nanoTime();
 	        
 	        GPUOP.getInstance().multiplyFloat(m, n, k, a, b, c);
 
 	        System.out.println((System.nanoTime() - start)/1e6 + "ms");
-    	        
+    	    
+//	        System.out.println(JsonUtils.toJson(c));
+	        
     	}
     	
     	GPUOP.getInstance().clear();
 
     	System.out.println("=========================>");
     	
-    	for(int i = 0;i<2;i++) {
-
-        	float[][] a = RandomUtils.gaussianRandom(4 * 128, 4608, 0.1f);
-        	
-        	float[][] b = RandomUtils.gaussianRandom(4608, 512, 0.1f);
-
-    		long start = System.nanoTime();
-    		
-        	MatrixOperation.multiplicationByEjml(a, b);
-        	
-        	System.out.println((System.nanoTime() - start)/1e6 + "ms");
-    	}
+//    	for(int i = 0;i<2;i++) {
+//
+//        	float[][] a = RandomUtils.gaussianRandom(4 * 128, 4608, 0.1f);
+//        	
+//        	float[][] b = RandomUtils.gaussianRandom(4608, 512, 0.1f);
+//
+//    		long start = System.nanoTime();
+//    		
+//        	MatrixOperation.multiplicationByEjml(a, b);
+//        	
+//        	System.out.println((System.nanoTime() - start)/1e6 + "ms");
+//    	}
 
         
     }

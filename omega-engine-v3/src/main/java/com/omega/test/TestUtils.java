@@ -2,6 +2,7 @@ package com.omega.test;
 
 import java.util.concurrent.ForkJoinPool;
 
+import com.omega.common.utils.Im2colToVector;
 import com.omega.common.utils.Im2colUtils;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
@@ -117,11 +118,21 @@ public class TestUtils {
 		int stride = 1;
 		
 		
-		PrintUtils.printImage(Im2colUtils.kernalTo2d(k));
+//		System.out.println("-----------------------------");
+//		
+//		PrintUtils.printImage(Im2colUtils.to2d(k));
 		
-		System.out.println("-----------------------------");
+		PrintUtils.printImage(MatrixUtils.transpose(Im2colUtils.im2colKernel(k)));
 		
-		PrintUtils.printImage(Im2colUtils.to2d(k));
+		float[] ka = MatrixUtils.transform(Im2colUtils.kernalTo2d(k));
+
+		System.out.println("=============================");
+		
+		PrintUtils.printImage(ka);
+		System.out.println("");
+		System.out.println("------------------------------");
+		PrintUtils.printImage(Im2colUtils.kernalToVector(k, false));
+		
 		
 		return null;
 	}
@@ -251,43 +262,54 @@ public class TestUtils {
 
 		float[][] input2d = Im2colUtils.im2col(deltaP, kh, kw, 1);
 		
-		/**
-		 * kernel im2col
-		 */
-		float[][][][] kernel180 = MatrixOperation.rotate180V2(k);
+		float[] input1d = Im2colToVector.im2col(deltaP, kh, kw, 1);
 		
-		float[][] kt = Im2colUtils.to2d(kernel180);
+		float[] xa = MatrixUtils.transform(input2d);
 		
-		float[] r = new float[N * kc * oHeight * oWidth];
+		System.out.println(JsonUtils.toJson(xa));
 		
-		GPUOP.getInstance().multiplyFloat(input2d.length, kt.length, kt[0].length, MatrixUtils.transform(input2d), MatrixUtils.transform(kt), r);
-
-		float[][][][] tmp = MatrixUtils.col2img(r, N, kc, oHeight, oWidth);
-		
-		PrintUtils.printImage(tmp);
+		System.out.println(JsonUtils.toJson(input1d));
+//		
+//		/**
+//		 * kernel im2col
+//		 */
+//		float[][][][] kernel180 = MatrixOperation.rotate180V2(k);
+//		
+//		float[][] kt = Im2colUtils.to2d(kernel180);
+//		
+//		float[] r = new float[N * kc * oHeight * oWidth];
+//		
+//		GPUOP.getInstance().multiplyFloat(input2d.length, kt.length, kt[0].length, MatrixUtils.transform(input2d), MatrixUtils.transform(kt), r);
+//
+//		float[][][][] tmp = MatrixUtils.col2img(r, N, kc, oHeight, oWidth);
+//		
+//		PrintUtils.printImage(tmp);
 		
 	}
 	
 	public static void main(String[] args) {
 		
 //		TestUtils.testIm2colInput();
-//		TestUtils.testKernal();
+		TestUtils.testKernal();
 
 //		float[][] x2 = TestUtils.testKernal();
 		
-		float[][][][] x = TestUtils.getX();
-
-		float[] v1 = MatrixUtils.transform(x);
+//		float[][][][] x = TestUtils.getX();
+//
+//		float[] v1 = MatrixUtils.transform(x);
+//		
+//		float[][][][] v2 = MatrixUtils.transform(v1, 4, 3, 3, 3);
+//		
+//		System.out.println("-----------------x-------------------------");
+//		PrintUtils.printImage(x);
+//		System.out.println("-----------------v1-------------------------");
+//		PrintUtils.printImage(v1);
+//		System.out.println("");
+//		System.out.println("-----------------v2-------------------------");
+//		PrintUtils.printImage(v2);
 		
-		float[][][][] v2 = MatrixUtils.transform(v1, 4, 3, 3, 3);
+//		test();
 		
-		System.out.println("-----------------x-------------------------");
-		PrintUtils.printImage(x);
-		System.out.println("-----------------v1-------------------------");
-		PrintUtils.printImage(v1);
-		System.out.println("");
-		System.out.println("-----------------v2-------------------------");
-		PrintUtils.printImage(v2);
 	}
 	
 }

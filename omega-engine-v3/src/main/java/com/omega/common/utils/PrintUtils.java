@@ -31,7 +31,7 @@ public class PrintUtils {
 			}
 			System.out.println("");
 		}
-		
+		System.out.println("-----------------------------------");
 	}
 	
 	public static void printImage(float[][][] data) {

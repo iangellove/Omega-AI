@@ -139,4 +139,10 @@ public class DropoutLayer extends Layer {
 		return null;
 	}
 
+	@Override
+	public void initCache() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }
