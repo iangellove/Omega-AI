@@ -2,11 +2,16 @@ package com.omega.engine.nn.layer;
 
 import java.util.Vector;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
+import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.MathUtils;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
+import com.omega.common.utils.Transpose;
+import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
 
@@ -18,7 +23,11 @@ import com.omega.engine.nn.data.Blobs;
  *
  */
 public class FullyLayer extends Layer{
-
+	
+	private float[] input1d;
+	
+	private float[] weight1d;
+	
 	public FullyLayer(int inputNum,int outputNum) {
 		this.channel = 1;
 		this.height = 1;
@@ -53,6 +62,10 @@ public class FullyLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
+		int inputSize = this.number * this.width;
+		if(this.input1d == null || inputSize != this.input1d.length) {
+			this.input1d = new Tensor(1, 1, 1, inputSize).data;
+		}
 	}
 	
 	@Override
@@ -64,6 +77,7 @@ public class FullyLayer extends Layer{
 		this.bias = MatrixUtils.zero(this.oWidth);
 		this.deltaB = new float[this.oWidth];
 		this.deltaW = new float[width][oWidth];
+		this.weight1d = new float[width * oWidth];
 //		this.bias = MatrixOperation.gaussianRandom(this.outputNum, 0.1);
 	}
 	
@@ -73,28 +87,61 @@ public class FullyLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		if(this.input != null) {
-
-			Vector<Task<Object>> workers = new Vector<Task<Object>>();
-
-			for(int m = 0;m<this.number;m++) {
-				final int index = m;
-				workers.add(new Task<Object>(index) {
-					@Override
-				    public Object call() throws Exception {
-						for(int w = 0;w<oWidth;w++) {
-							for(int i = 0;i<width;i++) {
-								output.maxtir[index][0][0][w] += input.maxtir[index][0][0][i] * weight[i][w];
-							}
-							if(hasBias) {
-								output.maxtir[index][0][0][w] += bias[w];
-							}
-						}
-						return null;
+			
+//			long start = System.nanoTime();
+			
+			MatrixUtils.transform(input.maxtir, input1d);
+			MatrixUtils.transform(weight, weight1d);
+			
+			float[] r = new float[this.number*this.oWidth];
+			
+			GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, input1d, weight1d, r);
+			
+			output.maxtir = MatrixUtils.transform(r, this.number, 1, 1, this.oWidth);
+			
+			if(hasBias) {
+			
+				for(int n = 0;n<this.number;n++) {
+					for(int w = 0;w<this.oWidth;w++) {
+						output.maxtir[n][0][0][w] += bias[w];
 					}
-				});
+				}
+			
 			}
-
-			TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
+			
+//			System.out.println((System.nanoTime() - start)/1e6+"ms.--->gpu");
+//			
+//			long start2 = System.nanoTime();
+//			
+//			Vector<Task<Object>> workers = new Vector<Task<Object>>();
+//
+//			for(int m = 0;m<this.number;m++) {
+//				final int index = m;
+//				workers.add(new Task<Object>(index) {
+//					@Override
+//				    public Object call() throws Exception {
+//						for(int ow = 0;ow<oWidth;ow++) {
+//							for(int w = 0;w<width;w++) {
+//								output.maxtir[index][0][0][ow] += input.maxtir[index][0][0][w] * weight[w][ow];
+//							}
+//							if(hasBias) {
+//								output.maxtir[index][0][0][ow] += bias[ow];
+//							}
+//						}
+//						return null;
+//					}
+//				});
+//			}
+//
+//			TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
+//			
+//			System.out.println((System.nanoTime() - start2)/1e6+"ms.--->cpu");
+			
+//			PrintUtils.printImage(output.maxtir[0]);
+//			
+//			PrintUtils.printImage(test[0]);
+//			System.out.println("=================================");
+//			System.out.println(CheckArrayUtils.check(output.maxtir, test));
 			
 		}
 		
@@ -104,40 +151,72 @@ public class FullyLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-
+		
 		/**
-		 * 计算当前层误差
+		 * deltaW = inputT * delta
+		 * diff = delta * weightT
 		 */
-		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-		for(int n = 0;n<this.number;n++) {
-			final int index = n;
-			workers.add(new Task<Object>(index) {
-				@Override
-			    public Object call() throws Exception {
-					for(int ow = 0;ow<oWidth;ow++) {
-						for(int w = 0;w<width;w++) {
-							/**
-							 * 计算当前层weight梯度
-							 * deltaW(i) = 1/m * ∑ delta(j) * input(i)
-							 * 计算deltaW平均值
-							 */
-							deltaW[w][ow] += delta.maxtir[index][0][0][ow] * input.maxtir[index][0][0][w] / number;
-							diff.maxtir[index][0][0][w] += delta.maxtir[index][0][0][ow] * weight[w][ow];
-						}
-						if(hasBias) {
-							/**
-							 * 计算当前层weight梯度
-							 * deltaB(i) = 1/m * ∑ delta(i) * input(i)
-							 * 计算deltaB平均值
-							 */
-							deltaB[ow] += delta.maxtir[index][0][0][ow] / number;
-						}
-					}
-					return null;
+		float[] dw = new float[width * oWidth];
+		float[] delta1d = new float[this.number * this.oWidth];
+		MatrixUtils.transform(this.delta.maxtir, delta1d);
+		float[] inputT = Transpose.transpose(this.input1d, this.number, this.width);
+		GPUOP.getInstance().multiplyFloat(this.width, this.number, this.oWidth, inputT, delta1d, dw);
+//		float[][] deltaW2 = new float[this.width][this.oWidth];
+		dw = MatrixOperation.multiplication(dw, (1.0f / this.number));
+		MatrixUtils.transform(dw, deltaW, width, oWidth);
+		
+		float[] diffTmp = new float[this.number * this.width];
+		float[] weightT = Transpose.transpose(this.weight1d, this.width, this.oWidth);
+		GPUOP.getInstance().multiplyFloat(this.number, this.oWidth, this.width, delta1d, weightT, diffTmp);
+		diff.maxtir = MatrixUtils.transform(diffTmp, this.number, 1, 1, width);
+		
+		if(hasBias) {
+			
+			for(int n = 0;n<this.number;n++) {
+				for(int ow = 0;ow<this.oWidth;ow++) {
+					deltaB[ow] += delta.maxtir[index][0][0][ow] / number;
 				}
-			});
+			}
+		
 		}
-		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
+		
+//		/**
+//		 * 计算当前层误差
+//		 */
+//		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+//		for(int n = 0;n<this.number;n++) {
+//			final int index = n;
+//			workers.add(new Task<Object>(index) {
+//				@Override
+//			    public Object call() throws Exception {
+//					for(int ow = 0;ow<oWidth;ow++) {
+//						for(int w = 0;w<width;w++) {
+//							/**
+//							 * 计算当前层weight梯度
+//							 * deltaW(i) = 1/m * ∑ delta(j) * input(i)
+//							 * 计算deltaW平均值
+//							 */
+//							deltaW[w][ow] += input.maxtir[index][0][0][w] * delta.maxtir[index][0][0][ow] / number;
+//							diff.maxtir[index][0][0][w] += delta.maxtir[index][0][0][ow] * weight[w][ow];
+//						}
+//						if(hasBias) {
+//							/**
+//							 * 计算当前层weight梯度
+//							 * deltaB(i) = 1/m * ∑ delta(i) * input(i)
+//							 * 计算deltaB平均值
+//							 */
+//							deltaB[ow] += delta.maxtir[index][0][0][ow] / number;
+//						}
+//					}
+//					return null;
+//				}
+//			});
+//		}
+//		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
+		
+//		System.out.println(CheckArrayUtils.check(deltaW, deltaW2));
+//		System.out.println(CheckArrayUtils.check(diff.maxtir, diff2));
+//		System.out.println("=======================");
 		
 	}
 

@@ -31,6 +31,16 @@ public class CheckArrayUtils {
 		return error;
 	}
 	
+	public static float check(float[][] x,float[][] y) {
+		float error = 0.0f;
+		for(int i = 0;i<x.length;i++) {
+			for(int j = 0;j<x[i].length;j++) {
+				error += Math.abs((x[i][j] - y[i][j]));
+			}
+		}
+		return error;
+	}
+	
 	public static float check(float[] x,float[] y) {
 		float error = 0.0f;
 		for(int i = 0;i<x.length;i++) {

@@ -564,19 +564,41 @@ public class MatrixUtils {
 		int xi = x.length;
 		int xj = x[0].length;
 		
-		float[] result = new float[x.length * x[0].length];
+		float[] y = new float[xi * xj];
 		
 		for(int r = 0;r<xi;r++) {
 			
 			for(int c = 0;c<xj;c++) {
 				
-				result[r * xj + c] = x[r][c];
+				y[r * xj + c] = x[r][c];
 				
 			}
 			
 		}
+		return y;
+	}
+	
+	/**
+	 * transform
+	 * @param x  c * h * w
+	 * @index ci * h * w + hi * w + wi
+	 * @return
+	 */
+	public static void transform(float[][] x,float[] y) {
 		
-		return result;
+		int xi = x.length;
+		int xj = x[0].length;
+		
+		for(int r = 0;r<xi;r++) {
+			
+			for(int c = 0;c<xj;c++) {
+				
+				y[r * xj + c] = x[r][c];
+				
+			}
+			
+		}
+
 	}
 	
 	/**
@@ -604,6 +626,27 @@ public class MatrixUtils {
 	}
 	
 	/**
+	 * 
+	 * @param x
+	 * @index ni * c * h * w + ci * h * w + hi * w + wi
+	 * @return
+	 */
+	public static void transform(float[][][][] x,float[] y){
+		
+		for(int n = 0;n<x.length;n++) {
+
+			for(int c = 0;c<x[n].length;c++) {
+				for(int h = 0;h<x[n][c].length;h++) {
+					for(int w = 0;w<x[n][c][h].length;w++) {
+						y[n*x[n].length*x[n][c].length*x[n][c][h].length + c*x[n][c].length*x[n][c][h].length + h*x[n][c][h].length + w] = x[n][c][h][w];
+					}
+				}
+				
+			}
+		}
+	}
+	
+	/**
 	 * transform
 	 * @param x
 	 * @return
@@ -619,6 +662,20 @@ public class MatrixUtils {
 		}
 		
 		return y;
+	}
+	
+	/**
+	 * transform
+	 * @param x
+	 * @return
+	 */
+	public static void transform(float[] x,float[][] y,int r,int c) {
+		
+		for(int ri = 0;ri<r;ri++) {
+			for(int ci = 0;ci<c;ci++) {
+				y[ri][ci] = x[ri * c + ci];
+			}
+		}
 	}
 	
 	/**

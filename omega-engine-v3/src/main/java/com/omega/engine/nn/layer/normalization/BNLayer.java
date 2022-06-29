@@ -359,6 +359,8 @@ public class BNLayer extends NormalizationLayer {
 		
 		float[] dmu = new float[this.meanNum];
 		
+		float[] meanDzSum = new float[this.meanNum];
+		
 		int batchNum = number;
 		
 		if(bnType == BNType.conv_bn) {
@@ -405,21 +407,20 @@ public class BNLayer extends NormalizationLayer {
 
 		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
 
-		float[] meanDzSum = meanDzSum(input.maxtir, diff.maxtir, mean, mode);
-
-		for(int i = 0;i<meanDzSum.length;i++) {
-			// dvar = ∑ dxhat * (xi - mean) * -1/2 * (var + eta)^-3/2
-			dvar[i] = (float) (meanDzSum[i] * -0.5f * Math.pow(var[i] + eta, -1.5));
-		}
-		
 		/**
 		 * 原论文公式
 		 * dmean = (∑ dxhat * -1 / (var + eta)^1/2) + dvar * (∑ -2 * (x - mean)) / n
 		 * 使用darknet公式
 		 * dmean = (∑ dxhat * -1 / (var + eta)^1/2)
 		 */
-		 muSum(diff.maxtir, std, dmu, mode);
-
+		meanDzSum(input.maxtir, diff.maxtir, mean, std, meanDzSum, dmu, mode);
+//		muSum(diff.maxtir, std, dmu, mode);
+		
+		for(int i = 0;i<meanDzSum.length;i++) {
+			// dvar = ∑ dxhat * (xi - mean) * -1/2 * (var + eta)^-3/2
+			dvar[i] = (float) (meanDzSum[i] * -0.5f * Math.pow(var[i] + eta, -1.5));
+		}
+		
 //		BNBackward job = new BNBackward(this, dvar, dmu, 0, number - 1);
 //		
 //		ForkJobEngine.run(job);
@@ -577,14 +578,13 @@ public class BNLayer extends NormalizationLayer {
 		return meanSum;
 	}
 	
-	public float[] meanDzSum(float[][][][] x,float[][][][] dz,float[] mean,int mode) {
-		
-		float[] meanDzSum = new float[mean.length];
+	public void meanDzSum(float[][][][] x,float[][][][] dz,float[] mean,float[] std,float[] meanDzSum,float[] muSum,int mode) {
 		
 		if(mode == 0) {
 			for(int i = 0;i<meanDzSum.length;i++) {
 				for(int n = 0;n<x.length;n++) {
 					meanDzSum[i] += (x[n][0][0][i] - mean[i]) * dz[n][0][0][i];
+					muSum[i] += -1.0f * dz[n][0][0][i] / std[i];
 				}
 			}
 		}else {
@@ -593,13 +593,13 @@ public class BNLayer extends NormalizationLayer {
 					for(int h = 0;h<x[0][0].length;h++) {
 						for(int w = 0;w<x[0][0][h].length;w++) {
 							meanDzSum[i] += (x[n][i][h][w] - mean[i]) * dz[n][i][h][w];
+							muSum[i] += -1.0f * dz[n][i][h][w] / std[i];
 						}
 					}
 				}
 			}
 		}
 
-		return meanDzSum;
 	}
 	
 	public void muSum(float[][][][] dz,float[] std,float[] result,int mode) {

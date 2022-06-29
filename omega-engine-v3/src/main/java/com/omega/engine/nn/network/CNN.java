@@ -82,9 +82,9 @@ public class CNN extends Network {
 			Layer layer = layerList.get(i);
 			
 //			long start2 = System.nanoTime();
-//			
+			
 			layer.forward();
-//			
+			
 //			if(layer.getLayerType() == LayerType.conv) {
 //				convTime += System.nanoTime() - start2;
 //			}
@@ -179,18 +179,10 @@ public class CNN extends Network {
 			Layer layer = layerList.get(i);
 			
 			layer.learnRate = this.learnRate;
-			
-//			long startB = System.nanoTime();
-			
+		
 //			long start2 = System.nanoTime();
 			
 			layer.back();
-
-//			backTime += System.nanoTime() - startB;
-			
-//			bct += System.nanoTime() - bStart;
-			
-//			long uStart = System.nanoTime();
 			
 			layer.update();
 			
