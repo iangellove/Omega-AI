@@ -2,6 +2,7 @@ package com.omega.test;
 
 import java.util.concurrent.ForkJoinPool;
 
+import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.Im2colToVector;
 import com.omega.common.utils.Im2colUtils;
 import com.omega.common.utils.JsonUtils;
@@ -11,6 +12,7 @@ import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.PrintUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.common.utils.To2dOP;
+import com.omega.common.utils.Transpose;
 import com.omega.engine.gpu.GPUOP;
 
 public class TestUtils {
@@ -290,7 +292,7 @@ public class TestUtils {
 	public static void main(String[] args) {
 		
 //		TestUtils.testIm2colInput();
-		TestUtils.testKernal();
+//		TestUtils.testKernal();
 
 //		float[][] x2 = TestUtils.testKernal();
 		
@@ -309,6 +311,61 @@ public class TestUtils {
 //		PrintUtils.printImage(v2);
 		
 //		test();
+		
+		int N = 128;
+		int W = 5000;
+		int OW = 5000;
+		
+		float[][] x = RandomUtils.x2Random(N, W);
+		
+		float[][] d = RandomUtils.x2Random(N, OW);
+		
+//		float[][] x = new float[][] {
+//			{1.0f,2.0f,3.0f,4.0f},
+//			{5.0f,6.0f,7.0f,8.0f},
+//			{9.0f,10.0f,11.0f,12.0f}
+//		};
+//		
+//		
+		
+//		float[][] d = new float[][] {
+//			{0.1f,0.2f},
+//			{0.3f,0.4f},
+//			{0.5f,0.6f}
+//		};
+		
+		float[][] dw = new float[W][OW];
+		
+		for(int w = 0;w<W;w++) {
+			for(int ow = 0;ow<OW;ow++) {
+				for(int n = 0;n<N;n++) {
+					dw[w][ow] += x[n][w] * d[n][ow] / N;
+				}
+			}
+		}
+		
+		float[] r = new float[W *OW];
+		
+		float[] x1 = MatrixUtils.transform(x);
+		
+		float[] xt = Transpose.transpose(x1, N, W);
+		
+		float[] d1 = MatrixUtils.transform(d);
+		
+		GPUOP.getInstance().multiplyFloat(W, N, OW, xt, d1, r);
+		
+		r = MatrixOperation.multiplication(r, (1.0f / N));
+		
+		float[][] x1d = MatrixUtils.transform(r,W,OW);
+		
+//		float[] x1d = MatrixUtils.transform(x);
+//
+//		float[] xt2 = Transpose.transpose(x1d, 2, 3);
+//		
+//		System.out.println(JsonUtils.toJson(xt1));
+//		System.out.println(JsonUtils.toJson(xt2));
+		
+		System.out.println(CheckArrayUtils.check(dw, x1d));
 		
 	}
 	

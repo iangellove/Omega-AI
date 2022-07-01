@@ -172,7 +172,7 @@ public abstract class Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(this.gama, batchIndex));
 				break;
 			case SIG:
-				this.network.learnRate = (float) (this.lr / (1 + Math.pow(Math.E, this.gama * (batchIndex - step))));
+				this.network.learnRate = (float) (this.lr / (1.0f + Math.pow(Math.E, this.gama * (batchIndex - step))));
 				break;
 			}
 			

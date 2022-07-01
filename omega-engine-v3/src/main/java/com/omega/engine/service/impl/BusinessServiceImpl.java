@@ -169,7 +169,7 @@ public class BusinessServiceImpl implements BusinessService {
 
 		try {
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10000, 0.0001f, 64, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 64, LearnRateUpdate.NONE, false);
 
 //			netWork.GRADIENT_CHECK = true;
 		
@@ -386,7 +386,7 @@ public class BusinessServiceImpl implements BusinessService {
 
 //			netWork.GRADIENT_CHECK = true;
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -542,9 +542,12 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
 			
-			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, true, labelSet);
+			float[] mean = new float[] {0.485f, 0.456f, 0.406f};
+			float[] std = new float[] {0.229f, 0.224f, 0.225f};
+			
+			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 	    	
-			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, true, labelSet);
+			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 			
 			int channel = 3;
 			
@@ -554,7 +557,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.0001f;
+			netWork.learnRate = 0.01f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -760,7 +763,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -903,7 +906,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full2);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -937,9 +940,12 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
 			
-			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, true, labelSet);
+			float[] mean = new float[] {0.485f, 0.456f, 0.406f};
+			float[] std = new float[] {0.229f, 0.224f, 0.225f};
+			
+			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 	    	
-			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, true, labelSet);
+			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 			
 			int channel = 3;
 			
@@ -949,7 +955,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.0001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -1016,7 +1022,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full2);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 100, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -1052,9 +1058,12 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
 			
-			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, true, labelSet);
+			float[] mean = new float[] {0.5f,0.5f,0.5f};
+			float[] std = new float[] {0.5f,0.5f,0.5f};
+			
+			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 	    	
-			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, true, labelSet);
+			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 			
 			int channel = 3;
 			
@@ -1250,10 +1259,10 @@ public class BusinessServiceImpl implements BusinessService {
 //		bs.cnnNetwork_mnist();
 //		bs.cnnNetwork_cifar10();
 
-//		bs.cnnNetwork_vgg16_cifar10();
+		bs.cnnNetwork_vgg16_cifar10();
 //		bs.vgg16_cifar10();
 //		bs.alexNet_mnist();
-		bs.alexNet_cifar10();
+//		bs.alexNet_cifar10();
 	}
 
 }

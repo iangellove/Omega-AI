@@ -1,5 +1,7 @@
 package com.omega.engine.nn.network;
 
+import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.data.Blob;
@@ -206,6 +208,12 @@ public class CNN extends Network {
 			
 //			System.out.println("["+layer.getClass().toString()+"]back:"+(System.nanoTime() - start) / 1e6 + "ms");
 //			uct += System.nanoTime() - uStart;
+			
+//			if(layer.diff!=null) {
+//
+//				System.out.println("["+layer.getClass().toString()+"]back:max["+MatrixOperation.max(layer.diff.maxtir)+"],min["+MatrixOperation.min(layer.diff.maxtir)+"]");
+//				
+//			}
 			
 		}
 		

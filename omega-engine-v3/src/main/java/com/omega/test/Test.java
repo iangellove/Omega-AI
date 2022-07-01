@@ -25,7 +25,13 @@ public class Test {
 //		bs.alexNet_mnist();
 //		bs.alexNet_cifar10();
 		
-		System.out.println(Math.pow(10, -1.5));
+		int n = 3;
+		int x = 5;
+		
+		System.out.println((n + x) * 2);
+		
+		System.out.println(n * 2 + x * 2);
+		
 		
 	}
 	

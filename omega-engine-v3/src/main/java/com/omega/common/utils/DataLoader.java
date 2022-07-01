@@ -635,6 +635,47 @@ public class DataLoader {
      * @param fileName the file of 'train' or 'test' about image
      * @return one row show a `picture`
      */
+    public static DataSet getImagesToDataSetByBin(String fileName,int number,int channel,int height,int width,int labelSize,String[] labelSet,boolean normalization,float[] mean,float[] std) {
+        float[][][][] x = new float[number][channel][height][width];
+        String[] labels = new String[number];
+        float[][] dataLabel = new float[number][labelSize];
+        
+        try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(fileName))) {
+
+        	for(int n = 0;n<number;n++) {
+        		int labelIndex = bin.read();
+        		labels[n] = labelSet[labelIndex];
+        		dataLabel[n] = LabelUtils.labelIndexToVector(labelIndex, labelSize);
+        		for(int c = 0;c<channel;c++) {
+        			for(int h = 0;h<height;h++) {
+        				for(int w = 0;w<width;w++) {
+        					if(normalization) {
+//        						x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
+//        						x[n][c][h][w] = (float) (bin.read() / 255.0d) - 0.5f;
+        						x[n][c][h][w] = (float) ((bin.read() / 255.0d) - mean[c]) / std[c];
+                    		}else{
+                    			x[n][c][h][w] = bin.read();
+                    		}
+        				}
+        			}
+        		}
+        	}
+        	
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        
+        DataSet data = new DataSet(number, channel, height, width, labelSize, x, dataLabel, labels, labelSet);
+        
+        return data;
+    }
+    
+    /**
+     * get images of 'train' or 'test'
+     *
+     * @param fileName the file of 'train' or 'test' about image
+     * @return one row show a `picture`
+     */
     public static DataSet getImagesToDataSetByBin(String[] fileNames,int number,int channel,int height,int width,int labelSize,boolean normalization,String[] labelSet) {
         
     	int batchSize = number * fileNames.length;
@@ -661,6 +702,58 @@ public class DataLoader {
 //            						x[index][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
 //            						x[index][c][h][w] = (float) ((bin.read() / 255.0d) - 0.5);
             						x[index][c][h][w] = (float) (bin.read() / 255.0d) ;
+                        		}else{
+                        			x[index][c][h][w] = bin.read();
+                        		}
+            				}
+            			}
+            		}
+            		index++;
+            	}
+            	
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            
+        }
+        
+        DataSet data = new DataSet(batchSize, channel, height, width, labelSize, x, dataLabel, labels, labelSet);
+        
+        return data;
+    }
+    
+    /**
+     * get images of 'train' or 'test'
+     *
+     * @param fileName the file of 'train' or 'test' about image
+     * @return one row show a `picture`
+     */
+    public static DataSet getImagesToDataSetByBin(String[] fileNames,int number,int channel,int height,int width,int labelSize,String[] labelSet,boolean normalization,float[] mean,float[] std) {
+        
+    	int batchSize = number * fileNames.length;
+    	
+    	float[][][][] x = new float[batchSize][channel][height][width];
+        String[] labels = new String[batchSize];
+        float[][] dataLabel = new float[batchSize][labelSize];
+
+    	int index = 0;
+    	
+        for(String fileName:fileNames) {
+
+            try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(fileName))) {
+            	
+            	for(int n = 0;n<number;n++) {
+            		int labelIndex = bin.read();
+            		labels[index] = labelSet[labelIndex];
+            		
+            		dataLabel[index] = LabelUtils.labelIndexToVector(labelIndex, labelSize);
+            		for(int c = 0;c<channel;c++) {
+            			for(int h = 0;h<height;h++) {
+            				for(int w = 0;w<width;w++) {
+            					if(normalization) {
+//            						x[index][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
+//            						x[index][c][h][w] = (float) ((bin.read() / 255.0d) - 0.5);
+            						x[index][c][h][w] = (float) ((bin.read() / 255.0d) - mean[c]) / std[c] ;
                         		}else{
                         			x[index][c][h][w] = bin.read();
                         		}

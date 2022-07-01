@@ -68,7 +68,7 @@ public class PoolingLayer extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		MatrixOperation.poolingAndMask(this.input.maxtir, this.mask,this.pWidth, this.pHeight, this.stride, this.poolingType, this.output.maxtir);
+		MatrixOperation.poolingAndMask(this.input.maxtir, this.mask, this.pWidth, this.pHeight, this.stride, this.poolingType, this.output.maxtir);
 	}
 
 	@Override

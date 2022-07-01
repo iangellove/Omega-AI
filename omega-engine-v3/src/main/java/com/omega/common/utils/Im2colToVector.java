@@ -124,7 +124,7 @@ public class Im2colToVector extends RecursiveAction {
 		
 		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
 		
-		int ow = x[0].length * kh * kw;
+//		int ow = x[0].length * kh * kw;
 		
 		int oh = N * oHeight * oWidth;
 		

@@ -1712,6 +1712,58 @@ public class MatrixOperation {
 	
 	/**
 	 * 
+	 * @Title: max
+	 *
+	 * @return
+	 *
+	 * @Description:
+	 *
+	 * @throws
+	 */
+	public static float max(float[][][][] x) {
+		float max = 0.0f;
+		for(int n = 0;n<x.length;n++) {
+			for(int c= 0;c<x[n].length;c++) {
+				for(int h = 0;h<x[n][c].length;h++) {
+					for(int w = 0;w<x[n][c][h].length;w++) {
+						if(max <= x[n][c][h][w]) {
+							max = x[n][c][h][w];
+						}
+					}
+				}
+			}
+		}
+		return max;
+	}
+	
+	/**
+	 * 
+	 * @Title: max
+	 *
+	 * @return
+	 *
+	 * @Description:
+	 *
+	 * @throws
+	 */
+	public static float min(float[][][][] x) {
+		float min = 0.0f;
+		for(int n = 0;n<x.length;n++) {
+			for(int c= 0;c<x[n].length;c++) {
+				for(int h = 0;h<x[n][c].length;h++) {
+					for(int w = 0;w<x[n][c][h].length;w++) {
+						if(min >= x[n][c][h][w]) {
+							min = x[n][c][h][w];
+						}
+					}
+				}
+			}
+		}
+		return min;
+	}
+	
+	/**
+	 * 
 	 * @Title: maxIndex
 	 *
 	 * @return
@@ -1958,10 +2010,17 @@ public class MatrixOperation {
 		
 //		float[] std = new float[mean.length];
 		
+		float scale = 1.0f / x.length;
+		
+		if(type != 0) {
+			scale = 1.0f / (x.length * x[0][0].length * x[0][0][0].length);
+		}
+		
 		Vector<Task<Object>> workers = new Vector<Task<Object>>();
 		
 		for(int m = 0;m<x.length;m++) {
 			final int index = m;
+			final float s = scale;
 			workers.add(new Task<Object>(index) {
 				@Override
 			    public Object call() throws Exception {
@@ -1969,9 +2028,9 @@ public class MatrixOperation {
 						for(int h = 0;h<x[index][c].length;h++) {
 							for(int  w = 0;w<x[index][c][h].length;w++) {
 								if(type == 0) {
-									var[w] += ((x[index][c][h][w] - mean[w]) * (x[index][c][h][w] - mean[w])) / x.length;
+									var[w] += ((x[index][c][h][w] - mean[w]) * (x[index][c][h][w] - mean[w])) * s;
 								}else {
-									var[c] += ((x[index][c][h][w] - mean[c]) * (x[index][c][h][w] - mean[c])) / x.length;
+									var[c] += ((x[index][c][h][w] - mean[c]) * (x[index][c][h][w] - mean[c])) * s;
 								}
 							}
 						}
@@ -3064,16 +3123,12 @@ public class MatrixOperation {
 		 */
 		float[] ka = Im2colUtils.kernalToVector(k, false);
 
-//		long start3 = System.nanoTime();
-		
 		float[] r = new float[xm * ko];
 		
 		GPUOP.getInstance().multiplyFloat(xm, xn, ko, input1d, ka, r);
-		
-//		System.out.println((System.nanoTime() - start3) / 1e6 + "ms.multiplyFloat");
-//		long start = System.nanoTime();
+
 		MatrixUtils.col2imgV2(r, out, N, ko, oHeight, oWidth);
-//		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
+
 	}
 	
 	public static float[][][][] convnDeltaByIm2ColGPUV2(float[][][][] d,float[][][][] k,int stride){

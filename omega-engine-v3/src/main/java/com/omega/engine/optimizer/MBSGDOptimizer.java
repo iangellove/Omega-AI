@@ -106,7 +106,7 @@ public class MBSGDOptimizer extends Optimizer {
 //					/**
 //					 * update learning rate
 //					 */
-//					this.updateLR();
+					this.updateLR();
 					
 					this.batchIndex++;
 				}
@@ -114,7 +114,7 @@ public class MBSGDOptimizer extends Optimizer {
 //				/**
 //				 * update learning rate
 //				 */
-				this.updateLR();
+//				this.updateLR();
 //				
 			}
 			

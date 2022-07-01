@@ -27,7 +27,7 @@ import com.omega.engine.updater.MWAUtils;
  */
 public class BNLayer extends NormalizationLayer {
 	
-	public BNType bnType = BNType.fully_bn;
+	public BNType bnType = null;
 	
 	public float[] mean;
 	
@@ -82,13 +82,17 @@ public class BNLayer extends NormalizationLayer {
 			this.oHeight = this.height;
 			this.oWidth = this.width;
 		}
-		if(this.preLayer.getLayerType() == LayerType.conv) {
-			this.setBnType(BNType.conv_bn);
-			this.meanNum = this.channel;
-		}else if(this.preLayer.getLayerType() == LayerType.full){
-			this.setBnType(BNType.fully_bn);
-			this.meanNum = this.channel * this.height * this.width;
+		
+		if(this.bnType == null) {
+			if(this.preLayer.getLayerType() == LayerType.conv) {
+				this.setBnType(BNType.conv_bn);
+				this.meanNum = this.channel;
+			}else if(this.preLayer.getLayerType() == LayerType.full){
+				this.setBnType(BNType.fully_bn);
+				this.meanNum = this.channel * this.height * this.width;
+			}
 		}
+		
 		if(this.gama == null || this.beta == null) {
 			this.gama = MatrixUtils.one(this.meanNum);
 			this.beta = MatrixUtils.zero(this.meanNum);
@@ -99,11 +103,13 @@ public class BNLayer extends NormalizationLayer {
 			this.deltaBeta = MatrixUtils.zero(this.meanNum);
 		}
 		this.number = this.network.number;
-		this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
-		this.z = Blobs.zero(this.number, this.oChannel, this.oHeight, this.oWidth, this.z);
+		if(this.output == null || this.number != this.output.number) {
+			this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
+			this.z = Blobs.zero(this.number, this.oChannel, this.oHeight, this.oWidth, this.z);
+		}
 		MatrixUtils.zero(this.mean);
 		MatrixUtils.zero(this.var);
-		MatrixUtils.zero(this.std);
+//		MatrixUtils.zero(this.std);
 	}
 	
 	@Override
@@ -113,9 +119,11 @@ public class BNLayer extends NormalizationLayer {
 	
 	@Override
 	public void initBack() {
-		this.diff = Blobs.zero(number, channel, height, width, this.diff);
-		MatrixUtils.zero(this.deltaGama);
-		MatrixUtils.zero(this.deltaBeta);
+		if(this.diff == null || this.number != this.diff.number) {
+			this.diff = Blobs.zero(number, channel, height, width, this.diff);
+		}
+//		MatrixUtils.zero(this.deltaGama);
+//		MatrixUtils.zero(this.deltaBeta);
 	}
 
 	@Override
@@ -134,6 +142,7 @@ public class BNLayer extends NormalizationLayer {
 		}
 		
 		if(this.network.RUN_MODEL == RunModel.TRAIN) {
+			
 			
 			/**
 			 * 计算平均值
@@ -163,7 +172,7 @@ public class BNLayer extends NormalizationLayer {
 //			this.z.maxtir = MatrixOperation.division(MatrixOperation.subtraction(this.input.maxtir, this.mean, mode), this.std, mode);
 			
 			this.culOutput(this.mean, this.std, mode);
-			
+
 		}else {
 
 			/**
@@ -234,11 +243,12 @@ public class BNLayer extends NormalizationLayer {
 	@Override
 	public void forward() {
 		// TODO Auto-generated method stub
-		
+
 		/**
 		 * 参数初始化
 		 */
 		this.init();
+
 		/**
 		 * 设置输入
 		 */
@@ -343,6 +353,8 @@ public class BNLayer extends NormalizationLayer {
 	@Override
 	public void diff() {
 
+//		long start = System.nanoTime();
+		
 		/**
 		 * deltaGama = ∑ deta * z
 		 * deltaBeta = ∑ deta
@@ -353,13 +365,13 @@ public class BNLayer extends NormalizationLayer {
 		 */
 //		float[][][][] dz = new float[this.number][this.channel][this.oHeight][this.oWidth];
 		
-//		long start = System.nanoTime();
-
 		float[] dvar = new float[this.meanNum];
+
+		float[] dvar2 = new float[this.meanNum];
 		
 		float[] dmu = new float[this.meanNum];
 		
-		float[] meanDzSum = new float[this.meanNum];
+		float[] dmu2 = new float[this.meanNum];
 		
 		int batchNum = number;
 		
@@ -378,74 +390,28 @@ public class BNLayer extends NormalizationLayer {
 			break;
 		}
 		
-		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-		for(int m = 0;m<this.number;m++) {
-			final int index = m;
-			workers.add(new Task<Object>(index) {
-				@Override
-			    public Object call() throws Exception {
-					for(int c = 0;c<oChannel;c++) {
-						for(int h = 0;h<oHeight;h++) {
-							for(int w = 0;w<oWidth;w++) {
-								int ci = w;
-								if(bnType == BNType.conv_bn) {
-									ci = c;
-								}
-								// deltaGama = ∑ deta * z
-								deltaGama[ci] += delta.maxtir[index][c][h][w] * z.maxtir[index][c][h][w];
-								// deltaBeta = ∑ deta
-								deltaBeta[ci] += delta.maxtir[index][c][h][w];
-								// dxhat = deta * gama
-								diff.maxtir[index][c][h][w] = delta.maxtir[index][c][h][w] * gama[ci];
-							}
-						}
-					}
-					return null;
-				}
-			});
-		}
-
-		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
-
+		computeDeltaV2();
+		
 		/**
 		 * 原论文公式
 		 * dmean = (∑ dxhat * -1 / (var + eta)^1/2) + dvar * (∑ -2 * (x - mean)) / n
 		 * 使用darknet公式
 		 * dmean = (∑ dxhat * -1 / (var + eta)^1/2)
 		 */
-		meanDzSum(input.maxtir, diff.maxtir, mean, std, meanDzSum, dmu, mode);
-//		muSum(diff.maxtir, std, dmu, mode);
-		
-		for(int i = 0;i<meanDzSum.length;i++) {
+		meanDzSum(input.maxtir, diff.maxtir, mean, std, dvar2, dmu, dmu2, 1.0f / batchNum, mode);
+
+		for(int i = 0;i<dvar2.length;i++) {
 			// dvar = ∑ dxhat * (xi - mean) * -1/2 * (var + eta)^-3/2
-			dvar[i] = (float) (meanDzSum[i] * -0.5f * Math.pow(var[i] + eta, -1.5));
+			dvar[i] = (float) (dvar2[i] * -0.5f * Math.pow(var[i] + eta, -1.5));
 		}
-		
-//		BNBackward job = new BNBackward(this, dvar, dmu, 0, number - 1);
-//		
-//		ForkJobEngine.run(job);
-		
+
+		for(int i = 0;i<dmu.length;i++) {
+			dmu[i] += dmu2[i] * dvar[i];
+		}
+
+		computeDiff(dvar, dmu, batchNum);
+
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
-		
-		/**
-		 * dl/dx
-		 */
-		for(int m = 0;m<this.number;m++) {
-			for(int c = 0;c<oChannel;c++) {
-				for(int h = 0;h<oHeight;h++) {
-					for(int w = 0;w<oWidth;w++) {
-						int ci = w;
-						if(bnType == BNType.conv_bn) {
-							ci = c;
-						}
-						// dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/n
-						diff.maxtir[m][c][h][w] = diff.maxtir[m][c][h][w] / std[ci] + 2.0f * dvar[ci] * (input.maxtir[m][c][h][w] - mean[ci]) / batchNum + dmu[ci] / batchNum;
-					}
-				}
-			}
-		}
-		
-//		System.out.println((System.nanoTime() - start) / 1e6+"ms.========>");
 		
 	}
 	
@@ -552,76 +518,222 @@ public class BNLayer extends NormalizationLayer {
 		// TODO Auto-generated method stub
 		
 	}
-	
-	public float[] meanSum(float[][][][] x,float[] mean,int mode) {
-		
-		float[] meanSum = new float[mean.length];
+//	
+//	public float[] meanSum(float[][][][] x,float[] mean,int mode) {
+//		
+//		float[] meanSum = new float[mean.length];
+//		
+//		if(mode == 0) {
+//			for(int i = 0;i<meanSum.length;i++) {
+//				for(int n = 0;n<x.length;n++) {
+//					meanSum[i] += x[n][0][0][i] - mean[i];
+//				}
+//			}
+//		}else {
+//			for(int i = 0;i<meanSum.length;i++) {
+//				for(int n = 0;n<x.length;n++) {
+//					for(int h = 0;h<x[0][0].length;h++) {
+//						for(int w = 0;w<x[0][0][h].length;w++) {
+//							meanSum[i] += x[n][i][h][w] - mean[i];
+//						}
+//					}
+//				}
+//			}
+//		}
+//
+//		return meanSum;
+//	}
+//	
+	public void meanDzSum(float[][][][] x,float[][][][] dz,float[] mean,float[] std,float[] dvar2,float[] dmu,float[] dmu2,float scale,int mode) {
 		
 		if(mode == 0) {
-			for(int i = 0;i<meanSum.length;i++) {
+			for(int i = 0;i<dvar2.length;i++) {
 				for(int n = 0;n<x.length;n++) {
-					meanSum[i] += x[n][0][0][i] - mean[i];
+					dvar2[i] += (x[n][0][0][i] - mean[i]) * dz[n][0][0][i];
+					dmu[i] += -1.0f * dz[n][0][0][i] / std[i];
+					dmu2[i] += -2.0f * (x[n][0][0][i] - mean[i]) * scale;
 				}
 			}
+			
 		}else {
-			for(int i = 0;i<meanSum.length;i++) {
+			for(int i = 0;i<dvar2.length;i++) {
 				for(int n = 0;n<x.length;n++) {
 					for(int h = 0;h<x[0][0].length;h++) {
 						for(int w = 0;w<x[0][0][h].length;w++) {
-							meanSum[i] += x[n][i][h][w] - mean[i];
+							dvar2[i] += (x[n][i][h][w] - mean[i]) * dz[n][i][h][w];
+							dmu[i] += -1.0f * dz[n][i][h][w] / std[i];
+							dmu2[i] += -2.0f * (x[n][i][h][w] - mean[i]) * scale;
 						}
 					}
 				}
 			}
 		}
 
-		return meanSum;
 	}
 	
-	public void meanDzSum(float[][][][] x,float[][][][] dz,float[] mean,float[] std,float[] meanDzSum,float[] muSum,int mode) {
+	/**
+	 * deltaGama = ∑ deta * z
+	 * deltaBeta = ∑ deta
+	 * dxhat = deta * gama
+	 */
+	public void computeDeltaV2() {
 		
-		if(mode == 0) {
-			for(int i = 0;i<meanDzSum.length;i++) {
-				for(int n = 0;n<x.length;n++) {
-					meanDzSum[i] += (x[n][0][0][i] - mean[i]) * dz[n][0][0][i];
-					muSum[i] += -1.0f * dz[n][0][0][i] / std[i];
-				}
-			}
-		}else {
-			for(int i = 0;i<meanDzSum.length;i++) {
-				for(int n = 0;n<x.length;n++) {
-					for(int h = 0;h<x[0][0].length;h++) {
-						for(int w = 0;w<x[0][0][h].length;w++) {
-							meanDzSum[i] += (x[n][i][h][w] - mean[i]) * dz[n][i][h][w];
-							muSum[i] += -1.0f * dz[n][i][h][w] / std[i];
+		if(bnType == BNType.conv_bn) {
+
+			for(int c = 0;c<oChannel;c++) {
+				float gamaTemp = gama[c];
+				deltaGama[c] = 0;
+				deltaBeta[c] = 0;
+				for(int m = 0;m<this.number;m++) {
+					for(int h = 0;h<oHeight;h++) {
+						for(int w = 0;w<oWidth;w++) {
+							// deltaGama = ∑ deta * z
+							deltaGama[c] += delta.maxtir[m][c][h][w] * z.maxtir[m][c][h][w];
+							// deltaBeta = ∑ deta
+							deltaBeta[c] += delta.maxtir[m][c][h][w];
+							// dxhat = deta * gama
+							diff.maxtir[m][c][h][w] = delta.maxtir[m][c][h][w] * gamaTemp;
 						}
 					}
 				}
 			}
+
+		}else {
+
+			for(int w = 0;w<oWidth;w++) {
+				deltaGama[w] = 0;
+				deltaBeta[w] = 0;
+				for(int m = 0;m<this.number;m++) {
+					// deltaGama = ∑ deta * z
+					deltaGama[w] += delta.maxtir[m][0][0][w] * z.maxtir[m][0][0][w];
+					// deltaBeta = ∑ deta
+					deltaBeta[w] += delta.maxtir[m][0][0][w];
+					// dxhat = deta * gama
+					diff.maxtir[m][0][0][w] = delta.maxtir[m][0][0][w] * gama[w];
+
+				}
+			}
+
 		}
 
 	}
 	
-	public void muSum(float[][][][] dz,float[] std,float[] result,int mode) {
+	/**
+	 * deltaGama = ∑ deta * z
+	 * deltaBeta = ∑ deta
+	 * dxhat = deta * gama
+	 */
+	public void computeDelta() {
 		
-		if(mode == 0) {
-			for(int i = 0;i<std.length;i++) {
-				for(int n = 0;n<dz.length;n++) {
-					result[i] += -1.0f * dz[n][0][0][i] / std[i];
-				}
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		if(bnType == BNType.conv_bn) {
+
+			for(int m = 0;m<this.number;m++) {
+				final int index = m;
+				workers.add(new Task<Object>(index) {
+					@Override
+				    public Object call() throws Exception {
+						for(int c = 0;c<oChannel;c++) {
+							for(int h = 0;h<oHeight;h++) {
+								for(int w = 0;w<oWidth;w++) {
+									// deltaGama = ∑ deta * z
+									deltaGama[c] += delta.maxtir[index][c][h][w] * z.maxtir[index][c][h][w];
+									// deltaBeta = ∑ deta
+									deltaBeta[c] += delta.maxtir[index][c][h][w];
+									// dxhat = deta * gama
+									diff.maxtir[index][c][h][w] = delta.maxtir[index][c][h][w] * gama[c];
+								}
+							}
+						}
+						return null;
+					}
+				});
 			}
+
 		}else {
-			for(int i = 0;i<std.length;i++) {
-				for(int n = 0;n<dz.length;n++) {
-					for(int h = 0;h<dz[0][0].length;h++) {
-						for(int w = 0;w<dz[0][0][h].length;w++) {
-							result[i] += -1.0f * dz[n][i][h][w] / std[i];
+
+			for(int m = 0;m<this.number;m++) {
+				final int index = m;
+				workers.add(new Task<Object>(index) {
+					@Override
+				    public Object call() throws Exception {
+						for(int w = 0;w<oWidth;w++) {
+							// deltaGama = ∑ deta * z
+							deltaGama[w] += delta.maxtir[index][0][0][w] * z.maxtir[index][0][0][w];
+							// deltaBeta = ∑ deta
+							deltaBeta[w] += delta.maxtir[index][0][0][w];
+							// dxhat = deta * gama
+							diff.maxtir[index][0][0][w] = delta.maxtir[index][0][0][w] * gama[w];
+
+						}
+						return null;
+					}
+				});
+			}
+
+		}
+
+		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
+
+	}
+	
+	/**
+	 * dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/2
+	 */
+	public void computeDiff(float[] dvar,float[] dmu,float batchNum) {
+		
+		float sacle = 1.0f / batchNum;
+		
+		if(bnType == BNType.conv_bn) {
+
+			/**
+			 * dl/dx
+			 */
+			for(int m = 0;m<this.number;m++) {
+				for(int c = 0;c<oChannel;c++) {
+					for(int h = 0;h<oHeight;h++) {
+						for(int w = 0;w<oWidth;w++) {
+							// dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/n
+							diff.maxtir[m][c][h][w] = diff.maxtir[m][c][h][w] / std[c] + 2.0f * dvar[c] * (input.maxtir[m][c][h][w] - mean[c]) * sacle + dmu[c] * sacle;
 						}
 					}
 				}
 			}
+
+		}else {
+
+			for(int m = 0;m<this.number;m++) {
+				for(int w = 0;w<oWidth;w++) {
+					// dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/n
+					diff.maxtir[m][0][0][w] = diff.maxtir[m][0][0][w] / std[w] + 2.0f * dvar[w] * (input.maxtir[m][0][0][w] - mean[w]) * sacle + dmu[w] * sacle;
+				}
+			}
+
 		}
 
 	}
 	
+//	public void muSum(float[][][][] dz,float[] std,float[] result,int mode) {
+//		
+//		if(mode == 0) {
+//			for(int i = 0;i<std.length;i++) {
+//				for(int n = 0;n<dz.length;n++) {
+//					result[i] += -1.0f * dz[n][0][0][i] / std[i];
+//				}
+//			}
+//		}else {
+//			for(int i = 0;i<std.length;i++) {
+//				for(int n = 0;n<dz.length;n++) {
+//					for(int h = 0;h<dz[0][0].length;h++) {
+//						for(int w = 0;w<dz[0][0][h].length;w++) {
+//							result[i] += -1.0f * dz[n][i][h][w] / std[i];
+//						}
+//					}
+//				}
+//			}
+//		}
+//
+//	}
+//	
 }

@@ -723,6 +723,26 @@ public class MatrixUtils {
 	/**
 	 * transform
 	 * @param x
+	 * @index ni * c * h * w + ci * h * w + hi * w + wi
+	 * @return
+	 */
+	public static void transform(float[] x, float[][][][] y,int n,int c,int h,int w) {
+		
+		for(int ni = 0;ni<n;ni++) {
+			for(int ci = 0;ci<c;ci++) {
+				for(int hi = 0;hi<h;hi++) {
+					for(int wi = 0;wi<w;wi++) {
+						y[ni][ci][hi][wi] = x[ni * c * h * w + ci * h * w + hi * w + wi];
+					}
+				}
+			}
+		}
+
+	}
+	
+	/**
+	 * transform
+	 * @param x
 	 * @return
 	 */
 	public static float[][][][] transform(float[][] x,int n,int c,int h,int w) {

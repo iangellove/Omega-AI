@@ -5,7 +5,6 @@ import java.util.Vector;
 import com.omega.common.data.Tensor;
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
-import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
@@ -52,7 +51,9 @@ public class FullyLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		this.diff = Blobs.zero(number, channel, height, width, this.diff);
+		if(this.diff == null || this.number != this.diff.number){
+			this.diff = Blobs.zero(number, channel, height, width, this.diff);
+		}
 		MatrixUtils.zero(this.deltaB);
 		MatrixUtils.zero(this.deltaW);
 	}
@@ -61,8 +62,10 @@ public class FullyLayer extends Layer{
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
-		this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
 		int inputSize = this.number * this.width;
+		if(this.output == null || this.number != this.output.number){
+			this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
+		}
 		if(this.input1d == null || inputSize != this.input1d.length) {
 			this.input1d = new Tensor(1, 1, 1, inputSize).data;
 		}
@@ -93,11 +96,11 @@ public class FullyLayer extends Layer{
 			MatrixUtils.transform(input.maxtir, input1d);
 			MatrixUtils.transform(weight, weight1d);
 			
-			float[] r = new float[this.number*this.oWidth];
+			float[] r = new float[this.number * this.oWidth];
 			
 			GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, input1d, weight1d, r);
 			
-			output.maxtir = MatrixUtils.transform(r, this.number, 1, 1, this.oWidth);
+			MatrixUtils.transform(r, output.maxtir, this.number, 1, 1, this.oWidth);
 			
 			if(hasBias) {
 			
@@ -108,40 +111,6 @@ public class FullyLayer extends Layer{
 				}
 			
 			}
-			
-//			System.out.println((System.nanoTime() - start)/1e6+"ms.--->gpu");
-//			
-//			long start2 = System.nanoTime();
-//			
-//			Vector<Task<Object>> workers = new Vector<Task<Object>>();
-//
-//			for(int m = 0;m<this.number;m++) {
-//				final int index = m;
-//				workers.add(new Task<Object>(index) {
-//					@Override
-//				    public Object call() throws Exception {
-//						for(int ow = 0;ow<oWidth;ow++) {
-//							for(int w = 0;w<width;w++) {
-//								output.maxtir[index][0][0][ow] += input.maxtir[index][0][0][w] * weight[w][ow];
-//							}
-//							if(hasBias) {
-//								output.maxtir[index][0][0][ow] += bias[ow];
-//							}
-//						}
-//						return null;
-//					}
-//				});
-//			}
-//
-//			TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
-//			
-//			System.out.println((System.nanoTime() - start2)/1e6+"ms.--->cpu");
-			
-//			PrintUtils.printImage(output.maxtir[0]);
-//			
-//			PrintUtils.printImage(test[0]);
-//			System.out.println("=================================");
-//			System.out.println(CheckArrayUtils.check(output.maxtir, test));
 			
 		}
 		
@@ -161,14 +130,13 @@ public class FullyLayer extends Layer{
 		MatrixUtils.transform(this.delta.maxtir, delta1d);
 		float[] inputT = Transpose.transpose(this.input1d, this.number, this.width);
 		GPUOP.getInstance().multiplyFloat(this.width, this.number, this.oWidth, inputT, delta1d, dw);
-//		float[][] deltaW2 = new float[this.width][this.oWidth];
 		dw = MatrixOperation.multiplication(dw, (1.0f / this.number));
 		MatrixUtils.transform(dw, deltaW, width, oWidth);
 		
-		float[] diffTmp = new float[this.number * this.width];
+		float[] diff1d = new float[this.number * this.width];
 		float[] weightT = Transpose.transpose(this.weight1d, this.width, this.oWidth);
-		GPUOP.getInstance().multiplyFloat(this.number, this.oWidth, this.width, delta1d, weightT, diffTmp);
-		diff.maxtir = MatrixUtils.transform(diffTmp, this.number, 1, 1, width);
+		GPUOP.getInstance().multiplyFloat(this.number, this.oWidth, this.width, delta1d, weightT, diff1d);
+		MatrixUtils.transform(diff1d, diff.maxtir, this.number, 1, 1, width);
 		
 		if(hasBias) {
 			

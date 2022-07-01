@@ -121,8 +121,8 @@ public class ConvolutionLayer extends Layer {
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
-		this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
 		if(this.pInput == null || this.number != this.pInput.number){
+			this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
 			this.pInput = Blobs.zero(number, channel, height + padding * 2, width + padding * 2, this.pInput);
 			int pLength = this.channel * kHeight * kWidth * this.number * oHeight * oWidth;
 			this.pInput1D = new Tensor(1, 1, 1, pLength);
@@ -132,7 +132,9 @@ public class ConvolutionLayer extends Layer {
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		this.diff = Blobs.zero(number, channel, height, width, this.diff);
+		if(this.diff == null || this.number != this.diff.number){
+			this.diff = Blobs.zero(number, channel, height, width, this.diff);
+		}
 		MatrixUtils.zero(this.deltaB);
 		MatrixUtils.zero(this.deltaW);
 	}
