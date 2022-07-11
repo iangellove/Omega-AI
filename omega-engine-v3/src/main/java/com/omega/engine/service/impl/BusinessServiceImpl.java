@@ -673,7 +673,7 @@ public class BusinessServiceImpl implements BusinessService {
 
 			int fInputCount = pool5.oChannel * pool5.oWidth * pool5.oHeight;
 			
-			System.out.println(fInputCount);
+//			System.out.println(fInputCount);
 			
 			int inputCount = 4096;
 			
