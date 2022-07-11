@@ -1,5 +1,7 @@
 package com.omega.engine.nn.layer;
 
+import java.util.List;
+
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.gpu.data.CacheDataSet;
 import com.omega.engine.nn.data.Blob;
@@ -16,6 +18,8 @@ import com.omega.engine.updater.Updater;
 public abstract class Layer {
 	
 	public Network network;
+	
+	public Layer parent;
 	
 	public int index = 0;
 	
@@ -64,10 +68,16 @@ public abstract class Layer {
 	
 	public Updater updater;
 	
+	public boolean isIdentity = false;
+	
 	/**
 	 * cache data
 	 */
 	private CacheDataSet tampDataSet;
+	
+
+	public List<Layer> layers = null;
+	
 	
 	public abstract void init();
 	
@@ -123,12 +133,26 @@ public abstract class Layer {
 	 * 转换并设置输入数据
 	 */
 	public void setInput() {
+		
+		if(parent == null) {
 
-		/**
-		 * 获取上一层的输出作为当前层的输入
-		 */
-		this.input = Blobs.transform(number, channel, height, width, this.network.getPreLayer(this.index).output);
+			/**
+			 * 获取上一层的输出作为当前层的输入
+			 */
+			this.input = Blobs.transform(number, channel, height, width, this.network.getPreLayer(this.index).output);
 
+		}else {
+			/**
+			 * resnet block layer
+			 */
+			if(this.index == 0) {
+				this.input = parent.input;
+			}else {
+				this.input = this.parent.layers.get(index - 1).output;
+			}
+			
+		}
+		
 	}
 	
 	/**
@@ -141,10 +165,25 @@ public abstract class Layer {
 //		MatrixOperation.printImage(this.network.getNextLayer(this.index).diff.maxtir[0][0]);
 //		
 
-		/**
-		 * 获取上一层的输出作为当前层的输入
-		 */
-		this.delta = Blobs.transform(number, oChannel, oHeight, oWidth, this.network.getNextLayer(this.index).diff);
+		if(parent == null) {
+
+			/**
+			 * 获取上一层的输出作为当前层的输入
+			 */
+			this.delta = Blobs.transform(number, oChannel, oHeight, oWidth, this.network.getNextLayer(this.index).diff);
+
+		}else {
+			/**
+			 * resnet block layer
+			 */
+			if(this.index == parent.layers.size() - 1 || isIdentity) {
+				this.delta = parent.delta;
+			}else {
+				this.delta = Blobs.transform(number, oChannel, oHeight, oWidth, parent.layers.get(index + 1).diff);
+			}
+			
+		}
+		
 	}
 	
 	/**

@@ -25,7 +25,7 @@ public class ReluLayer extends ActiveFunctionLayer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		
+
 		Vector<Task<Object>> workers = new Vector<Task<Object>>();
 		
 		for(int n = 0;n<this.number;n++) {

@@ -75,6 +75,9 @@ public class BNLayer extends NormalizationLayer {
 	public void init() {
 		if(preLayer == null) {
 			preLayer = this.network.getPreLayer(this.index);
+			if(this.parent != null) {
+				preLayer = this.parent.layers.get(index - 1);
+			}
 			this.channel = preLayer.oChannel;
 			this.height = preLayer.oHeight;
 			this.width = preLayer.oWidth;

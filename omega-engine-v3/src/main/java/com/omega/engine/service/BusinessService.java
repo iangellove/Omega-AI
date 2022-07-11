@@ -22,4 +22,20 @@ public interface BusinessService {
 	
 	public void showImage();
 	
+	public void cnn_1x1();
+	
+	public void resnet18_mnist();
+	
+	public void resnet18_cifar10();
+	
+	public void bpNetwork_mnist(String sid,float lr);
+	
+	public void alexNet_mnist(String sid,float lr);
+	
+	public void alexNet_cifar10(String sid,float lr);
+	
+	public void cnnNetwork_vgg16_cifar10(String sid,float lr);
+	
+	public void cnnNetwork_mnist(String sid,float lr);
+	
 }

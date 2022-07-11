@@ -8,6 +8,9 @@ public abstract class ActiveFunctionLayer extends Layer {
 	@Override
 	public void init() {
 		Layer preLayer = this.network.getPreLayer(this.index);
+		if(this.parent != null) {
+			preLayer = this.parent.layers.get(index - 1);
+		}
 		this.number = preLayer.number;
 		this.channel = preLayer.oChannel;
 		this.height = preLayer.oHeight;

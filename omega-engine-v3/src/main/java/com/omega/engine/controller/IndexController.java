@@ -45,4 +45,10 @@ public class IndexController {
 		return "origin/origin2";
 	}
 	
+	@RequestMapping("/training")
+	public String training(HttpServletRequest request,HttpServletResponse response) {
+		
+		return "training/controller";
+	}
+	
 }

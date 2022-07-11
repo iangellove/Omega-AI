@@ -15,11 +15,12 @@ spring:
 
 eureka:
   client:
-    serviceUrl:
-      defaultZone: http://${security.username}:${security.password}@127.0.0.1:8001/eureka/
+    service-url:
+      #defaultZone: http://${security.username}:${security.password}@192.168.3.188:8001/eureka/
+      defaultZone: http://localhost:8001/eureka/
   instance:
-    prefer-ip-address: true
-    instance_id: ${spring.cloud.client.ip-address}:${server.port}
+    preferIpAddress: true
+    instanceId: ${spring.cloud.client.ip-address}:${server.port}
     hostname: ${spring.cloud.client.ip-address}
     
 #安全认证的配置  

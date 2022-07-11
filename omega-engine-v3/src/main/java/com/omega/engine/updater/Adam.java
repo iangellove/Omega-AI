@@ -104,7 +104,7 @@ public class Adam extends Updater {
 		// TODO Auto-generated method stub
 		
 //		this.lr = layer.learnRate / layer.number;
-		
+//		System.out.println(layer.learnRate);
 		/**
 		 * init
 		 */

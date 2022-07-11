@@ -1,7 +1,5 @@
 package com.omega.engine.nn.network;
 
-import com.omega.common.utils.MatrixOperation;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.data.Blob;

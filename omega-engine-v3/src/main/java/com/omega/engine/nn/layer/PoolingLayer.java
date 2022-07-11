@@ -62,7 +62,6 @@ public class PoolingLayer extends Layer {
 		this.oChannel = this.channel;
 		this.oWidth = (this.width - pWidth) / this.stride + 1;
 		this.oHeight = (this.height - pHeight) / this.stride + 1;
-		
 	}
 
 	@Override

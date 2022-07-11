@@ -19,6 +19,8 @@ import com.omega.engine.optimizer.lr.LearnRateUpdate;
  */
 public abstract class Optimizer {
 	
+	private String sid;
+	
 	public int batchIndex = 1;
 	
 	public int trainIndex = 1;
@@ -62,6 +64,8 @@ public abstract class Optimizer {
 	public float gama = 0.9999f;
 	
 	public float lr = 0.1f;
+	
+	public boolean isOnline = false;
 	
 	public abstract void train(BaseData trainingData);
 	
@@ -241,6 +245,18 @@ public abstract class Optimizer {
 
 	public void setWarmUp(boolean warmUp) {
 		this.warmUp = warmUp;
+	}
+	
+	public void online(boolean isOnline) {
+		this.isOnline = isOnline;
+	}
+
+	public String getSid() {
+		return sid;
+	}
+
+	public void setSid(String sid) {
+		this.sid = sid;
 	}
 	
 }
