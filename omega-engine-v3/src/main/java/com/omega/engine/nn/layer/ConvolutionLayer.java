@@ -9,7 +9,6 @@ import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
-import com.omega.common.utils.Transpose;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.gpu.data.CacheDataSet;
 import com.omega.engine.nn.data.Blob;
@@ -41,6 +40,8 @@ public class ConvolutionLayer extends Layer {
 	public Blob pInput;  //n * c * h * w
 	
 	public Tensor pInput1D;  //n * c * h * w im2col
+	
+	public Tensor dInput1D;
 	
 	public float[][][][] kernel;  //kn * c * kh * kw
 
@@ -136,6 +137,14 @@ public class ConvolutionLayer extends Layer {
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number){
 			this.diff = Blobs.zero(number, channel, height, width, this.diff);
+			int kh = this.oHeight;
+			int kw = this.oWidth;
+			int oHeight = ((this.pInput.height - kh ) / stride) + 1;
+			int oWidth = ((this.pInput.width - kw) / stride) + 1;
+			int xm = this.channel * oHeight * oWidth;
+			int xn = this.number * kh * kw;
+			int pLength = xm * xn;
+			this.dInput1D = new Tensor(1, 1, 1, pLength);
 		}
 		MatrixUtils.zero(this.deltaB);
 		MatrixUtils.zero(this.deltaW);
@@ -187,9 +196,6 @@ public class ConvolutionLayer extends Layer {
 		/**
 		 * 计算deltaW
 		 */
-//		this.computeDeltaW();
-		
-		this.computeDeltaW_V2();
 		
 		if(this.hasBias) {
 			this.deltaB = MatrixOperation.division(MatrixOperation.sumBias(this.delta.maxtir),this.number);
@@ -357,92 +363,28 @@ public class ConvolutionLayer extends Layer {
 	 * 计算deltaW
 	 */
 	public void computeDeltaW (){
-//		long start = System.nanoTime();
-//		int ko = this.kernelNum;
-		int kh = this.kHeight;
-		int kw = this.kWidth;
-
-		int oHeight = ((this.height + this.padding * 2 - kh) / stride) + 1;
-		
-		int oWidth = ((this.width + this.padding * 2 - kw) / stride) + 1;
-		
-		int xm = this.number * oHeight * oWidth;
-		int xn = kh * kw * this.channel;
-		int kc = this.delta.maxtir[0].length;
-		
-		/**
-		 * input im2col
-		 */
-//		float[][] pinput2d = Im2colUtils.im2col(this.pInput.maxtir, this.kHeight, this.kWidth, this.stride);
-		
-		float[] pt = Transpose.transpose(pInput1D.data, xm, xn);
-//		System.out.println((System.nanoTime() - start) / 1e6+"ms->computeDeltaW");
-//		float[][] delta2d = Im2colUtils.to2d(this.delta.maxtir);
-		
-		float[] delta1d = Im2colUtils.kernalToVector(this.delta.maxtir, true);
-		
-//		float[][] dw2d = MatrixOperation.multiplicationByCuda(pInputT, delta2d);
-
-		float[] c = MatrixUtils.zero(xn * kc);
-
-//		System.out.println("-=============");
-		GPUOP.getInstance().multiplyFloat(xn, xm, kc, pt, delta1d, c);
-		
-		Im2colUtils.to4d(c, this.deltaW, this.kernelNum, this.channel, this.kHeight, this.kWidth);
-
-		MatrixOperation.divisionSelf(this.deltaW, this.number);
-		
-//		
-	}
-	
-	/**
-	 * 计算deltaW
-	 */
-	public void computeDeltaW_V2 (){
-//		long start = System.nanoTime();
 		int ko = this.kernelNum;
 		int kh = this.delta.height;
 		int kw = this.delta.width;
 		
 		int oHeight = ((this.pInput.height - kh ) / stride) + 1;
-		
 		int oWidth = ((this.pInput.width - kw) / stride) + 1;
 		
 		int xm = this.channel * oHeight * oWidth;
 		int xn = this.number * kh * kw;
 
-		int pLength = xm * xn;
-		
-		float[] dInput2d = new float[pLength];
-		
 		/**
 		 * input im2col
 		 */
-		Im2colForWeight.im2col(this.pInput.maxtir, dInput2d, kh, kw, this.stride);
+		Im2colForWeight.im2col(this.pInput.maxtir, this.dInput1D.data, kh, kw, this.stride);
 		
 		float[] delta1d = Im2colUtils.kernalToVector(this.delta.maxtir, true);
 
 		float[] c = MatrixUtils.zero(xm * ko);
 		
-		GPUOP.getInstance().multiplyFloat(xm, xn, ko, dInput2d, delta1d, c);
+		GPUOP.getInstance().multiplyFloat(xm, xn, ko, this.dInput1D.data, delta1d, c);
 		
 		Im2col4d2T.to4d(c, this.deltaW, this.kernelNum, this.channel, this.kHeight, this.kWidth, this.number);
-//		
-//		for(int cc = 0;cc<xm;cc++) {
-//			int ci = cc / this.kHeight / this.kWidth;
-//			int ckh = (cc - (ci * kHeight * kWidth)) / kHeight;
-//			int ckw = (cc - (ci * kHeight * kWidth)) % kHeight;
-//			for(int o = 0;o<ko;o++) {
-//				int index = cc * ko + o;
-//				this.deltaW[o][ci][ckh][ckw] = c[index];
-//			}
-//		}
-//		
-////		Im2colUtils.to4d(Transpose.transpose(c, xn, ko), this.deltaW, this.kernelNum, this.channel, this.kHeight, this.kWidth);
-//
-//		MatrixOperation.divisionSelf(this.deltaW, this.number);
-		
-//		
 	}
 	
 }
