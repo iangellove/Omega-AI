@@ -3,6 +3,7 @@ package com.omega.test;
 import java.util.concurrent.ForkJoinPool;
 
 import com.omega.common.utils.CheckArrayUtils;
+import com.omega.common.utils.Im2colForWeight;
 import com.omega.common.utils.Im2colToVector;
 import com.omega.common.utils.Im2colUtils;
 import com.omega.common.utils.JsonUtils;
@@ -289,6 +290,65 @@ public class TestUtils {
 		
 	}
 	
+	public static void testWeight() {
+		
+		float[][][][] x = new float[][][][] {
+			{
+				{
+					{1.1f,1.2f,1.3f},
+					{1.4f,1.5f,1.6f},
+					{1.7f,1.8f,1.9f}
+				},
+				{
+					{1.101f,1.11f,1.12f},
+					{1.13f,1.14f,1.15f},
+					{1.16f,1.17f,1.18f}
+				},
+				{
+					{1.19f,1.201f,1.21f},
+					{1.22f,1.23f,1.24f},
+					{1.25f,1.26f,1.27f}
+				}
+			},
+			{{{2.1f,2.2f,2.3f},{2.4f,2.5f,2.6f},{2.7f,2.8f,2.9f}},{{2.101f,2.11f,2.12f},{2.13f,2.14f,2.15f},{2.16f,2.17f,2.18f}},{{2.19f,2.201f,2.21f},{2.22f,2.23f,2.24f},{2.25f,2.26f,2.27f}}},
+			{{{3.1f,3.2f,3.3f},{3.4f,3.5f,3.6f},{3.7f,3.8f,3.9f}},{{3.101f,3.11f,3.12f},{3.13f,3.14f,3.15f},{3.16f,3.17f,3.18f}},{{3.19f,3.201f,3.21f},{3.22f,3.23f,3.24f},{3.25f,3.26f,3.27f}}},
+			{{{4.1f,4.2f,4.3f},{4.4f,4.5f,4.6f},{4.7f,4.8f,4.9f}},{{4.101f,4.11f,4.12f},{4.13f,4.14f,4.15f},{4.16f,4.17f,4.18f}},{{4.19f,4.201f,4.21f},{4.22f,4.23f,4.24f},{4.25f,4.26f,4.27f}}},
+		};
+		
+		int N = 4;
+		int C = 3;
+		int kh = 2;
+		int kw = 2;
+		
+		int oHeight = ((3 - kh ) / 1) + 1;
+		
+		int oWidth = ((3 - kw) / 1) + 1;
+		
+		int xm = C * oHeight * oWidth;
+		int xn = N * kh * kw;
+
+		int pLength = xm * xn;
+		
+		float[] y = new float[pLength];
+		
+		Im2colForWeight.im2col(x, y, 2, 2, 1);
+		
+//		PrintUtils.printImage(y);
+		
+		for(int i = 0;i<xm;i++) {
+			
+			System.out.println("");
+			
+			for(int j = 0;j<xn;j++) {
+				
+				System.out.print(y[i * xn + j]+" ");
+				
+			}
+			
+		}
+		
+	}
+	
 	public static void main(String[] args) {
 		
 //		TestUtils.testIm2colInput();
@@ -312,60 +372,62 @@ public class TestUtils {
 		
 //		test();
 		
-		int N = 128;
-		int W = 5000;
-		int OW = 5000;
-		
-		float[][] x = RandomUtils.x2Random(N, W);
-		
-		float[][] d = RandomUtils.x2Random(N, OW);
-		
-//		float[][] x = new float[][] {
-//			{1.0f,2.0f,3.0f,4.0f},
-//			{5.0f,6.0f,7.0f,8.0f},
-//			{9.0f,10.0f,11.0f,12.0f}
-//		};
+//		int N = 128;
+//		int W = 5000;
+//		int OW = 5000;
 //		
+//		float[][] x = RandomUtils.x2Random(N, W);
 //		
-		
-//		float[][] d = new float[][] {
-//			{0.1f,0.2f},
-//			{0.3f,0.4f},
-//			{0.5f,0.6f}
-//		};
-		
-		float[][] dw = new float[W][OW];
-		
-		for(int w = 0;w<W;w++) {
-			for(int ow = 0;ow<OW;ow++) {
-				for(int n = 0;n<N;n++) {
-					dw[w][ow] += x[n][w] * d[n][ow] / N;
-				}
-			}
-		}
-		
-		float[] r = new float[W *OW];
-		
-		float[] x1 = MatrixUtils.transform(x);
-		
-		float[] xt = Transpose.transpose(x1, N, W);
-		
-		float[] d1 = MatrixUtils.transform(d);
-		
-		GPUOP.getInstance().multiplyFloat(W, N, OW, xt, d1, r);
-		
-		r = MatrixOperation.multiplication(r, (1.0f / N));
-		
-		float[][] x1d = MatrixUtils.transform(r,W,OW);
-		
-//		float[] x1d = MatrixUtils.transform(x);
-//
-//		float[] xt2 = Transpose.transpose(x1d, 2, 3);
+//		float[][] d = RandomUtils.x2Random(N, OW);
 //		
-//		System.out.println(JsonUtils.toJson(xt1));
-//		System.out.println(JsonUtils.toJson(xt2));
+////		float[][] x = new float[][] {
+////			{1.0f,2.0f,3.0f,4.0f},
+////			{5.0f,6.0f,7.0f,8.0f},
+////			{9.0f,10.0f,11.0f,12.0f}
+////		};
+////		
+////		
+//		
+////		float[][] d = new float[][] {
+////			{0.1f,0.2f},
+////			{0.3f,0.4f},
+////			{0.5f,0.6f}
+////		};
+//		
+//		float[][] dw = new float[W][OW];
+//		
+//		for(int w = 0;w<W;w++) {
+//			for(int ow = 0;ow<OW;ow++) {
+//				for(int n = 0;n<N;n++) {
+//					dw[w][ow] += x[n][w] * d[n][ow] / N;
+//				}
+//			}
+//		}
+//		
+//		float[] r = new float[W *OW];
+//		
+//		float[] x1 = MatrixUtils.transform(x);
+//		
+//		float[] xt = Transpose.transpose(x1, N, W);
+//		
+//		float[] d1 = MatrixUtils.transform(d);
+//		
+//		GPUOP.getInstance().multiplyFloat(W, N, OW, xt, d1, r);
+//		
+//		r = MatrixOperation.multiplication(r, (1.0f / N));
+//		
+//		float[][] x1d = MatrixUtils.transform(r,W,OW);
+//		
+////		float[] x1d = MatrixUtils.transform(x);
+////
+////		float[] xt2 = Transpose.transpose(x1d, 2, 3);
+////		
+////		System.out.println(JsonUtils.toJson(xt1));
+////		System.out.println(JsonUtils.toJson(xt2));
+//		
+//		System.out.println(CheckArrayUtils.check(dw, x1d));
 		
-		System.out.println(CheckArrayUtils.check(dw, x1d));
+		TestUtils.testWeight();
 		
 	}
 	

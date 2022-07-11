@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.Im2col4d2T;
 import com.omega.common.utils.Im2colForWeight;
 import com.omega.common.utils.Im2colToVector;
 import com.omega.common.utils.Im2colUtils;
@@ -425,19 +426,21 @@ public class ConvolutionLayer extends Layer {
 		
 		GPUOP.getInstance().multiplyFloat(xm, xn, ko, dInput2d, delta1d, c);
 		
-		for(int cc = 0;cc<xm;cc++) {
-			int ci = cc / this.kHeight / this.kWidth;
-			int ckh = (cc - (ci * kHeight * kWidth)) / kHeight;
-			int ckw = (cc - (ci * kHeight * kWidth)) % kHeight;
-			for(int o = 0;o<ko;o++) {
-				int index = cc * ko + o;
-				this.deltaW[o][ci][ckh][ckw] = c[index];
-			}
-		}
-		
-//		Im2colUtils.to4d(Transpose.transpose(c, xn, ko), this.deltaW, this.kernelNum, this.channel, this.kHeight, this.kWidth);
-
-		MatrixOperation.divisionSelf(this.deltaW, this.number);
+		Im2col4d2T.to4d(c, this.deltaW, this.kernelNum, this.channel, this.kHeight, this.kWidth, this.number);
+//		
+//		for(int cc = 0;cc<xm;cc++) {
+//			int ci = cc / this.kHeight / this.kWidth;
+//			int ckh = (cc - (ci * kHeight * kWidth)) / kHeight;
+//			int ckw = (cc - (ci * kHeight * kWidth)) % kHeight;
+//			for(int o = 0;o<ko;o++) {
+//				int index = cc * ko + o;
+//				this.deltaW[o][ci][ckh][ckw] = c[index];
+//			}
+//		}
+//		
+////		Im2colUtils.to4d(Transpose.transpose(c, xn, ko), this.deltaW, this.kernelNum, this.channel, this.kHeight, this.kWidth);
+//
+//		MatrixOperation.divisionSelf(this.deltaW, this.number);
 		
 //		
 	}
