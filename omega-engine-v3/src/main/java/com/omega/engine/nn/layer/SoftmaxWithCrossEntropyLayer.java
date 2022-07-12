@@ -89,7 +89,6 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 //		MatrixOperation.printImage(this.input.maxtir[0]);
 		
 		this.output();
-		
 
 //		MatrixOperation.printImage(this.output.maxtir[0]);
 		
@@ -99,7 +98,9 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 	@Override
 	public void back() {
 		// TODO Auto-generated method stub
+		
 		this.initBack();
+		
 		this.diff();
 		
 		if(this.network.GRADIENT_CHECK) {

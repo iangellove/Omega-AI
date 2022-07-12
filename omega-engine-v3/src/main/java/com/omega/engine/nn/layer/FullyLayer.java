@@ -1,10 +1,6 @@
 package com.omega.engine.nn.layer;
 
-import java.util.Vector;
-
 import com.omega.common.data.Tensor;
-import com.omega.common.task.Task;
-import com.omega.common.task.TaskEngine;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
@@ -148,44 +144,6 @@ public class FullyLayer extends Layer{
 		
 		}
 		
-//		/**
-//		 * 计算当前层误差
-//		 */
-//		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-//		for(int n = 0;n<this.number;n++) {
-//			final int index = n;
-//			workers.add(new Task<Object>(index) {
-//				@Override
-//			    public Object call() throws Exception {
-//					for(int ow = 0;ow<oWidth;ow++) {
-//						for(int w = 0;w<width;w++) {
-//							/**
-//							 * 计算当前层weight梯度
-//							 * deltaW(i) = 1/m * ∑ delta(j) * input(i)
-//							 * 计算deltaW平均值
-//							 */
-//							deltaW[w][ow] += input.maxtir[index][0][0][w] * delta.maxtir[index][0][0][ow] / number;
-//							diff.maxtir[index][0][0][w] += delta.maxtir[index][0][0][ow] * weight[w][ow];
-//						}
-//						if(hasBias) {
-//							/**
-//							 * 计算当前层weight梯度
-//							 * deltaB(i) = 1/m * ∑ delta(i) * input(i)
-//							 * 计算deltaB平均值
-//							 */
-//							deltaB[ow] += delta.maxtir[index][0][0][ow] / number;
-//						}
-//					}
-//					return null;
-//				}
-//			});
-//		}
-//		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
-		
-//		System.out.println(CheckArrayUtils.check(deltaW, deltaW2));
-//		System.out.println(CheckArrayUtils.check(diff.maxtir, diff2));
-//		System.out.println("=======================");
-		
 	}
 
 	@Override
@@ -277,31 +235,7 @@ public class FullyLayer extends Layer{
 	public float[][][][] output(float[][][][] input) {
 		// TODO Auto-generated method stub
 		
-		float[][][][] output = new float[this.number][this.oChannel][this.oHeight][this.oWidth];
-		
-		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-
-		for(int m = 0;m<this.number;m++) {
-			final int index = m;
-			workers.add(new Task<Object>(index) {
-				@Override
-			    public Object call() throws Exception {
-					for(int w = 0;w<oWidth;w++) {
-						for(int i = 0;i<width;i++) {
-							output[index][0][0][w] += input[index][0][0][i] * weight[i][w];
-						}
-						if(hasBias) {
-							output[index][0][0][w] += bias[w];
-						}
-					}
-					return null;
-				}
-			});
-		}
-
-		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
-		
-		return output;
+		return null;
 	}
 
 	@Override

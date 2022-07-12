@@ -621,65 +621,69 @@ public class BNLayer extends NormalizationLayer {
 
 	}
 	
-	/**
-	 * deltaGama = ∑ deta * z
-	 * deltaBeta = ∑ deta
-	 * dxhat = deta * gama
-	 */
-	public void computeDelta() {
-		
-		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-		
-		if(bnType == BNType.conv_bn) {
-
-			for(int m = 0;m<this.number;m++) {
-				final int index = m;
-				workers.add(new Task<Object>(index) {
-					@Override
-				    public Object call() throws Exception {
-						for(int c = 0;c<oChannel;c++) {
-							for(int h = 0;h<oHeight;h++) {
-								for(int w = 0;w<oWidth;w++) {
-									// deltaGama = ∑ deta * z
-									deltaGama[c] += delta.maxtir[index][c][h][w] * z.maxtir[index][c][h][w];
-									// deltaBeta = ∑ deta
-									deltaBeta[c] += delta.maxtir[index][c][h][w];
-									// dxhat = deta * gama
-									diff.maxtir[index][c][h][w] = delta.maxtir[index][c][h][w] * gama[c];
-								}
-							}
-						}
-						return null;
-					}
-				});
-			}
-
-		}else {
-
-			for(int m = 0;m<this.number;m++) {
-				final int index = m;
-				workers.add(new Task<Object>(index) {
-					@Override
-				    public Object call() throws Exception {
-						for(int w = 0;w<oWidth;w++) {
-							// deltaGama = ∑ deta * z
-							deltaGama[w] += delta.maxtir[index][0][0][w] * z.maxtir[index][0][0][w];
-							// deltaBeta = ∑ deta
-							deltaBeta[w] += delta.maxtir[index][0][0][w];
-							// dxhat = deta * gama
-							diff.maxtir[index][0][0][w] = delta.maxtir[index][0][0][w] * gama[w];
-
-						}
-						return null;
-					}
-				});
-			}
-
-		}
-
-		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
-
-	}
+//	/**
+//	 * deltaGama = ∑ deta * z
+//	 * deltaBeta = ∑ deta
+//	 * dxhat = deta * gama
+//	 */
+//	public void computeDelta() {
+//		
+//		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+//		
+//		if(bnType == BNType.conv_bn) {
+//
+//			for(int m = 0;m<this.number;m++) {
+//				final int index = m;
+//				workers.add(new Task<Object>(index) {
+//					@Override
+//				    public Object call() throws Exception {
+//						for(int c = 0;c<oChannel;c++) {
+//							for(int h = 0;h<oHeight;h++) {
+//								for(int w = 0;w<oWidth;w++) {
+//									synchronized (deltaGama){
+//										// deltaGama = ∑ deta * z
+//										deltaGama[c] += delta.maxtir[index][c][h][w] * z.maxtir[index][c][h][w];
+//										// deltaBeta = ∑ deta
+//										deltaBeta[c] += delta.maxtir[index][c][h][w];
+//									}
+//									// dxhat = deta * gama
+//									diff.maxtir[index][c][h][w] = delta.maxtir[index][c][h][w] * gama[c];
+//								}
+//							}
+//						}
+//						return null;
+//					}
+//				});
+//			}
+//
+//		}else {
+//
+//			for(int m = 0;m<this.number;m++) {
+//				final int index = m;
+//				workers.add(new Task<Object>(index) {
+//					@Override
+//				    public Object call() throws Exception {
+//						for(int w = 0;w<oWidth;w++) {
+//							synchronized (deltaGama){
+//								// deltaGama = ∑ deta * z
+//								deltaGama[w] += delta.maxtir[index][0][0][w] * z.maxtir[index][0][0][w];
+//								// deltaBeta = ∑ deta
+//								deltaBeta[w] += delta.maxtir[index][0][0][w];
+//							}
+//							// dxhat = deta * gama
+//							diff.maxtir[index][0][0][w] = delta.maxtir[index][0][0][w] * gama[w];
+//
+//						}
+//						return null;
+//					}
+//				});
+//			}
+//
+//		}
+//
+//		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
+//
+//	}
 	
 	/**
 	 * dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/2
@@ -716,27 +720,5 @@ public class BNLayer extends NormalizationLayer {
 		}
 
 	}
-	
-//	public void muSum(float[][][][] dz,float[] std,float[] result,int mode) {
-//		
-//		if(mode == 0) {
-//			for(int i = 0;i<std.length;i++) {
-//				for(int n = 0;n<dz.length;n++) {
-//					result[i] += -1.0f * dz[n][0][0][i] / std[i];
-//				}
-//			}
-//		}else {
-//			for(int i = 0;i<std.length;i++) {
-//				for(int n = 0;n<dz.length;n++) {
-//					for(int h = 0;h<dz[0][0].length;h++) {
-//						for(int w = 0;w<dz[0][0][h].length;w++) {
-//							result[i] += -1.0f * dz[n][i][h][w] / std[i];
-//						}
-//					}
-//				}
-//			}
-//		}
-//
-//	}
-//	
+
 }

@@ -1842,6 +1842,61 @@ public class MatrixOperation {
 		
 		int count = 0;
 
+		float scale = 1.0f / x.length;
+
+		if(type == 0) {
+			count = x[0][0][0].length;
+		}else {
+			count = x[0].length;
+			scale = 1.0f / (x.length * x[0][0].length * x[0][0][0].length);
+		}
+		
+		float[] mean = new float[count];
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		for(int m = 0;m<x.length;m++) {
+			final int index = m;
+			final float s = scale;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					
+					synchronized (mean){
+
+						for(int c = 0;c<x[index].length;c++) {
+							for(int h = 0;h<x[index][c].length;h++) {
+								for(int  w = 0;w<x[index][c][h].length;w++) {
+									if(type == 0) {
+										mean[w] += x[index][c][h][w] * s;
+									}else {
+										mean[c] += x[index][c][h][w] * s;
+									}
+								}
+							}
+						}
+					}
+					
+					return null;
+				}
+			});
+		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+		
+		return mean;
+	}
+	
+	/**
+	 * mean
+	 * @param x
+	 * @param type 0:fully,1:conv
+	 * @return
+	 */
+	public static float[] meanO(float[][][][] x,int type){
+		
+		int count = 0;
+
 		if(type == 0) {
 			count = x[0][0][0].length;
 		}else {
@@ -1853,24 +1908,17 @@ public class MatrixOperation {
 		Vector<Task<Object>> workers = new Vector<Task<Object>>();
 		
 		for(int m = 0;m<x.length;m++) {
-			final int index = m;
-			workers.add(new Task<Object>(index) {
-				@Override
-			    public Object call() throws Exception {
-					for(int c = 0;c<x[index].length;c++) {
-						for(int h = 0;h<x[index][c].length;h++) {
-							for(int  w = 0;w<x[index][c][h].length;w++) {
-								if(type == 0) {
-									mean[w] += x[index][c][h][w] / x.length;
-								}else {
-									mean[c] += x[index][c][h][w] / x.length / x[0][0].length / x[0][0][0].length;
-								}
-							}
+			for(int c = 0;c<x[m].length;c++) {
+				for(int h = 0;h<x[m][c].length;h++) {
+					for(int  w = 0;w<x[m][c][h].length;w++) {
+						if(type == 0) {
+							mean[w] += x[m][c][h][w] / x.length;
+						}else {
+							mean[c] += x[m][c][h][w] / x.length / x[0][0].length / x[0][0][0].length;
 						}
 					}
-					return null;
 				}
-			});
+			}
 		}
 		
 		TaskEngine.getInstance(threadNum).dispatchTask(workers);
@@ -1900,17 +1948,21 @@ public class MatrixOperation {
 			workers.add(new Task<Object>(index) {
 				@Override
 			    public Object call() throws Exception {
-					for(int c = 0;c<x[index].length;c++) {
-						for(int h = 0;h<x[index][c].length;h++) {
-							for(int  w = 0;w<x[index][c][h].length;w++) {
-								if(type == 0) {
-									mean[w] += x[index][c][h][w] * s;
-								}else {
-									mean[c] += x[index][c][h][w] * s;
+				
+					synchronized (mean) {
+						for(int c = 0;c<x[index].length;c++) {
+							for(int h = 0;h<x[index][c].length;h++) {
+								for(int  w = 0;w<x[index][c][h].length;w++) {
+									if(type == 0) {
+										mean[w] += x[index][c][h][w] * s;
+									}else {
+										mean[c] += x[index][c][h][w] * s;
+									}
 								}
 							}
 						}
 					}
+					
 					return null;
 				}
 			});
@@ -2024,13 +2076,15 @@ public class MatrixOperation {
 			workers.add(new Task<Object>(index) {
 				@Override
 			    public Object call() throws Exception {
-					for(int c = 0;c<x[index].length;c++) {
-						for(int h = 0;h<x[index][c].length;h++) {
-							for(int  w = 0;w<x[index][c][h].length;w++) {
-								if(type == 0) {
-									var[w] += ((x[index][c][h][w] - mean[w]) * (x[index][c][h][w] - mean[w])) * s;
-								}else {
-									var[c] += ((x[index][c][h][w] - mean[c]) * (x[index][c][h][w] - mean[c])) * s;
+					synchronized (var){
+						for(int c = 0;c<x[index].length;c++) {
+							for(int h = 0;h<x[index][c].length;h++) {
+								for(int  w = 0;w<x[index][c][h].length;w++) {
+									if(type == 0) {
+										var[w] += ((x[index][c][h][w] - mean[w]) * (x[index][c][h][w] - mean[w])) * s;
+									}else {
+										var[c] += ((x[index][c][h][w] - mean[c]) * (x[index][c][h][w] - mean[c])) * s;
+									}
 								}
 							}
 						}
@@ -3922,26 +3976,30 @@ public class MatrixOperation {
 				
 				@Override
 			    public Object call() throws Exception {
+					
+					synchronized (diff) {
 
-					for(int c = 0;c<channel;c++) {
-						
-						int maskIndex = 0;
-						
-						for(int i = 0;i<oHeight;i++) {
+						for(int c = 0;c<channel;c++) {
 							
-							for(int j = 0;j<oWidth;j++) {
+							int maskIndex = 0;
+							
+							for(int i = 0;i<oHeight;i++) {
 								
-								for(int m = 0;m<pHeight;m++) {
+								for(int j = 0;j<oWidth;j++) {
 									
-									for(int n = 0;n<pWidth;n++) {
+									for(int m = 0;m<pHeight;m++) {
 										
-										diff[index][c][i * stride + m][j * stride + n] += delta[index][c][i][j] * mask[index][c][maskIndex][m][n];
+										for(int n = 0;n<pWidth;n++) {
+											
+											diff[index][c][i * stride + m][j * stride + n] += delta[index][c][i][j] * mask[index][c][maskIndex][m][n];
+											
+										}
 										
 									}
 									
+									maskIndex++;
+									
 								}
-								
-								maskIndex++;
 								
 							}
 							
