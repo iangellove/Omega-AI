@@ -196,6 +196,7 @@ public class ConvolutionLayer extends Layer {
 		/**
 		 * 计算deltaW
 		 */
+		computeDeltaW();
 		
 		if(this.hasBias) {
 			this.deltaB = MatrixOperation.division(MatrixOperation.sumBias(this.delta.maxtir),this.number);

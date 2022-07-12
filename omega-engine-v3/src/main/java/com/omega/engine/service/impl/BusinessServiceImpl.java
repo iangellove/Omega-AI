@@ -560,7 +560,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.01f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -675,7 +675,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 //			System.out.println(fInputCount);
 			
-			int inputCount = 4096;
+			int inputCount = 256;
 			
 			FullyLayer full1 = new FullyLayer(fInputCount, inputCount, false);
 
@@ -2563,8 +2563,8 @@ public class BusinessServiceImpl implements BusinessService {
 //		bs.resnet18_mnist();
 //		bs.vgg16_cifar10();
 //		bs.alexNet_mnist();
-//		bs.alexNet_cifar10();
-		bs.cnnNetwork_vgg16_cifar10();
+		bs.alexNet_cifar10();
+//		bs.cnnNetwork_vgg16_cifar10();
 	}
 
 }
