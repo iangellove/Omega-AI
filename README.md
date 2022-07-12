@@ -413,7 +413,8 @@ public void cnnNetwork_cifar10() {
 
 ### 训练情况可视化
 
-...
+支持动态调参，可视化训练
+![在这里插入图片描述](https://img-blog.csdnimg.cn/8bd006e4fc1442cfbc2d5e3682a2c5f1.png#pic_center)
 
 ### 彩蛋
 
