@@ -1587,8 +1587,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
-			
-			ConvolutionLayer conv1 = new ConvolutionLayer(channel, 64, width, height, 3, 3, 0, 1, false);
+			ConvolutionLayer conv1 = new ConvolutionLayer(channel, 32, width, height, 3, 3, 1, 1, false);
 			
 			BNLayer bn1 = new BNLayer();
 			
@@ -1597,7 +1596,7 @@ public class BusinessServiceImpl implements BusinessService {
 			PoolingLayer pool1 = new PoolingLayer(conv1.oChannel, conv1.oWidth, conv1.oHeight, 2, 2, 2, PoolingType.MAX_POOLING);
 			
 			
-			ConvolutionLayer conv2 = new ConvolutionLayer(pool1.oChannel, 128, pool1.oWidth, pool1.oHeight, 3, 3, 0, 1, false);
+			ConvolutionLayer conv2 = new ConvolutionLayer(pool1.oChannel, 64, pool1.oWidth, pool1.oHeight, 3, 3, 1, 1, false);
 			
 			BNLayer bn2 = new BNLayer();
 			
@@ -1606,26 +1605,37 @@ public class BusinessServiceImpl implements BusinessService {
 			PoolingLayer pool2 = new PoolingLayer(conv2.oChannel, conv2.oWidth, conv2.oHeight, 2, 2, 2, PoolingType.MAX_POOLING);
 
 			
-			ConvolutionLayer conv3 = new ConvolutionLayer(pool2.oChannel, 256, pool2.oWidth, pool2.oHeight, 3, 3, 0, 1, false);
+			ConvolutionLayer conv3 = new ConvolutionLayer(pool2.oChannel, 128, pool2.oWidth, pool2.oHeight, 3, 3, 1, 1, false);
 			
 			BNLayer bn3 = new BNLayer();
 			
+			ConvolutionLayer conv4 = new ConvolutionLayer(conv3.oChannel, 256, conv3.oWidth, conv3.oHeight, 3, 3, 1, 1, false);
+			
+			BNLayer bn4 = new BNLayer();
+			
+			ConvolutionLayer conv5 = new ConvolutionLayer(conv4.oChannel, 256, conv4.oWidth, conv4.oHeight, 3, 3, 1, 1, false);
+			
+			BNLayer bn5 = new BNLayer();
+			
 			ReluLayer active3 = new ReluLayer();
 			
-			PoolingLayer pool3 = new PoolingLayer(conv3.oChannel, conv3.oWidth, conv3.oHeight, 2, 2, 2, PoolingType.MAX_POOLING);
+			PoolingLayer pool3 = new PoolingLayer(conv5.oChannel, conv5.oWidth, conv5.oHeight, 2, 2, 2, PoolingType.MAX_POOLING);
 
-			
 			int fInputCount = pool3.oChannel * pool3.oWidth * pool3.oHeight;
 			
-			int inputCount = (int) (Math.sqrt((fInputCount) + 10) + 10);
-			
-			FullyLayer full1 = new FullyLayer(fInputCount, inputCount, false);
+			FullyLayer full1 = new FullyLayer(fInputCount, 1024, false);
 
-			BNLayer bn4 = new BNLayer();
+			BNLayer bn6 = new BNLayer();
 			
 			ReluLayer active4 = new ReluLayer();
 			
-			FullyLayer full2 = new FullyLayer(inputCount, 10);
+			FullyLayer full2 = new FullyLayer(1024, 512, false);
+			
+			BNLayer bn7 = new BNLayer();
+			
+			ReluLayer active5 = new ReluLayer();
+			
+			FullyLayer full3 = new FullyLayer(512, 10);
 
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
@@ -1640,17 +1650,27 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(bn2);
 			netWork.addLayer(active2);
 			netWork.addLayer(pool2);
+			
 			netWork.addLayer(conv3);
 			netWork.addLayer(bn3);
-			netWork.addLayer(active3);
-			netWork.addLayer(pool3);
-			netWork.addLayer(full1);
+			netWork.addLayer(conv4);
 			netWork.addLayer(bn4);
+			netWork.addLayer(conv5);
+			netWork.addLayer(bn5);
+			netWork.addLayer(active3);
+			
+			netWork.addLayer(pool3);
+			
+			netWork.addLayer(full1);
+			netWork.addLayer(bn6);
 			netWork.addLayer(active4);
 			netWork.addLayer(full2);
+			netWork.addLayer(bn7);
+			netWork.addLayer(active5);
+			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(sid, netWork, 30, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(sid, netWork, 20, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			TrainTask.addTask(sid, optimizer);
 			

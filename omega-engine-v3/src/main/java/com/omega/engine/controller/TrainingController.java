@@ -42,7 +42,7 @@ public class TrainingController {
 					businessService.cnnNetwork_mnist(sid, lrf);
 					break;
 				case "2":
-					businessService.alexNet_cifar10(sid, lrf);
+					businessService.alexNet_mnist(sid, lrf);
 					break;
 				case "3":
 					businessService.alexNet_cifar10(sid, lrf);
