@@ -115,11 +115,13 @@ cifat_10 （cifat_10数据集）
 
 ### 数据集成绩
 
-iris 训练次数8   测试数据集准确率100%
+iris 训练次数8 bp神经网络[3层全连接层]  测试数据集准确率100%
 
-mnist 训练次数8 测试数据集准确率98.6% 
+mnist 训练次数10 alexnet 测试数据集准确率98.6% 
 
-cifat_10 训练次数8 测试数据集准确率76.6%
+cifat_10 训练次数10 alexnet 测试数据集准确率76.6%
+
+cifat_10 训练次数10 vgg16 测试数据集准确率86.45%
 
 ## 事例代码
 
@@ -409,7 +411,7 @@ public void cnnNetwork_cifar10() {
 ````
 ## 未来可期
 
-实现rcnn、rnn、yolo等算法
+实现rcnn、rnn、resnet、yolo等算法
 
 ### 训练情况可视化
 
