@@ -16,11 +16,13 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 1.添加gup支持，使用jcuda调用cuda的cublasSgemm矩阵乘法，参考了caffe的卷积操作已将卷积操作优化成im2col+gemm实现，计算效率得到大大提高
 
-2.添加vgg16 demo，该模型在cifar10数据集上表现为测试数据集准确率78.2%
+2.添加vgg16 demo，该模型在cifar10数据集上表现为测试数据集准确率86.45%
 
 3.利用jdk ForkJoin框架实现任务拆分，充分利用cpu多线程，提高对数组操作与计算速度
 
 4.参考darknet对学习率更新机制进行升级，目前已支持RANDOM、POLY、STEP、EXP、SIG等多种学习率更新方法，并且实现学习率warmup功能
+
+5.添加basicblock模块，新增resnet模型支持，目前该模型在cifar10数据集上的表现，训练次数10，测试数据集准确率为93.22%
 
 ### 依赖
 由于omega-engine-1.0.3加入了jcuda支持，所以1.0.3需要安装与jcuda版本对应的cuda，我在该项目中使用的是jcuda-11.2.0版本的包，那么我cuda需要安装11.2.x版本
@@ -126,6 +128,8 @@ mnist 训练次数10 alexnet 测试数据集准确率98.6%
 cifat_10 训练次数10 alexnet 测试数据集准确率76.6%
 
 cifat_10 训练次数10 vgg16 测试数据集准确率86.45%
+
+cifat_10 训练次数10 resnet18 [batchSize:128,learningRate:0.001] 测试数据集准确率93.22% 
 
 ## 事例代码
 
