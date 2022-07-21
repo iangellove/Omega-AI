@@ -560,7 +560,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.01f;
+			netWork.learnRate = 0.001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -2232,7 +2232,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.0001f;
+			netWork.learnRate = 0.001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, 1, 784);
 			
@@ -2473,16 +2473,8 @@ public class BusinessServiceImpl implements BusinessService {
 
 			int fInputCount = pool2.oChannel * pool2.oWidth * pool2.oHeight;
 			
-			int inputCount = (int) (Math.sqrt((fInputCount) + 10) + 10);
-			
 			FullyLayer full1 = new FullyLayer(fInputCount, 10, false);
-//
-//			BNLayer bn5 = new BNLayer();
-//			
-//			ReluLayer active13 = new ReluLayer();
-//			
-//			FullyLayer full2 = new FullyLayer(inputCount, 10);
-//			
+
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
 			netWork.addLayer(inputLayer);
@@ -2525,12 +2517,9 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			netWork.addLayer(pool2);
 			netWork.addLayer(full1);
-//			netWork.addLayer(bn5);
-//			netWork.addLayer(active13);
-//			netWork.addLayer(full2);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 128, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -2559,11 +2548,11 @@ public class BusinessServiceImpl implements BusinessService {
 //		bs.cnnNetwork_mnist();
 //		bs.cnnNetwork_cifar10();
 
-//		bs.resnet18_cifar10();
+		bs.resnet18_cifar10();
 //		bs.resnet18_mnist();
 //		bs.vgg16_cifar10();
 //		bs.alexNet_mnist();
-		bs.alexNet_cifar10();
+//		bs.alexNet_cifar10();
 //		bs.cnnNetwork_vgg16_cifar10();
 	}
 

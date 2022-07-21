@@ -1973,6 +1973,72 @@ public class MatrixOperation {
 	}
 	
 	/**
+	 * mean
+	 * @param x
+	 * @param type 0:fully,1:conv
+	 * @return
+	 */
+	public static void meanV2(float[][][][] x,float[] mean,int type){
+		
+		float scale = 1.0f / x.length;
+		
+		if(type != 0) {
+			scale = 1.0f / (x.length * x[0][0].length * x[0][0][0].length);
+		}
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		if(type == 0) {
+
+			for(int  w = 0;w<x[0][0][0].length;w++) {
+				final int index = w;
+				final float s = scale;
+				workers.add(new Task<Object>(index) {
+					@Override
+				    public Object call() throws Exception {
+				
+						for(int c = 0;c<x[0].length;c++) {
+							for(int h = 0;h<x[0][c].length;h++) {
+								for(int  n = 0;n<x.length;n++) {
+									mean[index] += x[n][c][h][index] * s;
+								}
+							}
+						}
+
+						return null;
+					}
+				});
+			}
+			
+		}else {
+			
+			for(int  c = 0;c<x[0].length;c++) {
+				final int index = c;
+				final float s = scale;
+				workers.add(new Task<Object>(index) {
+					@Override
+				    public Object call() throws Exception {
+				
+						for(int n = 0;n<x.length;n++) {
+							for(int h = 0;h<x[n][index].length;h++) {
+								for(int  w = 0;w<x[n][index][h].length;w++) {
+									mean[index] += x[n][index][h][w] * s;
+								}
+							}
+						}
+
+						return null;
+					}
+				});
+			}
+			
+		}
+
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+		
+	}
+	
+	/**
 	 * standard deviation
 	 * @param x
 	 * @return
@@ -2059,9 +2125,7 @@ public class MatrixOperation {
 	 * @return
 	 */
 	public static void var(float[][][][] x, float[] mean, float[] var,int type){
-		
-//		float[] std = new float[mean.length];
-		
+
 		float scale = 1.0f / x.length;
 		
 		if(type != 0) {
@@ -2095,8 +2159,73 @@ public class MatrixOperation {
 		}
 		
 		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+
+	}
+	
+	/**
+	 * standard deviation
+	 * @param x
+	 * @param type 0:fully,1:conv
+	 * @return
+	 */
+	public static void varV2(float[][][][] x, float[] mean, float[] var,int type){
+
+		float scale = 1.0f / x.length;
 		
-//		return std;
+		if(type != 0) {
+			scale = 1.0f / (x.length * x[0][0].length * x[0][0][0].length);
+		}
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		if(type == 0) {
+
+			for(int  w = 0;w<x[0][0][0].length;w++) {
+				final int index = w;
+				final float s = scale;
+				workers.add(new Task<Object>(index) {
+					@Override
+				    public Object call() throws Exception {
+				
+						for(int c = 0;c<x[0].length;c++) {
+							for(int h = 0;h<x[0][c].length;h++) {
+								for(int  n = 0;n<x.length;n++) {
+									var[index] += (x[n][c][h][index] - mean[index]) * (x[n][c][h][index] - mean[index]) * s;
+								}
+							}
+						}
+
+						return null;
+					}
+				});
+			}
+			
+		}else {
+			
+			for(int  c = 0;c<x[0].length;c++) {
+				final int index = c;
+				final float s = scale;
+				workers.add(new Task<Object>(index) {
+					@Override
+				    public Object call() throws Exception {
+				
+						for(int n = 0;n<x.length;n++) {
+							for(int h = 0;h<x[n][index].length;h++) {
+								for(int  w = 0;w<x[n][index][h].length;w++) {
+									var[index] += (x[n][index][h][w] - mean[index]) * (x[n][index][h][w] - mean[index]) * s;
+								}
+							}
+						}
+
+						return null;
+					}
+				});
+			}
+			
+		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+
 	}
 	
 	/**
@@ -3243,7 +3372,6 @@ public class MatrixOperation {
 		int xm = N * oHeight * oWidth;
 		int xn = kh * kw * kn;
 
-//		long start = System.nanoTime();
 		
 		/**
 		 * input im2col
@@ -3260,9 +3388,13 @@ public class MatrixOperation {
 		float[] r = new float[N * kc * oHeight * oWidth];
 		
 		GPUOP.getInstance().multiplyFloat(xm, xn, kc, input1d, kt, r);
-
-		MatrixUtils.col2imgV2(r, diff, N, kc, oHeight, oWidth);
-
+		
+		OP1dto4d.to1d(r, diff, N, kc, oHeight, oWidth);
+		
+//		System.out.println("++++++++++++++++++++++++++++++++++");
+//		
+//		PrintUtils.printImage(diff[2][0]);
+		
 	}
 	
 	public static float[][][][] convnDeltaByIm2ColGPU(float[][][][] d,float[][][][] k,int stride){

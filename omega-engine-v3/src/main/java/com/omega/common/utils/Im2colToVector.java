@@ -23,6 +23,10 @@ public class Im2colToVector extends RecursiveAction {
 	private int kh;
 	private int kw;
 	private int stride;
+	private int oHeight;
+	private int oWidth;
+	private int ow;
+	private int kSize;
 	
 	public Im2colToVector(float[][][][] data,float[] y,int kh,int kw,int stride,int start,int end) {
 		this.x = data;
@@ -32,6 +36,10 @@ public class Im2colToVector extends RecursiveAction {
 		this.kh = kh;
 		this.kw = kw;
 		this.stride = stride;
+		this.oHeight = ((x[0][0].length - kh ) / stride) + 1;
+		this.oWidth = ((x[0][0][0].length - kw) / stride) + 1;
+		this.ow = x[0].length * kh * kw;
+		this.kSize = kh * kw;
 	}
 	
 	@Override
@@ -60,14 +68,6 @@ public class Im2colToVector extends RecursiveAction {
 	
 	private void col() {
 
-		int oHeight = ((x[0][0].length - kh ) / stride) + 1;
-		
-		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
-		
-		int ow = x[0].length * kh * kw;
-		
-		int kSize = kh * kw;
-		
 		for (int i = start; i <= end; i++) {
 			
 			int n = i / oHeight / oWidth;

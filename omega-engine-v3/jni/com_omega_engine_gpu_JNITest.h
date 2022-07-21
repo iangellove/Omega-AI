@@ -23,6 +23,14 @@ JNIEXPORT jint JNICALL Java_com_omega_engine_gpu_JNITest_max
 JNIEXPORT jfloatArray JNICALL Java_com_omega_engine_gpu_JNITest_im2col
   (JNIEnv *, jobject, jfloatArray, jfloatArray, jint, jint, jint, jint, jint, jint, jint);
 
+/*
+ * Class:     com_omega_engine_gpu_JNITest
+ * Method:    im2colV2
+ * Signature: ([F[FIIIIIII)V
+ */
+JNIEXPORT void JNICALL Java_com_omega_engine_gpu_JNITest_im2colV2
+  (JNIEnv *, jobject, jfloatArray, jfloatArray, jint, jint, jint, jint, jint, jint, jint);
+
 #ifdef __cplusplus
 }
 #endif

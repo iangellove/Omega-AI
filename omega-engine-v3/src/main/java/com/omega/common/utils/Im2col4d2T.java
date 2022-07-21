@@ -64,20 +64,20 @@ public class Im2col4d2T extends RecursiveAction {
 	}
 	
 	private void col() {
-
+		
 		for (int i = start; i <= end; i++) {
 			int ci = i / kh / kw;
 			int ckh = (i - (ci * kh * kw)) / kh;
 			int ckw = (i - (ci * kh * kw)) % kh;
 			for(int o = 0;o<kn;o++) {
 				int index = i * kn + o;
-				
-				if(number > 0) {
-					this.y[o][ci][ckh][ckw] = x[index] / number;
-				}else {
-					this.y[o][ci][ckh][ckw] = x[index];
+				if(ckh < this.y[o][ci].length && ckw < this.y[o][ci][0].length) {
+					if(number > 0) {
+						this.y[o][ci][ckh][ckw] = x[index] / number;
+					}else {
+						this.y[o][ci][ckh][ckw] = x[index];
+					}
 				}
-				
 			}
 		}
 		
@@ -87,5 +87,5 @@ public class Im2col4d2T extends RecursiveAction {
 		Im2col4d2T job = new Im2col4d2T(data, col, kn, kc, kh, kw, 0, kc * kh * kw - 1, number);
 		ForkJobEngine.run(job);
 	}
-	
+
 }

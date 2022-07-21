@@ -1,101 +1,75 @@
 package com.omega.engine.gpu;
 
-import static jcuda.driver.JCudaDriver.cuModuleGetFunction;
-import static jcuda.driver.JCudaDriver.cuModuleLoad;
+import jcuda.driver.CUcontext;
+import jcuda.driver.CUdevice;
+import static jcuda.driver.JCudaDriver.cuInit;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
 
-import jcuda.driver.CUcontext;
-import jcuda.driver.CUdevice;
-import jcuda.driver.CUfunction;
-import jcuda.driver.JCudaDriver;
+import static jcuda.driver.JCudaDriver.cuDeviceGet;
+import static jcuda.driver.JCudaDriver.cuCtxCreate;
+import static jcuda.driver.JCudaDriver.cuDeviceGetAttribute;
+import static jcuda.driver.CUdevice_attribute.CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK;
 
-public class CUDAModules {
+public class CUDAUtils {
 	
-	public static Map<String,MyCUDAModule> modules = new HashMap<String,MyCUDAModule>();
-	
-	private static CUdevice device;
-	
-	private static CUcontext context;
-	
-	public static int maxThreads;
-	
-	public static int threadsPerDimension;
-	
-	
-	public static CUfunction getFunctionByModule(String fileName,String functionName) {
-		
-		MyCUDAModule m = CUDAModules.getModule(fileName);
-		
-		if(m.getFunctions().containsKey(functionName)) {
-			return m.getFunctions().get(functionName);
-		}
-		
-		CUfunction function = new CUfunction();
-        cuModuleGetFunction(function, m, functionName);
-        m.getFunctions().put(functionName, function);
-        
-		return function;
+	private static CUDAUtils INSTANCE = null;
+
+    private static boolean init = false;
+    private static CUdevice device = null;
+    private static CUcontext context = null;
+    
+    private CUDAUtils() {
+    }
+
+    private synchronized static void createInstance() {
+        if (INSTANCE == null) {
+            INSTANCE = new CUDAUtils();
+        }
+    }
+
+	public static CUDAUtils getInstance() {
+	    if (INSTANCE == null) {
+	        createInstance();
+	    }
+	    return INSTANCE;
 	}
 	
-	public static MyCUDAModule getModule(String fileName) {
-		
-		// Create the PTX file by calling the NVCC
-        try {
-        	
-			String ptxFileName = preparePtxFile(fileName);
-			
-			if(CUDAModules.modules.containsKey(ptxFileName)) {
-				return CUDAModules.modules.get(ptxFileName);
-			}
-//	        
-//	        long[] l = new long[1];
-//	        int[] count = new int[1];
-//	        JCudaDriver.cuDeviceTotalMem(l, device);
-//	        JCudaDriver.cuDeviceGetCount(count);
-//	        
-//	        CUdevprop prop = new CUdevprop();
-//	        JCudaDriver.cuDeviceGetProperties(prop, device);
-//	        
-//	        System.out.println(JsonUtils.toJson(l));
-//	        System.out.println(JsonUtils.toJson(count));
-//	        System.out.println(prop.toString());
-	        
-        	JCudaDriver.setExceptionsEnabled(true);
-        	
-			// Initialize the driver and create a context for the first device.
+	/**
+     * Initialize the CUDA driver API.
+     */
+    public void initCUDA() {
+        if (init) {
+            return;
+        }
 
-        	CUDAUtils instance = CUDAUtils.getInstance();
-        	
-        	instance.initCUDA();
-        	
-        	device = instance.getDevice(0);
-        	
-        	context = instance.getContext(device);
-        	
-        	maxThreads = instance.getMaxThreads(device);
-        	
-            threadsPerDimension = (int) Math.sqrt(maxThreads);
-			
-	        // Load the ptx file.
-	        MyCUDAModule module = new MyCUDAModule();
-	        cuModuleLoad(module, ptxFileName);
-	        
-	        CUDAModules.modules.put(ptxFileName, module);
-			
-			return module;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-        return null;
-	}
+        cuInit(0);
+
+        init = true;
+    }
+    
+    public CUdevice getDevice(int ordinal) {
+      device = new CUdevice();
+      cuDeviceGet(device, ordinal);
+      return device;
+    }
+    
+    public CUcontext getContext(CUdevice device) {
+        if (context == null) {
+            context = new CUcontext();
+            cuCtxCreate(context, 0, device);
+        }
+        return context;
+    }
+	
+    public int getMaxThreads(CUdevice device) {
+        int[] maxThreadsArray = {0};
+        cuDeviceGetAttribute(maxThreadsArray, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, device);
+        return maxThreadsArray[0];
+    }
 	
     /**
      * The extension of the given file name is replaced with "ptx".
@@ -169,9 +143,7 @@ public class CUDAModules {
      * @return The byte array containing the data from the input stream
      * @throws IOException If an I/O error occurs
      */
-    private static byte[] toByteArray(InputStream inputStream)
-        throws IOException
-    {
+    private static byte[] toByteArray(InputStream inputStream)throws IOException{
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte buffer[] = new byte[8192];
         while (true)
@@ -185,5 +157,5 @@ public class CUDAModules {
         }
         return baos.toByteArray();
     }
-	
+    
 }

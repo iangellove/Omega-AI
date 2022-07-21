@@ -5,7 +5,12 @@ import java.util.concurrent.RecursiveAction;
 
 import com.omega.common.task.ForkJobEngine;
 
-public class Im2colForWeight extends RecursiveAction {
+/**
+ * 
+ * @author Administrator
+ *
+ */
+public class Im2colForWeightV2 extends RecursiveAction {
 
 	/**
 	 * 
@@ -25,11 +30,13 @@ public class Im2colForWeight extends RecursiveAction {
 	private int stride;
 	private int oHeight;
 	private int oWidth;
-//	private int oh;
+	private int oh;
 	private int ow;
 	private int kSize;
 	
-	public Im2colForWeight(float[][][][] data,float[] y,int kh,int kw,int stride,int start,int end) {
+	
+	
+	public Im2colForWeightV2(float[][][][] data,float[] y,int kh,int kw,int stride,int start,int end) {
 		this.x = data;
 		this.y = y;
 		this.start = start;
@@ -40,6 +47,7 @@ public class Im2colForWeight extends RecursiveAction {
 		this.oHeight = ((x[0][0].length - kh ) / stride) + 1;
 		this.oWidth = ((x[0][0][0].length - kw) / stride) + 1;
 		this.ow = x.length * kh * kw;
+		this.oh = x[0].length * oHeight * oWidth;
 		this.kSize = kh * kw;
 	}
 	
@@ -55,8 +63,8 @@ public class Im2colForWeight extends RecursiveAction {
 		} else {
 
 			int mid = (start + end + 1) >>> 1;
-			Im2colForWeight left = new Im2colForWeight(x, y, kh, kw, stride, start, mid - 1);
-			Im2colForWeight right = new Im2colForWeight(x, y, kh, kw, stride, mid, end);
+			Im2colForWeightV2 left = new Im2colForWeightV2(x, y, kh, kw, stride, start, mid - 1);
+			Im2colForWeightV2 right = new Im2colForWeightV2(x, y, kh, kw, stride, mid, end);
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -69,19 +77,19 @@ public class Im2colForWeight extends RecursiveAction {
 	
 	private void col() {
 
-		for (int i = start; i <= end; i++) {
+		for (int j = start; j <= end; j++) {
+
+			int n = j / kSize;
 			
-			int c = i / oHeight / oWidth;
+			int xSize = j - (n * kSize);
 			
-			int startH = (i - (c * oHeight * oWidth)) / oHeight * stride;
-			
-			int startW = (i - (c * oHeight * oWidth)) % oWidth * stride;
-			
-			for(int j = 0;j<ow;j++) {
+			for(int i = 0;i<oh;i++) {
+
+				int c = i / oHeight / oWidth;
 				
-				int n = j / kSize;
+				int startH = (i - (c * oHeight * oWidth)) / oHeight * stride;
 				
-				int xSize = j - (n * kSize);
+				int startW = (i - (c * oHeight * oWidth)) % oWidth * stride;
 				
 				int xh = startH + xSize / kw;
 				
@@ -98,15 +106,19 @@ public class Im2colForWeight extends RecursiveAction {
 	
 	public static void im2col(float[][][][] x,float[] y,int kh,int kw,int stride){
 		
-		int C = x[0].length;
+		int N = x.length;
 		
-		int oHeight = ((x[0][0].length - kh ) / stride) + 1;
+//		int C = x[0].length;
+//		
+//		int oHeight = ((x[0][0].length - kh ) / stride) + 1;
+//		
+//		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
+//		
+//		int oh = C * oHeight * oWidth;
 		
-		int oWidth = ((x[0][0][0].length - kw) / stride) + 1;
+		int ow = N * kh * kw;
 		
-		int oh = C * oHeight * oWidth;
-		
-		Im2colForWeight job = new Im2colForWeight(x, y, kh, kw, stride, 0, oh - 1);
+		Im2colForWeightV2 job = new Im2colForWeightV2(x, y, kh, kw, stride, 0, ow - 1);
 	
 		ForkJobEngine.run(job);
 		

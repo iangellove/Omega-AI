@@ -63,6 +63,9 @@ public class CNN extends Network {
 //		
 //		long convTime = 0;
 //		
+//		long blTime = 0;
+		
+//		
 //		long bnTime = 0;
 //		
 //		long fullyTime = 0;
@@ -88,6 +91,9 @@ public class CNN extends Network {
 //			if(layer.getLayerType() == LayerType.conv) {
 //				convTime += System.nanoTime() - start2;
 //			}
+//			if(layer.getLayerType() == LayerType.block) {
+//				blTime += System.nanoTime() - start2;
+//			}
 //			
 //			if(layer.getLayerType() == LayerType.bn) {
 //				bnTime += System.nanoTime() - start2;
@@ -106,6 +112,9 @@ public class CNN extends Network {
 		}
 		
 //		System.out.println("conv forward:"+convTime / 1e6 + "ms");
+//		
+//		System.out.println("block forward:"+blTime / 1e6 + "ms");
+		
 //		
 //		System.out.println("bn forward:"+bnTime / 1e6 + "ms");
 //		

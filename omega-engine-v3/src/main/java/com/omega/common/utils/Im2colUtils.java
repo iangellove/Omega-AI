@@ -128,6 +128,28 @@ public class Im2colUtils {
 		return y;
 	}
 	
+	/**
+	 * 
+	 * @param x
+	 * @param isT (true : [N * H * W][C]  , false : [C * H * W][N])
+	 * @return
+	 */
+	public static void kernalToVector(float[][][][] x,float[] y,boolean isT){
+		int N = x.length;
+		int C = x[0].length;
+		int H = x[0][0].length;
+		int W = x[0][0][0].length;
+
+		KernalToVector job = null;
+		if(isT) {
+			job = new KernalToVector(x, y, 0, N * H * W - 1, isT);	
+		}else {
+			job = new KernalToVector(x, y, 0, C * H * W - 1, isT);
+		}
+		ForkJobEngine.run(job);
+		
+	}
+	
 	public static float[][] to2d(float[][][][] x){
 
 		int N = x.length;

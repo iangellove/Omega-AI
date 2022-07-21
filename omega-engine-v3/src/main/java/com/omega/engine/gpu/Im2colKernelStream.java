@@ -2,18 +2,21 @@ package com.omega.engine.gpu;
 
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import static jcuda.driver.JCudaDriver.cuMemAlloc;
+
 import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.Im2colToVector;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
+
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
 import jcuda.driver.CUfunction;
+import jcuda.driver.CUstream;
 import jcuda.driver.JCudaDriver;
 import jcuda.runtime.JCuda;
 
-public class Im2colKernel {
+public class Im2colKernelStream {
 
 	private float[] x;
 	private float[] out;
@@ -32,7 +35,7 @@ public class Im2colKernel {
 	private CUfunction function;
 
 	
-	public Im2colKernel(float[] x,float[] out,int N,int C,int H,int W,int kh,int kw,int s) {
+	public Im2colKernelStream(float[] x,float[] out,int N,int C,int H,int W,int kh,int kw,int s) {
 		this.x = x;
 		this.N = N;
 		this.C = C;
@@ -81,12 +84,15 @@ public class Im2colKernel {
 		try {
 //			long start1 = System.nanoTime();
 			
+			CUstream stream = new CUstream();
+			JCudaDriver.cuStreamCreate(stream, 1);
+			
 			/**
 			 * 申请内存
 			 */
 	        CUdeviceptr deviceInputX = new CUdeviceptr();
 	        cuMemAlloc(deviceInputX, x.length * Sizeof.FLOAT);
-	        JCudaDriver.cuMemcpyHtoD(deviceInputX, Pointer.to(x), x.length * Sizeof.FLOAT);
+//	        cuMemcpyHtoD(deviceInputX, Pointer.to(x), x.length * Sizeof.FLOAT);
 	        
 	        CUdeviceptr deviceInputOut = new CUdeviceptr();
 	        cuMemAlloc(deviceInputOut, out.length * Sizeof.FLOAT);
@@ -130,19 +136,29 @@ public class Im2colKernel {
 	        
 //	        long start2 = System.nanoTime();
 	        
-	        cuLaunchKernel(function,
+	        for(int i = 0;i<1;i++) {
+	        	
+	        	JCudaDriver.cuMemcpyHtoDAsync(deviceInputX, Pointer.to(x), x.length * Sizeof.FLOAT, stream);
+	        	
+		        cuLaunchKernel(function,
 		            gridSizeX,  1, 1,      // Grid dimension
 		            blockSizeX, 1, 1,      // Block dimension
-		            0, null,               // Shared memory size and stream
+		            0, stream,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
 		        );
+		        
+		        JCudaDriver.cuMemcpyDtoHAsync(Pointer.to(out), deviceInputOut, out.length * Sizeof.FLOAT, stream);
+		        
+	        }
+	        
+	        JCudaDriver.cuStreamSynchronize(stream);
 	        
 //	        cuCtxSynchronize();
 //	        System.out.println((System.nanoTime() - start2) / 1e6 + "ms2");
 	        
 //	        long start4 = System.nanoTime();
 //	        System.out.println(out.length);
-	        JCudaDriver.cuMemcpyDtoH(Pointer.to(out), deviceInputOut, out.length * Sizeof.FLOAT);
+//	        cuMemcpyDtoH(Pointer.to(out), deviceInputOut, out.length * Sizeof.FLOAT);
 
 	        // Clean up.
 	        JCuda.cudaFree(deviceInputX);
@@ -263,7 +279,7 @@ public class Im2colKernel {
 
     		long start = System.nanoTime();
     		
-        	Im2colKernel k = new Im2colKernel(x, out, N, C, H, W, kh, kw, s);
+        	Im2colKernelStream k = new Im2colKernelStream(x, out, N, C, H, W, kh, kw, s);
         	
         	k.im2col();
         	

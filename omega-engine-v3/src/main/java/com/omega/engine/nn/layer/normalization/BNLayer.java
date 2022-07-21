@@ -150,15 +150,23 @@ public class BNLayer extends NormalizationLayer {
 			/**
 			 * 计算平均值
 			 */
-			 MatrixOperation.mean(this.input.maxtir, this.mean, mode);
-
+			MatrixOperation.meanV2(this.input.maxtir, this.mean, mode);
+//			 
+//			float[] y = new float[this.mean.length];
+//			
+//			MatrixOperation.mean(this.input.maxtir, y, mode);
+//
+//			System.out.println(CheckArrayUtils.check(this.mean, y));
+			
 			/**
 			 * 计算标准差
 			 * var = 1/m ∑(x - mean)^2
 			 * std = (var + eta)^1/2
 			 */
 			
-			MatrixOperation.var(this.input.maxtir, this.mean, this.var, mode);
+//			MatrixOperation.var(this.input.maxtir, this.mean, this.var, mode);
+			
+			MatrixOperation.varV2(this.input.maxtir, this.mean, this.var, mode);
 			
 			MatrixOperation.std(MatrixOperation.add(this.var, this.eta), this.std);
 			
@@ -479,7 +487,7 @@ public class BNLayer extends NormalizationLayer {
 	public float[][][][] output(float[][][][] input) {
 		// TODO Auto-generated method stub
 		
-		float[][][][] output = new float[this.number][this.oChannel][this.oHeight][this.oWidth];
+//		float[][][][] output = new float[this.number][this.oChannel][this.oHeight][this.oWidth];
 //		
 //		/**
 //		 * 计算平均值
@@ -505,7 +513,7 @@ public class BNLayer extends NormalizationLayer {
 //		 */
 //		output = MatrixOperation.addByBN(MatrixOperation.multiplicationByBN(z, this.gama), this.beta);
 //		
-		return output;
+		return this.output.maxtir;
 	}
 	
 	public BNType getBnType() {
@@ -547,6 +555,52 @@ public class BNLayer extends NormalizationLayer {
 //		return meanSum;
 //	}
 //	
+//	public void meanDzSum(float[][][][] x,float[][][][] dz,float[] mean,float[] std,float[] dvar2,float[] dmu,float[] dmu2,float scale,int mode) {
+//		
+//		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+//		
+//		if(mode == 0) {
+//			for(int i = 0;i<dvar2.length;i++) {
+//				final int index = i;
+//				workers.add(new Task<Object>(index) {
+//					@Override
+//				    public Object call() throws Exception {
+//						for(int n = 0;n<x.length;n++) {
+//							dvar2[index] += (x[n][0][0][index] - mean[index]) * dz[n][0][0][index];
+//							dmu[index] += -1.0f * dz[n][0][0][index] / std[index];
+//							dmu2[index] += -2.0f * (x[n][0][0][index] - mean[index]) * scale;
+//						}
+//						return null;
+//					}
+//				});
+//			}
+//			
+//		}else {
+//			for(int i = 0;i<dvar2.length;i++) {
+//				final int index = i;
+//				workers.add(new Task<Object>(index) {
+//					@Override
+//				    public Object call() throws Exception {
+//						for(int n = 0;n<x.length;n++) {
+//							for(int h = 0;h<x[0][0].length;h++) {
+//								for(int w = 0;w<x[0][0][h].length;w++) {
+//									dvar2[index] += (x[n][index][h][w] - mean[index]) * dz[n][index][h][w];
+//									dmu[index] += -1.0f * dz[n][index][h][w] / std[index];
+//									dmu2[index] += -2.0f * (x[n][index][h][w] - mean[index]) * scale;
+//								}
+//							}
+//						}
+//						return null;
+//					}
+//				});
+//				
+//			}
+//		}
+//
+//		TaskEngine.getInstance(8).dispatchTask(workers);
+//		
+//	}
+	
 	public void meanDzSum(float[][][][] x,float[][][][] dz,float[] mean,float[] std,float[] dvar2,float[] dmu,float[] dmu2,float scale,int mode) {
 		
 		if(mode == 0) {
@@ -582,12 +636,11 @@ public class BNLayer extends NormalizationLayer {
 	public void computeDeltaV2() {
 		
 		if(bnType == BNType.conv_bn) {
-
+			
 			for(int c = 0;c<oChannel;c++) {
-				float gamaTemp = gama[c];
 				deltaGama[c] = 0;
 				deltaBeta[c] = 0;
-				for(int m = 0;m<this.number;m++) {
+				for(int m = 0;m<number;m++) {
 					for(int h = 0;h<oHeight;h++) {
 						for(int w = 0;w<oWidth;w++) {
 							// deltaGama = ∑ deta * z
@@ -595,18 +648,19 @@ public class BNLayer extends NormalizationLayer {
 							// deltaBeta = ∑ deta
 							deltaBeta[c] += delta.maxtir[m][c][h][w];
 							// dxhat = deta * gama
-							diff.maxtir[m][c][h][w] = delta.maxtir[m][c][h][w] * gamaTemp;
+							diff.maxtir[m][c][h][w] = delta.maxtir[m][c][h][w] * gama[c];
 						}
 					}
 				}
-			}
 
+			}
+			
 		}else {
 
 			for(int w = 0;w<oWidth;w++) {
 				deltaGama[w] = 0;
 				deltaBeta[w] = 0;
-				for(int m = 0;m<this.number;m++) {
+				for(int m = 0;m<number;m++) {
 					// deltaGama = ∑ deta * z
 					deltaGama[w] += delta.maxtir[m][0][0][w] * z.maxtir[m][0][0][w];
 					// deltaBeta = ∑ deta
@@ -618,72 +672,8 @@ public class BNLayer extends NormalizationLayer {
 			}
 
 		}
-
+		
 	}
-	
-//	/**
-//	 * deltaGama = ∑ deta * z
-//	 * deltaBeta = ∑ deta
-//	 * dxhat = deta * gama
-//	 */
-//	public void computeDelta() {
-//		
-//		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-//		
-//		if(bnType == BNType.conv_bn) {
-//
-//			for(int m = 0;m<this.number;m++) {
-//				final int index = m;
-//				workers.add(new Task<Object>(index) {
-//					@Override
-//				    public Object call() throws Exception {
-//						for(int c = 0;c<oChannel;c++) {
-//							for(int h = 0;h<oHeight;h++) {
-//								for(int w = 0;w<oWidth;w++) {
-//									synchronized (deltaGama){
-//										// deltaGama = ∑ deta * z
-//										deltaGama[c] += delta.maxtir[index][c][h][w] * z.maxtir[index][c][h][w];
-//										// deltaBeta = ∑ deta
-//										deltaBeta[c] += delta.maxtir[index][c][h][w];
-//									}
-//									// dxhat = deta * gama
-//									diff.maxtir[index][c][h][w] = delta.maxtir[index][c][h][w] * gama[c];
-//								}
-//							}
-//						}
-//						return null;
-//					}
-//				});
-//			}
-//
-//		}else {
-//
-//			for(int m = 0;m<this.number;m++) {
-//				final int index = m;
-//				workers.add(new Task<Object>(index) {
-//					@Override
-//				    public Object call() throws Exception {
-//						for(int w = 0;w<oWidth;w++) {
-//							synchronized (deltaGama){
-//								// deltaGama = ∑ deta * z
-//								deltaGama[w] += delta.maxtir[index][0][0][w] * z.maxtir[index][0][0][w];
-//								// deltaBeta = ∑ deta
-//								deltaBeta[w] += delta.maxtir[index][0][0][w];
-//							}
-//							// dxhat = deta * gama
-//							diff.maxtir[index][0][0][w] = delta.maxtir[index][0][0][w] * gama[w];
-//
-//						}
-//						return null;
-//					}
-//				});
-//			}
-//
-//		}
-//
-//		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
-//
-//	}
 	
 	/**
 	 * dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/2
