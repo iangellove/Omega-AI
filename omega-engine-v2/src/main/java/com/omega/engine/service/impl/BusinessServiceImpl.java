@@ -1,5 +1,6 @@
 package com.omega.engine.service.impl;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Async;
@@ -34,6 +35,9 @@ public class BusinessServiceImpl implements BusinessService {
 	
 //	@Autowired
 //	private NetworksDataBase dataBase;
+	
+	@Value("${dataset.path}")
+	private String DATASET_PATH;
 
 	@Override
 	public void bpNetwork_iris() {
@@ -302,27 +306,19 @@ public class BusinessServiceImpl implements BusinessService {
 			/**
 			 * 读取训练数据集
 			 */
-			String mnist_train_data = "/dataset/mnist/train-images.idx3-ubyte";
+			String mnist_train_data = DATASET_PATH + "dataset/mnist/train-images.idx3-ubyte";
 			
-			String mnist_train_label = "/dataset/mnist/train-labels.idx1-ubyte";
+			String mnist_train_label = DATASET_PATH + "dataset/mnist/train-labels.idx1-ubyte";
 			
-			String mnist_test_data = "/dataset/mnist/t10k-images.idx3-ubyte";
+			String mnist_test_data = DATASET_PATH + "dataset/mnist/t10k-images.idx3-ubyte";
 			
-			String mnist_test_label = "/dataset/mnist/t10k-labels.idx1-ubyte";
+			String mnist_test_label = DATASET_PATH + "dataset/mnist/t10k-labels.idx1-ubyte";
 			
 			String[] labelSet = new String[] {"0","1","2","3","4","5","6","7","8","9"};
 			
-			Resource trainDataRes = new ClassPathResource(mnist_train_data);
-
-			Resource trainLabelRes = new ClassPathResource(mnist_train_label);
+			DataSet trainData = DataLoader.loadDataByUByte(mnist_train_data, mnist_train_label, labelSet, 1, 1 ,784,true);
 			
-			Resource testDataRes = new ClassPathResource(mnist_test_data);
-			
-			Resource testLabelRes = new ClassPathResource(mnist_test_label);
-			
-			DataSet trainData = DataLoader.loadDataByUByte(trainDataRes.getFile(), trainLabelRes.getFile(), labelSet, 1, 1 , 784, true);
-			
-			DataSet testData = DataLoader.loadDataByUByte(testDataRes.getFile(), testLabelRes.getFile(), labelSet, 1, 1 , 784, true);
+			DataSet testData = DataLoader.loadDataByUByte(mnist_test_data, mnist_test_label, labelSet, 1, 1 ,784,true);
 
 			int channel = 1;
 			
@@ -426,14 +422,14 @@ public class BusinessServiceImpl implements BusinessService {
 	    	String[] labelSet = new String[] {"airplane","automobile","bird","cat","deer","dog","frog","horse","ship","truck"};
 	    	
 			String[] train_data_filenames = new String[] {
-					"E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/data_batch_1.bin",
-					"E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/data_batch_2.bin",
-					"E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/data_batch_3.bin",
-					"E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/data_batch_4.bin",
-					"E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/data_batch_5.bin"
+					"E:/cifar-10/data_batch_1.bin",
+					"E:/cifar-10/data_batch_2.bin",
+					"E:/cifar-10/data_batch_3.bin",
+					"E:/cifar-10/data_batch_4.bin",
+					"E:/cifar-10/data_batch_5.bin"
 			};
 			
-			String test_data_filename = "E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/test_batch.bin";
+			String test_data_filename = "E:/cifar-10/test_batch.bin";
 			
 			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, true, labelSet);
 	    	
@@ -541,14 +537,14 @@ public class BusinessServiceImpl implements BusinessService {
 	    	String[] labelSet = new String[] {"airplane","automobile","bird","cat","deer","dog","frog","horse","ship","truck"};
 	    	
 			String[] train_data_filenames = new String[] {
-					"E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/data_batch_1.bin",
-					"E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/data_batch_2.bin",
-					"E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/data_batch_3.bin",
-					"E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/data_batch_4.bin",
-					"E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/data_batch_5.bin"
+					DATASET_PATH + "cifar-10/data_batch_1.bin",
+					DATASET_PATH + "cifar-10/data_batch_2.bin",
+					DATASET_PATH + "cifar-10/data_batch_3.bin",
+					DATASET_PATH + "cifar-10/data_batch_4.bin",
+					DATASET_PATH + "cifar-10/data_batch_5.bin"
 			};
 			
-			String test_data_filename = "E:/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/test_batch.bin";
+			String test_data_filename = DATASET_PATH + "cifar-10/test_batch.bin";
 			
 			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, true, labelSet);
 	    	
@@ -768,7 +764,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001d, 16, LearnRateUpdate.NONE);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001d, 128, LearnRateUpdate.NONE);
 
 			long start = System.currentTimeMillis();
 			
@@ -1048,8 +1044,8 @@ public class BusinessServiceImpl implements BusinessService {
 //		bs.bpNetwork_mnist();
 //		bs.cnnNetwork_mnist_demo();
 //		bs.cnnNetwork_mnist();
-		bs.cnnNetwork_cifar10();
-//		bs.cnnNetwork_vgg16_cifar10();
+//		bs.cnnNetwork_cifar10();
+		bs.cnnNetwork_vgg16_cifar10();
 //		bs.alexNet_mnist();
 //		bs.alexNet_cifar10();
 	}

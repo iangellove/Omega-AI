@@ -54,6 +54,48 @@ public class MatrixUtils {
 	 *
 	 * @throws
 	 */
+	public static float[] val(int size,float v) {
+		float[] temp = new float[size];
+		for(int i = 0;i<size;i++) {
+			temp[i] = v;
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][] createMatrix(int heigth,int width,double value) {
+		double[][] temp = new double[heigth][width];
+		for(int h = 0;h<heigth;h++) {
+			for(int w = 0;w<width;w++) {
+				temp[h][w] = value;
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static double[][][] createMatrix(int channel,int heigth,int width,double value) {
 		double[][][] temp = new double[channel][heigth][width];
 		for(int c = 0;c<channel;c++) {
@@ -393,6 +435,29 @@ public class MatrixUtils {
 	}
 	
 	/**
+	 * transform
+	 * @param x  c * h * w
+	 * @index ci * h * w + hi * w + wi
+	 * @return
+	 */
+	public static double[] transform(double[][] x) {
+		
+		double[] result = new double[x.length * x[0].length];
+		
+		for(int r = 0;r<x.length;r++) {
+			
+			for(int c = 0;c<x[r].length;c++) {
+				
+				result[r*x[r].length + c] = x[r][c];
+				
+			}
+			
+		}
+		
+		return result;
+	}
+	
+	/**
 	 * 
 	 * @param x
 	 * @index ni * c * h * w + ci * h * w + hi * w + wi
@@ -412,6 +477,24 @@ public class MatrixUtils {
 				
 			}
 		}
+		return y;
+	}
+	
+	/**
+	 * transform
+	 * @param x
+	 * @return
+	 */
+	public static double[][] transform(double[] x,int r,int c) {
+		
+		double[][] y = new double[r][c];
+		
+		for(int ri = 0;ri<r;ri++) {
+			for(int ci = 0;ci<c;ci++) {
+				y[ri][ci] = x[ri * c + ci];
+			}
+		}
+		
 		return y;
 	}
 	
@@ -515,6 +598,22 @@ public class MatrixUtils {
 		double[] temp = MatrixUtils.transform(x);
 		
 		return MatrixUtils.transform(temp, n, c, h, w);
+	}
+	
+	/**
+	 * 矩阵转置
+	 * @return
+	 */
+	public static double[][] transpose(double[][] x){
+		double[][] result = new double[x[0].length][x.length];
+		
+		for(int i = 0;i<x.length;i++) {
+			for(int j = 0;j<x[0].length;j++) {
+				result[j][i] = x[i][j];
+			}
+		}
+		
+		return result;
 	}
 	
 }

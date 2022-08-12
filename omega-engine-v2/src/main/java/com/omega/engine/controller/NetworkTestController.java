@@ -145,5 +145,27 @@ public class NetworkTestController {
 		}
 		return result;
     }
+
+	
+	@RequestMapping(value = "/vgg16", method = { RequestMethod.POST, RequestMethod.GET })
+	public Map<String, Object> vgg16(HttpServletRequest request, HttpServletResponse response) {
+		Map<String, Object> result = new HashMap<String, Object>();
+		
+		try {
+			
+			businessService.cnnNetwork_vgg16_cifar10();
+			
+			result.put("success", true);
+			result.put("code", 200);
+			result.put("msg", "执行成功");
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			result.put("success", false);
+			result.put("code", 400);
+			result.put("msg", "系统繁忙");
+		}
+		return result;
+    }
 	
 }

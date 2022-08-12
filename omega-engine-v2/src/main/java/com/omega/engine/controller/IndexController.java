@@ -33,4 +33,16 @@ public class IndexController {
 		return "mnist/mnist";
 	}
 	
+	@RequestMapping("/origin")
+	public String origin(HttpServletRequest request,HttpServletResponse response) {
+		
+		return "origin/origin";
+	}
+	
+	@RequestMapping("/origin2")
+	public String origin2(HttpServletRequest request,HttpServletResponse response) {
+		
+		return "origin/origin2";
+	}
+	
 }

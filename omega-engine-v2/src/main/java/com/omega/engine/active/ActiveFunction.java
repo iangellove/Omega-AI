@@ -46,7 +46,11 @@ public abstract class ActiveFunction {
 	
 	public abstract double[][][] active(double[][][] x);
 	
+	public abstract double[][][][] active(double[][][][] x);
+	
 	public abstract double[][][] diff2d();
+	
+	public abstract double[][][][] diff(double[][][][] x);
 	
 	public abstract double[][][] activeTemp(double[][][] x);
 	

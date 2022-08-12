@@ -30,3 +30,6 @@ security:
 ribbon:
   eureka:
     enable: true
+    
+dataset:
+  path: E:/    

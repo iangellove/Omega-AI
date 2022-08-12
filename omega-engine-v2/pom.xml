@@ -18,6 +18,7 @@
 		<java.version>1.8</java.version>
 		<spring-cloud.version>Greenwich.RELEASE</spring-cloud.version>
 		<swagger.version>2.9.2</swagger.version>
+		<jcuda.version>11.2.0</jcuda.version>
 	</properties>
 	
 	<licenses>
@@ -26,7 +27,7 @@
 	     <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
 	   </license>
 	</licenses>
-	
+
 	<dependencies>
 	
 		<dependency>
@@ -92,6 +93,14 @@
 		  <artifactId>ejml-all</artifactId>
 		  <version>0.40</version>
 		</dependency>
+		
+		<!-- 
+		<dependency>
+		    <groupId>com.aparapi</groupId>
+		    <artifactId>aparapi</artifactId>
+		    <version>2.0.0</version>
+		</dependency>
+		 -->
 
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
@@ -108,6 +117,46 @@
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 		</dependency>
+		
+		<!-- jcuda -->
+		
+		<dependency>
+		    <groupId>org.jcuda</groupId>
+		    <artifactId>jcuda</artifactId>
+		    <version>${jcuda.version}</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.jcuda</groupId>
+		    <artifactId>jcublas</artifactId>
+		    <version>${jcuda.version}</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.jcuda</groupId>
+		    <artifactId>jcufft</artifactId>
+		    <version>${jcuda.version}</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.jcuda</groupId>
+		    <artifactId>jcusparse</artifactId>
+		    <version>${jcuda.version}</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.jcuda</groupId>
+		    <artifactId>jcusolver</artifactId>
+		    <version>${jcuda.version}</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.jcuda</groupId>
+		    <artifactId>jcurand</artifactId>
+		    <version>${jcuda.version}</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.jcuda</groupId>
+		    <artifactId>jcudnn</artifactId>
+		    <version>${jcuda.version}</version>
+		</dependency>
+		
+		<!-- jcuda -->
 		
 		<!--引入Swagger2依赖——开始 -->
 		 <dependency>

@@ -1107,8 +1107,8 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
 			
-			float[] mean = new float[] {0.5f,0.5f,0.5f};
-			float[] std = new float[] {0.5f,0.5f,0.5f};
+			float[] mean = new float[] {0.485f, 0.456f, 0.406f};
+			float[] std = new float[] {0.229f, 0.224f, 0.225f};
 			
 			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 	    	
@@ -2548,9 +2548,9 @@ public class BusinessServiceImpl implements BusinessService {
 //		bs.cnnNetwork_mnist();
 //		bs.cnnNetwork_cifar10();
 
-		bs.resnet18_cifar10();
+//		bs.resnet18_cifar10();
 //		bs.resnet18_mnist();
-//		bs.vgg16_cifar10();
+		bs.vgg16_cifar10();
 //		bs.alexNet_mnist();
 //		bs.alexNet_cifar10();
 //		bs.cnnNetwork_vgg16_cifar10();

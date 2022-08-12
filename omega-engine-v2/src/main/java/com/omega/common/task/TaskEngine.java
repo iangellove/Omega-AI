@@ -16,13 +16,13 @@ public class TaskEngine {
 	
 	private static TaskEngine instance;
 	
-	private int threadNum = 4;
+	private int threadNum = 16;
 	
 	private ThreadPoolExecutor threadPool;
 	
 	public TaskEngine(int threadNum) {
 		if(threadNum < 1) {
-			this.threadNum = 4;
+			this.threadNum = 16;
 			threadPool = new ThreadPoolExecutor(4, 4, 1000, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());
 		}else {
 			this.threadNum = threadNum;

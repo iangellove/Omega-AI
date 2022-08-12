@@ -102,6 +102,39 @@ public class Sigmoid extends ActiveFunction {
 	}
 
 	@Override
+	public double[][][][] active(double[][][][] x) {
+		// TODO Auto-generated method stub
+		double[][][][] r = new double[x.length][x[0].length][x[0][0].length][x[0][0][0].length];
+		for(int n = 0;n<x.length;n++) {
+			for(int c = 0;c<x[n].length;c++) {
+				for(int i = 0;i<x[n][c].length;i++) {
+					for(int j = 0;j<x[n][c][i].length;j++) {
+						r[n][c][i][j] = (double) (1d / (1d + Math.exp(-x[n][c][i][j])));
+					}
+				}
+			}
+		}
+		return r;
+	}
+
+	@Override
+	public double[][][][] diff(double[][][][] x) {
+		// TODO Auto-generated method stub
+		double[][][][] r = new double[x.length][x[0].length][x[0][0].length][x[0][0][0].length];
+		for(int n = 0;n<x.length;n++) {
+			for(int c = 0;c<x[n].length;c++) {
+				for(int i = 0;i<x[n][c].length;i++) {
+					for(int j = 0;j<x[n][c][i].length;j++) {
+						double tmp = (double) (1d / (1d + Math.exp(-x[n][c][i][j])));
+						r[n][c][i][j] = tmp * (1d - tmp);
+					}
+				}
+			}
+		}
+		return r;
+	}
+
+	@Override
 	public double[][][] diff2d() {
 		// TODO Auto-generated method stub
 		this.diff2d = MatrixUtils.clone(this.active(this.input2d));

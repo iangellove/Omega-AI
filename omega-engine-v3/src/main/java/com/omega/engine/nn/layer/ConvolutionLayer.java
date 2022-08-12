@@ -54,6 +54,8 @@ public class ConvolutionLayer extends Layer {
 	
 	public float[][][][] dwd;
 	
+//	private float[] pi1d;
+	
 //	public float[] delta1d;
 	
 //	public float[][][][] pdwd;
@@ -134,6 +136,7 @@ public class ConvolutionLayer extends Layer {
 			this.pInput = Blobs.zero(number, channel, height + padding * 2, width + padding * 2, this.pInput);
 			int pLength = this.channel * kHeight * kWidth * this.number * oHeight * oWidth;
 			this.pInput1D = new Tensor(1, 1, 1, pLength);
+//			this.pi1d = new float[number * channel * (height + padding * 2) * (width + padding * 2)];
 		}
 	}
 
@@ -164,40 +167,20 @@ public class ConvolutionLayer extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-//		long start = System.nanoTime();
+		long start = System.nanoTime();
         
 		MatrixOperation.zeroPadding(this.input.maxtir, this.pInput.maxtir, this.padding);
 
-//		this.output.maxtir = MatrixOperation.convnVail(this.pInput.maxtir, this.kernel, this.stride);
-		
-//		this.output.maxtir = MatrixOperation.convnVailByIm2Col(this.pInput.maxtir, this.kernel, this.stride, false);
-//		
-//		System.out.println("");
-//		System.out.println("================start=====================");
-//		
-//		PrintUtils.printImage(this.output.maxtir[0][0][0]);
-
-//		Im2colKernel k = new Im2colKernel(MatrixUtils.transform(this.pInput.maxtir), this.pInput1D.data, this.number, this.channel, this.height + this.padding * 2, this.width + this.padding * 2, this.kHeight, this.kWidth, this.stride);
-//    	
-//    	k.im2col();
-    	
 		Im2colToVector.im2col(this.pInput.maxtir, this.pInput1D.data, this.kHeight, this.kWidth, this.stride);
-		
-//		System.out.println("this.pInput1D.data:"+this.pInput1D.data.length);
-//		Im2colToVector.im2col(this.pInput.maxtir, this.pInput1D.data, this.kHeight, this.kWidth, this.stride);
-		
+
 		MatrixOperation.convnVailByIm2ColGPUV2(this.pInput1D.data, this.kernel, this.number, this.channel, this.height + this.padding * 2, this.width + this.padding * 2, this.stride, this.output.maxtir);
 
-//		System.out.println("");
-//		System.out.println("=================end====================");
-//		
-		
 		if(this.hasBias) {
-//			long start3 = System.nanoTime();
+
 			this.output.maxtir = MatrixOperation.add(this.output.maxtir, this.bias);
-//			System.out.println((System.nanoTime() - start3) / 1e6+"ms->add bias");
+
 		}
-//		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
+		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
 	}
 
 	/**
@@ -390,6 +373,7 @@ public class ConvolutionLayer extends Layer {
 	 * 计算deltaW
 	 */
 	public void computeDeltaW (){
+		
 		int ko = this.kernelNum;
 		int kh = this.delta.height;
 		int kw = this.delta.width;
@@ -424,6 +408,7 @@ public class ConvolutionLayer extends Layer {
 		GPUOP.getInstance().multiplyFloat(xm, xn, ko, this.dInput1D.data, delta1d, c);
 		
 		Im2col4d2T.to4d(c, this.deltaW, this.kernelNum, this.channel, oHeight, oWidth, this.number);
+		
 	}
 	
 }

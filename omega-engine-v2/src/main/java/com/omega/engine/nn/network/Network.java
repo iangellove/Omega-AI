@@ -18,7 +18,7 @@ import com.omega.engine.updater.UpdaterType;
  */
 public abstract class Network {
 	
-	private int threadNum = 8;
+	private int threadNum = 16;
 	
 	public NetworkType networkType;
 	

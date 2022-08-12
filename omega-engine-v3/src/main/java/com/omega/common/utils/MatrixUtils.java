@@ -101,6 +101,26 @@ public class MatrixUtils {
 	 *
 	 * @throws
 	 */
+	public static float[] order(int size,int tmp) {
+		float[] temp = new float[size];
+		for(int i = 0;i<size;i++) {
+			temp[i] = 1.0f * i + tmp;
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static float[] val(int size,float v) {
 		float[] temp = new float[size];
 		for(int i = 0;i<size;i++) {
@@ -973,6 +993,16 @@ public class MatrixUtils {
 	
 	public static int[] shape(float[][] x) {
 		return new int[] {x.length,x[0].length};
+	}
+	
+	public static void col2im4d(float[] once,float[][][][] out,int index,int C,int H,int W) {
+		for(int c = 0;c<C;c++) {
+			for(int h = 0;h<H;h++) {
+				for(int w = 0;w<W;w++) {
+					out[index][c][h][w] = once[c * H * W + h * W + w];
+				}
+			}
+		}
 	}
 	
 }

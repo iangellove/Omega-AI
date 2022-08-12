@@ -6,6 +6,7 @@ import org.ejml.simple.SimpleMatrix;
 
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
+import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.pooling.PoolingType;
 
 /**
@@ -22,7 +23,7 @@ import com.omega.engine.pooling.PoolingType;
  */
 public class MatrixOperation {
 	
-	private static final int threadNum = 8;
+	private static final int threadNum = 16;
 	
 	/**
 	 * 
@@ -1058,16 +1059,74 @@ public class MatrixOperation {
 	 * @throws
 	 */
 	public static double[][] multiplicationByEjml(double[][] x,double[][] z) {
-		double[][] temp = MatrixUtils.zero(x.length,z[0].length);
+		int m = x.length;
+		int n = z.length;
+		int k = z[0].length;
+
+		double[][] temp = MatrixUtils.zero(m,k);
 		SimpleMatrix a = new SimpleMatrix(x);
 		SimpleMatrix b = new SimpleMatrix(z);
+//		long start = System.nanoTime();
+//		System.out.println("========start["+m+","+n+","+k+"]");
 		SimpleMatrix c = a.mult(b);
+//		System.out.println("========end:"+(System.nanoTime() - start) / 1e6);
 		for(int i = 0;i<temp.length;i++) {
 			for(int j = 0;j<temp[i].length;j++) {
 				temp[i][j] = c.get(i, j);
 			}
 		}
 		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static double[][] multiplicationByCuda(double[][] x,double[][] z) {
+
+		int m = x.length;
+		int n = z.length;
+		int k = z[0].length;
+
+		double[] c = MatrixUtils.zero(m*k);
+		
+		double[] a = MatrixUtils.transform(x);
+		double[] b = MatrixUtils.transform(z);
+		
+		GPUOP.getInstance().multiplyDouble(m, n, k, a, b, c);
+		
+		System.out.println(GPUOP.toString2D(c, k));
+		
+		return MatrixUtils.transform(c, m, k);
+	}
+	
+	public static void main(String[] args) {
+//		double[][] a = MatrixUtils.createMatrix(2, 3, 1.0);
+//		double[][] b = MatrixUtils.createMatrix(3, 4, 2.0);
+//		
+//		long start = System.currentTimeMillis();
+//		
+//		System.out.println("start");
+//		
+//		double[][] c = GPUOP.multiple(a, b);
+//		
+//		System.out.println(JsonUtils.toJson(a));
+//		
+//		System.out.println(JsonUtils.toJson(b));
+//		
+//		System.out.println(JsonUtils.toJson(c));
+//
+//		System.out.println("end:"+(System.currentTimeMillis() - start) / 1000);
+		
 	}
 	
 	/**
@@ -1957,7 +2016,6 @@ public class MatrixOperation {
 		return y;
 	}
 	
-	
 	/**
 	 * rotate90
 	 * @param matrix
@@ -2517,6 +2575,8 @@ public class MatrixOperation {
 //					double[][] output = MatrixOperation.multiplicationForMatrix(col, colK);
 
 					double[][] output = MatrixOperation.multiplicationByEjml(col, colK);
+					
+//					double[][] output = MatrixOperation.multiplicationByCuda(col, colK);
 					
 					result[index] = MatrixUtils.transform(output, oHeight, oWidth);
 

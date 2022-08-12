@@ -101,6 +101,26 @@ public class Relu extends ActiveFunction{
 	}
 
 	@Override
+	public double[][][][] active(double[][][][] x) {
+		// TODO Auto-generated method stub
+		double[][][][] r = new double[x.length][x[0].length][x[0][0].length][x[0][0][0].length];
+		for(int n = 0;n<x.length;n++) {
+			for(int c = 0;c<x[n].length;c++) {
+				for(int i = 0;i<x[n][c].length;i++) {
+					for(int j = 0;j<x[n][c][i].length;j++) {
+						if(x[n][c][i][j] > 0) {
+							r[n][c][i][j] = x[n][c][i][j];
+						}else {
+							r[n][c][i][j] = 0;
+						}
+					}
+				}
+			}
+		}
+		return r;
+	}
+	
+	@Override
 	public double[][][] diff2d() {
 		// TODO Auto-generated method stub
 		this.diff2d = MatrixUtils.zero(this.input2d.length,this.input2d[0].length,this.input2d[0][0].length);
@@ -117,7 +137,27 @@ public class Relu extends ActiveFunction{
 		}
 		return this.diff2d;
 	}
-
+	
+	@Override
+	public double[][][][] diff(double[][][][] x) {
+		// TODO Auto-generated method stub
+		double[][][][] r = new double[x.length][x[0].length][x[0][0].length][x[0][0][0].length];
+		for(int n = 0;n<x.length;n++) {
+			for(int c = 0;c<x[n].length;c++) {
+				for(int i = 0;i<x[n][c].length;i++) {
+					for(int j = 0;j<x[n][c][i].length;j++) {
+						if(x[n][c][i][j] > 0) {
+							r[n][c][i][j] = 1;
+						}else {
+							r[n][c][i][j] = 0;
+						}
+					}
+				}
+			}
+		}
+		return r;
+	}
+	
 	@Override
 	public double[][][] activeTemp(double[][][] x) {
 		// TODO Auto-generated method stub
