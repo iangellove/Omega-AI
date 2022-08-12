@@ -2550,10 +2550,10 @@ public class BusinessServiceImpl implements BusinessService {
 
 //		bs.resnet18_cifar10();
 //		bs.resnet18_mnist();
-		bs.vgg16_cifar10();
+//		bs.vgg16_cifar10();  //没有添加bn层
 //		bs.alexNet_mnist();
 //		bs.alexNet_cifar10();
-//		bs.cnnNetwork_vgg16_cifar10();
+		bs.cnnNetwork_vgg16_cifar10();
 	}
 
 }
