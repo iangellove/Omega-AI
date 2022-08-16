@@ -26,9 +26,12 @@ public class KernalToVector2 extends RecursiveAction  {
 	
 	private int N = 0;
 	
-	public KernalToVector2(float[][][][] x,float[] y,int start,int end) {
+	private boolean T = false;
+	
+	public KernalToVector2(float[][][][] x,float[] y,boolean T,int start,int end) {
 		this.x = x;
 		this.y = y;
+		this.T = T;
 		this.H = x[0][0].length;
 		this.W = x[0][0][0].length;
 		this.N = x.length;
@@ -49,8 +52,8 @@ public class KernalToVector2 extends RecursiveAction  {
 		} else {
 
 			int mid = (start + end + 1) >>> 1;
-			KernalToVector2 left = new KernalToVector2(x, y, start, mid - 1);
-			KernalToVector2 right = new KernalToVector2(x, y, mid, end);
+			KernalToVector2 left = new KernalToVector2(x, y, T, start, mid - 1);
+			KernalToVector2 right = new KernalToVector2(x, y, T, mid, end);
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -70,7 +73,13 @@ public class KernalToVector2 extends RecursiveAction  {
 				for(int h = 0;h<H;h++) {
 					
 					for(int w = 0;w<W;w++) {
-						y[ko * C * H * W + c * H * W + h * W + w] = x[ko][c][h][w];
+						
+						if(T) {
+							y[c * N * H * W + ko * H * W + h * W + w] = x[ko][c][h][w];
+						}else {
+							y[ko * C * H * W + c * H * W + h * W + w] = x[ko][c][h][w];
+						}
+						
 					}
 					
 				}

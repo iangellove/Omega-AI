@@ -15,13 +15,13 @@ import jcuda.driver.CUdeviceptr;
 import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
 import jcuda.runtime.JCuda;
+import jcuda.runtime.cudaError;
 
 public class ConvKernel {
 	
 	private String id;
 	private float[] x;
 	private float[] kernel;
-//	private float[] x_im2col;
 	private float[] out;
 	private int C;
 	private int H;
@@ -89,13 +89,6 @@ public class ConvKernel {
 		 * 初始化cuda函数
 		 */
 		initFunction();
-		
-//		/**
-//		 * 申请内存
-//		 */
-//		if(x_im2col == null) {
-//			x_im2col = new float[ih * iw];
-//		}
 
 		/**
 		 * 申请显存
@@ -129,6 +122,12 @@ public class ConvKernel {
 	
 	public void setX(float[] x) {
 		this.x = x;
+
+		/**
+		 * 申请内存
+		 */
+        JCudaDriver.cuMemcpyHtoD(dx, Pointer.to(x), x.length * Sizeof.FLOAT);
+
 	}
 	
 	public void setKernel(float[] kernel) {
@@ -161,14 +160,6 @@ public class ConvKernel {
 	public void im2col() {
 		
 		try {
-//			long start1 = System.nanoTime();
-
-			/**
-			 * 申请内存
-			 */
-	        JCudaDriver.cuMemcpyHtoD(dx, Pointer.to(x), x.length * Sizeof.FLOAT);
-
-//	        long start3 = System.nanoTime();
 
 	        cuLaunchKernel(function,
 		            this.CAFFE_GET_BLOCKS(ih),  1, 1,      // Grid dimension
@@ -176,18 +167,7 @@ public class ConvKernel {
 		            0, null,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
 		        );
-	        
-//	        JCudaDriver.cuCtxSynchronize();
-//	        System.out.println((System.nanoTime() - start2) / 1e6 + "ms2");
-	        
-//	        long start4 = System.nanoTime();
-//	        System.out.println(out.length);
-//	        JCudaDriver.cuMemcpyDtoH(Pointer.to(x_im2col), dy, x_im2col.length * Sizeof.FLOAT);
 
-	        // Clean up.
-//	        JCuda.cudaFree(dx);
-//	        JCuda.cudaFree(dy);
-//	        System.out.println((System.nanoTime() - start1) / 1e6 + "ms1");
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -204,6 +184,17 @@ public class ConvKernel {
 	     }
 	}
 	
+	public float[] getOut() {
+		return out;
+	}
+
+	public void checkCUDA(int code) {
+		if(code != cudaError.cudaSuccess) {
+			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
+		}
+	}
+	
+	
     public static void main(String args[]){	
     	int N = 128;
     	int C = 512;
@@ -218,9 +209,9 @@ public class ConvKernel {
 		int ow = oHeight * oWidth;
 		int oh = ko;
     	
-    	float[] x1 = RandomUtils.gaussianRandom(N * C * H * W, 0.1f);
+    	float[] x1 = RandomUtils.gaussianRandom(N * C * H * W, 0.01f);
     	
-    	float[] k1 = RandomUtils.gaussianRandom(ko * C * kh * kw, 0.1f);
+    	float[] k1 = RandomUtils.gaussianRandom(ko * C * kh * kw, 0.01f);
     	
     	float[] out = new float[oh * ow];
 
@@ -266,7 +257,7 @@ public class ConvKernel {
 
     	float[] ka = Im2colUtils.kernalToVector(k2, false);
     	
-    	float[] kt = Im2colUtils.kernalToVector2(k2);
+    	float[] kt = Im2colUtils.kernalToVector2(k2, false);
     	
     	System.out.println("k:"+CheckArrayUtils.check(k1, kt));
 		
@@ -300,9 +291,5 @@ public class ConvKernel {
 
 		CUDAMemoryManager.free();
     }
-
-	public float[] getOut() {
-		return out;
-	}
-
+	
 }

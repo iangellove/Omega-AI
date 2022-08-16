@@ -18,6 +18,7 @@ import java.util.Locale;
 
 import com.omega.common.utils.RandomUtils;
 
+import jcuda.CudaException;
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
@@ -25,7 +26,9 @@ import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
 import jcuda.jcublas.JCublas2;
 import jcuda.jcublas.cublasHandle;
+import jcuda.jcublas.cublasStatus;
 import jcuda.runtime.JCuda;
+import jcuda.runtime.cudaError;
 import jcuda.runtime.cudaMemcpyKind;
 
 public class GPUOP {
@@ -247,7 +250,7 @@ public class GPUOP {
 
             Pointer zero = Pointer.to(new float[]{ 0.0f });
             Pointer one = Pointer.to(new float[]{ 1.0f });
-            
+
             int status = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, k, m, n, one, 
                 dB, k, dA, n, zero, dC, k);
             
@@ -259,6 +262,47 @@ public class GPUOP {
 //            cudaFree(dB);
 //            cudaFree(dC);
            
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+    
+    public void multiplyFloat(int m,int n,int k,float[] C,Pointer dA,Pointer dB, Pointer dC,int CUBLAS_OP_A,int CUBLAS_OP_N_B,float alpha,float beta){
+    	
+    	try {
+    		
+            Pointer zero = Pointer.to(new float[]{ alpha });
+            Pointer one = Pointer.to(new float[]{ beta });
+            
+            int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
+            int ldb = CUBLAS_OP_N_B == CUBLAS_OP_N ? n : k;
+//            System.out.println(lda+":"+ldb);
+            int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, one, 
+                dB, ldb, dA, lda, zero, dC, n);
+            cublasGetVector(C.length, Sizeof.FLOAT, dC, 1, Pointer.to(C), 1);
+           
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+    
+    public void multiplyFloat(int m,int n,int k,Pointer dA,Pointer dB, Pointer dC,int CUBLAS_OP_A,int CUBLAS_OP_N_B,float alpha,float beta){
+    	
+    	try {
+    		
+            Pointer zero = Pointer.to(new float[]{ alpha });
+            Pointer one = Pointer.to(new float[]{ beta });
+            
+            int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
+            int ldb = CUBLAS_OP_N_B == CUBLAS_OP_N ? n : k;
+
+            int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, one, 
+                dB, ldb, dA, lda, zero, dC, n);
+            
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -455,6 +499,16 @@ public class GPUOP {
             sb.append(String.format(Locale.ENGLISH, "%7.4f ", a[i]));
         }
         return sb.toString();
+    }
+    
+    private static int checkResult(int result)
+    {
+        if (result != cublasStatus.CUBLAS_STATUS_SUCCESS)
+        {	
+            System.err.println("cuda error code:"+result+"["+cublasStatus.stringFor(result)+"]");
+            throw new CudaException(cublasStatus.stringFor(result));
+        }
+        return result;
     }
     
 }

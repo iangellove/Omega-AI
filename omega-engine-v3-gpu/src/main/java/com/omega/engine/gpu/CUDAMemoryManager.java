@@ -23,7 +23,7 @@ public class CUDAMemoryManager {
 		}
 		
 		CUdeviceptr device = new CUdeviceptr();
-		
+//		System.out.println(key+":"+size);
 		cuMemAlloc(device, size * Sizeof.FLOAT);
 		
 		deviceMap.put(key, device);

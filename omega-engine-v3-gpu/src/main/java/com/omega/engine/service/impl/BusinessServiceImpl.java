@@ -9,6 +9,7 @@ import com.omega.common.utils.DataLoader;
 import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.JsonUtils;
 import com.omega.engine.controller.TrainTask;
+import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.loss.CrossEntropyLoss;
 import com.omega.engine.loss.SoftmaxWithCrossEntropyLoss;
 import com.omega.engine.nn.data.DataSet;
@@ -2540,20 +2541,28 @@ public class BusinessServiceImpl implements BusinessService {
 
 	
 	public static void main(String[] args) {
-		BusinessServiceImpl bs = new BusinessServiceImpl();
-//		bs.showImage();
-//		bs.bpNetwork_iris();
-//		bs.bpNetwork_mnist();
-//		bs.cnnNetwork_mnist_demo();
-//		bs.cnnNetwork_mnist();
-//		bs.cnnNetwork_cifar10();
+		
+		try {
 
-//		bs.resnet18_cifar10();
-//		bs.resnet18_mnist();
-//		bs.vgg16_cifar10();
-//		bs.alexNet_mnist();
-//		bs.alexNet_cifar10();
-		bs.cnnNetwork_vgg16_cifar10();
+			BusinessServiceImpl bs = new BusinessServiceImpl();
+//			bs.showImage();
+//			bs.bpNetwork_iris();
+//			bs.bpNetwork_mnist();
+//			bs.cnnNetwork_mnist_demo();
+//			bs.cnnNetwork_mnist();
+//			bs.cnnNetwork_cifar10();
+
+//			bs.resnet18_cifar10();
+//			bs.resnet18_mnist();
+//			bs.vgg16_cifar10();
+//			bs.alexNet_mnist();
+			bs.alexNet_cifar10();
+//			bs.cnnNetwork_vgg16_cifar10();
+		} finally {
+			// TODO: handle finally clause
+			CUDAMemoryManager.free();
+		}
+		
 	}
 
 }

@@ -4073,6 +4073,103 @@ public class MatrixOperation {
 		TaskEngine.getInstance(threadNum).dispatchTask(workers);
 
 	}
+	
+//	/**
+//	 * pooling
+//	 * @param x
+//	 * @param pWidth
+//	 * @param pHeight
+//	 * @param stride
+//	 * @param poolingType
+//	 * @return
+//	 * 
+//	 * o = (W - ps) / S + 1
+//	 */
+//	public static void poolingAndMask(float[] x,float[] mask,int pWidth,int pHeight,int stride,PoolingType poolingType,float[] result){
+//		
+//		int number = x.length;
+//		
+//		int channel = x[0].length;
+//		
+//		int oHeight = ((x[0][0].length - pHeight ) / stride) + 1;
+//		
+//		int oWidth = ((x[0][0][0].length - pWidth) / stride) + 1;
+//
+//		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+//		
+//		for(int b = 0;b<number;b++) {
+//			
+//			final int index = b;
+//			
+//			workers.add(new Task<Object>(index) {
+//				
+//				@Override
+//				public Object call() {
+//					
+//					for(int c = 0;c<channel;c++) {
+//						
+//						int maskIndex = 0;
+//						
+//						for(int i = 0;i<oHeight;i++) {
+//							
+//							for(int j = 0;j<oWidth;j++) {
+//								
+//								int maxH = 0;
+//								
+//								int maxW = 0;
+//								
+//								for(int m = 0;m<pHeight;m++) {
+//									
+//									for(int n = 0;n<pWidth;n++) {
+//										
+//										switch (poolingType) {
+//										case MAX_POOLING:
+//											
+//											if(m == 0 && n == 0) {
+//												result[index][c][i][j] = x[index][c][i * stride + m][j * stride + n];
+//											}else if(result[index][c][i][j] <= x[index][c][i * stride + m][j * stride + n]) {
+//												result[index][c][i][j] = x[index][c][i * stride + m][j * stride + n];
+//												maxH = m;
+//												maxW = n;
+//											}
+//
+//											break;
+//										case MEAN_POOLING:
+//											result[index][c][i][j] += x[index][c][i * stride + m][j * stride + n];
+//											mask[index][c][maskIndex][m][n] = 1.0f / pWidth / pHeight;
+//											break;
+//										}
+//										
+//									}
+//									
+//								}
+//								
+//								switch (poolingType) {
+//								case MAX_POOLING:
+//									mask[index][c][maskIndex][maxH][maxW] = 1;
+//									break;
+//								case MEAN_POOLING:
+//									result[index][c][i][j] /= pWidth * pHeight;
+//									break;
+//								}
+//								
+//								maskIndex++;
+//							}
+//							
+//						}
+//						
+//					}
+//					
+//					return null;
+//				}
+//				
+//			});
+//			
+//		}
+//		
+//		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+//
+//	}
 
 	/**
 	 * poolingDiff

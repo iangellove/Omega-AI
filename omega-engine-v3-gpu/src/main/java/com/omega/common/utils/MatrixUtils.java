@@ -1007,5 +1007,18 @@ public class MatrixUtils {
 		}
 	}
 	
+	public static void col2im4dWeight(float[] once,float[][][][] out,int kNumber,int channel,int H,int W,float number) {
+//		System.out.println(out);
+		for(int ko = 0;ko<kNumber;ko++) {
+			for(int c = 0;c<channel;c++) {
+				for(int h = 0;h<H;h++) {
+					for(int w = 0;w<W;w++) {
+						out[ko][c][h][w] = once[ko * channel * H * W + c * H * W + h * W + w] / number;
+					}
+				}
+			}
+		}
+	}
+	
 	
 }

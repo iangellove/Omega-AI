@@ -1,16 +1,13 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.Dilation;
-import com.omega.common.utils.Im2col4d2T;
-import com.omega.common.utils.Im2colForWeight;
 import com.omega.common.utils.Im2colUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.ConvKernel;
-import com.omega.engine.gpu.GPUOP;
+import com.omega.engine.gpu.ConvWeightKernel;
 import com.omega.engine.gpu.data.CacheDataSet;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
@@ -40,7 +37,7 @@ public class ConvolutionLayer extends Layer {
 	
 	public Blob pInput;  //n * c * h * w
 	
-	public Tensor pInput1D;  //n * c * h * w im2col
+//	public Tensor pInput1D;  //n * c * h * w im2col
 	
 	public Tensor dInput1D;
 	
@@ -62,11 +59,21 @@ public class ConvolutionLayer extends Layer {
 	
 	private ConvKernel convKernel;
 	
-	private ConvKernel detalWKernel;
+	private ConvWeightKernel detalWKernel;
+	
+	private ConvKernel detalXKernel;
 	
 	private float[] onceX;
 	
+	private float[] onceWX;
+	
+	private float[] onceDX;
+	
 	private float[] onceOut;
+	
+	private float[] onceDWOut;
+	
+	private float[] onceDXOut;
 	
 	/**
 	 * ConvolutionLayer
@@ -142,8 +149,8 @@ public class ConvolutionLayer extends Layer {
 		if(this.pInput == null || this.number != this.pInput.number){
 			this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
 			this.pInput = Blobs.zero(number, channel, height + padding * 2, width + padding * 2, this.pInput);
-			int pLength = this.channel * kHeight * kWidth * this.number * oHeight * oWidth;
-			this.pInput1D = new Tensor(1, 1, 1, pLength);
+//			int pLength = this.channel * kHeight * kWidth * this.number * oHeight * oWidth;
+//			this.pInput1D = new Tensor(1, 1, 1, pLength);
 			this.pi1d = new float[number * channel * (height + padding * 2) * (width + padding * 2)];
 		}
 		if(convKernel == null){
@@ -173,7 +180,18 @@ public class ConvolutionLayer extends Layer {
 			this.dInput1D = new Tensor(1, 1, 1, pLength);
 //			this.delta1d = new float[this.number * this.oChannel * kh * kw];
 		}
-
+		if(detalWKernel == null){
+			this.onceWX = new float[channel * (height + this.padding * 2) * (width + this.padding * 2)];
+			this.onceDWOut = new float[kernelNum * channel * kHeight * kWidth];
+			detalWKernel = new ConvWeightKernel(this.index+"_conv_dw", onceDWOut, channel, height + this.padding * 2, width + this.padding * 2, kernelNum, this.kHeight, this.kWidth, stride);
+		}
+		if(detalXKernel == null){
+			int ih = this.diff.height + diffPadding * 2;
+			int iw = this.diff.width + diffPadding * 2;
+			this.onceDX = new float[kernelNum * ih * iw];
+			this.onceDXOut = new float[channel * height * width];
+			detalXKernel = new ConvKernel(this.index+"_conv_dx", onceDXOut, kernelNum, ih, iw, channel, this.kHeight, this.kWidth, 1);
+		}
 		MatrixUtils.zero(this.deltaB);
 		MatrixUtils.zero(this.deltaW);
 	}
@@ -181,18 +199,16 @@ public class ConvolutionLayer extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		long start = System.nanoTime();
-		
+//		long start = System.nanoTime();
+//		
 		MatrixOperation.zeroPadding(this.input.maxtir, this.pInput.maxtir, this.padding);
 		
 		this.pi1d = MatrixUtils.transform(this.pInput.maxtir);
-		
-//		MatrixOperation.zeroPadding(this.input.maxtir, this.pi1d, this.padding);
-//		
+
 		/**
 		 * kernel im2col
 		 */
-		float[] ka = Im2colUtils.kernalToVector2(this.kernel);
+		float[] ka = Im2colUtils.kernalToVector2(this.kernel, false);
 		
 		convKernel.setKernel(ka);
 		
@@ -204,22 +220,13 @@ public class ConvolutionLayer extends Layer {
 			convKernel.conv();
 			MatrixUtils.col2im4d(convKernel.getOut(), this.output.maxtir, n, this.kernelNum, this.oHeight, this.oWidth);
 		}
-		
-//		PrintUtils.printImage(out2[0][0]);
-		
-//		Im2colToVector.im2col(this.pInput.maxtir, this.pInput1D.data, this.kHeight, this.kWidth, this.stride);
-//		
-//		MatrixOperation.convnVailByIm2ColGPUV2(this.pInput1D.data, this.kernel, this.number, this.channel, this.height + this.padding * 2, this.width + this.padding * 2, this.stride, this.output.maxtir);
 
-//		PrintUtils.printImage(this.output.maxtir[0][0]);
-//		System.out.println("error:"+CheckArrayUtils.check(out2, this.output.maxtir));
-//		
 		if(this.hasBias) {
 
 			this.output.maxtir = MatrixOperation.add(this.output.maxtir, this.bias);
 
 		}
-		System.out.println(this.index+":"+(System.nanoTime() - start) / 1e6+"ms.");
+//		System.out.println(this.index+":"+(System.nanoTime() - start) / 1e6+"ms.");
 	}
 
 	/**
@@ -254,17 +261,26 @@ public class ConvolutionLayer extends Layer {
 			deltaP = MatrixOperation.zeroPadding(this.delta.maxtir, this.diffPadding);
 		}
 		
+		float[] ix = MatrixUtils.transform(deltaP);
+		
 		/**
 		 * 旋转kernel180
 		 */
 		float[][][][] kernel180 = MatrixOperation.rotate180V2(this.kernel);
 		
-		/**
-		 * 计算当前层梯度
-		 */
-		MatrixOperation.convnDeltaByIm2ColGPUV2(deltaP, kernel180, this.diff.maxtir, 1);
-//		System.out.println((System.nanoTime() - start) / 1e6 +"ms.");
-//		System.out.println((System.nanoTime() - start) / 1e6+"ms->all back========>");
+		float[] ka = Im2colUtils.kernalToVector2(kernel180, true);
+
+		detalXKernel.setKernel(ka);
+		
+		int onceLength = kernelNum * deltaP[0][0].length * deltaP[0][0][0].length;
+
+		for(int n = 0;n<this.number;n++) {
+			System.arraycopy(ix, n * onceLength, this.onceDX, 0, onceLength);
+			detalXKernel.setX(onceDX);
+			detalXKernel.conv();
+			MatrixUtils.col2im4d(detalXKernel.getOut(), this.diff.maxtir, n, this.channel, this.height, this.width);
+		}
+
 	}
 
 	@Override
@@ -410,42 +426,67 @@ public class ConvolutionLayer extends Layer {
 	
 	/**
 	 * 计算deltaW
+	 * 20220816: dw = diff * im2col(input)T 
+	 * diff[knumber * oh * ow]
+	 * im2col(input)T[oh * ow * C * kh * kw]
 	 */
 	public void computeDeltaW (){
-		int ko = this.kernelNum;
-		int kh = this.delta.height;
-		int kw = this.delta.width;
+//		
+//		int ko = this.kernelNum;
+//		int kh = this.delta.height;
+//		int kw = this.delta.width;
+//		
+//		if(this.stride > 1) {
+//			kh = this.dwd[0][0].length;
+//			kw = this.dwd[0][0][0].length;
+//		}
+//		
+//		int oHeight = ((this.pInput.height - kh ) / 1) + 1;
+//		int oWidth = ((this.pInput.width - kw) / 1) + 1;
+//		
+//		int xm = this.channel * oHeight * oWidth;
+//		int xn = this.number * kh * kw;
+//		
+//		
 		
-		if(this.stride > 1) {
-			kh = this.dwd[0][0].length;
-			kw = this.dwd[0][0][0].length;
+		float[] ka = Im2colUtils.kernalToVector2(this.delta.maxtir, false);
+		
+		int onceXLength = channel * (height + this.padding * 2) * (width + this.padding * 2);
+		
+		int  onceDiffLength = kernelNum * oHeight * oWidth;
+		
+		float[] onceDiff = new float[onceDiffLength];
+//		long start = System.nanoTime();
+		for(int n = 0;n<number;n++) {
+			System.arraycopy(this.pi1d, n * onceXLength, onceWX, 0, onceXLength);
+			System.arraycopy(ka, n * onceDiffLength, onceDiff, 0, onceDiffLength);
+			detalWKernel.setX(onceWX);
+			detalWKernel.setKernel(onceDiff);
+			detalWKernel.conv();
 		}
-		
-		int oHeight = ((this.pInput.height - kh ) / 1) + 1;
-		int oWidth = ((this.pInput.width - kw) / 1) + 1;
-		
-		int xm = this.channel * oHeight * oWidth;
-		int xn = this.number * kh * kw;
-		
-		/**
-		 * input im2col
-		 */
-		Im2colForWeight.im2col(this.pInput.maxtir, this.dInput1D.data, kh, kw, 1);
 
-		float[] delta1d = null;
-
-		if(this.stride == 1) {
-			delta1d = Im2colUtils.kernalToVector(this.delta.maxtir, true);
-		}else {
-			Dilation.dilation(this.delta.maxtir, this.dwd, this.stride);
-			delta1d = Im2colUtils.kernalToVector(this.dwd, true);
-		}
-
-		float[] c = MatrixUtils.zero(xm * ko);
-		
-		GPUOP.getInstance().multiplyFloat(xm, xn, ko, this.dInput1D.data, delta1d, c);
-		
-		Im2col4d2T.to4d(c, this.deltaW, this.kernelNum, this.channel, oHeight, oWidth, this.number);
+		MatrixUtils.col2im4dWeight(detalWKernel.getOut(), deltaW, kernelNum, channel, kHeight, kWidth, number);
+		detalWKernel.clear();
+//		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
+//		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
+//
+//		Im2colForWeight.im2col(this.pInput.maxtir, this.dInput1D.data, kh, kw, 1);
+//
+//		float[] delta1d = null;
+//
+//		if(this.stride == 1) {
+//			delta1d = Im2colUtils.kernalToVector(this.delta.maxtir, true);
+//		}else {
+//			Dilation.dilation(this.delta.maxtir, this.dwd, this.stride);
+//			delta1d = Im2colUtils.kernalToVector(this.dwd, true);
+//		}
+//
+//		float[] c = MatrixUtils.zero(xm * ko);
+//		
+//		GPUOP.getInstance().multiplyFloat(xm, xn, ko, this.dInput1D.data, delta1d, c);
+//		
+//		Im2col4d2T.to4d(c, this.deltaW, this.kernelNum, this.channel, oHeight, oWidth, this.number);
+//		
 	}
 	
 }
