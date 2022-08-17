@@ -20,6 +20,8 @@ public abstract class Layer {
 	
 	public Network network;
 	
+	public boolean PROPAGATE_DOWN = true;;
+	
 	public Layer parent;
 	
 	public int index = 0;

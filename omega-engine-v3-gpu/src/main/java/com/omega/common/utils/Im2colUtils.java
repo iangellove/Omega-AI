@@ -162,10 +162,25 @@ public class Im2colUtils {
 		int H = x[0][0].length;
 		int W = x[0][0][0].length;
 		float[] y = new float[N * H * W * C];
-		KernalToVector2 job = new KernalToVector2(x, y, T, 0, N - 1);	
-
+		KernalToVector2 job = new KernalToVector2(x, y, T, 0, N - 1);
 		ForkJobEngine.run(job);
 		return y;
+	}
+	
+	/**
+	 * 
+	 * @param x
+	 * @param isT (true : [N][C * H * W])
+	 * @return
+	 */
+	public static void kernalToVector2(float[][][][] x,float[] y,boolean T){
+		int N = x.length;
+//		int C = x[0].length;
+//		int H = x[0][0].length;
+//		int W = x[0][0][0].length;
+//		float[] y = new float[N * H * W * C];
+		KernalToVector2 job = new KernalToVector2(x, y, T, 0, N - 1);
+		ForkJobEngine.run(job);
 	}
 	
 	public static float[][] to2d(float[][][][] x){

@@ -1,5 +1,7 @@
 package com.omega.engine.nn.layer;
 
+import org.apache.commons.math3.stat.descriptive.moment.Kurtosis;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.Im2colUtils;
 import com.omega.common.utils.MathUtils;
@@ -7,7 +9,8 @@ import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.ConvKernel;
-import com.omega.engine.gpu.ConvWeightKernel;
+import com.omega.engine.gpu.DWeightKernel;
+import com.omega.engine.gpu.DXKernel;
 import com.omega.engine.gpu.data.CacheDataSet;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
@@ -42,6 +45,8 @@ public class ConvolutionLayer extends Layer {
 	public Tensor dInput1D;
 	
 	public float[][][][] kernel;  //kn * c * kh * kw
+	
+	public float[] kcol;
 
 	public float[] bias;
 	
@@ -59,9 +64,9 @@ public class ConvolutionLayer extends Layer {
 	
 	private ConvKernel convKernel;
 	
-	private ConvWeightKernel detalWKernel;
+	private DWeightKernel dWKernel;
 	
-	private ConvKernel detalXKernel;
+	private DXKernel dXKernel;
 	
 	private float[] onceX;
 	
@@ -140,6 +145,7 @@ public class ConvolutionLayer extends Layer {
 		this.diffPadding = ((this.height - 1) * this.stride + this.kHeight - this.oHeight) / 2;
 		this.deltaB = MatrixUtils.zero(this.kernelNum);
 		this.deltaW = MatrixUtils.zero(this.kernelNum,this.channel,this.kHeight,this.kWidth);
+		this.kcol = new float[kernelNum * channel * kHeight * kWidth];
 	}
 
 	@Override
@@ -180,17 +186,15 @@ public class ConvolutionLayer extends Layer {
 			this.dInput1D = new Tensor(1, 1, 1, pLength);
 //			this.delta1d = new float[this.number * this.oChannel * kh * kw];
 		}
-		if(detalWKernel == null){
+		if(dWKernel == null){
 			this.onceWX = new float[channel * (height + this.padding * 2) * (width + this.padding * 2)];
 			this.onceDWOut = new float[kernelNum * channel * kHeight * kWidth];
-			detalWKernel = new ConvWeightKernel(this.index+"_conv_dw", onceDWOut, channel, height + this.padding * 2, width + this.padding * 2, kernelNum, this.kHeight, this.kWidth, stride);
+			dWKernel = new DWeightKernel(this.index+"_conv_dw", onceDWOut, channel, height + this.padding * 2, width + this.padding * 2, kernelNum, this.kHeight, this.kWidth, stride);
 		}
-		if(detalXKernel == null){
-			int ih = this.diff.height + diffPadding * 2;
-			int iw = this.diff.width + diffPadding * 2;
-			this.onceDX = new float[kernelNum * ih * iw];
+		if(dXKernel == null){
+			this.onceDX = new float[kernelNum * oHeight * oWidth];
 			this.onceDXOut = new float[channel * height * width];
-			detalXKernel = new ConvKernel(this.index+"_conv_dx", onceDXOut, kernelNum, ih, iw, channel, this.kHeight, this.kWidth, 1);
+			dXKernel = new DXKernel(this.index+"_conv_dx", onceDXOut, channel, height, width, kernelNum, this.kHeight, this.kWidth, this.padding, this.stride);
 		}
 		MatrixUtils.zero(this.deltaB);
 		MatrixUtils.zero(this.deltaW);
@@ -208,9 +212,9 @@ public class ConvolutionLayer extends Layer {
 		/**
 		 * kernel im2col
 		 */
-		float[] ka = Im2colUtils.kernalToVector2(this.kernel, false);
+		Im2colUtils.kernalToVector2(this.kernel, this.kcol, false);
 		
-		convKernel.setKernel(ka);
+		convKernel.setKernel(this.kcol);
 		
 		int onceLength = channel * (height + this.padding * 2) * (width + this.padding * 2);
 		
@@ -244,43 +248,35 @@ public class ConvolutionLayer extends Layer {
 		/**
 		 * 计算deltaW
 		 */
-		this.computeDeltaW();
+		float[] deltaData = this.computeDeltaW();
 
 		if(this.hasBias) {
 			this.deltaB = MatrixOperation.division(MatrixOperation.sumBias(this.delta.maxtir),this.number);
 		}
-
-		/**
-		 * 梯度添加zeroPadding使得size与卷积输入一致
-		 */
-		float[][][][] deltaP = null;
 		
-		if(this.stride > 1) {
-			deltaP = MatrixOperation.zeroPadding(this.dwd, this.stride);
-		}else {
-			deltaP = MatrixOperation.zeroPadding(this.delta.maxtir, this.diffPadding);
+		if(PROPAGATE_DOWN) {
+
+			
+			/**
+			 * dx = col2im(a)
+			 * a = (weight)T * diff
+			 * a[c * kh * kw * oh * ow]
+			 * (weight)T[c * kh * kw * ko]
+			 * diff[ko * oh * ow]
+			 */
+			dXKernel.setKernel(this.kcol);
+			
+			int onceLength = kernelNum * oHeight * oWidth;
+			
+			for(int n = 0;n<this.number;n++) {
+				System.arraycopy(deltaData, n * onceLength, onceDX, 0, onceLength);
+				dXKernel.setDelta(onceDX);
+				dXKernel.conv();
+				MatrixUtils.col2im4d(dXKernel.getOut(), this.diff.maxtir, n, this.channel, this.height, this.width);
+			}
+
 		}
 		
-		float[] ix = MatrixUtils.transform(deltaP);
-		
-		/**
-		 * 旋转kernel180
-		 */
-		float[][][][] kernel180 = MatrixOperation.rotate180V2(this.kernel);
-		
-		float[] ka = Im2colUtils.kernalToVector2(kernel180, true);
-
-		detalXKernel.setKernel(ka);
-		
-		int onceLength = kernelNum * deltaP[0][0].length * deltaP[0][0][0].length;
-
-		for(int n = 0;n<this.number;n++) {
-			System.arraycopy(ix, n * onceLength, this.onceDX, 0, onceLength);
-			detalXKernel.setX(onceDX);
-			detalXKernel.conv();
-			MatrixUtils.col2im4d(detalXKernel.getOut(), this.diff.maxtir, n, this.channel, this.height, this.width);
-		}
-
 	}
 
 	@Override
@@ -388,40 +384,13 @@ public class ConvolutionLayer extends Layer {
 	@Override
 	public float[][][][] output(float[][][][] input) {
 		// TODO Auto-generated method stub
-		
-		float[][][][] output = new float[this.number][this.oChannel][this.oHeight][this.oWidth];
-		
-		float[][][][] pInput = MatrixOperation.zeroPadding(input, this.padding);
-		
-		output = MatrixOperation.convnVailByIm2Col(pInput, this.kernel, this.stride, false);
-
-		output = MatrixOperation.add(output, this.bias);
-		
-		return output;
+		return null;
 	}
 
 	@Override
 	public void initCache() {
 		// TODO Auto-generated method stub
-		
-		CacheDataSet cache = new CacheDataSet(this.number);
-		
-		this.setTampDataSet(cache);
-		
-		/**
-		 * 创建输出层矩阵乘法缓存
-		 */
-		float[] r = new float[this.number * this.kernelNum * oHeight * oWidth];
-		cache.getDim1dSet().add(r);
-		
-		/**
-		 * 创建输入层im2col缓存
-		 */
-		float[][] col = new float[this.number * oHeight * oWidth][this.kHeight * this.kWidth * this.channel];
-		cache.getDim2dSet().add(col);
-		
-		float[] col2 =  new float[this.number * oHeight * oWidth * this.kHeight * this.kWidth * this.channel];
-		cache.getDim1dSet().add(col2);
+
 	}
 	
 	/**
@@ -430,24 +399,7 @@ public class ConvolutionLayer extends Layer {
 	 * diff[knumber * oh * ow]
 	 * im2col(input)T[oh * ow * C * kh * kw]
 	 */
-	public void computeDeltaW (){
-//		
-//		int ko = this.kernelNum;
-//		int kh = this.delta.height;
-//		int kw = this.delta.width;
-//		
-//		if(this.stride > 1) {
-//			kh = this.dwd[0][0].length;
-//			kw = this.dwd[0][0][0].length;
-//		}
-//		
-//		int oHeight = ((this.pInput.height - kh ) / 1) + 1;
-//		int oWidth = ((this.pInput.width - kw) / 1) + 1;
-//		
-//		int xm = this.channel * oHeight * oWidth;
-//		int xn = this.number * kh * kw;
-//		
-//		
+	public float[] computeDeltaW (){
 		
 		float[] ka = Im2colUtils.kernalToVector2(this.delta.maxtir, false);
 		
@@ -460,33 +412,17 @@ public class ConvolutionLayer extends Layer {
 		for(int n = 0;n<number;n++) {
 			System.arraycopy(this.pi1d, n * onceXLength, onceWX, 0, onceXLength);
 			System.arraycopy(ka, n * onceDiffLength, onceDiff, 0, onceDiffLength);
-			detalWKernel.setX(onceWX);
-			detalWKernel.setKernel(onceDiff);
-			detalWKernel.conv();
+			dWKernel.setX(onceWX);
+			dWKernel.setKernel(onceDiff);
+			dWKernel.conv();
 		}
 
-		MatrixUtils.col2im4dWeight(detalWKernel.getOut(), deltaW, kernelNum, channel, kHeight, kWidth, number);
-		detalWKernel.clear();
+		MatrixUtils.col2im4dWeight(dWKernel.getOut(), deltaW, kernelNum, channel, kHeight, kWidth, number);
+		dWKernel.clear();
+		
+		return ka;
 //		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
-//		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
-//
-//		Im2colForWeight.im2col(this.pInput.maxtir, this.dInput1D.data, kh, kw, 1);
-//
-//		float[] delta1d = null;
-//
-//		if(this.stride == 1) {
-//			delta1d = Im2colUtils.kernalToVector(this.delta.maxtir, true);
-//		}else {
-//			Dilation.dilation(this.delta.maxtir, this.dwd, this.stride);
-//			delta1d = Im2colUtils.kernalToVector(this.dwd, true);
-//		}
-//
-//		float[] c = MatrixUtils.zero(xm * ko);
-//		
-//		GPUOP.getInstance().multiplyFloat(xm, xn, ko, this.dInput1D.data, delta1d, c);
-//		
-//		Im2col4d2T.to4d(c, this.deltaW, this.kernelNum, this.channel, oHeight, oWidth, this.number);
-//		
+	
 	}
 	
 }

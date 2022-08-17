@@ -141,6 +141,9 @@ public abstract class Network {
 				bl.getIdentity().setUpdater(UpdaterFactory.create(this.updater));
 			}
 		}
+		if(layer.index <= 1) {
+			layer.PROPAGATE_DOWN = false;
+		}
 		this.layerList.add(layer);
 	}
 	
