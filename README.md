@@ -432,6 +432,7 @@ http://119.3.123.193:8011/AICar
 
 5.添加basicblock模块，新增resnet模型支持，目前该模型在cifar10数据集上的表现，训练次数10，测试数据集准确率为93.22%
 
+### omega-engine-v3-gpu
 #### 2022-07-02
 1.开启omega-engine-v3-gpu版本开发，该版本将实现对omega-engine的gpu全面支持.
 2.全面优化卷积层计算，包括前向传播与反向传播.
