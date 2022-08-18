@@ -11,19 +11,6 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 [https://github.com/iangellove/Omega-AI](https://github.com/iangellove/Omega-AI)
 
-### 版本更新
-#### omega-engine-1.0.3
-
-1.添加gup支持，使用jcuda调用cuda的cublasSgemm矩阵乘法，参考了caffe的卷积操作已将卷积操作优化成im2col+gemm实现，计算效率得到大大提高
-
-2.添加vgg16 demo，该模型在cifar10数据集上表现为测试数据集准确率86.45%
-
-3.利用jdk ForkJoin框架实现任务拆分，充分利用cpu多线程，提高对数组操作与计算速度
-
-4.参考darknet对学习率更新机制进行升级，目前已支持RANDOM、POLY、STEP、EXP、SIG等多种学习率更新方法，并且实现学习率warmup功能
-
-5.添加basicblock模块，新增resnet模型支持，目前该模型在cifar10数据集上的表现，训练次数10，测试数据集准确率为93.22%
-
 ### 依赖
 由于omega-engine-1.0.3加入了jcuda支持，所以1.0.3需要安装与jcuda版本对应的cuda，我在该项目中使用的是jcuda-11.2.0版本的包，那么我cuda需要安装11.2.x版本
 
@@ -431,6 +418,30 @@ public void cnnNetwork_cifar10() {
 ## 基于神经网络+遗传算法实现AI赛车游戏
 
 http://119.3.123.193:8011/AICar
+
+## 版本更新
+### omega-engine-v3
+#### 2022-06-20
+1.添加gup支持，使用jcuda调用cuda的cublasSgemm矩阵乘法，参考了caffe的卷积操作已将卷积操作优化成im2col+gemm实现，计算效率得到大大提高
+
+2.添加vgg16 demo，该模型在cifar10数据集上表现为测试数据集准确率86.45%
+
+3.利用jdk ForkJoin框架实现任务拆分，充分利用cpu多线程，提高对数组操作与计算速度
+
+4.参考darknet对学习率更新机制进行升级，目前已支持RANDOM、POLY、STEP、EXP、SIG等多种学习率更新方法，并且实现学习率warmup功能
+
+5.添加basicblock模块，新增resnet模型支持，目前该模型在cifar10数据集上的表现，训练次数10，测试数据集准确率为93.22%
+
+### omega-engine-v3-gpu
+#### 2022-07-02
+1.开启omega-engine-v3-gpu版本开发，该版本将实现对omega-engine的gpu全面支持.
+
+2.全面优化卷积层计算，包括前向传播与反向传播.
+
+#### 2022-08-17
+1.初步完成卷积层的gpu改造，使得卷积神经网络计算速度整体提升，增加im2col与col2im两个经典的核函数（Im2colKernel.cu，Col2imKernel.cu）.
+
+2.添加cuda内存管理器，用于管理整体显存的生命周期，减少频繁申请显存的操作，减少主机与显卡之间的数据传输.
 
 ## 欢迎打扰
 
