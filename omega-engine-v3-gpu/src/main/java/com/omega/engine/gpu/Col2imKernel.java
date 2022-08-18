@@ -5,6 +5,7 @@ import static jcuda.driver.JCudaDriver.cuMemAlloc;
 
 import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.Im2colToVector;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 
@@ -12,10 +13,13 @@ import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
 import jcuda.driver.CUfunction;
+import jcuda.driver.CUstream;
 import jcuda.driver.JCudaDriver;
 import jcuda.runtime.JCuda;
+import jcuda.runtime.cudaMemcpyKind;
+import jcuda.runtime.cudaStream_t;
 
-public class Im2colKernel {
+public class Col2imKernel {
 	
 	private float[] x;
 	private float[] out;
@@ -29,12 +33,14 @@ public class Im2colKernel {
 	private int p;
 	private int oHeight;
 	private int oWidth;
+	private int ow;
+	private int oh;
 	private int numKernels;
 	private CUfunction function;
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 
 	
-	public Im2colKernel(float[] x,float[] out,int N,int C,int H,int W,int kh,int kw,int s,int p) {
+	public Col2imKernel(float[] x,float[] out,int N,int C,int H,int W,int kh,int kw,int s,int p) {
 		this.x = x;
 		this.N = N;
 		this.C = C;
@@ -44,10 +50,12 @@ public class Im2colKernel {
 		this.kw = kw;
 		this.s = s;
 		this.p = p;
-		this.oHeight = ((H + 2 * p - kh) / s) + 1;
+		this.oHeight = ((H + 2 * p - kh ) / s) + 1;
 		this.oWidth = ((W + 2 * p - kw) / s) + 1;
+		this.oh = N * oHeight * oWidth;
+		this.ow = C * kh * kw;
+		this.numKernels = C * H * W;
 		this.out = out;
-		this.numKernels = C * oHeight * oWidth; 
 		initFunction();
 	}
 	
@@ -57,17 +65,8 @@ public class Im2colKernel {
 
 			if(function == null) {
 				
-				function = CUDAModules.getFunctionByModule("H://Im2colKernel.cu", "im2col_gpu_kernelV2");
-//				
-//				/**
-//				 * 加载方法
-//				 */
-//				CUmodule module = CUDAModules.getModule("H://Im2colKernel.cu");
-//				
-//		        // Obtain a function pointer to the "add" function.
-//				function = new CUfunction();
-//		        cuModuleGetFunction(function, module, "im2col_gpuv4");
-//		        
+				function = CUDAModules.getFunctionByModule("H://Col2imKernel.cu", "col2im_gpu_kernelV2");
+
 			}
 			
 		} catch (Exception e) {
@@ -81,13 +80,11 @@ public class Im2colKernel {
 	    return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
 	}
 	
-	public void im2col() {
+	public void col2im() {
 		
 		try {
 //			long start1 = System.nanoTime();
-			
-			
-			
+
 			/**
 			 * 申请内存
 			 */
@@ -100,7 +97,6 @@ public class Im2colKernel {
 	        cuMemAlloc(dy, out.length * Sizeof.FLOAT);
 	        
 //	        long start3 = System.nanoTime();
-
 	        /**
 	         * 设置入参
 	         * int oHeight,int oWidth,int ow,int oh,int kSize
@@ -111,10 +107,11 @@ public class Im2colKernel {
 	                Pointer.to(new int[]{numKernels}),
 	                Pointer.to(new int[]{H}),
 	                Pointer.to(new int[]{W}),
+	                Pointer.to(new int[]{C}),
 	                Pointer.to(new int[]{kh}),
 	                Pointer.to(new int[]{kw}),
-	                Pointer.to(new int[]{s}),
 	                Pointer.to(new int[]{p}),
+	                Pointer.to(new int[]{s}),
 	                Pointer.to(new int[]{oHeight}),
 	                Pointer.to(new int[]{oWidth})
 	            );
@@ -127,17 +124,9 @@ public class Im2colKernel {
 		        );
 	        
 //	        cuCtxSynchronize();
-//	        System.out.println((System.nanoTime() - start2) / 1e6 + "ms2");
-	        
-//	        long start4 = System.nanoTime();
-//	        System.out.println(out.length);
-	        
-	        JCudaDriver.cuMemcpyDtoH(Pointer.to(out), dy, out.length * Sizeof.FLOAT);
-//	        
-//	        Pointer py = new Pointer();
-//	        JCuda.cudaMalloc(py, out.length * Sizeof.FLOAT);
-//	        JCuda.cudaMemcpy(Pointer.to(py), Pointer.to(dy), out.length * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToDevice);
 
+	        JCudaDriver.cuMemcpyDtoH(Pointer.to(out), dy, out.length * Sizeof.FLOAT);
+	        
 	        // Clean up.
 	        JCuda.cudaFree(dx);
 	        JCuda.cudaFree(dy);
@@ -149,65 +138,49 @@ public class Im2colKernel {
 		
 	}
 
+	public float[] getOut() {
+		return out;
+	}
+
     public static void main(String args[]){	
 
     	int N = 1;
-    	int C = 512;
-    	int H = 34;
-    	int W = 34;
+    	int C = 1;
+    	int H = 8;
+    	int W = 8;
     	int kh = 3;
     	int kw = 3;
     	int s = 1;
     	int p = 1;
     	int oHeight = ((H + 2 * p - kh) / s) + 1;
 		int oWidth = ((W + 2 * p - kw) / s) + 1;
-		int ow = C * kh * kw;
-		int oh = oHeight * oWidth;
+		int oh = C * kh * kw;
+		int ow = oHeight * oWidth;
     	
-    	float[] x = RandomUtils.gaussianRandom(N * C * H * W, 0.1f);
-    	float[][][][] x2 = MatrixUtils.transform(x, N, C, H, W);
-
+    	float[] x = MatrixUtils.order(N * C * H * W, 1, 1);
+    	
     	float[] out = new float[oh * ow];
     	
-//    	System.out.println(x.length+"start.");
-
-//		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-
-		Im2colKernel k = new Im2colKernel(x, out, N, C, H, W, kh, kw, s, p);
-		long start = System.nanoTime();
-    	for(int i = 0;i<128;i++) {
+    	float[] xout = new float[C * H * W];
     	
-        	k.im2col();
-        	
-    	}
-    	System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
-//		TaskEngine.getInstance(8).dispatchTask(workers);
-
-//    	System.out.println(JsonUtils.toJson(out));
+	    Im2colKernel im2col = new Im2colKernel(x, out, N, C, H, W, kh, kw, s, p);
     	
-    	System.out.println("==============================>");
-		
-    	float[] out2 = new float[oh * ow];
-
-    	
-    	long start2 = System.nanoTime();
-	    for(int i = 0;i<128;i++) {
-	    	
-	//    	
-	//    	float[] cpu = MatrixOperation.im2col4d(x, N, C, H, W, kh, kw, s);
-	    	
-	    	Im2colToVector.im2col(x2, out2, kh, kw, s);
-	    	
-
-    	}
-//    	System.out.println(JsonUtils.toJson(cpu));
-	    System.out.println((System.nanoTime() - start2) / 1e6 + "ms");
-	    System.out.println(CheckArrayUtils.check(out, out2));
+	    Col2imKernel col2im = new Col2imKernel(out, xout, N, C, H, H, kh, kw, s, p);
+	    
+	    im2col.im2col();
+	    
+	    col2im.col2im();
+	    
+	    col2im.col2im();
+	    
+	    System.out.println(x.length+":"+xout.length);
+	    
+	    System.out.println(JsonUtils.toJson(out));
+	    
+	    System.out.println(JsonUtils.toJson(x));
+	    
+	    System.out.println(JsonUtils.toJson(xout));
 	    
     }
-
-	public float[] getOut() {
-		return out;
-	}
 
 }

@@ -2,6 +2,8 @@ package com.omega.common.data;
 
 import java.io.Serializable;
 
+import jcuda.Pointer;
+
 public class Tensor implements Serializable{
 	
 	/**
@@ -20,6 +22,8 @@ public class Tensor implements Serializable{
 	public int dataLength = 0;
 	
 	public float[] data;
+	
+	private Pointer deviceData;
 	
 	public Tensor(int number,int channel,int height,int width) {
 		this.number = number;

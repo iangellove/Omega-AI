@@ -5,7 +5,6 @@ import static jcuda.jcublas.JCublas2.cublasGetVector;
 import static jcuda.jcublas.JCublas2.cublasSetVector;
 
 import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 
 import jcuda.Pointer;
@@ -29,6 +28,7 @@ public class DWeightKernel {
 	private int kh;
 	private int kw;
 	private int s;
+	private int p;
 	private int oHeight;
 	private int oWidth;
 	private int ih;
@@ -44,7 +44,7 @@ public class DWeightKernel {
 	
 	private Pointer kernelParameters;
 
-	public DWeightKernel(String id,float[] out,int C,int H,int W,int ko,int kh,int kw,int s) {
+	public DWeightKernel(String id,float[] out,int C,int H,int W,int ko,int kh,int kw,int s,int p) {
 		this.id = id;
 		this.C = C;
 		this.H = H;
@@ -53,8 +53,9 @@ public class DWeightKernel {
 		this.kh = kh;
 		this.kw = kw;
 		this.s = s;
-		this.oHeight = ((H - kh ) / s) + 1;
-		this.oWidth = ((W - kw) / s) + 1;
+		this.p = p;
+		this.oHeight = ((H + 2 * p - kh) / s) + 1;
+		this.oWidth = ((W + 2 * p - kw) / s) + 1;
 		this.out = out;
 		this.ih = C * kh * kw;
 		this.iw = oHeight * oWidth;
@@ -88,13 +89,6 @@ public class DWeightKernel {
 		 * 初始化cuda函数
 		 */
 		initFunction();
-		
-//		/**
-//		 * 申请内存
-//		 */
-//		if(x_im2col == null) {
-//			x_im2col = new float[ih * iw];
-//		}
 
 		/**
 		 * 申请显存
@@ -129,11 +123,17 @@ public class DWeightKernel {
 	
 	public void setX(float[] x) {
 		this.x = x;
+		/**
+		 * k * n
+		 */
         JCudaDriver.cuMemcpyHtoD(dx, Pointer.to(x), x.length * Sizeof.FLOAT);
 	}
 	
 	public void setKernel(float[] kernel) {
 		this.kernel = kernel;
+		/**
+		 * m * n
+		 */
 		cublasSetVector(ko * iw, Sizeof.FLOAT, Pointer.to(kernel), 1, dA, 1);
 	}
 	
@@ -150,7 +150,9 @@ public class DWeightKernel {
 	}
 	
 	public void sgemm() {
-		
+		/**
+		 * m k n
+		 */
 		GPUOP.getInstance().multiplyFloat(ko, ih, iw, dA, dy, dC, cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 1.0f);
 		
 	}
@@ -201,7 +203,8 @@ public class DWeightKernel {
     	int kh = 5;
     	int kw = 5;
     	int s = 1;
-    	int oHeight = ((H - kh) / s) + 1;
+    	int p = 0;
+    	int oHeight = ((H + 2 *  - kh) / s) + 1;
 		int oWidth = ((W - kw) / s) + 1;
 		int ow = C * kh * kw;
 		int oh = ko;
@@ -216,7 +219,7 @@ public class DWeightKernel {
     	
     	float[] kOnce = new float[ko * oHeight * oHeight];
     	
-    	DWeightKernel ck = new DWeightKernel("conv1", out, C, H, W, ko, kh, kw, s);
+    	DWeightKernel ck = new DWeightKernel("conv1", out, C, H, W, ko, kh, kw, s, p);
 
     	long start = System.nanoTime();
     	

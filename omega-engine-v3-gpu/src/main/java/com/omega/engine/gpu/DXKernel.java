@@ -1,11 +1,10 @@
 package com.omega.engine.gpu;
 
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
-import static jcuda.jcublas.JCublas2.cublasGetVector;
+import static jcuda.driver.JCudaDriver.cuMemAlloc;
 import static jcuda.jcublas.JCublas2.cublasSetVector;
 
 import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 
 import jcuda.Pointer;
@@ -73,7 +72,7 @@ public class DXKernel {
 		try {
 
 			if(function == null) {
-				function = CUDAModules.getFunctionByModule("H://Col2imKernel.cu", "col2im_gpu_kernel");
+				function = CUDAModules.getFunctionByModule("H://Col2imKernel.cu", "col2im_gpu_kernelV2");
 			}
 			
 		} catch (Exception e) {
@@ -117,6 +116,7 @@ public class DXKernel {
                 Pointer.to(new int[]{W}),
                 Pointer.to(new int[]{C}),
                 Pointer.to(new int[]{kh}),
+                Pointer.to(new int[]{kw}),
                 Pointer.to(new int[]{pad}),
                 Pointer.to(new int[]{s}),
                 Pointer.to(new int[]{oHeight}),
@@ -127,11 +127,17 @@ public class DXKernel {
 	
 	public void setKernel(float[] kernel) {
 		this.kernel = kernel;
+		/**
+		 * m * k
+		 */
 		cublasSetVector(ko * ih, Sizeof.FLOAT, Pointer.to(kernel), 1, dA, 1);
 	}
 
 	public void setDelta(float[] delta) {
 		this.delta = delta;
+		/**
+		 * m * n
+		 */
 		cublasSetVector(ko * iw, Sizeof.FLOAT, Pointer.to(delta), 1, dB, 1);
 	}
 	
@@ -149,7 +155,10 @@ public class DXKernel {
 	
 	public void sgemm() {
 		
-		GPUOP.getInstance().multiplyFloat(ih, iw, ko, dA, dB, dC, cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 0.0f, 1.0f);
+		/**
+		 * k n m
+		 */
+		GPUOP.getInstance().multiplyFloat(ih, iw, ko, dA, dB, dC, cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 		
 	}
 	
@@ -163,7 +172,9 @@ public class DXKernel {
 		            0, null,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
 		        ));
-
+			
+			JCudaDriver.cuMemcpyDtoH(Pointer.to(out), dy, out.length * Sizeof.FLOAT);
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -172,7 +183,6 @@ public class DXKernel {
 	}
 	
 	public float[] getOut() {
-		JCudaDriver.cuMemcpyDtoH(Pointer.to(out), dy, out.length * Sizeof.FLOAT);
 		return out;
 	}
 
@@ -191,7 +201,7 @@ public class DXKernel {
     	int kh = 5;
     	int kw = 5;
     	int s = 1;
-    	int p = 0;
+    	int p = 1;
     	int oHeight = ((H + 2 * p - kh) / s) + 1;
 		int oWidth = ((W + 2 * p - kw) / s) + 1;
 		

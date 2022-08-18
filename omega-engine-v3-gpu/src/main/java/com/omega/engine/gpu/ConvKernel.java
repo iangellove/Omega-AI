@@ -30,10 +30,12 @@ public class ConvKernel {
 	private int kh;
 	private int kw;
 	private int s;
+	private int p;
 	private int oHeight;
 	private int oWidth;
 	private int ih;
 	private int iw;
+	private int numKernels;
 	private CUfunction function;
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
@@ -45,7 +47,7 @@ public class ConvKernel {
 	
 	private Pointer kernelParameters;
 
-	public ConvKernel(String id,float[] out,int C,int H,int W,int ko,int kh,int kw,int s) {
+	public ConvKernel(String id,float[] out,int C,int H,int W,int ko,int kh,int kw,int s,int p) {
 		this.id = id;
 		this.C = C;
 		this.H = H;
@@ -54,12 +56,13 @@ public class ConvKernel {
 		this.kh = kh;
 		this.kw = kw;
 		this.s = s;
-		this.oHeight = ((H - kh ) / s) + 1;
-		this.oWidth = ((W - kw) / s) + 1;
+		this.p = p;
+		this.oHeight = ((H + 2 * p - kh) / s) + 1;
+		this.oWidth = ((W + 2 * p - kw) / s) + 1;
 		this.out = out;
 		this.ih = C * kh * kw;
 		this.iw = oHeight * oWidth;
-
+		this.numKernels = C * oHeight * oWidth; 
 //		long start1 = System.nanoTime();
 		
 		init();
@@ -73,7 +76,7 @@ public class ConvKernel {
 
 			if(function == null) {
 				
-				function = CUDAModules.getFunctionByModule("H://Im2colKernel.cu", "im2col_gpu_kernel");
+				function = CUDAModules.getFunctionByModule("H://Im2colKernel.cu", "im2col_gpu_kernelV2");
         
 			}
 			
@@ -101,19 +104,19 @@ public class ConvKernel {
 		
         /**
          * 设置入参
-         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int oh,int ow
+         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
          */
-        int num_kernels = C * oHeight * oWidth; 
         
         kernelParameters = Pointer.to(
                 Pointer.to(dx),
                 Pointer.to(dy),
-                Pointer.to(new int[]{num_kernels}),
+                Pointer.to(new int[]{numKernels}),
                 Pointer.to(new int[]{H}),
                 Pointer.to(new int[]{W}),
                 Pointer.to(new int[]{kh}),
                 Pointer.to(new int[]{kw}),
                 Pointer.to(new int[]{s}),
+                Pointer.to(new int[]{p}),
                 Pointer.to(new int[]{oHeight}),
                 Pointer.to(new int[]{oWidth})
             );
@@ -162,7 +165,7 @@ public class ConvKernel {
 		try {
 
 	        cuLaunchKernel(function,
-		            this.CAFFE_GET_BLOCKS(ih),  1, 1,      // Grid dimension
+		            this.CAFFE_GET_BLOCKS(numKernels),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
@@ -198,14 +201,15 @@ public class ConvKernel {
     public static void main(String args[]){	
     	int N = 128;
     	int C = 512;
-    	int H = 9;
-    	int W = 9;
+    	int H = 8;
+    	int W = 8;
     	int ko = 512;
     	int kh = 3;
     	int kw = 3;
     	int s = 1;
-    	int oHeight = ((H - kh) / s) + 1;
-		int oWidth = ((W - kw) / s) + 1;
+    	int p = 0;
+    	int oHeight = ((H + 2 * p - kh) / s) + 1;
+		int oWidth = ((W + 2 * p - kw) / s) + 1;
 		int ow = oHeight * oWidth;
 		int oh = ko;
     	
@@ -221,7 +225,7 @@ public class ConvKernel {
 
     	float[] once = new float[C * H * W];
     	
-		ConvKernel ck = new ConvKernel("conv1", out, C, H, W, ko, kh, kw, s);
+		ConvKernel ck = new ConvKernel("conv1", out, C, H, W, ko, kh, kw, s, p);
 
 		ck.setKernel(k1);
 

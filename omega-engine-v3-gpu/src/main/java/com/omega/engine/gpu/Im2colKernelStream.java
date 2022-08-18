@@ -59,7 +59,7 @@ public class Im2colKernelStream {
 
 			if(function == null) {
 				
-				function = CUDAModules.getFunctionByModule("H://Im2colKernel.cu", "im2col_gpuv4");
+				function = CUDAModules.getFunctionByModule("H://Im2colKernelTmp.cu", "im2col_gpuv4");
 //				
 //				/**
 //				 * 加载方法

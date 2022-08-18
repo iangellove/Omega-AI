@@ -169,15 +169,15 @@ public class CNN extends Network {
 		 */
 		this.setLossDiff(lossDiff);
 		
-//		long start = System.nanoTime();
+		long start = System.nanoTime();
 //		
-//		long convTime = 0;
+		long convTime = 0;
 //		
-//		long bnTime = 0;
+		long bnTime = 0;
 //		
-//		long fullyTime = 0;
+		long fullyTime = 0;
 //		
-//		long poolingTime = 0;
+		long poolingTime = 0;
 //		
 //		long uct = 0;
 //		
@@ -189,27 +189,27 @@ public class CNN extends Network {
 			
 			layer.learnRate = this.learnRate;
 		
-//			long start2 = System.nanoTime();
+			long start2 = System.nanoTime();
 			
 			layer.back();
 			
 			layer.update();
 			
-//			if(layer.getLayerType() == LayerType.conv) {
-//				convTime += System.nanoTime() - start2;
-//			}
-//			
-//			if(layer.getLayerType() == LayerType.bn) {
-//				bnTime += System.nanoTime() - start2;
-//			}
-//			
-//			if(layer.getLayerType() == LayerType.full) {
-//				fullyTime += System.nanoTime() - start2;
-//			}
-//			
-//			if(layer.getLayerType() == LayerType.pooling) {
-//				poolingTime += System.nanoTime() - start2;
-//			}
+			if(layer.getLayerType() == LayerType.conv) {
+				convTime += System.nanoTime() - start2;
+			}
+			
+			if(layer.getLayerType() == LayerType.bn) {
+				bnTime += System.nanoTime() - start2;
+			}
+			
+			if(layer.getLayerType() == LayerType.full) {
+				fullyTime += System.nanoTime() - start2;
+			}
+			
+			if(layer.getLayerType() == LayerType.pooling) {
+				poolingTime += System.nanoTime() - start2;
+			}
 			
 //			layer.showDiff();
 			
@@ -224,15 +224,15 @@ public class CNN extends Network {
 			
 		}
 		
-//		System.out.println("conv backward:"+convTime / 1e6 + "ms");
-//		
-//		System.out.println("bn backward:"+bnTime / 1e6 + "ms");
-//		
-//		System.out.println("pooling backward:"+poolingTime / 1e6 + "ms");
-//		
-//		System.out.println("fully backward:"+fullyTime / 1e6 + "ms");
-//		
-//		System.out.println("all backward:"+(System.nanoTime() - start) / 1e6 + "ms");
+		System.out.println("conv backward:"+convTime / 1e6 + "ms");
+		
+		System.out.println("bn backward:"+bnTime / 1e6 + "ms");
+		
+		System.out.println("pooling backward:"+poolingTime / 1e6 + "ms");
+		
+		System.out.println("fully backward:"+fullyTime / 1e6 + "ms");
+		
+		System.out.println("all backward:"+(System.nanoTime() - start) / 1e6 + "ms");
 		
 	}
 

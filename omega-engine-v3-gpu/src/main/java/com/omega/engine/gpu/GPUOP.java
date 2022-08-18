@@ -294,14 +294,14 @@ public class GPUOP {
     	
     	try {
     		
-            Pointer zero = Pointer.to(new float[]{ alpha });
-            Pointer one = Pointer.to(new float[]{ beta });
+            Pointer alphaP = Pointer.to(new float[]{ alpha });
+            Pointer betaP = Pointer.to(new float[]{ beta });
             
             int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
             int ldb = CUBLAS_OP_N_B == CUBLAS_OP_N ? n : k;
 
-            int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, one, 
-                dB, ldb, dA, lda, zero, dC, n);
+            int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, alphaP, 
+                dB, ldb, dA, lda, betaP, dC, n);
             
 		} catch (Exception e) {
 			// TODO: handle exception

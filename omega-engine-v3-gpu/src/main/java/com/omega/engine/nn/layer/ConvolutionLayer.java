@@ -1,7 +1,5 @@
 package com.omega.engine.nn.layer;
 
-import org.apache.commons.math3.stat.descriptive.moment.Kurtosis;
-
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.Im2colUtils;
 import com.omega.common.utils.MathUtils;
@@ -11,7 +9,6 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.ConvKernel;
 import com.omega.engine.gpu.DWeightKernel;
 import com.omega.engine.gpu.DXKernel;
-import com.omega.engine.gpu.data.CacheDataSet;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.nn.model.ConvLayerInit;
@@ -35,14 +32,8 @@ public class ConvolutionLayer extends Layer {
 	public int stride = 1;
 	
 	public int padding = 0;
-
-	public int diffPadding = 0;
 	
-	public Blob pInput;  //n * c * h * w
-	
-//	public Tensor pInput1D;  //n * c * h * w im2col
-	
-	public Tensor dInput1D;
+	public Tensor inputData;
 	
 	public float[][][][] kernel;  //kn * c * kh * kw
 	
@@ -53,14 +44,6 @@ public class ConvolutionLayer extends Layer {
 	public float[][][][] deltaW;
 	
 	public float[] deltaB;
-	
-	public float[][][][] dwd;
-	
-	private float[] pi1d;
-	
-//	public float[] delta1d;
-	
-//	public float[][][][] pdwd;
 	
 	private ConvKernel convKernel;
 	
@@ -142,7 +125,6 @@ public class ConvolutionLayer extends Layer {
 		this.kernel = RandomUtils.xavierRandom(this.kernelNum, this.channel, this.kHeight, this.kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth);
 //		this.kernel = RandomUtils.heRandom(this.kernelNum, this.channel, this.kHeight, this.kWidth, this.channel * this.oChannel * this.height * this.width);
 		this.bias = MatrixUtils.zero(this.kernelNum);
-		this.diffPadding = ((this.height - 1) * this.stride + this.kHeight - this.oHeight) / 2;
 		this.deltaB = MatrixUtils.zero(this.kernelNum);
 		this.deltaW = MatrixUtils.zero(this.kernelNum,this.channel,this.kHeight,this.kWidth);
 		this.kcol = new float[kernelNum * channel * kHeight * kWidth];
@@ -152,17 +134,14 @@ public class ConvolutionLayer extends Layer {
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
-		if(this.pInput == null || this.number != this.pInput.number){
+		if(this.output == null || this.number != this.output.number){
 			this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
-			this.pInput = Blobs.zero(number, channel, height + padding * 2, width + padding * 2, this.pInput);
-//			int pLength = this.channel * kHeight * kWidth * this.number * oHeight * oWidth;
-//			this.pInput1D = new Tensor(1, 1, 1, pLength);
-			this.pi1d = new float[number * channel * (height + padding * 2) * (width + padding * 2)];
+			this.inputData = new Tensor(number, channel, height, width);
 		}
 		if(convKernel == null){
-			this.onceX = new float[channel * (height + this.padding * 2) * (width + this.padding * 2)];
+			this.onceX = new float[channel * height * width];
 			this.onceOut = new float[kernelNum * oHeight * oWidth];
-			convKernel = new ConvKernel(this.index+"_conv", onceOut, channel, height + this.padding * 2, width + this.padding * 2, kernelNum, kHeight, kWidth, stride);
+			convKernel = new ConvKernel(this.index+"_conv", onceOut, channel, height, width, kernelNum, kHeight, kWidth, stride, padding);
 		}
 	}
 
@@ -171,25 +150,11 @@ public class ConvolutionLayer extends Layer {
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number){
 			this.diff = Blobs.zero(number, channel, height, width, this.diff);
-			int kh = this.oHeight;
-			int kw = this.oWidth;
-			if(this.stride > 1) {
-				kh = this.oHeight + (this.oHeight - 1) * (this.stride - 1);
-				kw = this.oWidth + (this.oWidth - 1) * (this.stride - 1);
-				this.dwd = new float[this.number][this.oChannel][kh][kw];
-			}
-			int oHeight = ((this.pInput.height - kh ) / 1) + 1;
-			int oWidth = ((this.pInput.width - kw) / 1) + 1;
-			int xm = this.channel * oHeight * oWidth;
-			int xn = this.number * kh * kw;
-			int pLength = xm * xn;
-			this.dInput1D = new Tensor(1, 1, 1, pLength);
-//			this.delta1d = new float[this.number * this.oChannel * kh * kw];
 		}
 		if(dWKernel == null){
-			this.onceWX = new float[channel * (height + this.padding * 2) * (width + this.padding * 2)];
+			this.onceWX = new float[channel * height * width];
 			this.onceDWOut = new float[kernelNum * channel * kHeight * kWidth];
-			dWKernel = new DWeightKernel(this.index+"_conv_dw", onceDWOut, channel, height + this.padding * 2, width + this.padding * 2, kernelNum, this.kHeight, this.kWidth, stride);
+			dWKernel = new DWeightKernel(this.index+"_conv_dw", onceDWOut, channel, height, width, kernelNum, this.kHeight, this.kWidth, stride, padding);
 		}
 		if(dXKernel == null){
 			this.onceDX = new float[kernelNum * oHeight * oWidth];
@@ -197,18 +162,18 @@ public class ConvolutionLayer extends Layer {
 			dXKernel = new DXKernel(this.index+"_conv_dx", onceDXOut, channel, height, width, kernelNum, this.kHeight, this.kWidth, this.padding, this.stride);
 		}
 		MatrixUtils.zero(this.deltaB);
-		MatrixUtils.zero(this.deltaW);
 	}
 
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
 //		long start = System.nanoTime();
-//		
-		MatrixOperation.zeroPadding(this.input.maxtir, this.pInput.maxtir, this.padding);
 		
-		this.pi1d = MatrixUtils.transform(this.pInput.maxtir);
-
+		/**
+		 * input to array
+		 */
+		Im2colUtils.kernalToVector2(this.input.maxtir, this.inputData.data, false);
+		
 		/**
 		 * kernel im2col
 		 */
@@ -216,19 +181,17 @@ public class ConvolutionLayer extends Layer {
 		
 		convKernel.setKernel(this.kcol);
 		
-		int onceLength = channel * (height + this.padding * 2) * (width + this.padding * 2);
+		int onceLength = channel * height * width;
 		
 		for(int n = 0;n<this.number;n++) {
-			System.arraycopy(this.pi1d, n * onceLength, this.onceX, 0, onceLength);
+			System.arraycopy(this.inputData.data, n * onceLength, this.onceX, 0, onceLength);
 			convKernel.setX(onceX);
 			convKernel.conv();
 			MatrixUtils.col2im4d(convKernel.getOut(), this.output.maxtir, n, this.kernelNum, this.oHeight, this.oWidth);
 		}
 
 		if(this.hasBias) {
-
 			this.output.maxtir = MatrixOperation.add(this.output.maxtir, this.bias);
-
 		}
 //		System.out.println(this.index+":"+(System.nanoTime() - start) / 1e6+"ms.");
 	}
@@ -250,12 +213,17 @@ public class ConvolutionLayer extends Layer {
 		 */
 		float[] deltaData = this.computeDeltaW();
 
+		/**
+		 * 计算deltaB
+		 */
 		if(this.hasBias) {
 			this.deltaB = MatrixOperation.division(MatrixOperation.sumBias(this.delta.maxtir),this.number);
 		}
 		
+		/**
+		 * 计算diff
+		 */
 		if(PROPAGATE_DOWN) {
-
 			
 			/**
 			 * dx = col2im(a)
@@ -403,14 +371,14 @@ public class ConvolutionLayer extends Layer {
 		
 		float[] ka = Im2colUtils.kernalToVector2(this.delta.maxtir, false);
 		
-		int onceXLength = channel * (height + this.padding * 2) * (width + this.padding * 2);
+		int onceXLength = channel * height * width;
 		
 		int  onceDiffLength = kernelNum * oHeight * oWidth;
 		
 		float[] onceDiff = new float[onceDiffLength];
-//		long start = System.nanoTime();
+
 		for(int n = 0;n<number;n++) {
-			System.arraycopy(this.pi1d, n * onceXLength, onceWX, 0, onceXLength);
+			System.arraycopy(this.inputData.data, n * onceXLength, onceWX, 0, onceXLength);
 			System.arraycopy(ka, n * onceDiffLength, onceDiff, 0, onceDiffLength);
 			dWKernel.setX(onceWX);
 			dWKernel.setKernel(onceDiff);
@@ -421,8 +389,6 @@ public class ConvolutionLayer extends Layer {
 		dWKernel.clear();
 		
 		return ka;
-//		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
-	
 	}
 	
 }

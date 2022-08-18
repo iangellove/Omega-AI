@@ -561,7 +561,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.0001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -984,7 +984,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.0001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
