@@ -96,11 +96,16 @@ public class ConvKernel {
 		/**
 		 * 申请显存
 		 */
-		this.dx = CUDAMemoryManager.getDevice(id + "_dx", C * H * W);
-		this.dy = CUDAMemoryManager.getDevice(id + "_dy", ih * iw);
+		this.dx = CUDAMemoryManager.getDevice(C * H * W);
+		this.dy = CUDAMemoryManager.getDevice(ih * iw);
 		
-        this.dA = CUDAMemoryManager.getPointer(id + "_dA", ko * ih);
-        this.dC = CUDAMemoryManager.getPointer(id + "_dC", ko * iw);
+        this.dA = CUDAMemoryManager.getPointer(ko * ih);
+        this.dC = CUDAMemoryManager.getPointer(ko * iw);
+//		this.dx = CUDAMemoryManager.getDevice(id + "_dx", C * H * W);
+//		this.dy = CUDAMemoryManager.getDevice(id + "_dy", ih * iw);
+//		
+//        this.dA = CUDAMemoryManager.getPointer(id + "_dA", ko * ih);
+//        this.dC = CUDAMemoryManager.getPointer(id + "_dC", ko * iw);
 		
         /**
          * 设置入参

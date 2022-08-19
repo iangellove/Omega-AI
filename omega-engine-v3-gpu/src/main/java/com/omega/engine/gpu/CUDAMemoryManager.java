@@ -16,6 +16,14 @@ public class CUDAMemoryManager {
 	
 	public static Map<String,Pointer> pointerMap = new HashMap<String, Pointer>();
 	
+	public static CUdeviceptr getDevice(int size) {
+
+		CUdeviceptr device = new CUdeviceptr();
+		cuMemAlloc(device, size * Sizeof.FLOAT);
+		
+		return device;
+	}
+	
 	public static CUdeviceptr getDevice(String key,int size) {
 		
 		if(deviceMap.containsKey(key)) {
@@ -29,6 +37,14 @@ public class CUDAMemoryManager {
 		deviceMap.put(key, device);
 		
 		return device;
+	}
+	
+	public static Pointer getPointer(int size) {
+		
+		Pointer p = new Pointer();
+		cudaMalloc(p, size * Sizeof.FLOAT);
+		
+		return p;
 	}
 	
 	public static Pointer getPointer(String key,int size) {

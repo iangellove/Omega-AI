@@ -2405,7 +2405,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.0001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -2552,12 +2552,12 @@ public class BusinessServiceImpl implements BusinessService {
 //			bs.cnnNetwork_mnist();
 //			bs.cnnNetwork_cifar10();
 
-//			bs.resnet18_cifar10();
+			bs.resnet18_cifar10();
 //			bs.resnet18_mnist();
 //			bs.vgg16_cifar10();
 //			bs.alexNet_mnist();
 //			bs.alexNet_cifar10();
-			bs.cnnNetwork_vgg16_cifar10();
+//			bs.cnnNetwork_vgg16_cifar10();
 		} finally {
 			// TODO: handle finally clause
 			CUDAMemoryManager.free();

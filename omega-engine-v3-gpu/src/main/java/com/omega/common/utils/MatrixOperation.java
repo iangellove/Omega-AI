@@ -4021,6 +4021,10 @@ public class MatrixOperation {
 								
 								int maxW = 0;
 								
+								float maxval = -3.402823466e+38f;
+								
+								float meanVal = 0.0f;
+								
 								for(int m = 0;m<pHeight;m++) {
 									
 									for(int n = 0;n<pWidth;n++) {
@@ -4028,18 +4032,17 @@ public class MatrixOperation {
 										switch (poolingType) {
 										case MAX_POOLING:
 											
-											if(m == 0 && n == 0) {
-												result[index][c][i][j] = x[index][c][i * stride + m][j * stride + n];
-											}else if(result[index][c][i][j] <= x[index][c][i * stride + m][j * stride + n]) {
-												result[index][c][i][j] = x[index][c][i * stride + m][j * stride + n];
+											float val = x[index][c][i * stride + m][j * stride + n];
+											if(maxval <= val) {
 												maxH = m;
 												maxW = n;
+												maxval = val;
 											}
-
+											
 											break;
 										case MEAN_POOLING:
-											result[index][c][i][j] += x[index][c][i * stride + m][j * stride + n];
-											mask[index][c][maskIndex][m][n] = 1.0f / pWidth / pHeight;
+											meanVal += x[index][c][i * stride + m][j * stride + n];
+											mask[index][c][maskIndex][m][n] = 1.0f / (pWidth * pHeight);
 											break;
 										}
 										
@@ -4049,10 +4052,11 @@ public class MatrixOperation {
 								
 								switch (poolingType) {
 								case MAX_POOLING:
+									result[index][c][i][j] = maxval;
 									mask[index][c][maskIndex][maxH][maxW] = 1;
 									break;
 								case MEAN_POOLING:
-									result[index][c][i][j] /= pWidth * pHeight;
+									result[index][c][i][j] = meanVal / (pWidth * pHeight);
 									break;
 								}
 								
@@ -4255,7 +4259,7 @@ public class MatrixOperation {
 										
 										for(int n = 0;n<pWidth;n++) {
 											
-											diff[index][c][i * stride + m][j * stride + n] += delta[index][c][i][j] * mask[index][c][maskIndex][m][n];
+											diff[index][c][i * stride + m][j * stride + n] = delta[index][c][i][j] * mask[index][c][maskIndex][m][n];
 											
 										}
 										

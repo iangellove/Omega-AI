@@ -28,7 +28,6 @@ import jcuda.jcublas.JCublas2;
 import jcuda.jcublas.cublasHandle;
 import jcuda.jcublas.cublasStatus;
 import jcuda.runtime.JCuda;
-import jcuda.runtime.cudaError;
 import jcuda.runtime.cudaMemcpyKind;
 
 public class GPUOP {
@@ -501,7 +500,7 @@ public class GPUOP {
         return sb.toString();
     }
     
-    private static int checkResult(int result)
+    private static int checkCUBLASResult(int result)
     {
         if (result != cublasStatus.CUBLAS_STATUS_SUCCESS)
         {	

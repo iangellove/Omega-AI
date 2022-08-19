@@ -59,7 +59,7 @@ public class DWeightKernel {
 		this.out = out;
 		this.ih = C * kh * kw;
 		this.iw = oHeight * oWidth;
-//		System.out.println(ih + "*" + iw);
+
 //		long start1 = System.nanoTime();
 		
 		init();
@@ -93,12 +93,16 @@ public class DWeightKernel {
 		/**
 		 * 申请显存
 		 */
+		this.dx = CUDAMemoryManager.getDevice(C * H * W);
+		this.dy = CUDAMemoryManager.getDevice(ih * iw);
 		
-		this.dx = CUDAMemoryManager.getDevice(id + "_dwx", C * H * W);
-		this.dy = CUDAMemoryManager.getDevice(id + "_dwy", ih * iw);
-		
-        this.dA = CUDAMemoryManager.getPointer(id + "_dwA", ko * iw);
-        this.dC = CUDAMemoryManager.getPointer(id + "_dwC", ko * ih);
+        this.dA = CUDAMemoryManager.getPointer(ko * iw);
+        this.dC = CUDAMemoryManager.getPointer(ko * ih);
+//		this.dx = CUDAMemoryManager.getDevice(id + "_dwx", C * H * W);
+//		this.dy = CUDAMemoryManager.getDevice(id + "_dwy", ih * iw);
+//		
+//        this.dA = CUDAMemoryManager.getPointer(id + "_dwA", ko * iw);
+//        this.dC = CUDAMemoryManager.getPointer(id + "_dwC", ko * ih);
 		
         /**
          * 设置入参

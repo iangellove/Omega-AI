@@ -98,11 +98,16 @@ public class DXKernel {
 		/**
 		 * 申请显存
 		 */
-		this.dy = CUDAMemoryManager.getDevice(id + "_dxy", C * H * W);
+		this.dy = CUDAMemoryManager.getDevice(C * H * W);
 		
-        this.dA = CUDAMemoryManager.getPointer(id + "_dxA", ko * ih);
-        this.dB = CUDAMemoryManager.getPointer(id + "_dxB", ko * iw);
-        this.dC = CUDAMemoryManager.getPointer(id + "_dxC", ih * iw);
+        this.dA = CUDAMemoryManager.getPointer(ko * ih);
+        this.dB = CUDAMemoryManager.getPointer(ko * iw);
+        this.dC = CUDAMemoryManager.getPointer(ih * iw);
+//		this.dy = CUDAMemoryManager.getDevice(id + "_dxy", C * H * W);
+//		
+//        this.dA = CUDAMemoryManager.getPointer(id + "_dxA", ko * ih);
+//        this.dB = CUDAMemoryManager.getPointer(id + "_dxB", ko * iw);
+//        this.dC = CUDAMemoryManager.getPointer(id + "_dxC", ih * iw);
 		
         /**
          * 设置入参
