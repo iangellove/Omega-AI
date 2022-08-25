@@ -60,11 +60,8 @@ public class DWeightKernel {
 		this.ih = C * kh * kw;
 		this.iw = oHeight * oWidth;
 
-//		long start1 = System.nanoTime();
-		
 		init();
-		
-//        System.out.println((System.nanoTime() - start1) / 1e6 + "ms.1111");
+
 	}
 	
 	public void initFunction() {
@@ -98,12 +95,7 @@ public class DWeightKernel {
 		
         this.dA = CUDAMemoryManager.getPointer(ko * iw);
         this.dC = CUDAMemoryManager.getPointer(ko * ih);
-//		this.dx = CUDAMemoryManager.getDevice(id + "_dwx", C * H * W);
-//		this.dy = CUDAMemoryManager.getDevice(id + "_dwy", ih * iw);
-//		
-//        this.dA = CUDAMemoryManager.getPointer(id + "_dwA", ko * iw);
-//        this.dC = CUDAMemoryManager.getPointer(id + "_dwC", ko * ih);
-		
+
         /**
          * 设置入参
          * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int oh,int ow
@@ -171,6 +163,8 @@ public class DWeightKernel {
 		            0, null,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
 		        );
+	        
+	        JCudaDriver.cuCtxSynchronize();
 
 		} catch (Exception e) {
 			// TODO: handle exception

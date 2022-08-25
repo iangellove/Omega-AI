@@ -302,6 +302,26 @@ public class GPUOP {
             int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, alphaP, 
                 dB, ldb, dA, lda, betaP, dC, n);
             
+            cudaDeviceSynchronize();
+            
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+    
+    public void gpu_gemv(int m,int n,Pointer dA,Pointer dx, Pointer dy,int CUBLAS_OP_A,float alpha,float beta){
+    	
+    	try {
+    		
+            Pointer alphaP = Pointer.to(new float[]{ alpha });
+            Pointer betaP = Pointer.to(new float[]{ beta });
+            
+            int status = JCublas2.cublasSgemv(handle, CUBLAS_OP_A, n, m, alphaP, dA, n, dx, 1, betaP, dy, 1);
+            
+            cudaDeviceSynchronize();
+            
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

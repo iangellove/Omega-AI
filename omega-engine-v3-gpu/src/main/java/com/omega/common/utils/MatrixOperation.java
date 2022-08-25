@@ -1996,15 +1996,15 @@ public class MatrixOperation {
 				workers.add(new Task<Object>(index) {
 					@Override
 				    public Object call() throws Exception {
-				
+						float val = 0.0f;
 						for(int c = 0;c<x[0].length;c++) {
 							for(int h = 0;h<x[0][c].length;h++) {
 								for(int  n = 0;n<x.length;n++) {
-									mean[index] += x[n][c][h][index] * s;
+									val += x[n][c][h][index] * s;
 								}
 							}
 						}
-
+						mean[index] = val;
 						return null;
 					}
 				});
@@ -2018,15 +2018,81 @@ public class MatrixOperation {
 				workers.add(new Task<Object>(index) {
 					@Override
 				    public Object call() throws Exception {
-				
+						float val = 0.0f;
 						for(int n = 0;n<x.length;n++) {
 							for(int h = 0;h<x[n][index].length;h++) {
 								for(int  w = 0;w<x[n][index][h].length;w++) {
-									mean[index] += x[n][index][h][w] * s;
+									val += x[n][index][h][w] * s;
 								}
 							}
 						}
+						mean[index] = val;
+						return null;
+					}
+				});
+			}
+			
+		}
 
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+		
+	}
+	
+	/**
+	 * mean
+	 * @param x
+	 * @param type 0:fully,1:conv
+	 * @return
+	 */
+	public static void meanV2(float[][][][] x,float[][][][] y,float[] mean,int type){
+		
+		float scale = 1.0f / x.length;
+		
+		if(type != 0) {
+			scale = 1.0f / (x.length * x[0][0].length * x[0][0][0].length);
+		}
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		if(type == 0) {
+
+			for(int  w = 0;w<x[0][0][0].length;w++) {
+				final int index = w;
+				final float s = scale;
+				workers.add(new Task<Object>(index) {
+					@Override
+				    public Object call() throws Exception {
+						float val = 0.0f;
+						for(int c = 0;c<x[0].length;c++) {
+							for(int h = 0;h<x[0][c].length;h++) {
+								for(int  n = 0;n<x.length;n++) {
+									val += x[n][c][h][index] * y[n][c][h][index] * s;
+								}
+							}
+						}
+						mean[index] = val;
+						return null;
+					}
+				});
+			}
+			
+		}else {
+			
+			for(int  c = 0;c<x[0].length;c++) {
+				final int index = c;
+				final float s = scale;
+				workers.add(new Task<Object>(index) {
+					@Override
+				    public Object call() throws Exception {
+						float val = 0.0f;
+						for(int n = 0;n<x.length;n++) {
+							for(int h = 0;h<x[n][index].length;h++) {
+								for(int  w = 0;w<x[n][index][h].length;w++) {
+									val += x[n][index][h][w] * y[n][index][h][w] * s;
+								}
+							}
+						}
+						mean[index] = val;
 						return null;
 					}
 				});
@@ -2170,10 +2236,10 @@ public class MatrixOperation {
 	 */
 	public static void varV2(float[][][][] x, float[] mean, float[] var,int type){
 
-		float scale = 1.0f / x.length;
+		float scale = 1.0f / (x.length - 1);
 		
 		if(type != 0) {
-			scale = 1.0f / (x.length * x[0][0].length * x[0][0][0].length);
+			scale = 1.0f / ((x.length * x[0][0].length * x[0][0][0].length) - 1);
 		}
 		
 		Vector<Task<Object>> workers = new Vector<Task<Object>>();
@@ -2186,15 +2252,16 @@ public class MatrixOperation {
 				workers.add(new Task<Object>(index) {
 					@Override
 				    public Object call() throws Exception {
-				
+						float val = 0.0f;
 						for(int c = 0;c<x[0].length;c++) {
 							for(int h = 0;h<x[0][c].length;h++) {
 								for(int  n = 0;n<x.length;n++) {
-									var[index] += (x[n][c][h][index] - mean[index]) * (x[n][c][h][index] - mean[index]) * s;
+									val += Math.pow(x[n][c][h][index] - mean[index], 2);
+//									val += (x[n][c][h][index] - mean[index]) * (x[n][c][h][index] - mean[index]);
 								}
 							}
 						}
-
+						var[index] = val * s;
 						return null;
 					}
 				});
@@ -2208,15 +2275,15 @@ public class MatrixOperation {
 				workers.add(new Task<Object>(index) {
 					@Override
 				    public Object call() throws Exception {
-				
+						float val = 0.0f;
 						for(int n = 0;n<x.length;n++) {
 							for(int h = 0;h<x[n][index].length;h++) {
 								for(int  w = 0;w<x[n][index][h].length;w++) {
-									var[index] += (x[n][index][h][w] - mean[index]) * (x[n][index][h][w] - mean[index]) * s;
+									val += (x[n][index][h][w] - mean[index]) * (x[n][index][h][w] - mean[index]) * s;
 								}
 							}
 						}
-
+						var[index] = val;
 						return null;
 					}
 				});
