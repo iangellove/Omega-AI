@@ -934,7 +934,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -2555,9 +2555,9 @@ public class BusinessServiceImpl implements BusinessService {
 //			bs.resnet18_cifar10();
 //			bs.resnet18_mnist();
 //			bs.vgg16_cifar10();
-//			bs.alexNet_mnist();
+			bs.alexNet_mnist();
 //			bs.alexNet_cifar10();
-			bs.cnnNetwork_vgg16_cifar10();
+//			bs.cnnNetwork_vgg16_cifar10();
 		} finally {
 			// TODO: handle finally clause
 			CUDAMemoryManager.free();

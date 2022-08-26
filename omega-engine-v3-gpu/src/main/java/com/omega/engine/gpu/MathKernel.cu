@@ -2,7 +2,7 @@
 
 
 extern "C"
-__global__ void mean_cov(float* x,float* mean,int number,int channel,int height,int width,float scale)
+__global__ void mean_cov(float* x,float* mean,int number,int channel,int height,int width)
 {
     
     for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < channel; index += blockDim.x * gridDim.x) {
@@ -19,14 +19,14 @@ __global__ void mean_cov(float* x,float* mean,int number,int channel,int height,
 			}
 		}	
 		
-		mean[index] = val * scale;
+		mean[index] = val / (number *  height * width);
 	}
 
 }
 
 
 extern "C"
-__global__ void mean_full(float* x,float* mean,int number,int width,float scale)
+__global__ void mean_full(float* x,float* mean,int number,int width)
 {
     
     for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < width; index += blockDim.x * gridDim.x) {
@@ -39,13 +39,13 @@ __global__ void mean_full(float* x,float* mean,int number,int width,float scale)
 	
 		}	
 		
-		mean[index] = val * scale;
+		mean[index] = val / number;
 	}
 
 }
 
 extern "C"
-__global__ void var_cov(float* x,float* mean,float* var,int number,int channel,int height,int width,float scale)
+__global__ void var_cov(float* x,float* mean,float* var,int number,int channel,int height,int width)
 {
     
     for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < channel; index += blockDim.x * gridDim.x) {
@@ -60,19 +60,19 @@ __global__ void var_cov(float* x,float* mean,float* var,int number,int channel,i
 					
 					float x_val = x[n * channel * height * width + index * height * width + h * width + w];
 					
-					val += (x_val - mean_val) * (x_val - mean_val);
+					val += powf((x_val - mean_val), 2);
 	
 				}
 			}
 		}	
 		
-		var[index] = val * scale;
+		var[index] = val / (number *  height * width - 1);
 	}
 
 }
 
 extern "C"
-__global__ void var_full(float* x,float* mean,float* var,int number,int width,float scale)
+__global__ void var_full(float* x,float* mean,float* var,int number,int width)
 {
     
     for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < width; index += blockDim.x * gridDim.x) {
@@ -85,11 +85,11 @@ __global__ void var_full(float* x,float* mean,float* var,int number,int width,fl
 				
 			float x_val = x[n * width + index];
 				
-			val += (x_val - mean_val) * (x_val - mean_val);
+			val += powf((x_val - mean_val), 2);
 	
 		}	
 		
-		var[index] = val * scale;
+		var[index] = val / (number - 1);
 	}
 
 }
