@@ -2555,9 +2555,9 @@ public class BusinessServiceImpl implements BusinessService {
 //			bs.resnet18_cifar10();
 //			bs.resnet18_mnist();
 //			bs.vgg16_cifar10();
-			bs.alexNet_mnist();
+//			bs.alexNet_mnist();
 //			bs.alexNet_cifar10();
-//			bs.cnnNetwork_vgg16_cifar10();
+			bs.cnnNetwork_vgg16_cifar10();
 		} finally {
 			// TODO: handle finally clause
 			CUDAMemoryManager.free();

@@ -249,9 +249,8 @@ __global__ void normalize_kernel(int N, float *x, float *z, float *out, float *m
     int index = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if (index >= N) return;
     int f = (index/spatial)%filters;
-    float val = (x[index] - mean[f])/(sqrtf(variance[f] + 0.00001f));
-    z[index] = val;
-    out[index] = val * gama[f] + beta[f];
+    z[index] = (x[index] - mean[f])/(sqrtf(variance[f] + 0.00001f));
+    out[index] = z[index] * gama[f] + beta[f];
 }
 
 
@@ -266,13 +265,44 @@ __global__ void dgama_kernel(float *xhat, float *delta, int batch ,int c, int si
     for(b = 0; b < batch; ++b){
         for(i = 0; i < size; i += BLOCK){
             int index = p + i + size*(filter + c*b);
-            sum += (p+i < size) ? delta[index]*xhat[index] : 0;
+            sum += (p+i < size) ? delta[index] * xhat[index] : 0;
         }
     }
     part[p] = sum;
     __syncthreads();
     if (p == 0) {
+    	dgama[filter] = 0;
         for(i = 0; i < BLOCK; ++i) dgama[filter] += part[i];
+    }
+}
+
+
+extern "C"
+__global__ void dgama_kernel2(float *xhat, float *delta, int batch ,int filters, int spatial, float *dgama)
+{
+    const int threads = BLOCK;
+    __shared__ float local[threads];
+
+    int id = threadIdx.x;
+    local[id] = 0;
+
+    int filter = blockIdx.x;
+
+    int i, j;
+    for(j = 0; j < batch; ++j){
+        for(i = 0; i < spatial; i += threads){
+            int index = j*spatial*filters + filter*spatial + i + id;
+            local[id] += (i+id < spatial) ? delta[index] * xhat[index] : 0;
+        }
+    }
+
+    __syncthreads();
+
+    if(id == 0){
+        dgama[filter] = 0;
+        for(i = 0; i < threads; ++i){
+            dgama[filter] += local[i];
+        }
     }
 }
 
@@ -294,10 +324,74 @@ __global__ void dbeta_kernel(float *dbeta, float *delta, int batch, int c, int s
     part[p] = sum;
     __syncthreads();
     if (p == 0) {
+    	dbeta[filter] = 0;
         for(i = 0; i < BLOCK; ++i) dbeta[filter] += part[i];
     }
 }
 
+extern "C"
+__global__ void dgama_dbeta_kernel(float *xhat, float *delta, int batch ,int c, int size, float *dgama,float *dbeta)
+{
+    __shared__ float part[BLOCK];
+    __shared__ float local[BLOCK];
+    int i,b;
+    int filter = blockIdx.x;
+    int p = threadIdx.x;
+    float sum = 0;
+    float sum_b = 0;
+    for(b = 0; b < batch; ++b){
+        for(i = 0; i < size; i += BLOCK){
+            int index = p + i + size*(filter + c*b);
+            float delta_val = delta[index];
+            sum += (p+i < size) ? delta_val * xhat[index] : 0;
+            sum_b += (p+i < size) ? delta_val : 0;
+        }
+    }
+    part[p] = sum;
+    local[p] = sum_b;
+    __syncthreads();
+    if (p == 0) {
+    	float dg = 0;
+    	float db = 0;
+        for(i = 0; i < BLOCK; ++i) {
+        	dg += part[i];
+        	db += local[i];
+        }
+        dgama[filter] = dg;
+        dbeta[filter] = db;
+    }
+}
+
+extern "C"
+__global__ void computeDelta_full(float* delta,float* deltaGama,float* deltaBeta,float* z,int number,int channel,int height,int width)
+{
+    
+    for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < channel; index += blockDim.x * gridDim.x) {
+
+		float deltaGama_val = 0;
+		
+		float deltaBeta_val = 0;
+		
+		for(int n = 0;n<number;n++) {	
+			for(int h = 0;h<height;h++) {
+				for(int w = 0;w<width;w++) {
+					
+					float delta_val = delta[n * channel * height * width + index * height * width + h * width + w];
+					
+					deltaGama_val += delta_val * z[n * channel * height * width + index * height * width + h * width + w];
+					
+					deltaBeta_val += delta_val;
+					
+				}
+			}
+		}	
+		
+		deltaGama[index] = deltaGama_val;
+		deltaBeta[index] = deltaBeta_val;
+		
+	}
+
+}
 
 extern "C"
 __global__ void dxhat_kernel2(int N, float *delta, float *dz, float *gama, int filters, int spatial)
@@ -320,9 +414,26 @@ __global__ void dxhat_kernel(float *dz, float *gama, int c, int size)
     if(offset < size) dz[(batch*c+filter)*size + offset] *= gama[filter];
 }
 
+extern "C"
+__global__ void full_mean_delta_kernel(float *dxhat, float *variance, int batch, int filters, float *mean_delta)
+{
+    
+    for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < filters; index += blockDim.x * gridDim.x) {
+			
+		float val = 0;
+		
+		for(int n = 0;n<batch;n++) {	
+			val += dxhat[n * filters + index];
+		}	
+		
+		mean_delta[index] = val * (-1.f/sqrtf(variance[index] + .00001f));
+	}
+
+}
+
 //dmean = (∑ dxhat * -1 / (var + eta)^1/2)
 extern "C"
-__global__ void fast_mean_delta_kernel(float *delta, float *variance, int batch, int filters, int spatial, float *mean_delta)
+__global__ void fast_mean_delta_kernel(float *dxhat, float *variance, int batch, int filters, int spatial, float *mean_delta)
 {
     const int threads = BLOCK;
     __shared__ float local[threads];
@@ -336,7 +447,7 @@ __global__ void fast_mean_delta_kernel(float *delta, float *variance, int batch,
     for(j = 0; j < batch; ++j){
         for(i = 0; i < spatial; i += threads){
             int index = j*spatial*filters + filter*spatial + i + id;
-            local[id] += (i+id < spatial) ? delta[index] : 0;
+            local[id] += (i+id < spatial) ? dxhat[index] : 0;
         }
     }
 
@@ -351,9 +462,26 @@ __global__ void fast_mean_delta_kernel(float *delta, float *variance, int batch,
     }
 }
 
+extern "C"
+__global__ void full_var_delta_kernel(float *x, float *dxhat, float *mean, float *variance, int batch, int filters, float *variance_delta)
+{
+    
+    for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < filters; index += blockDim.x * gridDim.x) {
+			
+		float val = 0;
+		
+		for(int n = 0;n<batch;n++) {	
+			val += dxhat[n * filters + index] * (x[n * filters + index] - mean[index]);
+		}	
+		
+		variance_delta[index] = val * -.5f * powf(variance[index] + .00001f, (float)(-3.f/2.f));
+	}
+
+}
+
 //dvar = ∑ dxhat * (xi - mean) * -1/2 * (var + eta)^-3/2
 extern "C"
-__global__ void  fast_variance_delta_kernel(float *x, float *delta, float *mean, float *variance, int batch, int filters, int spatial, float *variance_delta)
+__global__ void fast_variance_delta_kernel(float *x, float *dxhat, float *mean, float *variance, int batch, int filters, int spatial, float *variance_delta)
 {
     const int threads = BLOCK;
     __shared__ float local[threads];
@@ -368,7 +496,7 @@ __global__ void  fast_variance_delta_kernel(float *x, float *delta, float *mean,
         for(i = 0; i < spatial; i += threads){
             int index = j*spatial*filters + filter*spatial + i + id;
 
-            local[id] += (i+id < spatial) ? delta[index]*(x[index] - mean[filter]) : 0;
+            local[id] += (i+id < spatial) ? dxhat[index]*(x[index] - mean[filter]) : 0;
         }
     }
 
@@ -392,6 +520,27 @@ __global__ void dx_kernel(int N, float *x, float *mean, float *variance, float *
     if (index >= N) return;
     int f = (index/spatial)%filters;
     
-    diff[index] = diff[index] * 1.f/(sqrtf(variance[f] + .00001f)) + variance_delta[f] * 2.f * (x[index] - mean[f]) / (spatial * batch) + mean_delta[f]/(spatial * batch);
+    diff[index] = diff[index] * 1.f/(sqrtf(variance[f] + .00001f)) + variance_delta[f] * 2.f * (x[index] - mean[f]) / (spatial * batch) + mean_delta[f] / (spatial * batch);
 }
 
+
+
+extern "C"
+__global__ void dx_kernel_full(float *x, float *mean, float *variance, float *mean_delta, float *variance_delta, int batch, int filters, float *diff)
+{
+    
+    for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < filters; index += blockDim.x * gridDim.x) {
+		
+		float dvar_val = variance_delta[index];
+		float dmu_val = mean_delta[index];
+		float std_val = (sqrtf(variance[index] + .00001f));
+		float mean_val = mean[index];
+		
+		for(int n = 0;n<batch;n++) {	
+			int xIndex = n * filters + index;
+			diff[xIndex] = diff[xIndex] / std_val + 2.0 * dvar_val * (x[xIndex] - mean_val) / batch + dmu_val / batch;
+		}	
+		
+	}
+
+}

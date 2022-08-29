@@ -6,6 +6,7 @@ import java.util.Vector;
 
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
+import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
@@ -21,6 +22,8 @@ import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 
 public class BNKernel {
+	
+	private String id;
 	
 	private float[] x;
 	private float[] gama;
@@ -52,6 +55,8 @@ public class BNKernel {
 	
 	private CUfunction computeDiff_function;
 	private CUfunction computeDelta_function;
+	private CUfunction computeDelta_full_function;
+	
 	private CUfunction meanDzSum_function;
 	
 	/**
@@ -60,9 +65,12 @@ public class BNKernel {
 	private CUfunction dgama_function;
 	private CUfunction dbeta_function;
 	private CUfunction dxhat_function;
+	private CUfunction full_dmean_function;
+	private CUfunction full_dvar_function;
 	private CUfunction fast_dmean_function;
 	private CUfunction fast_dvar_function;
 	private CUfunction dx_function;
+	private CUfunction dx_full_function;
 	
 //	private CUfunction computeDgama_function;
 //	private CUfunction meanDelta_function;
@@ -101,6 +109,8 @@ public class BNKernel {
 	 */
 	private Pointer meanParameters;
 	private Pointer varParameters;
+	private Pointer fullDmeanParameters;
+	private Pointer fullDvarParameters;
 	private Pointer fastMeanParameters;
 	private Pointer fastVarParameters;
 	private Pointer normalizeParameters;
@@ -116,10 +126,14 @@ public class BNKernel {
 	 */
 	private Pointer dgamaParameters;
 	private Pointer dbetaParameters;
+	
+	private Pointer computeDelta_full_Parameters;
+	
 	private Pointer dxhatParameters;
 	private Pointer fastDmeanParameters;
 	private Pointer fastDvarParameters;
 	private Pointer dxParameters;
+	private Pointer dx_fullParameters;
 	
 	
 	
@@ -127,7 +141,8 @@ public class BNKernel {
 	private float eta = 0.00001f;
 
 
-	public BNKernel(float[] out,float[] diff,float[] dgama,float[] dbeta,int N,int C,int H,int W) {
+	public BNKernel(String id,float[] out,float[] diff,float[] dgama,float[] dbeta,int N,int C,int H,int W) {
+		this.id = id;
 		this.N = N;
 		this.C = C;
 		this.H = H;
@@ -196,6 +211,10 @@ public class BNKernel {
 				computeDelta_function = CUDAModules.getFunctionByModule("H://BNKernel.cu", "computeDelta");
 			}
 			
+			if(computeDelta_full_function == null) {
+				computeDelta_full_function = CUDAModules.getFunctionByModule("H://BNKernel.cu", "computeDelta_full");
+			}
+			
 			if(meanDzSum_function == null) {
 				meanDzSum_function = CUDAModules.getFunctionByModule("H://BNKernel.cu", "meanDzSum");
 			}
@@ -219,8 +238,16 @@ public class BNKernel {
 				dxhat_function = CUDAModules.getFunctionByModule("H://BNKernel.cu", "dxhat_kernel2");
 			}
 			
+			if(full_dmean_function == null) {
+				full_dmean_function = CUDAModules.getFunctionByModule("H://BNKernel.cu", "full_mean_delta_kernel");
+			}
+			
 			if(fast_dmean_function == null) {
 				fast_dmean_function = CUDAModules.getFunctionByModule("H://BNKernel.cu", "fast_mean_delta_kernel");
+			}
+			
+			if(full_dvar_function == null) {
+				full_dvar_function = CUDAModules.getFunctionByModule("H://BNKernel.cu", "full_var_delta_kernel");
 			}
 			
 			if(fast_dvar_function == null) {
@@ -229,6 +256,10 @@ public class BNKernel {
 			
 			if(dx_function == null) {
 				dx_function = CUDAModules.getFunctionByModule("H://BNKernel.cu", "dx_kernel");
+			}
+			
+			if(dx_full_function == null) {
+				dx_full_function = CUDAModules.getFunctionByModule("H://BNKernel.cu", "dx_kernel_full");
 			}
 			
 			
@@ -357,8 +388,35 @@ public class BNKernel {
             );
 		
 		/**
+		 * 设置入参
+		 * float* delta,float* deltaGama,float* deltaBeta,float* z,int number,int channel,int height,int width
+		 */
+		computeDelta_full_Parameters = Pointer.to(
+                Pointer.to(d_delta),
+                Pointer.to(d_dgama),
+                Pointer.to(d_dbeta),
+                Pointer.to(d_z),
+                Pointer.to(new int[] {N}),
+                Pointer.to(new int[] {C}),
+                Pointer.to(new int[] {H}),
+                Pointer.to(new int[] {W})
+            );
+		
+		/**
+		 * 设置入参
+		 * float *dxhat, float *variance, int batch, int filters, float *mean_delta
+		 */
+		fullDmeanParameters =Pointer.to(
+                Pointer.to(d_diff),
+                Pointer.to(d_var),
+                Pointer.to(new int[] {N}),
+                Pointer.to(new int[] {C}),
+                Pointer.to(d_dmean)
+            ); 
+		
+		/**
          * 设置入参
-         * float *delta, float *variance, int batch, int filters, int spatial, float *mean_delta
+         * float *dxhat, float *variance, int batch, int filters, int spatial, float *mean_delta
          */
 		fastDmeanParameters = Pointer.to(
                 Pointer.to(d_diff),
@@ -370,8 +428,22 @@ public class BNKernel {
             );
 		
 		/**
+		 * 设置入参
+		 * float *x, float *dxhat, float *mean, float *variance, int batch, int filters, float *variance_delta
+		 */
+		fullDvarParameters = Pointer.to(
+                Pointer.to(d_x),
+                Pointer.to(d_diff),
+                Pointer.to(d_mean),
+                Pointer.to(d_var),
+                Pointer.to(new int[] {N}),
+                Pointer.to(new int[] {C}),
+                Pointer.to(d_dvar)
+            );
+		
+		/**
          * 设置入参
-         * float *x, float *delta, float *mean, float *variance, int batch, int filters, int spatial, float *variance_delta
+         * float *x, float *dxhat, float *mean, float *variance, int batch, int filters, int spatial, float *variance_delta
          */
 		fastDvarParameters = Pointer.to(
                 Pointer.to(d_x),
@@ -480,6 +552,8 @@ public class BNKernel {
 	
 	public void forward(RunModel RUN_MODEL) {
 		
+//		long start = System.nanoTime();
+		
 		if(RUN_MODEL == RunModel.TRAIN) {
 			
 			/**
@@ -488,44 +562,33 @@ public class BNKernel {
 			 * var = 1/m ∑(x - mean)^2
 			 * std = (var + eta)^1/2
 			 */
-			
-//			long startMean = System.nanoTime();
-			
-			fast_mean();
-			
-//			System.out.println("mean:"+(System.nanoTime() - startMean)/1e6+"ms.");
-			
-//			long start_var = System.nanoTime();
-			
-			fast_var();
-			
-//			System.out.println("var:"+(System.nanoTime() - start_var)/1e6+"ms.");
-			
-//			long start_std = System.nanoTime();
-//			
-//			std();
-//			
-//			System.out.println("std:"+(System.nanoTime() - start_std)/1e6+"ms.");
-			
-//			long start_mwa = System.nanoTime();
+			if(H * W == 1){
+				
+				mean();
+
+				var();
+
+			}else {
+
+				fast_mean();
+
+				fast_var();
+
+			}
 			
 			/**
 			 * 移动加权平均法计算均值与方差
 			 */
 			mwa();
 			
-//			System.out.println("mwa:"+(System.nanoTime() - start_mwa)/1e6+"ms.");
-			
-//			long start_culOutput = System.nanoTime();
-
 			normalize(d_mean, d_var);
-
-//			System.out.println("normalize:"+(System.nanoTime() - start_culOutput)/1e6+"ms.");
 
 		}else {
 			normalize(d_runingMean, d_runingVar);
 		}
 
+//		System.out.println((System.nanoTime() - start)/1e6+"ms.forward");
+		
 	}
 	
 	public void mean() {
@@ -539,7 +602,7 @@ public class BNKernel {
 		            meanParameters, null // Kernel- and extra parameters
 		        );
 	        
-	        //	        JCudaDriver.cuCtxSynchronize();
+	        JCudaDriver.cuCtxSynchronize();
 	        
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -559,7 +622,7 @@ public class BNKernel {
 		            varParameters, null // Kernel- and extra parameters
 		        );
 	        
-	        //	        JCudaDriver.cuCtxSynchronize();
+	        JCudaDriver.cuCtxSynchronize();
 	        
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -579,7 +642,7 @@ public class BNKernel {
 		            fastMeanParameters, null // Kernel- and extra parameters
 		        );
 	        
-//	        JCudaDriver.cuCtxSynchronize();
+	        JCudaDriver.cuCtxSynchronize();
 	        
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -599,7 +662,7 @@ public class BNKernel {
 		            fastVarParameters, null // Kernel- and extra parameters
 		        );
 	        
-//	        JCudaDriver.cuCtxSynchronize();
+	        JCudaDriver.cuCtxSynchronize();
 	        
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -656,7 +719,7 @@ public class BNKernel {
 		            mwaParameters, null // Kernel- and extra parameters
 		        );
 	        
-	        checkCUDA(JCudaDriver.cuCtxSynchronize());
+	        JCudaDriver.cuCtxSynchronize();
 
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -666,13 +729,45 @@ public class BNKernel {
 	}
 	
 	public void backward() {
+		
+//		long start = System.nanoTime();
+		
+		if(H * W == 1){
+			computeDelta_full();
+		}else {
+			computeDgama();
+			computeDbeta();
+		}
 
-		computeDgama();
-		computeDbeta();
+//		System.out.println((System.nanoTime() - start) / 1e6 + "ms.1");
+		
+//		long start2 = System.nanoTime();
+		
 		computeDxhat();
-		computeDmean();
-		computeDvar();
-		computeDx();
+		
+		if(H * W == 1){
+			computeFullDmean();
+			computeFullDvar();
+		}else {
+			computeDmean();
+			computeDvar();
+		}
+		
+//		System.out.println((System.nanoTime() - start2) / 1e6 + "ms.2");
+		
+//		long start3 = System.nanoTime();
+		
+		if(H * W == 1) {
+			computeDx_full();
+		}else {
+			computeDx();
+		}
+		
+//		System.out.println((System.nanoTime() - start3) / 1e6 + "ms.3");
+//		
+//		System.out.println("===========>"+id);
+		
+//		System.out.println((System.nanoTime() - start)/1e6+"ms.backward");
 		
 	}
 
@@ -702,6 +797,23 @@ public class BNKernel {
 		
 	}
 	
+	private void computeDelta_full() {
+		
+		cuLaunchKernel(computeDelta_full_function,
+	            this.CAFFE_GET_BLOCKS(C),  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            computeDelta_full_Parameters, null // Kernel- and extra parameters
+	        );
+		
+		JCudaDriver.cuCtxSynchronize();
+		
+		JCudaDriver.cuMemcpyDtoH(Pointer.to(dgama), d_dgama, dgama.length * Sizeof.FLOAT);
+		
+		JCudaDriver.cuMemcpyDtoH(Pointer.to(dbeta), d_dbeta, dbeta.length * Sizeof.FLOAT);
+		
+	}
+	
 	private void computeDxhat() {
 		
 		
@@ -725,7 +837,7 @@ public class BNKernel {
 	            dxhatParameters, null // Kernel- and extra parameters
 	        );
 		
-//		JCudaDriver.cuCtxSynchronize();
+		JCudaDriver.cuCtxSynchronize();
 		
 	}
 	
@@ -738,7 +850,20 @@ public class BNKernel {
 	            fastDmeanParameters, null // Kernel- and extra parameters
 	        );
 		
-//		JCudaDriver.cuCtxSynchronize();
+		JCudaDriver.cuCtxSynchronize();
+		
+	}
+	
+	private void computeFullDmean() {
+		
+		cuLaunchKernel(full_dmean_function,
+				this.CAFFE_GET_BLOCKS(C),  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            fullDmeanParameters, null // Kernel- and extra parameters
+	        );
+		
+		JCudaDriver.cuCtxSynchronize();
 		
 	}
 
@@ -751,7 +876,20 @@ public class BNKernel {
 	            fastDvarParameters, null // Kernel- and extra parameters
 	        );
 		
-//		JCudaDriver.cuCtxSynchronize();
+		JCudaDriver.cuCtxSynchronize();
+		
+	}
+	
+	private void computeFullDvar() {
+		
+		cuLaunchKernel(full_dvar_function,
+				this.CAFFE_GET_BLOCKS(C),  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            fullDvarParameters, null // Kernel- and extra parameters
+	        );
+		
+		JCudaDriver.cuCtxSynchronize();
 		
 	}
 	
@@ -785,6 +923,33 @@ public class BNKernel {
 		
 	}
 	
+	private void computeDx_full() {
+		
+		/**
+         * 设置入参
+         * int N, float *x, float *mean, float *variance, float *mean_delta, float *variance_delta, int batch, int filters, int spatial, float *diff
+         */
+		dx_fullParameters = Pointer.to(
+                Pointer.to(d_x),
+                Pointer.to(d_mean),
+                Pointer.to(d_var),
+                Pointer.to(d_dmean),
+                Pointer.to(d_dvar),
+                Pointer.to(new int[] {N}),
+                Pointer.to(new int[] {C}),
+                Pointer.to(d_diff)
+            );
+		
+		cuLaunchKernel(dx_full_function,
+	            this.CAFFE_GET_BLOCKS(C),  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            dx_fullParameters, null // Kernel- and extra parameters
+	        );
+		
+		JCudaDriver.cuMemcpyDtoH(Pointer.to(diff), d_diff, diff.length * Sizeof.FLOAT);
+		
+	}
 	
 	public void free() {
 		 JCuda.cudaFree(d_x);
@@ -832,10 +997,10 @@ public class BNKernel {
 	
 	
     public static void main(String args[]){	
-    	int N = 2;
-    	int C = 3;
-    	int H = 8;
-    	int W = 8;
+    	int N = 128;
+    	int C = 4096;
+    	int H = 1;
+    	int W = 1;
     	
     	float[] x = RandomUtils.gaussianRandom(N * C * H * W, 0.01f);
     	
@@ -859,9 +1024,9 @@ public class BNKernel {
     	
     	float[][][][] diff_cpu = new float[N][C][H][W];
     	
-    	BNKernel bn = new BNKernel(out, diff, dgama, dbeta, N, C, H, W);
+    	BNKernel bn = new BNKernel("test",out, diff, dgama, dbeta, N, C, H, W);
     	
-    	for(int i = 0;i<2;i++) {
+    	for(int i = 0;i<10;i++) {
 
         	long start = System.nanoTime();
         	
@@ -875,33 +1040,33 @@ public class BNKernel {
         	
         	bn.backward();
         	
-        	System.out.println((System.nanoTime() - start) / 1e6+"ms.");
+        	System.out.println((System.nanoTime() - start) / 1e6+"ms.count");
     	}
     	
     	bn.foward_cpu(x_cpu, out_cpu, x_cpu, diff_cpu);
     	
 //    	System.out.println(JsonUtils.toJson(x));
     	
-    	System.out.println(JsonUtils.toJson(bn.getOut()));
+//    	System.out.println(JsonUtils.toJson(bn.getOut()));
+//    	
+//    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(out_cpu)));
     	
-    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(out_cpu)));
-
-    	float[] mean = new float[C];
-    	float[] var = new float[C];
+    	System.out.println("out error:"+CheckArrayUtils.oneCheck(MatrixUtils.transform(out_cpu), bn.getOut()));
+    	
+//    	float[] mean = new float[C];
+//    	float[] var = new float[C];
 //    	float[] z = new float[N * C * H *W];
     	
-    	bn.showDM("var_gpu",bn.d_var, var);
-    	bn.showDM("dmean_gpu",bn.d_dmean, mean);
+//    	bn.showDM("var_gpu",bn.d_var, var);
+//    	bn.showDM("dmean_gpu",bn.d_dmean, mean);
 //    	bn.showDM(bn.d_out, z);
 //    	bn.showDM(bn.d_dmu, mean);
     	
+//    	System.out.println(JsonUtils.toJson(bn.getDiff()));
+//    	
+//    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(diff_cpu)));
     	
-//    	System.out.println("dgama:"+JsonUtils.toJson(bn.getDgama()));
-//    	System.out.println("dbeta:"+JsonUtils.toJson(bn.getDbeta()));
-    	
-    	System.out.println(JsonUtils.toJson(bn.getDiff()));
-    	
-    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(diff_cpu)));
+    	System.out.println("diff error:"+CheckArrayUtils.oneCheck(MatrixUtils.transform(diff_cpu), bn.getDiff()));
     	
 //    	System.out.println(JsonUtils.toJson(bn.getDiff()));
     	
@@ -954,8 +1119,11 @@ public class BNKernel {
 		 */
 		meanDzSum_cpu(dvar, mean, var, dmu, x, diff);
 
-//		System.out.println("dvar:"+JsonUtils.toJson(dvar));
-//		System.out.println("dmu:"+JsonUtils.toJson(dmu));
+//		System.out.println("dgama:"+JsonUtils.toJson(dgama));
+//		System.out.println("dbeta:"+JsonUtils.toJson(dbeta));
+		
+		System.out.println("dgama error:"+CheckArrayUtils.oneCheck(dgama, this.dgama));
+		System.out.println("dbeta error:"+CheckArrayUtils.oneCheck(dbeta, this.dbeta));
 		
 		//float[][][][] diff,float[][][][] x,float[] mean,float[] dmu,float[] std,float[] dvar
 		computeDiff_cpu(diff, x, mean, var, dmu, dvar);
@@ -1010,8 +1178,8 @@ public class BNKernel {
 //			dmu[c] = dmu_val + dmu2_val * dvar[c];
 			dmu[c] = dmu_val;
 		}
-    	System.out.println("var_cpu:"+JsonUtils.toJson(var));
-    	System.out.println("dmean_cpu:"+JsonUtils.toJson(dmu));
+//    	System.out.println("var_cpu:"+JsonUtils.toJson(var));
+//    	System.out.println("dmean_cpu:"+JsonUtils.toJson(dmu));
     	
     }
     

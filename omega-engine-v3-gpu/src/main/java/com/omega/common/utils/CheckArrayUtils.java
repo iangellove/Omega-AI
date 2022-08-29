@@ -55,4 +55,18 @@ public class CheckArrayUtils {
 		return error;
 	}
 	
+	public static float oneCheck(float[] x,float[] y) {
+		float error = 0.0f;
+		int index = 0;
+		for(int i = 0;i<x.length;i++) {
+			float val = Math.abs((x[i] - y[i]));
+			if(error <= val) {
+				error = val;
+				index = i;
+			}
+		}
+		System.out.println(x[index]+":"+y[index]);
+		return error;
+	}
+	
 }
