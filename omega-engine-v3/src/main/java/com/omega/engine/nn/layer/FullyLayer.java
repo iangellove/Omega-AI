@@ -138,7 +138,7 @@ public class FullyLayer extends Layer{
 			
 			for(int n = 0;n<this.number;n++) {
 				for(int ow = 0;ow<this.oWidth;ow++) {
-					deltaB[ow] += delta.maxtir[index][0][0][ow] / number;
+					deltaB[ow] += delta.maxtir[n][0][0][ow] / number;
 				}
 			}
 		

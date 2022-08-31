@@ -51,6 +51,7 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+		
 		for(int n = 0;n<this.number;n++) {
 			float max = MatrixOperation.max(this.input.maxtir[n][0][0]);
 			float[] temp = MatrixOperation.subtraction(this.input.maxtir[n][0][0], max);

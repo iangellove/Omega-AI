@@ -56,7 +56,7 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		System.out.println("train_data:"+JsonUtils.toJson(trainData));
 	
-		BPNetwork netWork = new BPNetwork(new CrossEntropyLoss());
+		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss());
 		
 		InputLayer inputLayer = new InputLayer(1,1,4);
 		
@@ -86,7 +86,7 @@ public class BusinessServiceImpl implements BusinessService {
 
 		try {
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 100000, 0.00001f, 10, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.00001f, 10, LearnRateUpdate.NONE, false);
 		
 //		    netWork.GRADIENT_CHECK = true;
 		
@@ -2542,7 +2542,7 @@ public class BusinessServiceImpl implements BusinessService {
 	public static void main(String[] args) {
 		BusinessServiceImpl bs = new BusinessServiceImpl();
 //		bs.showImage();
-//		bs.bpNetwork_iris();
+		bs.bpNetwork_iris();
 //		bs.bpNetwork_mnist();
 //		bs.cnnNetwork_mnist_demo();
 //		bs.cnnNetwork_mnist();
@@ -2553,7 +2553,7 @@ public class BusinessServiceImpl implements BusinessService {
 //		bs.vgg16_cifar10();  //没有添加bn层
 //		bs.alexNet_mnist();
 //		bs.alexNet_cifar10();
-		bs.cnnNetwork_vgg16_cifar10();
+//		bs.cnnNetwork_vgg16_cifar10();
 	}
 
 }
