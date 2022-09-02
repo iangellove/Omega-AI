@@ -870,6 +870,25 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
+	public static void multiplication_self(float[] x,float b) {
+		for(int i = 0;i<x.length;i++) {
+			x[i] = x[i] * b;
+		}
+	}
+	
+	/**
+	 * 
+	 * @Title: multiplication
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static float[][] multiplication(float[][] x,float b) {
 		if(x == null) {
 			new RuntimeException("matrix is null.");
@@ -1231,6 +1250,27 @@ public class MatrixOperation {
 			temp[i] = x[i] / b;
 		}
 		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: division
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static void division_self(float[] x,float b) {
+		
+		for(int i = 0;i<x.length;i++) {
+			x[i] = x[i] / b;
+		}
+
 	}
 	
 	/**

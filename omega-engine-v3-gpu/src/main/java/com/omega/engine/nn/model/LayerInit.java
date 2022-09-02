@@ -2,6 +2,7 @@ package com.omega.engine.nn.model;
 
 import java.io.Serializable;
 
+import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.Layer;
 
 /**
@@ -34,9 +35,9 @@ public class LayerInit implements Serializable{
 	
 	private int oWidth = 0;
 	
-	private float[][] weight;
+	private Tensor weight;
 	
-	private float[] bias;
+	private Tensor bias;
 	
 	public LayerInit(Layer layer) {
 		this.index = layer.index;
@@ -126,19 +127,19 @@ public class LayerInit implements Serializable{
 		this.oWidth = oWidth;
 	}
 
-	public float[][] getWeight() {
+	public Tensor getWeight() {
 		return weight;
 	}
 
-	public void setWeight(float[][] weight) {
+	public void setWeight(Tensor weight) {
 		this.weight = weight;
 	}
 
-	public float[] getBias() {
+	public Tensor getBias() {
 		return bias;
 	}
 
-	public void setBias(float[] bias) {
+	public void setBias(Tensor bias) {
 		this.bias = bias;
 	}
 

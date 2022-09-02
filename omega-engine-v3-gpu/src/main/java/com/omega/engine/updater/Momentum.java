@@ -28,7 +28,7 @@ public class Momentum extends Updater {
 		 * init
 		 */
 		if(this.vdw == null) {
-			this.vdw = MatrixUtils.zero(layer.width, layer.oWidth);
+			this.vdw = MatrixUtils.zero(layer.width * layer.oWidth);
 			if(layer.hasBias) {
 				this.vdb = MatrixUtils.zero(layer.oWidth);
 			}
@@ -37,26 +37,26 @@ public class Momentum extends Updater {
 		/**
 		 * Vdw = beta * Vdwi-1 - learning_rate * dwi
 		 */
-		this.vdw = MomentumUtils.momentum(layer.deltaW, this.vdw, layer.learnRate);
+		this.vdw = MomentumUtils.momentum(layer.diffW.data, this.vdw, layer.learnRate);
 		
 		if(layer.hasBias) {
 			/**
 			 * Vdb = beta * Vdbi-1 - learning_rate * dbi
 			 */
-			this.vdb = MomentumUtils.momentum(layer.deltaB, this.vdb, layer.learnRate);
+			this.vdb = MomentumUtils.momentum(layer.diffB.data, this.vdb, layer.learnRate);
 		}
 
 		/**
 		 * W = W + vdw
 		 */
-		layer.weight = MatrixOperation.add(layer.weight, this.vdw);
+		layer.weight.data = MatrixOperation.add(layer.weight.data, this.vdw);
 		
 		if(layer.hasBias) {
 			
 			/**
 			 * b = b + Vdb
 			 */
-			layer.bias = MatrixOperation.add(layer.bias, this.vdb);	
+			layer.bias.data = MatrixOperation.add(layer.bias.data, this.vdb);	
 		}
 		
 	}
@@ -76,7 +76,7 @@ public class Momentum extends Updater {
 		 */
 		if(this.vdmw == null) {
 			
-			this.vdmw = MatrixUtils.zero(conv.kernelNum, conv.channel, conv.kHeight, conv.kWidth);
+			this.vdmw = MatrixUtils.zero(conv.kernelNum * conv.channel * conv.kHeight * conv.kWidth);
 
 			if(layer.hasBias) {
 				this.vdmb = MatrixUtils.zero(conv.kernelNum);
@@ -87,26 +87,26 @@ public class Momentum extends Updater {
 		/**
 		 * Vdw = beta * Vdwi-1 - learning_rate * dwi
 		 */
-		this.vdmw = MomentumUtils.momentum(conv.deltaW, this.vdmw, conv.learnRate);
+		this.vdmw = MomentumUtils.momentum(conv.diffW.data, this.vdmw, conv.learnRate);
 		
 		if(layer.hasBias) {
 			/**
 			 * Vdb = beta * Vdbi-1 - learning_rate * dbi
 			 */
-			this.vdmb = MomentumUtils.momentum(conv.deltaB, this.vdmb, conv.learnRate);
+			this.vdmb = MomentumUtils.momentum(conv.diffB.data, this.vdmb, conv.learnRate);
 		}
 
 		
 		/**
 		 * W = W + vdw
 		 */
-		conv.kernel = MatrixOperation.add(conv.kernel, this.vdmw);
+		conv.weight.data = MatrixOperation.add(conv.weight.data, this.vdmw);
 		
 		if(layer.hasBias) {
 			/**
 			 * b = b + Vdb
 			 */
-			conv.bias = MatrixOperation.add(conv.bias, this.vdmb);
+			conv.bias.data = MatrixOperation.add(conv.bias.data, this.vdmb);
 		}
 		
 	}

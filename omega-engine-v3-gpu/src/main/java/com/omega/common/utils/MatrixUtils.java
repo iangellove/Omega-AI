@@ -446,6 +446,30 @@ public class MatrixUtils {
 	
 	/**
 	 * 
+	 * @Title: val for matrix
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static float[] val(int n, float p,float val) {
+		float[] tmp = new float[n];
+		
+		for(int c = 0;c<n;c++) {
+			if(RandomUtils.getInstance().nextFloat() > p) {
+				tmp[c] = val;
+			}
+		}
+		
+		return tmp;
+	}
+	
+	/**
+	 * 
 	 * @Title: zero
 	 *
 	 * @param size

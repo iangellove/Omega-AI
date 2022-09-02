@@ -1,9 +1,8 @@
 package com.omega.engine.nn.layer;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.nn.network.RunModel;
 
 /**
@@ -15,7 +14,7 @@ public class DropoutLayer extends Layer {
 	
 	private float probability = 0.5f;
 	
-	private float[][][][] mask;
+	private float[] mask;
 	
 	public Layer preLayer;
 	
@@ -36,7 +35,7 @@ public class DropoutLayer extends Layer {
 			this.oWidth = this.width;
 		}
 		this.number = this.network.number;
-		this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
+		this.output = new Tensor(number, oChannel, oHeight, oWidth);
 		initParam();
 	}
 
@@ -48,7 +47,7 @@ public class DropoutLayer extends Layer {
 		 * 训练
 		 */
 		if(this.network.RUN_MODEL == RunModel.TRAIN) {
-			this.mask = MatrixUtils.val(this.number, this.oChannel, this.oHeight, this.oWidth, probability, 1.0f - probability);
+			this.mask = MatrixUtils.val(this.number * this.oChannel * this.oHeight * this.oWidth, probability, 1.0f - probability);
 		}
 		
 	}
@@ -56,21 +55,21 @@ public class DropoutLayer extends Layer {
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		this.diff = Blobs.zero(number, channel, height, width, this.diff);
+		this.diff = new Tensor(number, channel, height, width);
 	}
 
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
 		if(this.network.RUN_MODEL == RunModel.TRAIN) {
-			this.output.maxtir = MatrixOperation.multiplication(this.input.maxtir, this.mask);
+			this.output.data = MatrixOperation.multiplication(this.input.data, this.mask);
 		}else {
-			this.output.maxtir = MatrixOperation.multiplication(this.input.maxtir, 1.0f - probability);
+			this.output.data = MatrixOperation.multiplication(this.input.data, 1.0f - probability);
 		}
 	}
 
 	@Override
-	public Blob getOutput() {
+	public Tensor getOutput() {
 		// TODO Auto-generated method stub
 		return this.output;
 	}
@@ -78,7 +77,7 @@ public class DropoutLayer extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		this.diff.maxtir = MatrixOperation.multiplication(this.delta.maxtir, this.mask);
+		this.diff.data = MatrixOperation.multiplication(this.delta.data, this.mask);
 	}
 
 	@Override

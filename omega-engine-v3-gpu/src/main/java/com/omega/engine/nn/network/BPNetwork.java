@@ -1,8 +1,10 @@
 package com.omega.engine.nn.network;
 
+import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.PrintUtils;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
-import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
@@ -56,13 +58,13 @@ public class BPNetwork extends Network{
 	}
 	
 	@Override
-	public Blob forward(Blob input) {
+	public Tensor forward(Tensor inputData) {
 		// TODO Auto-generated method stub
 
 		/**
 		 * 设置输入数据
 		 */
-		this.setInputData(input);
+		this.setInputData(inputData);
 		
 		/**
 		 * forward
@@ -79,7 +81,7 @@ public class BPNetwork extends Network{
 	}
 	
 	@Override
-	public void back(Blob lossDiff) {
+	public void back(Tensor lossDiff) {
 		// TODO Auto-generated method stub
 		
 		/**
@@ -103,7 +105,7 @@ public class BPNetwork extends Network{
 	}
 	
 	@Override
-	public Blob loss(Blob output, float[][] label) {
+	public Tensor loss(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub
 		
 		switch (this.getLastLayer().getLayerType()) {
@@ -123,13 +125,15 @@ public class BPNetwork extends Network{
 	}
 
 	@Override
-	public Blob lossDiff(Blob output, float[][] label) {
+	public Tensor lossDiff(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub
-		return this.lossFunction.diff(output, label);
+		Tensor t = this.lossFunction.diff(output, label);
+//		PrintUtils.printImage(t.data);
+		return t;
 	}
 	
 	@Override
-	public Blob predict(Blob input) {
+	public Tensor predict(Tensor input) {
 		// TODO Auto-generated method stub
 		this.RUN_MODEL = RunModel.TEST;
 		this.forward(input);

@@ -1,5 +1,6 @@
 package com.omega.engine.nn.layer;
 
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
@@ -61,6 +62,7 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 				this.output.maxtir[n][0][0][i] = temp[i] / sum;
 			}
 		}
+		
 	}
 
 	@Override

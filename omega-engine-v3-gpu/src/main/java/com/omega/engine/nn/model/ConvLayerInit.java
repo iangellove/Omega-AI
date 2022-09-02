@@ -24,8 +24,6 @@ public class ConvLayerInit extends LayerInit {
 	
 	public int padding = 0;
 	
-	public float[][][][] kernel;  //c * kn * kh * kw
-
 	public ConvLayerInit(ConvolutionLayer layer) {
 		// TODO Auto-generated constructor stub
 		super(layer);
@@ -34,7 +32,6 @@ public class ConvLayerInit extends LayerInit {
 		this.kHeight = layer.kHeight;
 		this.stride = layer.stride;
 		this.padding = layer.padding;
-		this.kernel = layer.kernel;
 	}
 
 	public int getKernelNum() {
@@ -75,14 +72,6 @@ public class ConvLayerInit extends LayerInit {
 
 	public void setPadding(int padding) {
 		this.padding = padding;
-	}
-
-	public float[][][][] getKernel() {
-		return kernel;
-	}
-
-	public void setKernel(float[][][][] kernel) {
-		this.kernel = kernel;
 	}
 
 }

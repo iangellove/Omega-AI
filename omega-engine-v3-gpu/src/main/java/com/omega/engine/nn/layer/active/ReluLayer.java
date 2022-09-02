@@ -2,12 +2,13 @@ package com.omega.engine.nn.layer.active;
 
 import java.util.Vector;
 
+import com.omega.common.data.Tensor;
+import com.omega.common.task.ForkJobEngine;
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
-import com.omega.common.utils.MathUtils;
-import com.omega.common.utils.MatrixUtils;
-import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.layer.LayerType;
+import com.omega.engine.nn.layer.active.jobs.relu.ReluBackwardJob;
+import com.omega.engine.nn.layer.active.jobs.relu.ReluForwardJob;
 
 /**
  * Relu active function Layer
@@ -15,7 +16,16 @@ import com.omega.engine.nn.layer.LayerType;
  *
  */
 public class ReluLayer extends ActiveFunctionLayer {
-
+	
+	public void init() {
+		super.init();
+		
+	}
+	
+	public void initBack() {
+		
+	}
+	
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub
@@ -25,36 +35,12 @@ public class ReluLayer extends ActiveFunctionLayer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-
-		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-		
-		for(int n = 0;n<this.number;n++) {
-			final int index = n;
-			workers.add(new Task<Object>(index) {
-				@Override
-			    public Object call() throws Exception {
-					for(int c = 0;c<channel;c++) {
-						for(int h = 0;h<height;h++) {
-							for(int w = 0;w<width;w++) {
-								if(input.maxtir[index][c][h][w] > 0) {
-									output.maxtir[index][c][h][w] = input.maxtir[index][c][h][w];
-								}else {
-									output.maxtir[index][c][h][w] = 0;
-								}
-							}
-						}
-					}
-					return null;
-				}
-			});
-		}
-		
-		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
-		
+		ReluForwardJob forward = new ReluForwardJob(input.data, output.data, 0, output.dataLength - 1);
+		ForkJobEngine.run(forward);
 	}
 
 	@Override
-	public Blob getOutput() {
+	public Tensor getOutput() {
 		// TODO Auto-generated method stub
 		return this.output;
 	}
@@ -62,19 +48,8 @@ public class ReluLayer extends ActiveFunctionLayer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		for(int n = 0;n<this.number;n++) {
-			for(int c = 0;c<this.channel;c++) {
-				for(int h = 0;h<this.height;h++) {
-					for(int w = 0;w<this.width;w++) {
-						if(this.input.maxtir[n][c][h][w] > 0) {
-							this.diff.maxtir[n][c][h][w] = this.delta.maxtir[n][c][h][w];
-						}else {
-							this.diff.maxtir[n][c][h][w] = 0;
-						}
-					}
-				}
-			}
-		}
+		ReluBackwardJob backward = new ReluBackwardJob(input.data, delta.data,diff.data, 0, diff.dataLength - 1);
+		ForkJobEngine.run(backward);
 	}
 
 	@Override
@@ -121,9 +96,6 @@ public class ReluLayer extends ActiveFunctionLayer {
 	@Override
 	public void showDiff() {
 		// TODO Auto-generated method stub
-		float[] x = MatrixUtils.transform(this.diff.maxtir);
-		
-		System.out.println("relu layer["+this.index+"]diff-max:"+MathUtils.max(x)+" min:"+MathUtils.min(x));
 	}
 
 	@Override

@@ -1,10 +1,9 @@
 package com.omega.engine.optimizer;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.nn.data.BaseData;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 
@@ -20,16 +19,16 @@ public class BGDOptimizer extends Optimizer {
 		super(network, batchSize, trainTime, error, warmUp);
 		// TODO Auto-generated constructor stub
 		this.batchSize = batchSize;
-		this.loss = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
-		this.lossDiff = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
+		this.loss = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
+		this.lossDiff = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
 	}
 	
 	public BGDOptimizer(Network network, int batchSize, int trainTime, float error,LearnRateUpdate learnRateUpdate,boolean warmUp) throws Exception {
 		super(network, batchSize, trainTime, error, warmUp);
 		// TODO Auto-generated constructor stub
 		this.batchSize = batchSize;
-		this.loss = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
-		this.lossDiff = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
+		this.loss = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
+		this.lossDiff = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
 		this.learnRateUpdate = learnRateUpdate;
 	}
 
@@ -51,22 +50,22 @@ public class BGDOptimizer extends Optimizer {
 				/**
 				 * forward
 				 */
-				Blob output = this.network.forward(trainingData.input);
+				Tensor output = this.network.forward(trainingData.input);
 				
 				/**
 				 * loss
 				 */
-				this.loss = this.network.loss(output, trainingData.input.labels);
+				this.loss = this.network.loss(output, trainingData.label);
 
 				/**
 				 * lossDiff
 				 */
-				this.lossDiff = this.network.lossDiff(output, trainingData.input.labels);
+				this.lossDiff = this.network.lossDiff(output, trainingData.label);
 				
 				/**
 				 * current time error
 				 */
-				this.currentError = MatrixOperation.sum(this.loss.maxtir) / this.batchSize;
+				this.currentError = MatrixOperation.sum(this.loss.data) / this.batchSize;
 
 				/**
 				 * back

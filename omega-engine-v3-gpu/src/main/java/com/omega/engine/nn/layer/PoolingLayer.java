@@ -1,14 +1,8 @@
 package com.omega.engine.nn.layer;
 
-import com.omega.common.utils.Im2colUtils;
-import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MathUtils;
-import com.omega.common.utils.MatrixOperation;
-import com.omega.common.utils.MatrixUtils;
+import com.omega.common.data.Tensor;
 import com.omega.engine.gpu.PoolingDiffKernel;
 import com.omega.engine.gpu.PoolingKernel;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.pooling.PoolingType;
 
 /**
@@ -27,7 +21,7 @@ public class PoolingLayer extends Layer {
 	
 	public int stride = 1;
 	
-	public float[][][][][] mask;
+	public float[] mask;
 	
 	private PoolingKernel pooling;
 	
@@ -38,10 +32,6 @@ public class PoolingLayer extends Layer {
 	private float[] onceOut;
 	private float[] onceDiff;
 	private float[] onceDelta;
-	
-	private float[] maskData;
-	
-	private float[] input1d;
 	
 	public PoolingLayer(int channel,int width,int height,int pWidth,int pHeight,int stride,PoolingType poolingType) {
 		this.channel = channel;
@@ -58,17 +48,11 @@ public class PoolingLayer extends Layer {
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
-		if(this.output == null || this.output.maxtir.length != number) {
-			this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
-			this.input1d = new float[number * channel * height * width];
-			this.maskData = new float[number * channel * oHeight * oWidth * pHeight * pWidth];
+		if(this.output == null || this.output.number != number) {
+			this.output = new Tensor(number, oChannel, oHeight, oWidth);
+			this.mask = new float[number * channel * oHeight * oWidth * pHeight * pWidth];
 		}
-//		if(this.mask == null || this.mask.length != this.number){
-//			this.mask = MatrixUtils.zero(this.number,this.channel, this.oHeight * this.oWidth, this.pHeight, this.pWidth);
-//		}else {
-//			MatrixUtils.zero(this.mask);
-//		}
-		
+
 		if(pooling == null) {
 			onceX = new float[channel * height * width];
 			onceMask = new float[channel * oHeight * oWidth * pHeight * pWidth];
@@ -81,8 +65,8 @@ public class PoolingLayer extends Layer {
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		if(diff == null || this.diff.maxtir.length != number) {
-			this.diff = Blobs.zero(number, channel, height, width, this.diff);
+		if(diff == null || this.diff.number != number) {
+			this.diff = new Tensor(number, channel, height, width);
 		}
 		
 		if(diffKernel == null) {
@@ -104,18 +88,16 @@ public class PoolingLayer extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-//		MatrixOperation.poolingAndMask(this.input.maxtir, this.mask, this.pWidth, this.pHeight, this.stride, this.poolingType, this.output.maxtir);
-		
-		Im2colUtils.kernalToVector2(this.input.maxtir, this.input1d, false);
-		
+
 		int onceLength = channel * height * width;
+		int onceOutLength = oChannel * oHeight * oWidth;
 		
 		for(int n = 0;n<number;n++) {
-			System.arraycopy(this.input1d, n * onceLength, this.onceX, 0, onceLength);
+			System.arraycopy(this.input.data, n * onceLength, this.onceX, 0, onceLength);
 			pooling.setX(onceX);
 			pooling.pooling();
-			System.arraycopy(pooling.getMask(), 0, this.maskData, n * onceMask.length, onceMask.length);
-			MatrixUtils.col2im4d(pooling.getOut(), this.output.maxtir, n, channel, this.oHeight, this.oWidth);
+			System.arraycopy(pooling.getMask(), 0, this.mask, n * onceMask.length, onceMask.length);
+			System.arraycopy(pooling.getOut(), 0, this.output.data, n * onceOutLength, onceOutLength);
 		}
 		
 	}
@@ -123,26 +105,15 @@ public class PoolingLayer extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		
-//		MatrixOperation.poolingDiff(this.delta.maxtir, this.mask, this.diff.maxtir, this.pWidth, this.pHeight, this.stride);
-		
-		float[] delta_v = Im2colUtils.kernalToVector2(this.delta.maxtir, false);
-		
+		int onceLength = channel * height * width;
 		for(int n = 0;n<number;n++) {
-			System.arraycopy(delta_v, n * onceDelta.length, onceDelta, 0, onceDelta.length);
-			System.arraycopy(maskData, n * onceMask.length, onceMask, 0, onceMask.length);
+			System.arraycopy(this.delta.data, n * onceDelta.length, onceDelta, 0, onceDelta.length);
+			System.arraycopy(mask, n * onceMask.length, onceMask, 0, onceMask.length);
 			diffKernel.setX(onceDelta);
 			diffKernel.setMask(onceMask);
 			diffKernel.diff();
-			MatrixUtils.col2im4d(diffKernel.getOut(), this.diff.maxtir, n, channel, height, width);
+			System.arraycopy(diffKernel.getOut(), 0, this.diff.data, n * onceLength, onceLength);
 		}
-		
-//		PrintUtils.printImage(this.diff.maxtir);
-//		System.out.println("pooling layer ["+this.index+"]");
-//		
-//		MatrixOperation.printImage(this.nextDiff);
-//		
-//		System.out.println("pooling layer ["+this.index+"] end.");
 		
 	}
 
@@ -198,7 +169,7 @@ public class PoolingLayer extends Layer {
 	}
 
 	@Override
-	public Blob getOutput() {
+	public Tensor getOutput() {
 		// TODO Auto-generated method stub
 		return this.output;
 	}
@@ -206,23 +177,14 @@ public class PoolingLayer extends Layer {
 	@Override
 	public void showDiff() {
 		// TODO Auto-generated method stub
-//		System.out.println("pooling layer["+this.index+"]diff start:");
-//		
-//		MatrixOperation.printImage(this.diff);
-//		
-//		System.out.println("pooling layer["+this.index+"]diff end.");
 
-		float[] x = MatrixUtils.transform(this.diff.maxtir);
-		
-		System.out.println("pooling layer["+this.index+"]diff-max:"+MathUtils.max(x)+" min:"+MathUtils.min(x));
-		
 	}
 
 	@Override
 	public float[][][][] output(float[][][][] input) {
 		// TODO Auto-generated method stub
-		float[][][][] output = MatrixOperation.poolingAndMask(input, this.mask,this.pWidth, this.pHeight, this.stride, this.poolingType);
-		return output;
+		
+		return null;
 	}
 
 	@Override

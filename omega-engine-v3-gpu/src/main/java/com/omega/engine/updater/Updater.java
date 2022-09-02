@@ -17,13 +17,13 @@ public abstract class Updater {
 	
 	public float lr = 0.0001f;
 	
-	public float[][] vdw;
+	public float[] vdw;
 	
 	public float[] vdgama;
 	
 	public float[] vdb;
 	
-	public float[][][][] vdmw;  //c * kn * kh * kw
+	public float[] vdmw;  //c * kn * kh * kw
 	
 	public float[] vdmb;
 	

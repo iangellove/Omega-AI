@@ -52,12 +52,12 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		String[] labelSet = new String[] {"1","-1"};
 		
-		DataSet trainData = DataLoader.loalDataByTxt(iris_train, ",", 1, 1, 4, 2,labelSet);
-		DataSet testData = DataLoader.loalDataByTxt(iris_test, ",", 1, 1, 4, 2,labelSet);
-		
+		DataSet trainData = DataLoader.loalDataByTxt(iris_train, ",", 1, 1, 4, 2, labelSet);
+		DataSet testData = DataLoader.loalDataByTxt(iris_test, ",", 1, 1, 4, 2, labelSet);
+
 		System.out.println("train_data:"+JsonUtils.toJson(trainData));
-	
-		BPNetwork netWork = new BPNetwork(new CrossEntropyLoss());
+		
+		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss());
 		
 		InputLayer inputLayer = new InputLayer(1,1,4);
 		
@@ -87,17 +87,24 @@ public class BusinessServiceImpl implements BusinessService {
 
 		try {
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 100000, 0.00001f, 10, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.00001f, 10, LearnRateUpdate.NONE, false);
 		
 //		    netWork.GRADIENT_CHECK = true;
 		
 			optimizer.train(trainData);
 			
 			optimizer.test(testData);
-			
+
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 	}
@@ -152,8 +159,6 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
-//		SoftmaxLayer softmax = new SoftmaxLayer(10);
-		
 		netWork.addLayer(inputLayer);
 		netWork.addLayer(hidden1);
 		netWork.addLayer(bn1);
@@ -173,7 +178,7 @@ public class BusinessServiceImpl implements BusinessService {
 
 		try {
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 64, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 //			netWork.GRADIENT_CHECK = true;
 		
@@ -188,6 +193,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -293,6 +305,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -409,6 +428,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 	}
@@ -524,6 +550,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 	}
@@ -782,6 +815,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 	}
@@ -803,7 +843,7 @@ public class BusinessServiceImpl implements BusinessService {
 
 		System.out.println(testData.labels[10]);
 		
-		rc.createRGBImage(testOutPath, "png", testData.input.maxtir[10][1], 2);
+		rc.createRGBImage(testOutPath, "png", 32, 32, testData.input.getByNumberAndChannel(10,0), 2);
 		
 	}
 
@@ -947,6 +987,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -1080,10 +1127,17 @@ public class BusinessServiceImpl implements BusinessService {
 			optimizer.test(testData);
 			
 			System.out.println(((System.currentTimeMillis() - start) / 1000) + "s.");
-
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 	}
@@ -1307,6 +1361,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -1401,6 +1462,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 	}
@@ -1548,6 +1616,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -1688,6 +1763,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -1946,6 +2028,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -2066,6 +2155,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 	}
@@ -2190,6 +2286,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 	}
@@ -2370,6 +2473,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 	}
@@ -2535,6 +2645,13 @@ public class BusinessServiceImpl implements BusinessService {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 	}

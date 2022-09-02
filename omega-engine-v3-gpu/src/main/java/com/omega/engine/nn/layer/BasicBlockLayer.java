@@ -3,9 +3,8 @@ package com.omega.engine.nn.layer;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
 
@@ -92,12 +91,12 @@ public class BasicBlockLayer extends Layer {
 	@Override
 	public void init() {
 		this.number = this.network.number;
-		this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
+		this.output = new Tensor(number, oChannel, oHeight, oWidth);
 	}
 	
 	@Override
 	public void initBack() {
-		this.diff = Blobs.zero(number, channel, height, width, this.diff);
+		this.diff = new Tensor(number, channel, height, width);
 	}
 
 	@Override
@@ -110,11 +109,11 @@ public class BasicBlockLayer extends Layer {
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		float[][][][] x = this.input.maxtir;
+		float[] x = this.input.data;
 		
 		if(getIdentity() != null) {
 			getIdentity().forward();
-			x = getIdentity().output.maxtir;
+			x = getIdentity().output.data;
 		}
 		
 		/**
@@ -124,14 +123,14 @@ public class BasicBlockLayer extends Layer {
 			layer.forward();
 		}
 		
-		float[][][][] x2 = layers.get(layers.size() - 1).output.maxtir;
+		float[] x2 = layers.get(layers.size() - 1).output.data;
 		
-		this.output.maxtir = MatrixOperation.add(x, x2);
+		this.output.data = MatrixOperation.add(x, x2);
 		
 	}
 
 	@Override
-	public Blob getOutput() {
+	public Tensor getOutput() {
 		// TODO Auto-generated method stub
 		return this.output;
 	}
@@ -148,13 +147,13 @@ public class BasicBlockLayer extends Layer {
 			layer.back();
 		}
 		
-		float[][][][] delta2 = layers.get(0).diff.maxtir;
+		float[] delta2 = layers.get(0).diff.data;
 		
 		if(getIdentity() != null) {
 			getIdentity().back();
-			this.diff.maxtir = MatrixOperation.add(delta2, getIdentity().diff.maxtir);
+			this.diff.data = MatrixOperation.add(delta2, getIdentity().diff.data);
 		}else {
-			this.diff.maxtir = MatrixOperation.add(delta2, this.delta.maxtir);
+			this.diff.data = MatrixOperation.add(delta2, this.delta.data);
 		}
 
 	}

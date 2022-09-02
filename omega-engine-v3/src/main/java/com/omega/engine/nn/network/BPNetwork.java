@@ -1,5 +1,7 @@
 package com.omega.engine.nn.network;
 
+import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.PrintUtils;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.data.Blob;
@@ -118,14 +120,20 @@ public class BPNetwork extends Network{
 		default:
 			break;
 		}
-		
-		return this.lossFunction.loss(output, label);
+		Blob t = this.lossFunction.loss(output, label);
+//		float[] tmp = MatrixUtils.transform(t.maxtir);
+//		PrintUtils.printImage(tmp);
+		return t;
 	}
 
 	@Override
 	public Blob lossDiff(Blob output, float[][] label) {
 		// TODO Auto-generated method stub
-		return this.lossFunction.diff(output, label);
+		Blob t = this.lossFunction.diff(output, label);
+//		float[] tmp = MatrixUtils.transform(t.maxtir);
+//		PrintUtils.printImage(tmp);
+		return t;
+//		return this.lossFunction.diff(output, label);
 	}
 	
 	@Override

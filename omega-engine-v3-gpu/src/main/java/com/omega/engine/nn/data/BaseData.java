@@ -1,5 +1,8 @@
 package com.omega.engine.nn.data;
 
+import com.omega.common.data.Tensor;
+import com.omega.common.data.Tensors;
+
 public abstract class BaseData {
 	
 	public int number = 0;
@@ -9,33 +12,44 @@ public abstract class BaseData {
 	public int height = 0;
 	
 	public int width = 0;
+	
+	public int labelSize = 0;
 
-	public float[][] dataInput;
+	public Tensor input;
 	
-	public Blob input;
-	
-	public float[][] dataLabel;
+	public Tensor label;
 	
 	public String[] labels;
 	
 	public String[] labelSet;
 	
-	public Blob getRandomData(int[] indexs) {
-		Blob data = Blobs.blob(indexs.length, channel, height, width);
-		data.labels = new float[indexs.length][dataLabel[0].length];
+	public Tensor getRandomData(int[] indexs) {
+		Tensor data = Tensors.tensor(indexs.length, channel, height, width);
 		for(int i = 0;i<indexs.length;i++) {
 			int index = indexs[i];
-			data.maxtir[i] = this.input.maxtir[index];
-			data.labels[i] = this.dataLabel[index];
+			System.arraycopy(this.input.data, index * channel * height * width, data.data, i * channel * height * width, channel * height * width);
 		}
 		return data;
 	}
 	
-	public Blob getOnceData(int index) {
-		Blob data = Blobs.blob(1, channel, height, width);
-		data.labels = new float[1][dataLabel[index].length];
-		data.maxtir[0] = this.input.maxtir[index];
-		data.labels[0] = this.dataLabel[index];
+	public void getRandomData(int[] indexs,Tensor input,Tensor label) {
+		for(int i = 0;i<indexs.length;i++) {
+			int index = indexs[i];
+			System.arraycopy(this.input.data, index * channel * height * width, input.data, i * channel * height * width, channel * height * width);
+			System.arraycopy(this.label.data, index * labelSize, label.data, i * labelSize, labelSize);
+		}
+	}
+	
+	public void getAllData(Tensor input,Tensor label) {
+		for(int i = 0;i<number;i++) {
+			System.arraycopy(this.input.data, i * channel * height * width, input.data, i * channel * height * width, channel * height * width);
+			System.arraycopy(this.label.data, i * labelSize, label.data, i * labelSize, labelSize);
+		}
+	}
+	
+	public Tensor getOnceData(int index) {
+		Tensor data = Tensors.tensor(1, channel, height, width);
+		this.input.copy(index, data.data);
 		return data;
 	}
 	

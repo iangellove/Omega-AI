@@ -34,6 +34,21 @@ public class PrintUtils {
 		System.out.println("-----------------------------------");
 	}
 	
+	/**
+	 * print matrix
+	 * @param data
+	 */
+	public static void printImage(int[][] data) {
+		
+		for(int i = 0;i<data.length;i++) {
+			for(int j = 0;j<data[i].length;j++) {
+				System.out.print(data[i][j]+" ");
+			}
+			System.out.println("");
+		}
+		System.out.println("-----------------------------------");
+	}
+	
 	public static void printImage(float[][][] data) {
 		
 		for(int c = 0;c<data.length;c++) {

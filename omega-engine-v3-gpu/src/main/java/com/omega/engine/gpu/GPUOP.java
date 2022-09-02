@@ -311,6 +311,93 @@ public class GPUOP {
     	
     }
     
+    /**
+     * Multiplies the matrices A and B and writes the result into C.
+     * 
+     * @param size The size of the matrices
+     * @param A Matrix A
+     * @param B Matrix B
+     * @param C Matrix C
+     */
+    public void multiplyFloat(int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta){
+    	try {
+
+    		int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
+            int ldb = CUBLAS_OP_B == CUBLAS_OP_N ? n : k;
+    		
+            Pointer dA = new Pointer();
+            Pointer dB = new Pointer();
+            Pointer dC = new Pointer();
+
+            cudaMalloc(dA, m * k * Sizeof.FLOAT);
+            cudaMalloc(dB, k * n * Sizeof.FLOAT);
+            cudaMalloc(dC, m * n * Sizeof.FLOAT);
+            
+            cublasSetVector(m * k, Sizeof.FLOAT, Pointer.to(A), 1, dA, 1);
+            cublasSetVector(k * n, Sizeof.FLOAT, Pointer.to(B), 1, dB, 1);
+
+            Pointer alphaP = Pointer.to(new float[]{ alpha });
+            Pointer betaP = Pointer.to(new float[]{ beta });
+
+            int status = cublasSgemm(handle, CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, 
+                    dB, ldb, dA, lda, betaP, dC, n);
+             
+            cudaDeviceSynchronize();
+            
+            cublasGetVector(m * n, Sizeof.FLOAT, dC, 1, Pointer.to(C), 1);
+            cudaFree(dA);
+            cudaFree(dB);
+            cudaFree(dC);
+           
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+ 
+    }
+    
+    /**
+     * Multiplies the matrices A and B and writes the result into C.
+     * 
+     * @param size The size of the matrices
+     * @param A Matrix A
+     * @param B Matrix B
+     * @param C Matrix C
+     */
+    public void multiplyFloat(int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta,int lda,int ldb,int ldc){
+    	try {
+
+            Pointer dA = new Pointer();
+            Pointer dB = new Pointer();
+            Pointer dC = new Pointer();
+
+            cudaMalloc(dA, m * k * Sizeof.FLOAT);
+            cudaMalloc(dB, k * n * Sizeof.FLOAT);
+            cudaMalloc(dC, m * n * Sizeof.FLOAT);
+            
+            cublasSetVector(m * k, Sizeof.FLOAT, Pointer.to(A), 1, dA, 1);
+            cublasSetVector(k * n, Sizeof.FLOAT, Pointer.to(B), 1, dB, 1);
+
+            Pointer alphaP = Pointer.to(new float[]{ alpha });
+            Pointer betaP = Pointer.to(new float[]{ beta });
+
+            int status = cublasSgemm(handle, CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, 
+                    dB, ldb, dA, lda, betaP, dC, ldc);
+             
+            cudaDeviceSynchronize();
+            
+            cublasGetVector(m * n, Sizeof.FLOAT, dC, 1, Pointer.to(C), 1);
+            cudaFree(dA);
+            cudaFree(dB);
+            cudaFree(dC);
+           
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+ 
+    }
+    
     public void gpu_gemv(int m,int n,Pointer dA,Pointer dx, Pointer dy,int CUBLAS_OP_A,float alpha,float beta){
     	
     	try {

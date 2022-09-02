@@ -58,6 +58,7 @@ public class SoftmaxWithCrossEntropyLoss extends LossFunction {
 		for(int n = 0;n<x.number;n++) {
 			for(int o = 0;o<x.width;o++) {
 				temp.maxtir[n][0][0][o] = - label[n][o] / x.maxtir[n][0][0][o];
+//				System.out.println(temp.maxtir[n][0][0][o]);
 			}
 		}
 		return temp;

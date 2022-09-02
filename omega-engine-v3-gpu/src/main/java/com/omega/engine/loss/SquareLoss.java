@@ -1,7 +1,7 @@
 package com.omega.engine.loss;
 
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
+import com.omega.common.data.Tensor;
+import com.omega.common.data.Tensors;
 
 /**
  * Square loss
@@ -29,34 +29,36 @@ public class SquareLoss extends LossFunction {
 	}
 	
 	@Override
-	public Blob loss(Blob x, float[][] label) {
+	public Tensor loss(Tensor x, Tensor label) {
 		// TODO Auto-generated method stub
-		Blob temp = Blobs.blob(x.number,x.channel,x.height,x.width);
-		for(int n = 0;n<x.number;n++) {
-			for(int w = 0;w<x.width;w++) {
-				temp.maxtir[n][0][0][w] = (x.maxtir[n][0][0][w] - label[n][w]) * (x.maxtir[n][0][0][w] - label[n][w]) / 2;;
-			}
+		Tensor temp = Tensors.tensor(x.number,x.channel,x.height,x.width);
+		
+		for(int i = 0;i<x.getDataLength();i++) {
+			temp.data[i] = (x.data[i] - label.data[i]) * (x.data[i] - label.data[i]) / 2;;
 		}
+		
 		return temp;
 	}
 
 	@Override
-	public Blob diff(Blob x, float[][] label) {
+	public Tensor diff(Tensor x, Tensor label) {
 		// TODO Auto-generated method stub
-		Blob temp = Blobs.blob(x.number,x.channel,x.height,x.width);
-		for(int n = 0;n<x.number;n++) {
-			for(int w = 0;w<x.width;w++) {
-				temp.maxtir[n][0][0][w] = x.maxtir[n][0][0][w] - label[n][w];
-			}
+		Tensor temp = Tensors.tensor(x.number,x.channel,x.height,x.width);
+		
+		for(int i = 0;i<x.getDataLength();i++) {
+			temp.data[i] = x.data[i] - label.data[i];
 		}
+		
+		
 		return temp;
 	}
 	
 	public static void main(String[] args) {
-		float[][] x = new float[][] {{0.1f,-0.03f,1.23f,-0.4f,0.1f,-0.12f,0.001f,0.002f}};
-		Blob xb = Blobs.blob(1, 1, 1, 8, x);
-		float[][] label = new float[][] {{0.1f,-0.01f,0.022f,-0.4f,0.803f,-0.12f,0.001f,0.001f}};
-		float error = SquareLoss.operation().gradientCheck(xb,label);
+		float[] x = new float[] {0.2f,0.3f,0.5f,0.1f,0.1f,0.8f,0.3f,0.1f,0.6f,0.9f,0.01f,0.09f};
+		Tensor xt = Tensors.tensor(4, 1, 1, 3, x);
+		float[] label = new float[] {0,1,0,1,0,0,1,0,0,0,0,1};
+		Tensor labelt = Tensors.tensor(4, 1, 1, 3, label);
+		float error = SquareLoss.operation().gradientCheck(xt,labelt);
 		System.out.println("error:"+error);
 	}
 

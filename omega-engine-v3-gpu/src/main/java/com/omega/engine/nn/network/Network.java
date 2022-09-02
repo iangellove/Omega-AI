@@ -3,8 +3,8 @@ package com.omega.engine.nn.network;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.omega.common.data.Tensor;
 import com.omega.engine.loss.LossFunction;
-import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.layer.BasicBlockLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
@@ -40,9 +40,9 @@ public abstract class Network {
 	
 	public LossFunction lossFunction;
 	
-	public Blob inputData;
-	
-	public Blob lossDiff;
+	public Tensor input;
+
+	public Tensor lossDiff;
 	
 	public float accuracy = 0.01f;
 	
@@ -71,15 +71,15 @@ public abstract class Network {
 	
 	public abstract void init() throws Exception;
 	
-	public abstract Blob predict(Blob input);
+	public abstract Tensor predict(Tensor input);
 	
-	public abstract Blob forward(Blob input);
+	public abstract Tensor forward(Tensor input);
 	
-	public abstract void back(Blob lossDiff);
+	public abstract void back(Tensor lossDiff);
 	
-	public abstract Blob loss(Blob output,float[][] label);
+	public abstract Tensor loss(Tensor output,Tensor label);
 	
-	public abstract Blob lossDiff(Blob output,float[][] label);
+	public abstract Tensor lossDiff(Tensor output,Tensor label);
 	
 	public abstract NetworkType getNetworkType();
 	
@@ -87,17 +87,17 @@ public abstract class Network {
 		this.number = number;
 	}
 	
-	public void setInputData(Blob inputData) {
-		this.number = inputData.number;
-		this.inputData = inputData;
+	public void setInputData(Tensor input) {
+		this.number = input.number;
+		this.input = input;
 	}
 
-	public void setLossDiff(Blob lossDiff) {
+	public void setLossDiff(Tensor lossDiff) {
 		this.lossDiff = lossDiff;
 		this.getLastLayer().setDelta(this.lossDiff);
 	}
 
-	public Blob getOuput() {
+	public Tensor getOuput() {
 		// TODO Auto-generated method stub
 		return this.getLastLayer().getOutput();
 	}

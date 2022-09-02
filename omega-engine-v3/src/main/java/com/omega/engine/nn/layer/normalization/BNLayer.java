@@ -33,11 +33,11 @@ public class BNLayer extends NormalizationLayer {
 	
 	public float[] var;
 	
-	public float[] std;
+//	public float[] std;
 	
 	private float[] runingMean;
 
-	private float[] runingStd;
+	private float[] runingVar;
 	
 	/**
 	 * if prelayer is conv layer meanNum = channel
@@ -56,7 +56,7 @@ public class BNLayer extends NormalizationLayer {
 	
 	public float[] beta;
 	
-	private float eta = 0.00000001f;
+	private float eta = 0.00001f;
 	
 	/**
 	 * zi = (xi - mean) / (std + eta)^1/2
@@ -101,7 +101,7 @@ public class BNLayer extends NormalizationLayer {
 			this.beta = MatrixUtils.zero(this.meanNum);
 			this.mean = MatrixUtils.zero(this.meanNum);
 			this.var = MatrixUtils.zero(this.meanNum);
-			this.std = MatrixUtils.zero(this.meanNum);
+//			this.std = MatrixUtils.zero(this.meanNum);
 			this.deltaGama = MatrixUtils.zero(this.meanNum);
 			this.deltaBeta = MatrixUtils.zero(this.meanNum);
 		}
@@ -151,6 +151,9 @@ public class BNLayer extends NormalizationLayer {
 			 * 计算平均值
 			 */
 			MatrixOperation.meanV2(this.input.maxtir, this.mean, mode);
+			
+//			System.out.println(JsonUtils.toJson(mean));
+			
 //			 
 //			float[] y = new float[this.mean.length];
 //			
@@ -168,21 +171,23 @@ public class BNLayer extends NormalizationLayer {
 			
 			MatrixOperation.varV2(this.input.maxtir, this.mean, this.var, mode);
 			
-			MatrixOperation.std(MatrixOperation.add(this.var, this.eta), this.std);
+//			System.out.println(JsonUtils.toJson(var));
+			
+//			MatrixOperation.std(MatrixOperation.add(this.var, this.eta), this.std);
 			
 			/**
 			 * 移动加权平均法计算均值与方差
 			 */
 			this.runingMean = MWAUtils.mwa(this.mean, this.runingMean);
 			
-			this.runingStd = MWAUtils.mwa(this.std, this.runingStd);
+			this.runingVar = MWAUtils.mwa(this.var, this.runingVar);
 			
 			/**
 			 * zi = (xi - mean) / (std + eta)
 			 */
 //			this.z.maxtir = MatrixOperation.division(MatrixOperation.subtraction(this.input.maxtir, this.mean, mode), this.std, mode);
 			
-			this.culOutput(this.mean, this.std, mode);
+			this.culOutput(this.mean, this.var, mode);
 
 		}else {
 
@@ -191,14 +196,32 @@ public class BNLayer extends NormalizationLayer {
 			 */
 //			this.z.maxtir = MatrixOperation.division(MatrixOperation.subtraction(this.input.maxtir, this.runingMean, mode), this.runingStd, mode);
 			
-			this.culOutput(this.runingMean, this.runingStd, mode);
+			this.culOutput(this.runingMean, this.runingVar, mode);
 			
 		}
-
+		
+//		float[] t = MatrixUtils.transform(this.output.maxtir);
+//		
+//		System.out.println(JsonUtils.toJson(t));
+		
 		/**
 		 * yi = gama * zi + beta
 		 */
 //		this.output.maxtir = MatrixOperation.addByBN(MatrixOperation.multiplicationByBN(this.z.maxtir, this.gama, mode), this.beta, mode);
+//		
+//		System.out.println("x:"+JsonUtils.toJson(MatrixUtils.transform(input.maxtir)));
+//		
+//		System.out.println("runingMean:"+JsonUtils.toJson(this.runingMean));
+//		
+//		System.out.println("runingVar:"+JsonUtils.toJson(this.runingVar));
+//		
+//		System.out.println("output:"+JsonUtils.toJson(MatrixUtils.transform(output.maxtir)));
+//		
+//		
+//		System.out.println("gama:"+JsonUtils.toJson(gama));
+//		
+//		System.out.println("beta:"+JsonUtils.toJson(beta));
+//		
 		
 	}
 	
@@ -206,13 +229,17 @@ public class BNLayer extends NormalizationLayer {
 	 * zi = (xi - mean) / (std + eta)
 	 * yi = gama * zi + beta
 	 */
-	private void culOutput(float[] m,float[] s,int mode) {
+	private void culOutput(float[] m,float[] v,int mode) {
 		
 		int N = this.input.maxtir.length;
 		int C = this.input.maxtir[0].length;
 		int H = this.input.maxtir[0][0].length;
 		int W = this.input.maxtir[0][0][0].length;
 
+//		
+//		System.out.println("m:"+JsonUtils.toJson(m));
+//		System.out.println("v:"+JsonUtils.toJson(v));
+//		
 		Vector<Task<Object>> workers = new Vector<Task<Object>>();
 
 		for(int n = 0;n<N;n++) {
@@ -225,10 +252,10 @@ public class BNLayer extends NormalizationLayer {
 							for(int w = 0;w<W;w++) {
 								
 								if(mode == 0) {
-									z.maxtir[index][c][h][w] = (input.maxtir[index][c][h][w] - m[w]) / s[w];
+									z.maxtir[index][c][h][w] = (input.maxtir[index][c][h][w] - m[w]) / (float) Math.sqrt(v[w] + eta);
 									output.maxtir[index][c][h][w] = z.maxtir[index][c][h][w] * gama[w] + beta[w];
 								}else {
-									z.maxtir[index][c][h][w] = (input.maxtir[index][c][h][w] - m[c]) / s[c];
+									z.maxtir[index][c][h][w] = (input.maxtir[index][c][h][w] - m[c]) / (float) Math.sqrt(v[c] + eta);
 									output.maxtir[index][c][h][w] = z.maxtir[index][c][h][w] * gama[c] + beta[c];
 								}
 	
@@ -378,11 +405,7 @@ public class BNLayer extends NormalizationLayer {
 		
 		float[] dvar = new float[this.meanNum];
 
-		float[] dvar2 = new float[this.meanNum];
-		
 		float[] dmu = new float[this.meanNum];
-		
-		float[] dmu2 = new float[this.meanNum];
 		
 		int batchNum = number;
 		
@@ -409,16 +432,7 @@ public class BNLayer extends NormalizationLayer {
 		 * 使用darknet公式
 		 * dmean = (∑ dxhat * -1 / (var + eta)^1/2)
 		 */
-		meanDzSum(input.maxtir, diff.maxtir, mean, std, dvar2, dmu, dmu2, 1.0f / batchNum, mode);
-
-		for(int i = 0;i<dvar2.length;i++) {
-			// dvar = ∑ dxhat * (xi - mean) * -1/2 * (var + eta)^-3/2
-			dvar[i] = (float) (dvar2[i] * -0.5f * Math.pow(var[i] + eta, -1.5));
-		}
-
-		for(int i = 0;i<dmu.length;i++) {
-			dmu[i] += dmu2[i] * dvar[i];
-		}
+		meanDzSum(input.maxtir, diff.maxtir, mean, var, dvar, dmu, mode);
 
 		computeDiff(dvar, dmu, batchNum);
 
@@ -601,28 +615,40 @@ public class BNLayer extends NormalizationLayer {
 //		
 //	}
 	
-	public void meanDzSum(float[][][][] x,float[][][][] dz,float[] mean,float[] std,float[] dvar2,float[] dmu,float[] dmu2,float scale,int mode) {
+	/**
+	 * 原论文公式
+	 * dmean = (∑ dxhat * -1 / (var + eta)^1/2) + dvar * (∑ -2 * (x - mean)) / n
+	 * 使用darknet公式
+	 * dmean = (∑ dxhat * -1 / (var + eta)^1/2)
+	 */
+	public void meanDzSum(float[][][][] x,float[][][][] dz,float[] mean,float[] var,float[] dvar,float[] dmu,int mode) {
 		
 		if(mode == 0) {
-			for(int i = 0;i<dvar2.length;i++) {
+			for(int i = 0;i<dvar.length;i++) {
+				float m_val = 0.0f;
+				float v_val = 0.0f;
 				for(int n = 0;n<x.length;n++) {
-					dvar2[i] += (x[n][0][0][i] - mean[i]) * dz[n][0][0][i];
-					dmu[i] += -1.0f * dz[n][0][0][i] / std[i];
-					dmu2[i] += -2.0f * (x[n][0][0][i] - mean[i]) * scale;
+					m_val += dz[n][0][0][i];
+					v_val += dz[n][0][0][i] * (x[n][0][0][i] - mean[i]);
 				}
+				dmu[i] = (float) (m_val * (-1.f/Math.sqrt(var[i] + eta)));
+				dvar[i] = (float) (v_val * -0.5f * Math.pow(var[i] + eta, (float)(-3.0f/2.0f)));
 			}
 			
 		}else {
-			for(int i = 0;i<dvar2.length;i++) {
+			for(int i = 0;i<dvar.length;i++) {
+				float m_val = 0.0f;
+				float v_val = 0.0f;
 				for(int n = 0;n<x.length;n++) {
 					for(int h = 0;h<x[0][0].length;h++) {
 						for(int w = 0;w<x[0][0][h].length;w++) {
-							dvar2[i] += (x[n][i][h][w] - mean[i]) * dz[n][i][h][w];
-							dmu[i] += -1.0f * dz[n][i][h][w] / std[i];
-							dmu2[i] += -2.0f * (x[n][i][h][w] - mean[i]) * scale;
+							m_val += dz[n][i][h][w];
+							v_val += dz[n][i][h][w] * (x[n][i][h][w] - mean[i]);
 						}
 					}
 				}
+				dmu[i] = (float) (m_val * (-1.f/Math.sqrt(var[i] + eta)));
+				dvar[i] = (float) (v_val * -0.5f * Math.pow(var[i] + eta, (float)(-3.0f/2.0f)));
 			}
 		}
 
@@ -692,7 +718,7 @@ public class BNLayer extends NormalizationLayer {
 					for(int h = 0;h<oHeight;h++) {
 						for(int w = 0;w<oWidth;w++) {
 							// dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/n
-							diff.maxtir[m][c][h][w] = diff.maxtir[m][c][h][w] / std[c] + 2.0f * dvar[c] * (input.maxtir[m][c][h][w] - mean[c]) * sacle + dmu[c] * sacle;
+							diff.maxtir[m][c][h][w] = diff.maxtir[m][c][h][w] / (float) Math.sqrt(var[c] + eta) + 2.0f * dvar[c] * (input.maxtir[m][c][h][w] - mean[c]) * sacle + dmu[c] * sacle;
 						}
 					}
 				}
@@ -703,7 +729,7 @@ public class BNLayer extends NormalizationLayer {
 			for(int m = 0;m<this.number;m++) {
 				for(int w = 0;w<oWidth;w++) {
 					// dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/n
-					diff.maxtir[m][0][0][w] = diff.maxtir[m][0][0][w] / std[w] + 2.0f * dvar[w] * (input.maxtir[m][0][0][w] - mean[w]) * sacle + dmu[w] * sacle;
+					diff.maxtir[m][0][0][w] = diff.maxtir[m][0][0][w] / (float) Math.sqrt(var[w] + eta) + 2.0f * dvar[w] * (input.maxtir[m][0][0][w] - mean[w]) * sacle + dmu[w] * sacle;
 				}
 			}
 

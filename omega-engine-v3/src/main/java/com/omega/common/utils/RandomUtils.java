@@ -185,6 +185,21 @@ public class RandomUtils {
 	 * @param x
 	 * @return
 	 */
+	public static float[][] val(int x,int y,float val){
+		float[][] temp = new float[x][y];
+		for(int i = 0;i<x;i++) {
+			for(int j = 0;j<y;j++) {
+				temp[i][j] = val;
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
 	public static float[][] xavierRandomCaffe(int x,int y,int fanIn,int fanOut){
 		float[][] temp = new float[x][y];
 		float t = (float) 2.0f/(fanIn+fanOut);

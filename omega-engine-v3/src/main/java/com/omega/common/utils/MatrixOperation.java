@@ -2170,10 +2170,10 @@ public class MatrixOperation {
 	 */
 	public static void varV2(float[][][][] x, float[] mean, float[] var,int type){
 
-		float scale = 1.0f / x.length;
+		float scale = 1.0f / (x.length - 1);
 		
 		if(type != 0) {
-			scale = 1.0f / (x.length * x[0][0].length * x[0][0][0].length);
+			scale = 1.0f / (x.length * x[0][0].length * x[0][0][0].length - 1);
 		}
 		
 		Vector<Task<Object>> workers = new Vector<Task<Object>>();

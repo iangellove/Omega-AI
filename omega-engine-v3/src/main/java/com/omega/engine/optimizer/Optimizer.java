@@ -199,6 +199,8 @@ public abstract class Optimizer {
 			String label = testData.labels[n];
 			
 			String predictLabel = LabelUtils.vectorTolabel(output.maxtir[0][0][0], testData.labelSet);
+
+//			System.out.println(label+"="+predictLabel+":"+label.equals(predictLabel));
 			
 			if(!label.equals(predictLabel)) {
 //				System.out.println("index:"+n+"::"+JsonUtils.toJson(output)+"==>predictLabel:"+predictLabel+"==label:"+label+":"+label.equals(predictLabel));

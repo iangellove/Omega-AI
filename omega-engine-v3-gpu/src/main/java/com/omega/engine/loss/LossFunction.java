@@ -1,9 +1,9 @@
 package com.omega.engine.loss;
 
+import com.omega.common.data.Tensor;
+import com.omega.common.data.Tensors;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
 
 public abstract class LossFunction {
 	
@@ -11,21 +11,21 @@ public abstract class LossFunction {
 	
 	public float eta = 0.00001f;
 	
-	public abstract Blob loss(Blob x, float[][] label);
+	public abstract Tensor loss(Tensor x, Tensor label);
 	
-	public abstract Blob diff(Blob x, float[][] label);
+	public abstract Tensor diff(Tensor x, Tensor label);
 	
 	public abstract LossType getLossType();
 	
-	public float gradientCheck(Blob x, float[][] label) {
-		Blob diff = this.diff(x,label);
-		Blob f1 = this.loss(Blobs.blob(MatrixOperation.add(x.maxtir, eta)), label);
-		Blob f2 = this.loss(Blobs.blob(MatrixOperation.subtraction(x.maxtir, eta)), label);
-		float[][][][] temp = MatrixOperation.subtraction(f1.maxtir, f2.maxtir);
+	public float gradientCheck(Tensor x, Tensor label) {
+		Tensor diff = this.diff(x,label);
+		Tensor f1 = this.loss(Tensors.tensor(x.number, x.channel, x.height, x.width, MatrixOperation.add(x.data, eta)), label);
+		Tensor f2 = this.loss(Tensors.tensor(x.number, x.channel, x.height, x.width, MatrixOperation.subtraction(x.data, eta)), label);
+		float[] temp = MatrixOperation.subtraction(f1.data, f2.data);
 		temp = MatrixOperation.division(temp, 2 * eta);
 		System.out.println("diff:"+JsonUtils.toJson(diff));
 		System.out.println("gradientCheck:"+JsonUtils.toJson(temp));
-		float[][][][] error = MatrixOperation.subtraction(diff.maxtir, temp);
+		float[] error = MatrixOperation.subtraction(diff.data, temp);
 		return MatrixOperation.sum(error);
 	} 
 	

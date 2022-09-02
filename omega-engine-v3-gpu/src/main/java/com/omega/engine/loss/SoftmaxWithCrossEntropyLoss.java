@@ -1,7 +1,7 @@
 package com.omega.engine.loss;
 
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
+import com.omega.common.data.Tensor;
+import com.omega.common.data.Tensors;
 
 /**
  * Cross Entropy loss function
@@ -34,40 +34,40 @@ public class SoftmaxWithCrossEntropyLoss extends LossFunction {
 	}
 
 	@Override
-	public Blob loss(Blob x, float[][] label) {
+	public Tensor loss(Tensor x, Tensor label) {
 		// TODO Auto-generated method stub
-		Blob temp = Blobs.blob(x.number,x.channel,x.height,x.width);
+		Tensor temp = Tensors.tensor(x.number,x.channel,x.height,x.width);
 		
-		for(int n = 0;n<x.number;n++) {
-			for(int o = 0;o<x.width;o++) {
-				if(x.maxtir[n][0][0][o] == 0.0d) {
-					temp.maxtir[n][0][0][o] = (float) (- label[n][o] * Math.log(eta));
-				}else {
-					temp.maxtir[n][0][0][o] = (float) (- label[n][o] * Math.log(x.maxtir[n][0][0][o]));
-				}
+		for(int i = 0;i<x.getDataLength();i++) {
+			if(x.data[i] == 0.0f) {
+				temp.data[i] = (float) (- label.data[i] * Math.log(eta));
+			}else {
+				temp.data[i] = (float) (- label.data[i] * Math.log(x.data[i]));
 			}
 		}
-
+		
 		return temp;
 	}
 
 	@Override
-	public Blob diff(Blob x, float[][] label) {
+	public Tensor diff(Tensor x, Tensor label) {
 		// TODO Auto-generated method stub
-		Blob temp = Blobs.blob(x.number,x.channel,x.height,x.width);
-		for(int n = 0;n<x.number;n++) {
-			for(int o = 0;o<x.width;o++) {
-				temp.maxtir[n][0][0][o] = - label[n][o] / x.maxtir[n][0][0][o];
-			}
+		Tensor temp = Tensors.tensor(x.number,x.channel,x.height,x.width);
+		
+		for(int i = 0;i<x.getDataLength();i++) {
+			temp.data[i] = - label.data[i] / x.data[i];
+//			System.out.println(temp.data[i]);
 		}
+		
 		return temp;
 	}
 	
 	public static void main(String[] args) {
-		float[][] x = new float[][] {{0.2f,0.3f,0.5f},{0.1f,0.1f,0.8f},{0.3f,0.1f,0.6f},{0.9f,0.01f,0.09f}};
-		Blob xb = Blobs.blob(4, 1, 1, 3, x);
-		float[][] label = new float[][] {{0,1,0},{1,0,0},{1,0,0},{0,0,1}};
-		float error = SoftmaxWithCrossEntropyLoss.operation().gradientCheck(xb,label);
+		float[] x = new float[] {0.2f,0.3f,0.5f,0.1f,0.1f,0.8f,0.3f,0.1f,0.6f,0.9f,0.01f,0.09f};
+		Tensor xt = Tensors.tensor(4, 1, 1, 3, x);
+		float[] label = new float[] {0,1,0,1,0,0,1,0,0,0,0,1};
+		Tensor labelt = Tensors.tensor(4, 1, 1, 3, label);
+		float error = SoftmaxWithCrossEntropyLoss.operation().gradientCheck(xt,labelt);
 		System.out.println("error:"+error);
 	}
 

@@ -1,6 +1,6 @@
 package com.omega.engine.nn.layer.active;
 
-import com.omega.engine.nn.data.Blobs;
+import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.Layer;
 
 public abstract class ActiveFunctionLayer extends Layer {
@@ -18,12 +18,17 @@ public abstract class ActiveFunctionLayer extends Layer {
 		this.oChannel = this.channel;
 		this.oHeight = this.height;
 		this.oWidth = this.width;
-		this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
+		if(output == null || number != output.number) {
+			output = new Tensor(number, oChannel, oHeight, oWidth);
+		}
+		if(diff == null || number != output.number) {
+			diff = new Tensor(number, channel, height, width);
+		}
 	}
 	
 	@Override
 	public void initBack() {
-		this.diff = Blobs.zero(number, channel, height, width, this.diff);
+		
 	}
 	
 }

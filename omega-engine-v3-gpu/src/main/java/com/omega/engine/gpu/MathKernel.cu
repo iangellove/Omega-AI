@@ -107,9 +107,8 @@ __global__ void std_fn(float* var,float* std,float eta,int n)
 
 }
 
-
 extern "C"
-__global__ void mwa(float* mean,float* std,float* runingMean,float* runingStd,int n)
+__global__ void mwa(float* mean,float* var,float* runingMean,float* runingVar,int n)
 {
     
     float alpha = 0.1;
@@ -118,7 +117,7 @@ __global__ void mwa(float* mean,float* std,float* runingMean,float* runingStd,in
 		
 		runingMean[index] = alpha * runingMean[index] + (1 - alpha) * mean[index];
 		
-		runingStd[index] = alpha * runingStd[index] + (1 - alpha) * std[index];
+		runingVar[index] = alpha * runingVar[index] + (1 - alpha) * var[index];
 		
 	}
 

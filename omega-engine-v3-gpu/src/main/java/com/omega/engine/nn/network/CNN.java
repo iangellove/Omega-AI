@@ -1,8 +1,8 @@
 package com.omega.engine.nn.network;
 
+import com.omega.common.data.Tensor;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
-import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
@@ -56,7 +56,7 @@ public class CNN extends Network {
 	}
 
 	@Override
-	public Blob forward(Blob input) {
+	public Tensor forward(Tensor input) {
 		// TODO Auto-generated method stub
 
 		long start = System.nanoTime();
@@ -128,7 +128,7 @@ public class CNN extends Network {
 	}
 
 	@Override
-	public Blob loss(Blob output, float[][] label) {
+	public Tensor loss(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub
 		
 		switch (this.getLastLayer().getLayerType()) {
@@ -148,13 +148,13 @@ public class CNN extends Network {
 	}
 
 	@Override
-	public Blob lossDiff(Blob output, float[][] label) {
+	public Tensor lossDiff(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub
 		return this.lossFunction.diff(output, label);
 	}
 
 	@Override
-	public void back(Blob lossDiff) {
+	public void back(Tensor lossDiff) {
 		// TODO Auto-generated method stub
 
 //		long start = System.nanoTime();
@@ -192,9 +192,9 @@ public class CNN extends Network {
 			long start2 = System.nanoTime();
 			
 			layer.back();
-			
+
 			layer.update();
-			
+
 			if(layer.getLayerType() == LayerType.conv) {
 				convTime += System.nanoTime() - start2;
 			}
@@ -237,7 +237,7 @@ public class CNN extends Network {
 	}
 
 	@Override
-	public Blob predict(Blob input) {
+	public Tensor predict(Tensor input) {
 		// TODO Auto-generated method stub
 		this.RUN_MODEL = RunModel.TEST;
 		this.forward(input);

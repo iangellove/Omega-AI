@@ -3,10 +3,7 @@ package com.omega.engine.nn.layer;
 import java.util.List;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.gpu.data.CacheDataSet;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.Updater;
@@ -43,25 +40,21 @@ public abstract class Layer {
 	
 	public int oWidth = 0;
 	
-	public Blob input;
+	public Tensor input;
 	
-	public Tensor input2;
+	public Tensor output;
 	
-	public Blob output;
+	public Tensor diff;
 	
-	public Tensor output2;
+	public Tensor delta;
 	
-	public Blob diff;
+	public Tensor weight;
 	
-	public Blob delta;
+	public Tensor bias;
 	
-	public float[][] deltaW;
+	public Tensor diffW;
 	
-	public float[] deltaB;
-	
-	public float[][] weight;
-	
-	public float[] bias;
+	public Tensor diffB;
 	
 	public boolean hasBias = true;
 	
@@ -101,7 +94,7 @@ public abstract class Layer {
 //	 */
 //	public abstract Blob output(float eta);
 	
-	public abstract Blob getOutput();
+	public abstract Tensor getOutput();
 	
 	public abstract void diff();
 	
@@ -146,8 +139,8 @@ public abstract class Layer {
 			/**
 			 * 获取上一层的输出作为当前层的输入
 			 */
-			this.input = Blobs.transform(number, channel, height, width, this.network.getPreLayer(this.index).output);
-
+			this.input = this.network.getPreLayer(this.index).output;
+			
 		}else {
 			/**
 			 * resnet block layer
@@ -177,8 +170,8 @@ public abstract class Layer {
 			/**
 			 * 获取上一层的输出作为当前层的输入
 			 */
-			this.delta = Blobs.transform(number, oChannel, oHeight, oWidth, this.network.getNextLayer(this.index).diff);
-
+			this.delta = this.network.getNextLayer(this.index).diff;
+			
 		}else {
 			/**
 			 * resnet block layer
@@ -186,7 +179,7 @@ public abstract class Layer {
 			if(this.index == parent.layers.size() - 1 || isIdentity) {
 				this.delta = parent.delta;
 			}else {
-				this.delta = Blobs.transform(number, oChannel, oHeight, oWidth, parent.layers.get(index + 1).diff);
+				this.delta = parent.layers.get(index + 1).diff;
 			}
 			
 		}
@@ -196,7 +189,7 @@ public abstract class Layer {
 	/**
 	 * 转换并设置输入数据
 	 */
-	public void setDelta(Blob delta) {
+	public void setDelta(Tensor delta) {
 		/**
 		 * 获取上一层的输出作为当前层的输入
 		 */
@@ -216,29 +209,6 @@ public abstract class Layer {
 	 * (f(x + eta) - f(x - eta)) / (2 * eta) ≈ f'(x)
 	 */
 	public float gradientCheck() {
-		System.out.println("*******************" + this.index + "="+this.getLayerType()+" layer********************");
-		
-		if(this.index != 0) {
-
-			float[][][][] output1 = this.output(MatrixOperation.add(this.input.maxtir, this.eta));
-			
-			float[][][][] output2 = this.output(MatrixOperation.subtraction(this.input.maxtir, this.eta));
-			
-			float[][][][] gradientCheck = MatrixOperation.subtraction(output1, output2);
-			
-			gradientCheck = MatrixOperation.division(gradientCheck, 2 * this.eta);
-
-			float finalGCError = 0.0f;
-			
-			if(this.getLayerType()!=LayerType.pooling) {
-				
-				float[][][][] error = MatrixOperation.subtractionP(this.delta.maxtir, gradientCheck);
-//				System.out.println(JsonUtils.toJson(error));
-				finalGCError = MatrixOperation.sum(error);
-			}
-			
-			System.out.println("finalGCError:"+finalGCError);
-		}
 		
 		return 0.0f;
 	}

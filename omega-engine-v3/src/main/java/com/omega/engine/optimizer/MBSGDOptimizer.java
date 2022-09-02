@@ -61,7 +61,7 @@ public class MBSGDOptimizer extends Optimizer {
 		try {
 			
 			this.dataSize = trainingData.number;
-			
+
 			if(isWarmUp()) {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
@@ -75,6 +75,12 @@ public class MBSGDOptimizer extends Optimizer {
 				this.trainIndex = i;
 				
 				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+				
+//				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
+				
+//				int[][] indexs = new int[8][10];
+//				
+//				DataExportUtils.importTXT(indexs, "H://index.txt");
 				
 				/**
 				 * 遍历整个训练集
@@ -97,7 +103,7 @@ public class MBSGDOptimizer extends Optimizer {
 					 * forward
 					 */
 					Blob output = this.network.forward(input);
-
+					
 					/**
 					 * loss
 					 */

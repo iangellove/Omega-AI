@@ -3,7 +3,9 @@ package com.omega.engine.gpu;
 import static jcuda.driver.JCudaDriver.cuMemAlloc;
 import static jcuda.runtime.JCuda.cudaMalloc;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import jcuda.Pointer;
 import jcuda.Sizeof;
@@ -16,10 +18,17 @@ public class CUDAMemoryManager {
 	
 	public static Map<String,Pointer> pointerMap = new HashMap<String, Pointer>();
 	
+	public static List<CUdeviceptr> cu_deviceptrs = new ArrayList<CUdeviceptr>();
+	
+	public static List<Pointer> cu_porints = new ArrayList<Pointer>();
+	
 	public static CUdeviceptr getDevice(int size) {
 
 		CUdeviceptr device = new CUdeviceptr();
+		
 		cuMemAlloc(device, size * Sizeof.FLOAT);
+		
+		cu_deviceptrs.add(device);
 		
 		return device;
 	}
@@ -44,6 +53,8 @@ public class CUDAMemoryManager {
 		Pointer p = new Pointer();
 		cudaMalloc(p, size * Sizeof.FLOAT);
 		
+		cu_porints.add(p);
+		
 		return p;
 	}
 	
@@ -66,12 +77,22 @@ public class CUDAMemoryManager {
 		
 		for(String key:deviceMap.keySet()) {
 			 JCuda.cudaFree(deviceMap.get(key));
-//			 deviceMap.remove(key);
 		}
 		
 		for(String key:pointerMap.keySet()) {
 			 GPUOP.getInstance().free(pointerMap.get(key));
-//			 pointerMap.remove(key);
+		}
+
+	}
+	
+	public static void freeAll() throws Exception{
+		
+		for(CUdeviceptr dec:cu_deviceptrs) {
+			 JCuda.cudaFree(dec);
+		}
+		
+		for(Pointer p:cu_porints) {
+			 GPUOP.getInstance().free(p);
 		}
 
 	}

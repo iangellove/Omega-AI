@@ -1,14 +1,13 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MathUtils;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
-import com.omega.common.utils.Transpose;
 import com.omega.engine.gpu.GPUOP;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
+
+import jcuda.jcublas.cublasOperation;
 
 /**
  * 
@@ -18,10 +17,6 @@ import com.omega.engine.nn.data.Blobs;
  *
  */
 public class FullyLayer extends Layer{
-	
-	private float[] input1d;
-	
-	private float[] weight1d;
 	
 	public FullyLayer(int inputNum,int outputNum) {
 		this.channel = 1;
@@ -48,36 +43,32 @@ public class FullyLayer extends Layer{
 	public void initBack() {
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number){
-			this.diff = Blobs.zero(number, channel, height, width, this.diff);
+			this.diff = new Tensor(number, channel, height, width);
 		}
-		MatrixUtils.zero(this.deltaB);
-		MatrixUtils.zero(this.deltaW);
+		MatrixUtils.zero(this.diffB.data);
+		MatrixUtils.zero(this.diffW.data);
+		MatrixUtils.zero(this.diff.data);
 	}
 
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
-		int inputSize = this.number * this.width;
 		if(this.output == null || this.number != this.output.number){
-			this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
+			this.output = new Tensor(number, oChannel, oHeight, oWidth);
 		}
-		if(this.input1d == null || inputSize != this.input1d.length) {
-			this.input1d = new Tensor(1, 1, 1, inputSize).data;
-		}
+		MatrixUtils.zero(this.output.data);
 	}
 	
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub
-//		this.weight = MatrixOperation.gaussianRandom(this.width, this.oWidth, 0.01);
-		this.weight = RandomUtils.xavierRandom(this.width, this.oWidth, this.width, this.oWidth);
-//		this.weight = RandomUtils.heRandom(this.width, this.oWidth, this.width * this.oWidth);
-		this.bias = MatrixUtils.zero(this.oWidth);
-		this.deltaB = new float[this.oWidth];
-		this.deltaW = new float[width][oWidth];
-		this.weight1d = new float[width * oWidth];
-//		this.bias = MatrixOperation.gaussianRandom(this.outputNum, 0.1);
+		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.xavierRandom(this.width * this.oWidth, this.width, this.oWidth));
+//		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.val(this.width * this.oWidth, 0.1f));
+//		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.heRandom(this.width * this.oWidth, this.width * this.oWidth));
+		this.bias = new Tensor(1, 1, 1, oWidth);
+		this.diffB = new Tensor(1, 1, 1, oWidth);
+		this.diffW = new Tensor(1, 1, width, oWidth);
 	}
 	
 	@Override
@@ -87,22 +78,16 @@ public class FullyLayer extends Layer{
 		
 		if(this.input != null) {
 			
-//			long start = System.nanoTime();
+//			System.out.println("full-input:"+JsonUtils.toJson(input.data));
 			
-			MatrixUtils.transform(input.maxtir, input1d);
-			MatrixUtils.transform(weight, weight1d);
-			
-			float[] r = new float[this.number * this.oWidth];
-			
-			GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, input1d, weight1d, r);
-			
-			MatrixUtils.transform(r, output.maxtir, this.number, 1, 1, this.oWidth);
-			
+			GPUOP.getInstance().multiplyFloat(this.number, this.oWidth, this.width, input.data, weight.data, output.data, 
+					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f, this.width, this.oWidth, this.oWidth);
+
 			if(hasBias) {
-			
+
 				for(int n = 0;n<this.number;n++) {
-					for(int w = 0;w<this.oWidth;w++) {
-						output.maxtir[n][0][0][w] += bias[w];
+					for(int ow = 0;ow<this.oWidth;ow++) {
+						output.data[n * oWidth + ow] += bias.data[ow];
 					}
 				}
 			
@@ -117,28 +102,34 @@ public class FullyLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		
+//		System.out.println("index-delta:"+index);
+
 		/**
 		 * deltaW = inputT * delta
-		 * diff = delta * weightT
+		 * int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta
+		 * number * w
+		 * number * ow
+		 * m = w,k = number,n = ow
 		 */
-		float[] dw = new float[width * oWidth];
-		float[] delta1d = new float[this.number * this.oWidth];
-		MatrixUtils.transform(this.delta.maxtir, delta1d);
-		float[] inputT = Transpose.transpose(this.input1d, this.number, this.width);
-		GPUOP.getInstance().multiplyFloat(this.width, this.number, this.oWidth, inputT, delta1d, dw);
-		dw = MatrixOperation.multiplication(dw, (1.0f / this.number));
-		MatrixUtils.transform(dw, deltaW, width, oWidth);
+		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, input.data, delta.data, diffW.data,
+				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f, this.width, this.oWidth, this.oWidth);
+
+		MatrixOperation.multiplication_self(diffW.data, (1.0f / this.number));
 		
-		float[] diff1d = new float[this.number * this.width];
-		float[] weightT = Transpose.transpose(this.weight1d, this.width, this.oWidth);
-		GPUOP.getInstance().multiplyFloat(this.number, this.oWidth, this.width, delta1d, weightT, diff1d);
-		MatrixUtils.transform(diff1d, diff.maxtir, this.number, 1, 1, width);
+		/**
+		 * diff = delta * weightT
+		 * number * ow
+		 * w * ow
+		 * m = number,k = ow,n = w
+		 */
+		GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.data, weight.data, diff.data,
+				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f, this.oWidth, this.oWidth, this.width);
 		
 		if(hasBias) {
 			
 			for(int n = 0;n<this.number;n++) {
 				for(int ow = 0;ow<this.oWidth;ow++) {
-					deltaB[ow] += delta.maxtir[index][0][0][ow] / number;
+					diffB.data[ow] += delta.data[n * oWidth + ow] / number;
 				}
 			}
 		
@@ -197,20 +188,18 @@ public class FullyLayer extends Layer{
 		if(this.updater != null){
 			this.updater.update(this);
 		}else{
-			for(int i = 0;i<this.weight.length;i++) {
-				for(int j = 0;j<this.weight[i].length;j++) {
-					this.weight[i][j] -= this.learnRate * this.deltaW[i][j];
-				}
+			for(int i = 0;i<this.weight.getDataLength();i++) {
+				this.weight.data[i] -= this.learnRate * this.diffW.data[i];
 			}
-			for(int i = 0;i<this.oWidth;i++) {
-				this.bias[i] -= this.learnRate * this.deltaB[i];
+			for(int i = 0;i<this.bias.getDataLength();i++) {
+				this.bias.data[i] -= this.learnRate * this.diffB.data[i];
 			}
 		}
 		
 	}
 
 	@Override
-	public Blob getOutput() {
+	public Tensor getOutput() {
 		// TODO Auto-generated method stub
 		return this.output;
 	}
@@ -219,10 +208,6 @@ public class FullyLayer extends Layer{
 	public void showDiff() {
 		// TODO Auto-generated method stub
 
-		float[] x = MatrixUtils.transform(this.diff.maxtir);
-		
-		System.out.println("fully layer["+this.index+"]diff-max:"+MathUtils.max(x)+" min:"+MathUtils.min(x));
-		
 	}
 
 	@Override

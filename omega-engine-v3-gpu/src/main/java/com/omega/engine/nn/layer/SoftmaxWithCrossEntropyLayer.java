@@ -1,10 +1,9 @@
 package com.omega.engine.nn.layer;
 
-import com.omega.common.utils.MathUtils;
+import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
-import com.omega.common.utils.MatrixUtils;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
+import com.omega.common.utils.PrintUtils;
 
 /**
  * SoftmaxWithCrossEntropyLayer
@@ -18,7 +17,7 @@ import com.omega.engine.nn.data.Blobs;
  */
 public class SoftmaxWithCrossEntropyLayer extends Layer {
 	
-	private float[][] currentLabel;
+	private Tensor currentLabel;
 	
 	public SoftmaxWithCrossEntropyLayer(int inputNum) {
 		this.channel = 1;
@@ -34,7 +33,7 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
-		this.output = Blobs.zero(number, oChannel, oHeight, oWidth,this.output);
+		this.output = new Tensor(number, oChannel, oHeight, oWidth);
 	}
 
 	@Override
@@ -45,34 +44,36 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		this.diff = Blobs.zero(number, oChannel, oHeight, oWidth, this.diff);
+		this.diff = new Tensor(number, channel, height, width);
 	}
 	
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+		
+		float[] dest = new float[channel * height * width];
+		
 		for(int n = 0;n<this.number;n++) {
-			float max = MatrixOperation.max(this.input.maxtir[n][0][0]);
-			float[] temp = MatrixOperation.subtraction(this.input.maxtir[n][0][0], max);
+			input.copy(n, dest);
+			float max = MatrixOperation.max(dest);
+			float[] temp = MatrixOperation.subtraction(dest, max);
 			temp = MatrixOperation.exp(temp);
 			float sum = MatrixOperation.sum(temp);
 			for(int i = 0;i<temp.length;i++) {
-				this.output.maxtir[n][0][0][i] = temp[i] / sum;
+				this.output.data[n * channel * height * width + i] = temp[i] / sum;
 			}
 		}
+		
 	}
 
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
 		
-		for(int n = 0;n<this.number;n++) {
-			for(int w = 0;w<this.oWidth;w++) {
-				this.diff.maxtir[n][0][0][w] = this.output.maxtir[n][0][0][w] - this.currentLabel[n][w];
-			}
+		for(int i = 0;i<this.delta.getDataLength();i++) {
+			this.diff.data[i] = this.output.data[i] - this.currentLabel.data[i];
 		}
-//		MatrixOperation.printImage(this.diff);
-//		System.out.println(JsonUtils.toJson(this.diff));
+
 	}
 
 	@Override
@@ -113,35 +114,18 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 		// TODO Auto-generated method stub
 	}
 
-	public void setCurrentLabel(float[][] currentLabel) {
+	public void setCurrentLabel(Tensor currentLabel) {
 		this.currentLabel = currentLabel;
 	}
 
 	@Override
 	public void showDiff() {
 		// TODO Auto-generated method stub
-//		System.out.println("softmax with cross layer["+this.index+"]diff start:");
-////		
-//		MatrixOperation.printImage(this.input);
-////		
-////		System.out.println("=====================================");
-////		
-//		MatrixOperation.printImage(this.active);
-////		
-//		System.out.println("=====================================");
-////		
-//		MatrixOperation.printImage(this.diff);
-////		
-//		System.out.println("softmax with cross layer["+this.index+"]diff end.");
 
-		float[] x = MatrixUtils.transform(this.diff.maxtir);
-		
-		System.out.println("softmax layer["+this.index+"]diff-max:"+MathUtils.max(x)+" min:"+MathUtils.min(x));
-		
 	}
 
 	@Override
-	public Blob getOutput() {
+	public Tensor getOutput() {
 		// TODO Auto-generated method stub
 		return this.output;
 	}
@@ -155,20 +139,7 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 	@Override
 	public float[][][][] output(float[][][][] input) {
 		// TODO Auto-generated method stub
-		
-		float[][][][] output = new float[this.number][this.oChannel][this.oHeight][this.oWidth];
-		
-		for(int n = 0;n<this.number;n++) {
-			float max = MatrixOperation.max(input[n][0][0]);
-			float[] temp = MatrixOperation.subtraction(input[n][0][0], max);
-			temp = MatrixOperation.exp(temp);
-			float sum = MatrixOperation.sum(temp);
-			for(int i = 0;i<temp.length;i++) {
-				output[n][0][0][i] = temp[i] / sum;
-			}
-		}
-		
-		return output;
+		return null;
 	}
 
 	@Override

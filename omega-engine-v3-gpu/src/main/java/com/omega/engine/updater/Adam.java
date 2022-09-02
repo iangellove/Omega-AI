@@ -1,14 +1,12 @@
 package com.omega.engine.updater;
 
-import java.util.Vector;
-
-import com.omega.common.task.Task;
-import com.omega.common.task.TaskEngine;
+import com.omega.common.task.ForkJobEngine;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.normalization.BNLayer;
+import com.omega.engine.updater.jobs.AdamJob;
 
 /**
  * Adam Updater
@@ -23,21 +21,19 @@ public class Adam extends Updater {
 	
 	private float eta = 10e-8f;
 	
-	private float[][] mw;
+	private float[] mw;
 	
-	private float[][] vw;
+	private float[] vw;
 	
 	private float[] mb;
 	
 	private float[] vb;
 	
-	private float[][][][] mmw;
-	
-	private float[][][][] vmw;
-
 	private float[] mgama;
 	
 	private float[] vgama;
+	
+	private AdamJob adamJob;
 	
 	@Override
 	public void update(Layer layer) {
@@ -46,15 +42,21 @@ public class Adam extends Updater {
 		 * init
 		 */
 		if(this.mw == null || this.vw == null) {
-			this.mw = MatrixUtils.zero(layer.width, layer.oWidth);
-			this.vw = MatrixUtils.zero(layer.width, layer.oWidth);
+			this.mw = new float[layer.width * layer.oWidth];
+			this.vw = new float[layer.width * layer.oWidth];
 			if(layer.hasBias) {
 				this.mb = MatrixUtils.zero(layer.oWidth);
 				this.vb = MatrixUtils.zero(layer.oWidth);
 			}
 		}
+//		
+//		this.updateW(layer);
+//		
+
+		AdamJob adamJob = new AdamJob(layer.diffW.data, mw, vw, layer.weight.data, layer.learnRate, 0, layer.weight.getDataLength() - 1);
 		
-		this.updateW(layer);
+		ForkJobEngine.run(adamJob);
+
 		
 		if(layer.hasBias) {
 			
@@ -77,10 +79,10 @@ public class Adam extends Updater {
 		/**
 		 * init
 		 */
-		if(this.mmw == null || this.vmw == null) {
+		if(this.mw == null || this.vw == null) {
 			
-			this.mmw = MatrixUtils.zero(conv.kernelNum, conv.channel, conv.kHeight, conv.kWidth);
-			this.vmw = MatrixUtils.zero(conv.kernelNum, conv.channel, conv.kHeight, conv.kWidth);
+			this.mw = new float[conv.kernelNum * conv.channel * conv.kHeight * conv.kWidth];
+			this.vw = new float[conv.kernelNum * conv.channel * conv.kHeight * conv.kWidth];
 
 			if(layer.hasBias) {
 				this.mb = MatrixUtils.zero(conv.kernelNum);
@@ -88,9 +90,11 @@ public class Adam extends Updater {
 			}
 			
 		}
-
-		this.updateW(conv);
 		
+		AdamJob adamJob = new AdamJob(conv.diffW.data, mw, vw, conv.weight.data, conv.learnRate, 0, conv.weight.getDataLength() - 1);
+		
+		ForkJobEngine.run(adamJob);
+
 		if(conv.hasBias) {
 
 			this.updateB(conv);
@@ -146,69 +150,14 @@ public class Adam extends Updater {
 	 * vhat = vt / (1 - beta2)
 	 * W = W - learn_rate * mhat / (vhat^-1/2 + eta)
 	 */
-	public void updateW(ConvolutionLayer conv) {
-		
-		float[][][][] deltaW = conv.deltaW;
-		
-		int N = deltaW.length;
-		int C = deltaW[0].length;
-		int H = deltaW[0][0].length;
-		int W = deltaW[0][0][0].length;
-		
-		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-		
-		for(int n = 0;n<N;n++){
-			
-			final int index = n;
-			
-			workers.add(new Task<Object>(index) {
-				
-				@Override
-			    public Object call() throws Exception {
-					for(int c = 0;c<C;c++) {
-						for(int h = 0;h<H;h++) {
-							for(int w = 0;w<W;w++) {
-								mmw[index][c][h][w] = beta1 * mmw[index][c][h][w] + (1 - beta1) * deltaW[index][c][h][w];
-								vmw[index][c][h][w] = beta2 * vmw[index][c][h][w] + (1 - beta2) * deltaW[index][c][h][w] * deltaW[index][c][h][w];
-								float mhat = mmw[index][c][h][w] / (1 - beta1);
-								float vhat = vmw[index][c][h][w] / (1 - beta2);
-								
-								conv.kernel[index][c][h][w] = conv.kernel[index][c][h][w] - conv.learnRate * mhat / ((float)Math.sqrt(vhat) + eta);
-							}
-						}
-					}
-					return null;
-				}
-			});
-			
-		}
-		
-		TaskEngine.getInstance(8).dispatchTask(workers);
-		
-	}
-	
-	/**
-	 * mt = beta1 * mt-1 + (1 - beta1) * gt
-	 * vt = beta2 * vt-1 + (1 - beta2) * gt^2
-	 * mhat = mt / (1 - beta1)
-	 * vhat = vt / (1 - beta2)
-	 * W = W - learn_rate * mhat / (vhat^-1/2 + eta)
-	 */
 	public void updateW(Layer layer) {
 		
-		float[][] deltaW = layer.deltaW;
-		
-		int H = deltaW.length;
-		int W = deltaW[0].length;
-
-		for(int h = 0;h<H;h++) {
-			for(int w = 0;w<W;w++) {
-				this.mw[h][w] = this.beta1 * this.mw[h][w] + (1 - this.beta1) * deltaW[h][w];
-				this.vw[h][w] = this.beta2 * this.vw[h][w] + (1 - this.beta2) * deltaW[h][w] * deltaW[h][w];
-				float mhat = this.mw[h][w] / (1 - beta1);
-				float vhat = this.vw[h][w] / (1 - beta2);
-				layer.weight[h][w] = layer.weight[h][w] - layer.learnRate * mhat / ((float)Math.sqrt(vhat) + this.eta);
-			}
+		for(int i = 0;i<layer.diffW.getDataLength();i++) {
+			this.mw[i] = this.beta1 * this.mw[i] + (1 - this.beta1) * layer.diffW.data[i];
+			this.vw[i] = this.beta2 * this.vw[i] + (1 - this.beta2) * layer.diffW.data[i] * layer.diffW.data[i];
+			float mhat = this.mw[i] / (1 - beta1);
+			float vhat = this.vw[i] / (1 - beta2);
+			layer.weight.data[i] = layer.weight.data[i] - layer.learnRate * mhat / ((float)Math.sqrt(vhat) + this.eta);
 		}
 
 	}
@@ -222,14 +171,14 @@ public class Adam extends Updater {
 	 */
 	public void updateB(Layer layer) {
 		
-		float[] deltaB = layer.deltaB;
+		float[] deltaB = layer.diffB.data;
 
 		for(int i = 0;i<deltaB.length;i++){
 			this.mb[i] = this.beta1 * this.mb[i] + (1 - this.beta1) * deltaB[i];
 			this.vb[i] = this.beta2 * this.vb[i] + (1 - this.beta2) * deltaB[i] * deltaB[i];
 			float mhat = this.mb[i] / (1 - beta1);
 			float vhat = this.vb[i] / (1 - beta2);
-			layer.bias[i] = layer.bias[i] - layer.learnRate * mhat / ((float)Math.sqrt(vhat) + this.eta);
+			layer.bias.data[i] = layer.bias.data[i] - layer.learnRate * mhat / ((float)Math.sqrt(vhat) + this.eta);
 		}
 		
 	}

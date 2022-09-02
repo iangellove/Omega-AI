@@ -66,6 +66,32 @@ public class MathUtils {
 	}
 	
 	/**
+	 * 生成随机数组
+	 * @param length
+	 * @return
+	 */
+	public static int[][] sortInt(int length,int batchSize) {
+		
+		int itc = new BigDecimal(length).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_DOWN).intValue();
+		
+		int[][] tmp = new int[itc][batchSize];
+		
+		List<Integer> list = new ArrayList<Integer>(); 
+		
+		for(int i = 0;i<length;i++) {
+			list.add(i);
+		}
+		
+		for(int i = 0;i<tmp.length;i++) {
+			for(int j = 0;j<tmp[i].length;j++) {		
+				tmp[i][j] = list.get(i * batchSize + j);
+			}
+		}
+		
+		return tmp;
+	}
+	
+	/**
 	 * 整形随机数(范围)
 	 * @param start
 	 * @param end

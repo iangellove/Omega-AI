@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.omega.engine.nn.data.DataSet;
-import com.omega.engine.nn.data.MatrixDataSet;
 
 /**
  * data load utils
@@ -77,18 +76,18 @@ public class DataLoader {
             
             int inputSize = channel * height * width;
             
-            float[][] dataInput = new float[dataSize][inputSize];
-            float[][] dataLabel = new float[dataSize][labelSize];
+            float[] dataInput = new float[dataSize * inputSize];
+            float[] dataLabel = new float[dataSize * labelSize];
             String[] labels = new String[dataSize];
             
-            for(int i = 0;i<strs.size();i++) {
+            for(int i = 0;i<dataSize;i++) {
             	String[] onceData = strs.get(i);
             	for(int j = 0;j<onceData.length;j++) {
             		if(j == onceData.length - 1) {
-            			dataLabel[i][0] = Float.parseFloat(onceData[j]);
+            			dataLabel[i * labelSize + 0] = Float.parseFloat(onceData[j]);
             			labels[i] = onceData[j];
             		}else {
-            			dataInput[i][j] = Float.parseFloat(onceData[j]);
+            			dataInput[i * inputSize + j] = Float.parseFloat(onceData[j]);
             		}
             	}
             	
@@ -184,18 +183,18 @@ public class DataLoader {
 
             int inputSize = channel * height * width;
             
-            float[][] dataInput = new float[dataSize][inputSize];
-            float[][] dataLabel = new float[dataSize][labelSize];
+            float[] dataInput = new float[dataSize * inputSize];
+            float[] dataLabel = new float[dataSize * labelSize];
             String[] labels = new String[dataSize];
             
             for(int i = 0;i<strs.size();i++) {
             	String[] onceData = strs.get(i);
             	for(int j = 0;j<onceData.length;j++) {
             		if(j == onceData.length - 1) {
-            			dataLabel[i] = LabelUtils.labelToVector(onceData[j], labelSet);
+            			System.arraycopy(LabelUtils.labelToVector(onceData[j], labelSet), 0, dataLabel, i * labelSize, labelSize);
             			labels[i] = onceData[j];
             		}else {
-            			dataInput[i][j] = Float.parseFloat(onceData[j]);
+            			dataInput[i * inputSize + j] = Float.parseFloat(onceData[j]);
             		}
             	}
             	
@@ -239,15 +238,15 @@ public class DataLoader {
 		
 		try {
 			
-			float[][] dataInput = DataLoader.getImages(inputDataFileName,normalization);
+			int dataSize = DataLoader.getNumber(inputDataFileName, normalization);
 			
+			float[] dataInput = DataLoader.getImagesTo1d(inputDataFileName,normalization);
+
 			String[] labels = DataLoader.getLabels(labelDataFileName);
 			
 			if(dataInput!=null) {
-				int dataSize = dataInput.length;
-//				int inputSize = dataInput[0].length;
 				int labelSize = labelSet.length;
-				float[][] dataLabel = LabelUtils.labelToVector(labels, labelSet);
+				float[] dataLabel = LabelUtils.labelToVector1d(labels, labelSet);
 				return new DataSet(dataSize, channel, height, width, labelSize, dataInput, dataLabel, labels, labelSet);
 			}
 			
@@ -265,19 +264,19 @@ public class DataLoader {
 	 * @param labelDataFileName
 	 * @return
 	 */
-	public static DataSet loadDataByUByte(File inputDataFileName,File labelDataFileName,String[] labelSet,int channel,int height,int width,boolean normalization) {
+	public static DataSet loadDataByUByte(File inputDataFile,File labelDataFile,String[] labelSet,int channel,int height,int width,boolean normalization) {
 		
 		try {
 			
-			float[][] dataInput = DataLoader.getImages(inputDataFileName,normalization);
+			int dataSize = DataLoader.getNumber(inputDataFile, normalization);
 			
-			String[] labels = DataLoader.getLabels(labelDataFileName);
+			float[] dataInput = DataLoader.getImagesTo1d(inputDataFile,normalization);
+			
+			String[] labels = DataLoader.getLabels(labelDataFile);
 			
 			if(dataInput!=null) {
-				int dataSize = dataInput.length;
-//				int inputSize = dataInput[0].length;
 				int labelSize = labelSet.length;
-				float[][] dataLabel = LabelUtils.labelToVector(labels, labelSet);
+				float[] dataLabel = LabelUtils.labelToVector1d(labels, labelSet);
 				return new DataSet(dataSize, channel, height, width, labelSize, dataInput, dataLabel, labels, labelSet);
 			}
 			
@@ -304,47 +303,15 @@ public class DataLoader {
 		
 		try {
 			
-			float[][] dataInput = DataLoader.getImages(inputDataFileName,normalization);
+			float[] dataInput = DataLoader.getImagesTo1d(inputDataFileName,normalization);
 			
 			String[] labels = DataLoader.getLabels(labelDataFileName);
 			
 			if(dataInput!=null) {
 				int dataSize = dataInput.length;
-//				int inputSize = dataInput[0].length;
 				int labelSize = labelSet.length;
-				float[][] dataLabel = LabelUtils.labelToVector(labels, labelSet);
+				float[] dataLabel = LabelUtils.labelToVector1d(labels, labelSet);
 				return new DataSet(dataSize, channel, height, width, labelSize, dataInput, dataLabel, labels, labelSet);
-			}
-			
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-		
-		return null;
-	}
-	
-	/**
-	 * getDataByUByte
-	 * @param inputDataFileName
-	 * @param labelDataFileName
-	 * @return
-	 */
-	public static MatrixDataSet loadDataByUByteForMatrix(String inputDataFileName,String labelDataFileName,String[] labelSet,int channel,boolean normalization) {
-		
-		try {
-			
-			float[][][][] dataInput = DataLoader.getImagesToMatrix(inputDataFileName,channel,normalization);
-			
-			String[] labels = DataLoader.getLabels(labelDataFileName);
-			
-			if(dataInput!=null) {
-				int dataSize = dataInput.length;
-				int labelSize = labelSet.length;
-				int height = dataInput[0][0].length;
-				int width = dataInput[0][0][0].length;
-				float[][] dataLabel = LabelUtils.labelToVector(labels, labelSet);
-				return new MatrixDataSet(dataSize, channel, height, width, labelSize, dataInput, null, dataLabel, labels, labelSet);
 			}
 			
 		} catch (Exception e) {
@@ -433,6 +400,89 @@ public class DataLoader {
         return x;
     }
     
+	/**
+     * get images of 'train' or 'test'
+     *
+     * @param fileName the file of 'train' or 'test' about image
+     * @return one row show a `picture`
+     */
+    public static float[] getImagesTo1d(String fileName,boolean normalization) {
+        float[] x = null;
+        try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(fileName))) {
+            byte[] bytes = new byte[4];
+            bin.read(bytes, 0, 4);
+            if (!"00000803".equals(bytesToHex(bytes))) {                        // 读取魔数
+                throw new RuntimeException("Please select the correct file!");
+            } else {
+                bin.read(bytes, 0, 4);
+                int number = Integer.parseInt(bytesToHex(bytes), 16);           // 读取样本总数
+                bin.read(bytes, 0, 4);
+                int xPixel = Integer.parseInt(bytesToHex(bytes), 16);           // 读取每行所含像素点数
+                bin.read(bytes, 0, 4);
+                int yPixel = Integer.parseInt(bytesToHex(bytes), 16);           // 读取每列所含像素点数
+                x = new float[number * xPixel * yPixel];
+                for (int i = 0; i < x.length; i++) {
+                    float val = 0.0f;
+                    if(normalization){
+                    	val = bin.read() / 255.0f;
+                	}else {
+                		val = bin.read();
+                	}
+                    x[i] = val;
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return x;
+    }
+    
+    /**
+     * get images of 'train' or 'test'
+     *
+     * @param fileName the file of 'train' or 'test' about image
+     * @return one row show a `picture`
+     */
+    public static int getNumber(String fileName,boolean normalization) {
+        int number = 0;
+        try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(fileName))) {
+            byte[] bytes = new byte[4];
+            bin.read(bytes, 0, 4);
+            if (!"00000803".equals(bytesToHex(bytes))) {                        // 读取魔数
+                throw new RuntimeException("Please select the correct file!");
+            } else {
+                bin.read(bytes, 0, 4);
+                number = Integer.parseInt(bytesToHex(bytes), 16);           // 读取样本总数
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return number;
+    }
+    
+    /**
+     * get images of 'train' or 'test'
+     *
+     * @param fileName the file of 'train' or 'test' about image
+     * @return one row show a `picture`
+     */
+    public static int getNumber(File file,boolean normalization) {
+        int number = 0;
+        try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] bytes = new byte[4];
+            bin.read(bytes, 0, 4);
+            if (!"00000803".equals(bytesToHex(bytes))) {                        // 读取魔数
+                throw new RuntimeException("Please select the correct file!");
+            } else {
+                bin.read(bytes, 0, 4);
+                number = Integer.parseInt(bytesToHex(bytes), 16);           // 读取样本总数
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return number;
+    }
+    
     /**
      * get images of 'train' or 'test'
      *
@@ -466,6 +516,43 @@ public class DataLoader {
                     	}
                     }
                     x[i] = element;
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return x;
+    }
+    
+    /**
+     * get images of 'train' or 'test'
+     *
+     * @param fileName the file of 'train' or 'test' about image
+     * @return one row show a `picture`
+     */
+    public static float[] getImagesTo1d(File file,boolean normalization) {
+        float[] x = null;
+        try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] bytes = new byte[4];
+            bin.read(bytes, 0, 4);
+            if (!"00000803".equals(bytesToHex(bytes))) {                        // 读取魔数
+                throw new RuntimeException("Please select the correct file!");
+            } else {
+            	bin.read(bytes, 0, 4);
+                int number = Integer.parseInt(bytesToHex(bytes), 16);           // 读取样本总数
+                bin.read(bytes, 0, 4);
+                int xPixel = Integer.parseInt(bytesToHex(bytes), 16);           // 读取每行所含像素点数
+                bin.read(bytes, 0, 4);
+                int yPixel = Integer.parseInt(bytesToHex(bytes), 16);           // 读取每列所含像素点数
+                x = new float[number * xPixel * yPixel];
+                for (int i = 0; i < x.length; i++) {
+                    float val = 0.0f;
+                    if(normalization){
+                    	val = bin.read() / 255.0f;
+                	}else {
+                		val = bin.read();
+                	}
+                    x[i] = val;
                 }
             }
         } catch (IOException e) {
@@ -595,28 +682,24 @@ public class DataLoader {
      * @return one row show a `picture`
      */
     public static DataSet getImagesToDataSetByBin(String fileName,int number,int channel,int height,int width,int labelSize,boolean normalization,String[] labelSet) {
-        float[][][][] x = new float[number][channel][height][width];
+        float[] x = new float[number * channel * height * width];
         String[] labels = new String[number];
-        float[][] dataLabel = new float[number][labelSize];
+        float[] dataLabel = new float[number * labelSize];
         
         try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(fileName))) {
 
         	for(int n = 0;n<number;n++) {
         		int labelIndex = bin.read();
         		labels[n] = labelSet[labelIndex];
-        		dataLabel[n] = LabelUtils.labelIndexToVector(labelIndex, labelSize);
-        		for(int c = 0;c<channel;c++) {
-        			for(int h = 0;h<height;h++) {
-        				for(int w = 0;w<width;w++) {
-        					if(normalization) {
-//        						x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
-//        						x[n][c][h][w] = (float) (bin.read() / 255.0d) - 0.5f;
-        						x[n][c][h][w] = (float) (bin.read() / 255.0d);
-                    		}else{
-                    			x[n][c][h][w] = bin.read();
-                    		}
-        				}
-        			}
+        		System.arraycopy(LabelUtils.labelIndexToVector(labelIndex, labelSize), 0, dataLabel, n * labelSize, labelSize);
+        		for(int i = 0;i<channel * height * width;i++) {
+        			if(normalization) {
+//    					x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
+//    					x[n][c][h][w] = (float) (bin.read() / 255.0d) - 0.5f;
+    					x[n * channel * height * width + i] = (float) (bin.read() / 255.0d);
+            		}else{
+            			x[n * channel * height * width + i] = bin.read();
+            		}
         		}
         	}
         	
@@ -636,28 +719,25 @@ public class DataLoader {
      * @return one row show a `picture`
      */
     public static DataSet getImagesToDataSetByBin(String fileName,int number,int channel,int height,int width,int labelSize,String[] labelSet,boolean normalization,float[] mean,float[] std) {
-        float[][][][] x = new float[number][channel][height][width];
+        float[] x = new float[number * channel * height * width];
         String[] labels = new String[number];
-        float[][] dataLabel = new float[number][labelSize];
+        float[] dataLabel = new float[number * labelSize];
         
         try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(fileName))) {
 
         	for(int n = 0;n<number;n++) {
         		int labelIndex = bin.read();
         		labels[n] = labelSet[labelIndex];
-        		dataLabel[n] = LabelUtils.labelIndexToVector(labelIndex, labelSize);
-        		for(int c = 0;c<channel;c++) {
-        			for(int h = 0;h<height;h++) {
-        				for(int w = 0;w<width;w++) {
-        					if(normalization) {
-//        						x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
-//        						x[n][c][h][w] = (float) (bin.read() / 255.0d) - 0.5f;
-        						x[n][c][h][w] = (float) ((bin.read() / 255.0d) - mean[c]) / std[c];
-                    		}else{
-                    			x[n][c][h][w] = bin.read();
-                    		}
-        				}
-        			}
+        		System.arraycopy(LabelUtils.labelIndexToVector(labelIndex, labelSize), 0, dataLabel, n * labelSize, labelSize);
+        		for(int i = 0;i<channel * height * width;i++) {
+        			int c = i / (height * width);
+        			if(normalization) {
+//    					x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
+//    					x[n][c][h][w] = (float) (bin.read() / 255.0d) - 0.5f;
+    					x[n * channel * height * width + i] = (float) ((bin.read() / 255.0d) - mean[c]) / std[c];
+            		}else{
+            			x[n * channel * height * width + i] = bin.read();
+            		}
         		}
         	}
         	
@@ -680,9 +760,9 @@ public class DataLoader {
         
     	int batchSize = number * fileNames.length;
     	
-    	float[][][][] x = new float[batchSize][channel][height][width];
+    	float[] x = new float[batchSize * channel * height * width];
         String[] labels = new String[batchSize];
-        float[][] dataLabel = new float[batchSize][labelSize];
+        float[] dataLabel = new float[batchSize * labelSize];
 
     	int index = 0;
     	
@@ -693,21 +773,15 @@ public class DataLoader {
             	for(int n = 0;n<number;n++) {
             		int labelIndex = bin.read();
             		labels[index] = labelSet[labelIndex];
-            		
-            		dataLabel[index] = LabelUtils.labelIndexToVector(labelIndex, labelSize);
-            		for(int c = 0;c<channel;c++) {
-            			for(int h = 0;h<height;h++) {
-            				for(int w = 0;w<width;w++) {
-            					if(normalization) {
-//            						x[index][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
-//            						x[index][c][h][w] = (float) ((bin.read() / 255.0d) - 0.5);
-            						x[index][c][h][w] = (float) (bin.read() / 255.0d) ;
-                        		}else{
-                        			x[index][c][h][w] = bin.read();
-                        		}
-            				}
-            			}
+            		System.arraycopy(LabelUtils.labelIndexToVector(labelIndex, labelSize), 0, dataLabel, n * labelSize, labelSize);
+            		for(int i = 0;i<channel * height * width;i++) {
+            			if(normalization) {
+        					x[n * channel * height * width + i] = (float) (bin.read() / 255.0d) ;
+                		}else{
+                			x[n * channel * height * width + i] = bin.read();
+                		}
             		}
+            		
             		index++;
             	}
             	
@@ -730,35 +804,35 @@ public class DataLoader {
      */
     public static DataSet getImagesToDataSetByBin(String[] fileNames,int number,int channel,int height,int width,int labelSize,String[] labelSet,boolean normalization,float[] mean,float[] std) {
         
-    	int batchSize = number * fileNames.length;
+    	int fileNumber = fileNames.length;
     	
-    	float[][][][] x = new float[batchSize][channel][height][width];
+    	int batchSize = number * fileNumber;
+    	
+    	float[] x = new float[batchSize * channel * height * width];
         String[] labels = new String[batchSize];
-        float[][] dataLabel = new float[batchSize][labelSize];
+        float[] dataLabel = new float[batchSize * labelSize];
 
     	int index = 0;
     	
-        for(String fileName:fileNames) {
+        for(int f = 0;f<fileNumber;f++) {
 
+        	String fileName = fileNames[f];
+        	
             try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(fileName))) {
             	
             	for(int n = 0;n<number;n++) {
             		int labelIndex = bin.read();
             		labels[index] = labelSet[labelIndex];
-            		
-            		dataLabel[index] = LabelUtils.labelIndexToVector(labelIndex, labelSize);
-            		for(int c = 0;c<channel;c++) {
-            			for(int h = 0;h<height;h++) {
-            				for(int w = 0;w<width;w++) {
-            					if(normalization) {
-//            						x[index][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
-//            						x[index][c][h][w] = (float) ((bin.read() / 255.0d) - 0.5);
-            						x[index][c][h][w] = (float) ((bin.read() / 255.0d) - mean[c]) / std[c] ;
-                        		}else{
-                        			x[index][c][h][w] = bin.read();
-                        		}
-            				}
-            			}
+            		System.arraycopy(LabelUtils.labelIndexToVector(labelIndex, labelSize), 0, dataLabel, index * labelSize, labelSize);
+            		for(int i = 0;i<channel * height * width;i++) {
+            			int c = i / (height * width);
+            			if(normalization) {
+//        					x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
+//        					x[n][c][h][w] = (float) (bin.read() / 255.0d) - 0.5f;
+        					x[index * channel * height * width + i] = (float) ((bin.read() / 255.0d) - mean[c]) / std[c];
+                		}else{
+                			x[index * channel * height * width + i] = bin.read();
+                		}
             		}
             		index++;
             	}

@@ -380,6 +380,45 @@ public class ImageUtils {
 	}
 	
 	/**
+	 * red 1 green 2 bule 3
+	 * @param path
+	 * @param extName
+	 * @param rgb
+	 * @param rgbType
+	 * @return
+	 */
+	public boolean createRGBImage(String path,String extName,int height,int width,float[] rgb,int rgbType) {
+		
+		int[][] rgbInt = new int[height][width];
+		
+		for(int i = 0;i<rgb.length;i++) {
+			for(int j = 0;j<width;j++) {
+				if(rgbType == 1) { //red
+					rgbInt[i][j] = (int) rgb[i * width + j] << 16;
+				}else if(rgbType == 2) {
+					rgbInt[i][j] = (int) rgb[i * width + j] << 8;
+				}else {
+					rgbInt[i][j] = (int) rgb[i * width + j];
+				}
+				
+			}
+		}
+		
+		BufferedImage bufferedImage = this.convertRGBImage(rgbInt);
+		System.out.println(extName);
+		File outputfile = new File(path);
+		try {
+			System.out.println(ImageIO.write(bufferedImage, extName, outputfile));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
+	}
+	
+	/**
 	 * 返回屏幕色彩值
 	 * 
 	 * @param x

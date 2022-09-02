@@ -1,10 +1,8 @@
 package com.omega.engine.nn.layer.normalization;
 
-import com.omega.common.utils.MathUtils;
+import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BNKernel;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.model.LayerInit;
 
@@ -22,10 +20,6 @@ import com.omega.engine.nn.model.LayerInit;
 public class BNLayer extends NormalizationLayer {
 	
 	public BNType bnType = null;
-	
-	public float[] mean;
-	
-	public float[] var;
 
 	/**
 	 * if prelayer is conv layer meanNum = channel
@@ -37,24 +31,11 @@ public class BNLayer extends NormalizationLayer {
 	
 	public float[] beta;
 	
-	/**
-	 * zi = (xi - mean) / (std + eta)^1/2
-	 */
-	public Blob z;
-	
 	public float[] deltaGama;
 	
 	public float[] deltaBeta;
 	
 	private BNKernel kernel;
-	
-	private float[] x;
-	
-	private float[] out;
-	
-	private float[] delta_v;
-	
-	private float[] x_diff;
 	
 	public BNLayer() {
 //		initParam();
@@ -95,22 +76,24 @@ public class BNLayer extends NormalizationLayer {
 			this.deltaBeta = MatrixUtils.zero(this.meanNum);
 		}
 
-		if(this.output == null || this.number != this.output.number) {
-			this.out = new float[number * channel * height * width];
-			this.delta_v = new float[number * channel * height * width];
-			this.x_diff = new float[number * channel * height * width];
-			this.x = new float[number * channel * height * width];
-			this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
+		if(this.output == null) {
+			this.diff = new Tensor(number, channel, height, width);
+			this.output = new Tensor(number, oChannel, oHeight, oWidth);
+		}
+		
+		if(this.number != this.output.number) {
+			this.diff.data = new float[number * channel * height * width];
+			this.output.data = new float[number * channel * height * width];
 		}
 		
 		if(kernel == null) {
 
 			switch (this.getBnType()) {
 			case fully_bn:
-				kernel = new BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn",out, x_diff, deltaGama, deltaBeta, number, width, height, channel);
+				kernel = new BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn", output, diff, deltaGama, deltaBeta, number, width, height, channel);
 				break;
 			case conv_bn:
-				kernel = new BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn",out, x_diff, deltaGama, deltaBeta, number, channel, height, width);
+				kernel = new BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn", output, diff, deltaGama, deltaBeta, number, channel, height, width);
 				break;
 			}
 			
@@ -125,29 +108,25 @@ public class BNLayer extends NormalizationLayer {
 	
 	@Override
 	public void initBack() {
-		if(this.diff == null || this.number != this.diff.number) {
-			this.diff = Blobs.zero(number, channel, height, width, this.diff);
-		}
+//		if(this.diff == null || this.number != this.diff.number) {
+//			this.diff = new Tensor(number, oChannel, oHeight, oWidth);
+//		}
 	}
 
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-
-		MatrixUtils.transform(this.input.maxtir,x);
-
-		kernel.setX(x, number);
+		
+		kernel.setX(input, number);
 		
 		kernel.setGama(gama, beta);
 		
 		kernel.forward(this.network.RUN_MODEL);
 		
-		MatrixUtils.transform(kernel.getOut(), this.output.maxtir, number, channel, height, width);
-
 	}
 	
 	@Override
-	public Blob getOutput() {
+	public Tensor getOutput() {
 		// TODO Auto-generated method stub
 		return this.output;
 	}
@@ -188,13 +167,9 @@ public class BNLayer extends NormalizationLayer {
 		
 //		long start = System.nanoTime();
 		
-		MatrixUtils.transform(delta.maxtir, delta_v);
-		
-		kernel.setDelta(delta_v);
+		kernel.setDelta(delta);
 		
 		kernel.backward();
-		
-		MatrixUtils.transform(kernel.getDiff(),this.diff.maxtir,number,channel,height,width);
 		
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
 		
@@ -241,10 +216,6 @@ public class BNLayer extends NormalizationLayer {
 	public void showDiff() {
 		// TODO Auto-generated method stub
 
-		float[] x = MatrixUtils.transform(this.diff.maxtir);
-		
-		System.out.println("bn layer["+this.index+"]diff-max:"+MathUtils.max(x)+" min:"+MathUtils.min(x));
-		
 	}
 
 	@Override
@@ -263,7 +234,7 @@ public class BNLayer extends NormalizationLayer {
 	public float[][][][] output(float[][][][] input) {
 		// TODO Auto-generated method stub
 		
-		return this.output.maxtir;
+		return null;
 	}
 	
 	public BNType getBnType() {

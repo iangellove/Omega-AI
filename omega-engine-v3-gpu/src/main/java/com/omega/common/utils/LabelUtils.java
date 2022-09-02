@@ -73,6 +73,27 @@ public class LabelUtils {
 	 * @param labelSet
 	 * @return
 	 */
+	public static float[] labelToVector1d(String[] label,String[] labelSet) {
+		
+		float[] vector = new float[label.length * labelSet.length];
+		
+		for(int i = 0;i<label.length;i++) {
+			for(int j = 0;j<labelSet.length;j++) {
+				if(labelSet[j].equals(label[i])) {
+					vector[i * labelSet.length + j] = 1.0f;
+				}
+			}
+		}
+		
+		return vector;
+	}
+	
+	/**
+	 * labelToVector
+	 * @param label
+	 * @param labelSet
+	 * @return
+	 */
 	public static float[][] labelToVector(float[] label,float[] labelSet) {
 		
 		float[][] vector = new float[label.length][labelSet.length];

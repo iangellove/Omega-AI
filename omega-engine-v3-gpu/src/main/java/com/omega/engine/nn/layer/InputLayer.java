@@ -1,6 +1,8 @@
 package com.omega.engine.nn.layer;
 
-import com.omega.engine.nn.data.Blob;
+import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixUtils;
 
 public class InputLayer extends Layer {
 	
@@ -17,7 +19,7 @@ public class InputLayer extends Layer {
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
-		this.input = this.network.inputData;
+		this.input = this.network.input;
 	}
 
 	@Override
@@ -63,7 +65,7 @@ public class InputLayer extends Layer {
 	}
 	
 	@Override
-	public Blob getOutput() {
+	public Tensor getOutput() {
 		// TODO Auto-generated method stub
 		return this.output;
 	}

@@ -172,7 +172,7 @@ public class BusinessServiceImpl implements BusinessService {
 
 		try {
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 64, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 //			netWork.GRADIENT_CHECK = true;
 		
@@ -1039,8 +1039,6 @@ public class BusinessServiceImpl implements BusinessService {
 
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
-//			SoftmaxLayer softmax = new SoftmaxLayer(10);
-			
 			netWork.addLayer(inputLayer);
 			netWork.addLayer(conv1);
 			netWork.addLayer(bn1);
@@ -1079,7 +1077,7 @@ public class BusinessServiceImpl implements BusinessService {
 			optimizer.test(testData);
 			
 			System.out.println(((System.currentTimeMillis() - start) / 1000) + "s.");
-
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -2542,7 +2540,7 @@ public class BusinessServiceImpl implements BusinessService {
 	public static void main(String[] args) {
 		BusinessServiceImpl bs = new BusinessServiceImpl();
 //		bs.showImage();
-		bs.bpNetwork_iris();
+//		bs.bpNetwork_iris();
 //		bs.bpNetwork_mnist();
 //		bs.cnnNetwork_mnist_demo();
 //		bs.cnnNetwork_mnist();
@@ -2553,7 +2551,7 @@ public class BusinessServiceImpl implements BusinessService {
 //		bs.vgg16_cifar10();  //没有添加bn层
 //		bs.alexNet_mnist();
 //		bs.alexNet_cifar10();
-//		bs.cnnNetwork_vgg16_cifar10();
+		bs.cnnNetwork_vgg16_cifar10();
 	}
 
 }

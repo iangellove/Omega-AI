@@ -17,19 +17,6 @@ public class RandomUtils {
 		}
 		return instance;
 	}
-
-	/**
-	 * he随机数
-	 * @param x
-	 * @return
-	 */
-	public static float[] heRandom(int x,float n){
-		float[] temp = new float[x];
-		for(int i = 0;i<x;i++) {
-			temp[i] = (float) (getInstance().nextGaussian() * Math.sqrt(2.0d / n));
-		}
-		return temp;
-	}
 	
 	/**
 	 * he随机数
@@ -43,6 +30,20 @@ public class RandomUtils {
 			for(int j = 0;j<y;j++) {
 				temp[i][j] = (float) (Math.abs(getInstance().nextGaussian()) * t);
 			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * he随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[] heRandom(int x,float n){
+		float[] temp = new float[x];
+		float t = (float) Math.sqrt(2.0d / n);
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) (Math.abs(getInstance().nextGaussian()) * t);
 		}
 		return temp;
 	}
@@ -176,6 +177,33 @@ public class RandomUtils {
 			for(int j = 0;j<y;j++) {
 				temp[i][j] = (float) (getInstance().nextGaussian() * t);
 			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[] xavierRandom(int x,int fanIn,int fanOut){
+		float[] temp = new float[x];
+		float t = (float) Math.sqrt(2.0f/(fanIn+fanOut));
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) (getInstance().nextGaussian() * t);
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[] val(int x,float val){
+		float[] temp = new float[x];
+		for(int i = 0;i<x;i++) {
+			temp[i] = val;
 		}
 		return temp;
 	}

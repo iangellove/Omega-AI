@@ -15,12 +15,12 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 
+import com.omega.common.data.Tensor;
+import com.omega.common.data.Tensors;
 import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.LabelUtils;
 import com.omega.common.utils.PrintUtils;
 import com.omega.engine.database.NetworksDataBase;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.nn.network.CNN;
 import com.omega.engine.service.BusinessService;
 
@@ -102,18 +102,17 @@ public class NetworkTestController {
 
 	                float[][][][] imageData = imageUtils.getImageGrayPixel(file.getInputStream(),true);
 
-	                Blob input = Blobs.blob(imageData);
-	                Blob image = Blobs.transform(1, 1, 28, 28, input);
-
-	                PrintUtils.printImage(image.maxtir[0][0]);
+	                Tensor input = Tensors.tensor(imageData);
+	                
+	                PrintUtils.printImage(imageData[0][0]);
 	                
 	                if(networks.getNetworks().get("cnnMnist")!=null) {
 
 		                CNN cnn = (CNN) networks.getNetworks().get("cnnMnist");
 		                
-		                Blob ouput = cnn.predict(input);
+		                Tensor ouput = cnn.predict(input);
 		                
-		                String predict = LabelUtils.vectorTolabel(ouput.maxtir[0][0][0], new String[] {"0","1","2","3","4","5","6","7","8","9"});
+		                String predict = LabelUtils.vectorTolabel(ouput.data, new String[] {"0","1","2","3","4","5","6","7","8","9"});
 		                
 		                //System.out.println(JsonUtils.toJson(ouput.maxtir[0][0][0]));
 		                

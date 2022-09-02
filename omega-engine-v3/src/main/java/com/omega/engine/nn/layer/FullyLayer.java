@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
@@ -9,6 +10,8 @@ import com.omega.common.utils.Transpose;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.data.Blobs;
+
+import jcuda.jcublas.cublasOperation;
 
 /**
  * 
@@ -72,6 +75,7 @@ public class FullyLayer extends Layer{
 		// TODO Auto-generated method stub
 //		this.weight = MatrixOperation.gaussianRandom(this.width, this.oWidth, 0.01);
 		this.weight = RandomUtils.xavierRandom(this.width, this.oWidth, this.width, this.oWidth);
+//		this.weight = RandomUtils.val(this.width, this.oWidth, 0.1f);
 //		this.weight = RandomUtils.heRandom(this.width, this.oWidth, this.width * this.oWidth);
 		this.bias = MatrixUtils.zero(this.oWidth);
 		this.deltaB = new float[this.oWidth];
@@ -91,6 +95,8 @@ public class FullyLayer extends Layer{
 			
 			MatrixUtils.transform(input.maxtir, input1d);
 			MatrixUtils.transform(weight, weight1d);
+
+//			System.out.println("full-input:"+JsonUtils.toJson(input1d));
 			
 			float[] r = new float[this.number * this.oWidth];
 			
@@ -101,8 +107,8 @@ public class FullyLayer extends Layer{
 			if(hasBias) {
 			
 				for(int n = 0;n<this.number;n++) {
-					for(int w = 0;w<this.oWidth;w++) {
-						output.maxtir[n][0][0][w] += bias[w];
+					for(int ow = 0;ow<this.oWidth;ow++) {
+						output.maxtir[n][0][0][ow] += bias[ow];
 					}
 				}
 			

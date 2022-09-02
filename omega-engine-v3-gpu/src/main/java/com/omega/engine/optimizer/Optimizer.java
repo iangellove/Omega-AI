@@ -1,10 +1,10 @@
 package com.omega.engine.optimizer;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.task.TaskEngine;
 import com.omega.common.utils.LabelUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.data.BaseData;
-import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.optimizer.lr.GDDecay;
 import com.omega.engine.optimizer.lr.LRDecay;
@@ -29,13 +29,13 @@ public abstract class Optimizer {
 	
 	public int dataSize = 0;
 	
-	public Blob loss;
+	public Tensor loss;
 	
-	public Blob lossDiff;
+	public Tensor lossDiff;
 	
 	public int trainTime = 10;
 	
-	public int minTrainTime = 100;
+	public int minTrainTime = 10000;
 	
 	public float currentError = 1.0f;
 	
@@ -194,11 +194,13 @@ public abstract class Optimizer {
 			
 //			float[] onceError = MatrixOperation.subtraction(output, testData.dataLabel[i]);
 
-			Blob output = this.network.predict(testData.getOnceData(n));
+			Tensor output = this.network.predict(testData.getOnceData(n));
 
 			String label = testData.labels[n];
 			
-			String predictLabel = LabelUtils.vectorTolabel(output.maxtir[0][0][0], testData.labelSet);
+			String predictLabel = LabelUtils.vectorTolabel(output.data, testData.labelSet);
+
+//			System.out.println(label+"="+predictLabel+":"+label.equals(predictLabel));
 			
 			if(!label.equals(predictLabel)) {
 //				System.out.println("index:"+n+"::"+JsonUtils.toJson(output)+"==>predictLabel:"+predictLabel+"==label:"+label+":"+label.equals(predictLabel));
@@ -215,16 +217,16 @@ public abstract class Optimizer {
 		return error;
 	}
 	
-	public float accuracy(Blob output,float[][] labels,String[] labelSet) {
+	public float accuracy(Tensor output,Tensor labelData,String[] labelSet) {
 		
 		float error = 0.0f;
 		float trueCount = 0;
 		
 		for(int n = 0;n<output.number;n++) {
-
-			String label = LabelUtils.vectorTolabel(labels[n], labelSet);
 			
-			String predictLabel = LabelUtils.vectorTolabel(output.maxtir[n][0][0], labelSet);
+			String label = LabelUtils.vectorTolabel(labelData.getByNumber(n), labelSet);
+			
+			String predictLabel = LabelUtils.vectorTolabel(output.getByNumber(n), labelSet);
 			
 			if(label.equals(predictLabel)) {
 				trueCount++;

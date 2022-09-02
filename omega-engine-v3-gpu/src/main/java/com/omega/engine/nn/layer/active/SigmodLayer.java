@@ -2,10 +2,13 @@ package com.omega.engine.nn.layer.active;
 
 import java.util.Vector;
 
+import com.omega.common.data.Tensor;
+import com.omega.common.task.ForkJobEngine;
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
-import com.omega.engine.nn.data.Blob;
 import com.omega.engine.nn.layer.LayerType;
+import com.omega.engine.nn.layer.active.jobs.sigmod.SigmodBackwardJob;
+import com.omega.engine.nn.layer.active.jobs.sigmod.SigmodForwardJob;
 
 /**
  * Sigmod active function Layer
@@ -20,34 +23,19 @@ public class SigmodLayer extends ActiveFunctionLayer {
 		
 	}
 
+	public void init() {
+		super.init();
+	}
+	
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		
-		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-		
-		for(int n = 0;n<this.number;n++) {
-			final int index = n;
-			workers.add(new Task<Object>(index) {
-				@Override
-			    public Object call() throws Exception {
-					for(int c = 0;c<channel;c++) {
-						for(int h = 0;h<height;h++) {
-							for(int w = 0;w<width;w++) {
-								output.maxtir[index][c][h][w] = (float) (1f / (1f + Math.exp(-input.maxtir[index][c][h][w])));
-							}
-						}
-					}
-					return null;
-				}
-			});
-		}
-		
-		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
+		SigmodForwardJob forward = new SigmodForwardJob(input.data, output.data, 0, output.dataLength - 1);
+		ForkJobEngine.run(forward);
 	}
 
 	@Override
-	public Blob getOutput() {
+	public Tensor getOutput() {
 		// TODO Auto-generated method stub
 		return this.output;
 	}
@@ -55,15 +43,8 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		for(int n = 0;n<this.number;n++) {
-			for(int c = 0;c<this.channel;c++) {
-				for(int h = 0;h<this.height;h++) {
-					for(int w = 0;w<this.width;w++) {
-						this.diff.maxtir[n][c][h][w] = this.delta.maxtir[n][c][h][w] * this.output.maxtir[n][c][h][w] * (1f - this.output.maxtir[n][c][h][w]);
-					}
-				}
-			}
-		}
+		SigmodBackwardJob backward = new SigmodBackwardJob(delta.data, output.data, diff.data, 0, diff.dataLength - 1);
+		ForkJobEngine.run(backward);
 	}
 
 	@Override

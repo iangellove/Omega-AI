@@ -1,10 +1,9 @@
 package com.omega.engine.optimizer;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.nn.data.BaseData;
-import com.omega.engine.nn.data.Blob;
-import com.omega.engine.nn.data.Blobs;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 
@@ -20,16 +19,16 @@ public class SGDOptimizer extends Optimizer {
 		super(network, 1, trainTime, error, warmUp);
 		// TODO Auto-generated constructor stub
 		this.batchSize = 1;
-		this.loss = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
-		this.lossDiff = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
+		this.loss = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
+		this.lossDiff = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
 	}
 	
 	public SGDOptimizer(Network network, int trainTime, float error,LearnRateUpdate learnRateUpdate,boolean warmUp) throws Exception {
 		super(network, 1, trainTime, error, warmUp);
 		// TODO Auto-generated constructor stub
 		this.batchSize = 1;
-		this.loss = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
-		this.lossDiff = Blobs.blob(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
+		this.loss = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
+		this.lossDiff = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
 		this.learnRateUpdate = learnRateUpdate;
 	}
 
@@ -38,6 +37,10 @@ public class SGDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		
 		try {
+			
+			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width);
+			
+			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize);
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				
@@ -54,29 +57,29 @@ public class SGDOptimizer extends Optimizer {
 				/**
 				 * random data index
 				 */
-				int[] dataSetIndexs = MathUtils.randomInt(trainingData.number - 1, this.batchSize);
-
-				Blob input = trainingData.getRandomData(dataSetIndexs); 
+				int[] indexs = MathUtils.randomInt(trainingData.number - 1, this.batchSize);
+				
+				trainingData.getRandomData(indexs, input, label); 
 				
 				/**
 				 * forward
 				 */
-				Blob output = this.network.forward(input);
+				Tensor output = this.network.forward(input);
 				
 				/**
 				 * loss
 				 */
-				this.loss = this.network.loss(output, input.labels);
+				this.loss = this.network.loss(output, label);
 				
 				/**
 				 * loss diff
 				 */
-				this.lossDiff = this.network.lossDiff(output, input.labels);
+				this.lossDiff = this.network.lossDiff(output, label);
 				
 				/**
 				 * current time error
 				 */
-				this.currentError = MatrixOperation.sum(this.loss.maxtir) / this.batchSize;
+				this.currentError = MatrixOperation.sum(this.loss.data) / this.batchSize;
 				
 				/**
 				 * update learning rate
@@ -88,7 +91,7 @@ public class SGDOptimizer extends Optimizer {
 				 */
 				this.network.back(this.lossDiff);
 				
-				float error = this.accuracy(output, input.labels, trainingData.labelSet);
+				float error = this.accuracy(output, label, trainingData.labelSet);
 				
 				System.out.println("training["+this.trainIndex+"] accuracy:{"+error+"%} (lr:"+this.network.learnRate+") currentError:"+this.currentError);
 				

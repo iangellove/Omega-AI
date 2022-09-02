@@ -25,6 +25,8 @@ public class Tensor implements Serializable{
 	
 	private Pointer deviceData;
 	
+	public float[] once;
+	
 	public Tensor(int number,int channel,int height,int width) {
 		this.number = number;
 		this.channel = channel;
@@ -33,7 +35,22 @@ public class Tensor implements Serializable{
 		this.dataLength = number * channel * height * width;
 		this.data = new float[this.dataLength];
 	}
-
+	
+	public Tensor(int number,int channel,int height,int width,float[] data) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.data = data;
+	}
+	
+	public void copy(int n,float[] dest) {
+		if(n < number) {
+			System.arraycopy(data, n * channel * height * width, dest, 0, channel * height * width);
+		}
+	}
+	
 	public int getNumber() {
 		return number;
 	}
@@ -84,6 +101,23 @@ public class Tensor implements Serializable{
 
 	public float getByIndex(int n,int c,int h,int w) {
 		return this.data[n * channel * height * width + c * height * width + h * width + w];
+	}
+	
+	public float[] getByNumber(int n) {
+		if(once == null || once.length != channel * height * width) {
+			once = new float[channel * height * width];
+		}
+		System.arraycopy(data, n * channel * height * width, once, 0, channel * height * width);
+		return once;
+	}
+	
+	public float[] getByNumberAndChannel(int n,int c) {
+		if(once == null || once.length != height * width) {
+			once = new float[height * width];
+		}
+		int start = n * channel * height * width + c * height * width;
+		System.arraycopy(data, start, once, 0, height * width);
+		return once;
 	}
 	
 	public void clear() {

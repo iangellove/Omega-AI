@@ -9,10 +9,6 @@ __global__ void culOutput_cov(float* x,float* mean,float* std,float* gama,float*
 		
 		int c = index / (height * width);
 		
-		//int h = index / width;
-		
-		//int w = index % width;
-	
 		float mean_val = mean[c];
 		float std_val = std[c];
 		float gama_val = gama[c];

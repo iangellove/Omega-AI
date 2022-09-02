@@ -36,6 +36,7 @@ public class ReluLayer extends ActiveFunctionLayer {
 					for(int c = 0;c<channel;c++) {
 						for(int h = 0;h<height;h++) {
 							for(int w = 0;w<width;w++) {
+								
 								if(input.maxtir[index][c][h][w] > 0) {
 									output.maxtir[index][c][h][w] = input.maxtir[index][c][h][w];
 								}else {
@@ -62,19 +63,33 @@ public class ReluLayer extends ActiveFunctionLayer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+		
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
 		for(int n = 0;n<this.number;n++) {
-			for(int c = 0;c<this.channel;c++) {
-				for(int h = 0;h<this.height;h++) {
-					for(int w = 0;w<this.width;w++) {
-						if(this.input.maxtir[n][c][h][w] > 0) {
-							this.diff.maxtir[n][c][h][w] = this.delta.maxtir[n][c][h][w];
-						}else {
-							this.diff.maxtir[n][c][h][w] = 0;
+			final int index = n;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					for(int c = 0;c<channel;c++) {
+						for(int h = 0;h<height;h++) {
+							for(int w = 0;w<width;w++) {
+								
+								if(input.maxtir[index][c][h][w] > 0) {
+									diff.maxtir[index][c][h][w] = delta.maxtir[index][c][h][w];
+								}else {
+									diff.maxtir[index][c][h][w] = 0;
+								}
+							}
 						}
 					}
+					return null;
 				}
-			}
+			});
 		}
+		
+		TaskEngine.getInstance(this.network.getThreadNum()).dispatchTask(workers);
+		
 	}
 
 	@Override

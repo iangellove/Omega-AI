@@ -167,7 +167,7 @@ public class ConvolutionLayer extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		long start = System.nanoTime();
+//		long start = System.nanoTime();
         
 		MatrixOperation.zeroPadding(this.input.maxtir, this.pInput.maxtir, this.padding);
 
@@ -180,7 +180,7 @@ public class ConvolutionLayer extends Layer {
 			this.output.maxtir = MatrixOperation.add(this.output.maxtir, this.bias);
 
 		}
-		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
+//		System.out.println((System.nanoTime() - start) / 1e6+"ms.");
 	}
 
 	/**
