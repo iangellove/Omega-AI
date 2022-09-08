@@ -175,7 +175,7 @@ public class BasicBlockLayer extends Layer {
 		/**
 		 * 计算输出
 		 */
-		this.output();		
+		this.output();
 		
 	}
 
