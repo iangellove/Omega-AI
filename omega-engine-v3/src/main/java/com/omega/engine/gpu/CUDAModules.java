@@ -35,7 +35,6 @@ public class CUDAModules {
 		if(m.getFunctions().containsKey(functionName)) {
 			return m.getFunctions().get(functionName);
 		}
-		
 		CUfunction function = new CUfunction();
         cuModuleGetFunction(function, m, functionName);
         m.getFunctions().put(functionName, function);

@@ -5,9 +5,7 @@ import java.util.List;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.loss.LossFunction;
-import com.omega.engine.nn.layer.BasicBlockLayer;
 import com.omega.engine.nn.layer.Layer;
-import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.model.NetworkInit;
 import com.omega.engine.updater.UpdaterFactory;
 import com.omega.engine.updater.UpdaterType;
@@ -128,19 +126,6 @@ public abstract class Network {
 		layer.setNetwork(this);
 		layer.setIndex(this.layerList.size());
 		layer.setUpdater(UpdaterFactory.create(this.updater));
-		if(layer.layers != null) {
-			for(Layer sub:layer.layers) {
-				sub.setNetwork(this);
-				sub.setUpdater(UpdaterFactory.create(this.updater));
-			}
-		}
-		if(layer.getLayerType() == LayerType.block) {
-			BasicBlockLayer bl = (BasicBlockLayer) layer;
-			if(bl.getIdentity() != null) {
-				bl.getIdentity().setNetwork(this);
-				bl.getIdentity().setUpdater(UpdaterFactory.create(this.updater));
-			}
-		}
 		if(layer.index <= 1) {
 			layer.PROPAGATE_DOWN = false;
 		}
@@ -153,6 +138,10 @@ public abstract class Network {
 			init.getLayers().add(layer.save());
 		}
 		return init;
+	}
+	
+	public void saveToJson(String path) {
+		
 	}
 
 	public int getThreadNum() {

@@ -29,6 +29,41 @@ public class CUDAModules {
 	
 	public static int threadsPerDimension;
 	
+	public static Map<String,String> functions = new HashMap<String, String>(){
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -7636602208380901817L;
+
+		{
+			put("col2im_gpu_kernelV2", "H://Col2imKernel.cu");
+			put("im2col_gpu_kernelV2", "H://Im2colKernel.cu");
+			put("pooling_diff", "H://PoolingKernel.cu");
+			put("max_pooling", "H://PoolingKernel.cu");
+			put("mean_pooling", "H://PoolingKernel.cu");
+			put("mean_cov", "H://MathKernel.cu");
+			put("fast_mean_kernel", "H://MathKernel.cu");
+			put("var_cov", "H://MathKernel.cu");
+			put("fast_variance_kernel", "H://MathKernel.cu");
+			put("normalize_kernel", "H://BNKernel.cu");
+			put("std_fn", "H://MathKernel.cu");
+			put("mwa", "H://MathKernel.cu");
+			put("culOutput_cov", "H://BNKernel.cu");
+			put("computeDelta", "H://BNKernel.cu");
+			put("computeDelta_full", "H://BNKernel.cu");
+			put("meanDzSum", "H://BNKernel.cu");
+			put("computeDiff", "H://BNKernel.cu");
+			put("dgama_kernel", "H://BNKernel.cu");
+			put("dbeta_kernel", "H://BNKernel.cu");
+			put("dxhat_kernel2", "H://BNKernel.cu");
+			put("full_mean_delta_kernel", "H://BNKernel.cu");
+			put("full_var_delta_kernel", "H://BNKernel.cu");
+			put("fast_variance_delta_kernel", "H://BNKernel.cu");
+			put("dx_kernel", "H://BNKernel.cu");
+			put("dx_kernel_full", "H://BNKernel.cu");
+		}
+		};
+	
 	
 	public static CUfunction getFunctionByModule(String fileName,String functionName) {
 		
@@ -213,6 +248,13 @@ public class CUDAModules {
 
 	public static void setContext(CUcontext context) {
 		CUDAModules.context = context;
+	}
+	
+	public static void initCUDAFunctions() {
+		for(String key:functions.keySet()) {
+			CUDAModules.getFunctionByModule(functions.get(key), key);
+		}
+		System.out.println("CUDA functions init finish.");
 	}
 	
 }

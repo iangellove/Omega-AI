@@ -143,5 +143,40 @@ public class DropoutLayer extends Layer {
 		// TODO Auto-generated method stub
 		
 	}
+	
+
+	@Override
+	public void forward(Tensor inpnut) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+		/**
+		 * 设置输入
+		 */
+		this.setInput(inpnut);
+		/**
+		 * 计算输出
+		 */
+		this.output();
+	}
+
+	@Override
+	public void back(Tensor delta) {
+		// TODO Auto-generated method stub
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff();
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+	}
 
 }

@@ -2,6 +2,8 @@ package com.omega.common.utils;
 
 import java.util.Random;
 
+import com.omega.engine.active.ActiveType;
+
 /**
  * random utils
  * @author Administrator
@@ -16,6 +18,28 @@ public class RandomUtils {
 			instance = new Random();
 		}
 		return instance;
+	}
+	
+	/**
+	 * 根据激活函数获取增益值
+	 * @return
+	 */
+	public static float getGain(ActiveType at) {
+		
+		float gain = 1.0f;
+		
+		switch (at) {
+		case relu:
+			gain = (float) Math.sqrt(2.0);
+			break;
+		case tanh:
+			gain = 5.0f / 3.0f;
+			break;
+		default:
+			break;
+		}
+		
+		return gain;
 	}
 	
 	/**
@@ -44,6 +68,41 @@ public class RandomUtils {
 		float t = (float) Math.sqrt(2.0d / n);
 		for(int i = 0;i<x;i++) {
 			temp[i] = (float) (Math.abs(getInstance().nextGaussian()) * t);
+		}
+		return temp;
+	}
+	
+	/**
+	 * kaiming初始化
+	 * N～ (0,std)
+	 * std = sqrt(2/(1+a^2)*fan_in)
+	 * a 为激活函数的负半轴的斜率，relu 是 0
+	 * @param x
+	 * @return
+	 */
+	public static float[] kaimingNormalRandom(int x,float a,float n){
+		float[] temp = new float[x];
+//		float t = (float) (Math.sqrt(2.0d) / Math.sqrt(n));
+		float t = (float) (Math.sqrt(2.0d / n));
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) (getInstance().nextGaussian() * t);
+		}
+		return temp;
+	}
+	
+	/**
+	 * kaiming初始化
+	 * N～ (0,std)
+	 * std = sqrt(2/(1+a^2)*fan_in)
+	 * a 为激活函数的负半轴的斜率，relu 是 0
+	 * @param x
+	 * @return
+	 */
+	public static float[] kaimingUniformRandom(int x,float a,float n){
+		float[] temp = new float[x];
+		float t = (float) Math.sqrt(6.0d / (1 + a * a) * n);
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) Math.random() * (t - (-t)) + t;
 		}
 		return temp;
 	}
@@ -200,6 +259,20 @@ public class RandomUtils {
 	 * @param x
 	 * @return
 	 */
+	public static float[] xavierReluRandom(int x,int fanIn,int fanOut){
+		float[] temp = new float[x];
+		float t = (float) (Math.sqrt(2.0f/(fanIn+fanOut)) * Math.sqrt(2.0));
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) (getInstance().nextGaussian() * t);
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
 	public static float[] val(int x,float val){
 		float[] temp = new float[x];
 		for(int i = 0;i<x;i++) {
@@ -320,6 +393,19 @@ public class RandomUtils {
 					}
 				}
 			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[] order(int x,float a,float b){
+		float[] temp = new float[x];
+		for(int i = 0;i<x;i++) {
+			temp[i] = i * a + b;
 		}
 		return temp;
 	}

@@ -1,6 +1,7 @@
 package com.omega.engine.gpu;
 
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
+import static jcuda.jcublas.JCublas2.cublasGetVector;
 import static jcuda.jcublas.JCublas2.cublasSetVector;
 
 import com.omega.common.utils.CheckArrayUtils;
@@ -14,6 +15,7 @@ import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
 import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
+import jcuda.jcublas.cublasOperation;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 
@@ -97,7 +99,12 @@ public class ConvKernel {
 		 * 申请显存
 		 */
 		this.dx = CUDAMemoryManager.getDevice(C * H * W);
-		this.dy = CUDAMemoryManager.getDevice(ih * iw);
+		
+		if(kh == 1) {
+			dy = dx;
+		}else {
+			this.dy = CUDAMemoryManager.getDevice(ih * iw);
+		}
 		
         this.dA = CUDAMemoryManager.getPointer(ko * ih);
         this.dC = CUDAMemoryManager.getPointer(ko * iw);
@@ -110,8 +117,7 @@ public class ConvKernel {
         /**
          * 设置入参
          * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
-         */
-        
+         */ 
         kernelParameters = Pointer.to(
                 Pointer.to(dx),
                 Pointer.to(dy),
@@ -150,8 +156,14 @@ public class ConvKernel {
 	public void conv() {
 
 //        long start = System.nanoTime();
-
-		im2col();
+		
+		/**
+		 * if kernel size is 1 * 1.
+		 * im2col(input) = input
+		 */
+		if(kh > 1) {
+			im2col();
+		}
 		
 		sgemm();
 
@@ -160,9 +172,12 @@ public class ConvKernel {
 	}
 	
 	public void sgemm() {
-		
-		GPUOP.getInstance().multiplyFloat(ko, ih, iw, getOut(), dA, dy, dC);
-		
+
+		/**
+		 * m k n
+		 */
+		GPUOP.getInstance().multiplyFloat(ko, iw, ih, dA, dy, dC, cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
+
 	}
 	
 	public void im2col() {
@@ -195,6 +210,7 @@ public class ConvKernel {
 	}
 	
 	public float[] getOut() {
+		cublasGetVector(out.length, Sizeof.FLOAT, dC, 1, Pointer.to(out), 1);
 		return out;
 	}
 
@@ -211,8 +227,8 @@ public class ConvKernel {
     	int H = 8;
     	int W = 8;
     	int ko = 512;
-    	int kh = 3;
-    	int kw = 3;
+    	int kh = 1;
+    	int kw = 1;
     	int s = 1;
     	int p = 0;
     	int oHeight = ((H + 2 * p - kh) / s) + 1;
@@ -295,8 +311,6 @@ public class ConvKernel {
     	System.out.println((System.nanoTime() - start2) / 1e6 + "ms.cpu-count");
     	
     	MatrixUtils.col2imgV2(out1, out3, N, ko, oHeight, oWidth);
-    	
-    	System.err.println(N * oh * ow);
     	
     	System.out.println(CheckArrayUtils.check(out2, out3));
 

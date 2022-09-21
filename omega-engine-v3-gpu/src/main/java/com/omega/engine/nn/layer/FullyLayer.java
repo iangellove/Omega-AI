@@ -1,7 +1,6 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
@@ -44,10 +43,11 @@ public class FullyLayer extends Layer{
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number){
 			this.diff = new Tensor(number, channel, height, width);
+		}else {
+			MatrixUtils.zero(this.diff.data);
 		}
 		MatrixUtils.zero(this.diffB.data);
 		MatrixUtils.zero(this.diffW.data);
-		MatrixUtils.zero(this.diff.data);
 	}
 
 	@Override
@@ -56,14 +56,18 @@ public class FullyLayer extends Layer{
 		this.number = this.network.number;
 		if(this.output == null || this.number != this.output.number){
 			this.output = new Tensor(number, oChannel, oHeight, oWidth);
+		}else {
+			MatrixUtils.zero(this.output.data);
 		}
-		MatrixUtils.zero(this.output.data);
 	}
 	
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub
-		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.xavierRandom(this.width * this.oWidth, this.width, this.oWidth));
+		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.xavierReluRandom(this.width * this.oWidth, this.width, this.oWidth));
+//		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaimingNormalRandom(this.width * this.oWidth, 0, this.oWidth));
+//		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.xavierRandom(this.width * this.oWidth, this.width, this.oWidth));
+//		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.order(this.width * this.oWidth, 0.1f, 0.1f));
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.val(this.width * this.oWidth, 0.1f));
 //		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.heRandom(this.width * this.oWidth, this.width * this.oWidth));
 		this.bias = new Tensor(1, 1, 1, oWidth);
@@ -103,7 +107,7 @@ public class FullyLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 //		System.out.println("index-delta:"+index);
-
+		
 		/**
 		 * deltaW = inputT * delta
 		 * int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta
@@ -227,6 +231,43 @@ public class FullyLayer extends Layer{
 	public void initCache() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public void forward(Tensor inpnut) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+		/**
+		 * 设置输入
+		 */
+		this.setInput(inpnut);
+		/**
+		 * 计算输出
+		 */
+		this.output();
+	}
+
+	@Override
+	public void back(Tensor delta) {
+		// TODO Auto-generated method stub
+
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff();
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+
 	}
 
 }

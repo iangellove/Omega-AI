@@ -134,13 +134,13 @@ public class DataExportUtils {
 	
 	public static void main(String args[]) {
 		
-		String path = "H://index.txt";
+		String path = "H://index2.txt";
 		
-		int[][] indexs = MathUtils.randomInts(80,10);
+		int[][] indexs = MathUtils.randomInts(50000,128);
 		
 		DataExportUtils.exportTXT(indexs, path);
 		
-		int[][] t = new int[8][10];
+		int[][] t = new int[390][128];
 		
 		DataExportUtils.importTXT(t, path);
 		

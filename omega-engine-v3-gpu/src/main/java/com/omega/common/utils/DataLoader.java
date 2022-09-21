@@ -734,7 +734,7 @@ public class DataLoader {
         			if(normalization) {
 //    					x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
 //    					x[n][c][h][w] = (float) (bin.read() / 255.0d) - 0.5f;
-    					x[n * channel * height * width + i] = (float) ((bin.read() / 255.0d) - mean[c]) / std[c];
+    					x[n * channel * height * width + i] = (float) ((bin.read() / 255.0f) - mean[c]) / std[c];
             		}else{
             			x[n * channel * height * width + i] = bin.read();
             		}
@@ -829,7 +829,7 @@ public class DataLoader {
             			if(normalization) {
 //        					x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
 //        					x[n][c][h][w] = (float) (bin.read() / 255.0d) - 0.5f;
-        					x[index * channel * height * width + i] = (float) ((bin.read() / 255.0d) - mean[c]) / std[c];
+        					x[index * channel * height * width + i] = (float) ((bin.read() / 255.0f) - mean[c]) / std[c];
                 		}else{
                 			x[index * channel * height * width + i] = bin.read();
                 		}

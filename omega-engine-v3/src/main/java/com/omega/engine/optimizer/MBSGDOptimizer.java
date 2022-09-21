@@ -1,7 +1,10 @@
 package com.omega.engine.optimizer;
 
+import com.omega.common.data.utils.DataExportUtils;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.controller.TrainTask;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.data.Blob;
@@ -78,14 +81,15 @@ public class MBSGDOptimizer extends Optimizer {
 				
 //				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
 				
-//				int[][] indexs = new int[8][10];
+//				int[][] indexs = new int[390][128];
 //				
-//				DataExportUtils.importTXT(indexs, "H://index.txt");
+//				DataExportUtils.importTXT(indexs, "H://index2.txt");
 				
 				/**
 				 * 遍历整个训练集
 				 */
 				for(int it = 0;it<indexs.length;it++) {
+//				for(int it = 0;it<1;it++) {
 					
 					if(Math.abs(this.currentError) <= this.error) {
 						break;
@@ -104,6 +108,8 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					Blob output = this.network.forward(input);
 					
+//					System.out.println(JsonUtils.toJson(MatrixUtils.transform(output.maxtir)));
+					
 					/**
 					 * loss
 					 */
@@ -113,6 +119,8 @@ public class MBSGDOptimizer extends Optimizer {
 					 * loss diff
 					 */
 					this.lossDiff = this.network.lossDiff(output, input.labels);
+					
+//					System.out.println(JsonUtils.toJson(MatrixUtils.transform(lossDiff.maxtir)));
 					
 					/**
 					 * current time error

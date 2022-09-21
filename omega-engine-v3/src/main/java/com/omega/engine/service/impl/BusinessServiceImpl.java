@@ -5,6 +5,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import com.omega.common.data.utils.NetworkUtils;
 import com.omega.common.utils.DataLoader;
 import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.JsonUtils;
@@ -25,6 +26,7 @@ import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.model.NetworkInit;
 import com.omega.engine.nn.network.BPNetwork;
 import com.omega.engine.nn.network.CNN;
+import com.omega.engine.nn.network.Network;
 import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.pooling.PoolingType;
@@ -560,7 +562,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.0001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -689,7 +691,9 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			ReluLayer active15 = new ReluLayer();
 			
-			FullyLayer full3 = new FullyLayer(inputCount, 10);
+			FullyLayer full3 = new FullyLayer(inputCount, 10, false);
+			
+			BNLayer bn16 = new BNLayer();
 
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 			
@@ -766,9 +770,10 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(bn15);
 			netWork.addLayer(active15);
 			netWork.addLayer(full3);
+			netWork.addLayer(bn16);
 			netWork.addLayer(softmax);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -983,7 +988,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.0001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -1035,8 +1040,8 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			ReluLayer active5 = new ReluLayer();
 			
-			FullyLayer full3 = new FullyLayer(512, 10);
-
+			FullyLayer full3 = new FullyLayer(512, 10, false);
+			
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
 			netWork.addLayer(inputLayer);
@@ -1068,7 +1073,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -1077,6 +1082,8 @@ public class BusinessServiceImpl implements BusinessService {
 			optimizer.test(testData);
 			
 			System.out.println(((System.currentTimeMillis() - start) / 1000) + "s.");
+			
+			NetworkUtils.save(netWork, "H://test3.json", "test3");
 			
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -2402,7 +2409,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.0001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -2536,6 +2543,40 @@ public class BusinessServiceImpl implements BusinessService {
 		
 	}
 
+	@Override
+	public void test_nn(String path) {
+		// TODO Auto-generated method stub
+		
+		try {
+			
+			Network netWork = NetworkUtils.loadNetworkConfig(path);
+			
+			if(netWork != null) {
+				
+				String[] labelSet = new String[] {"airplane","automobile","bird","cat","deer","dog","frog","horse","ship","truck"};
+		    	
+				
+				String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
+				
+				float[] mean = new float[] {0.485f, 0.456f, 0.406f};
+				float[] std = new float[] {0.229f, 0.224f, 0.225f};
+				
+				DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
+				
+				netWork.lossFunction = new SoftmaxWithCrossEntropyLoss();
+				
+				MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 128, LearnRateUpdate.NONE, false);
+				
+				optimizer.test(testData);
+				
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
 	
 	public static void main(String[] args) {
 		BusinessServiceImpl bs = new BusinessServiceImpl();
@@ -2546,12 +2587,13 @@ public class BusinessServiceImpl implements BusinessService {
 //		bs.cnnNetwork_mnist();
 //		bs.cnnNetwork_cifar10();
 
-//		bs.resnet18_cifar10();
+		bs.resnet18_cifar10();
 //		bs.resnet18_mnist();
 //		bs.vgg16_cifar10();  //没有添加bn层
 //		bs.alexNet_mnist();
 //		bs.alexNet_cifar10();
-		bs.cnnNetwork_vgg16_cifar10();
+//		bs.cnnNetwork_vgg16_cifar10();
+//		bs.test_nn("H://test2.json");
 	}
 
 }

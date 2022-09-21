@@ -2,6 +2,7 @@ package com.omega.engine.optimizer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.task.TaskEngine;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.LabelUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.data.BaseData;
@@ -199,7 +200,9 @@ public abstract class Optimizer {
 			String label = testData.labels[n];
 			
 			String predictLabel = LabelUtils.vectorTolabel(output.data, testData.labelSet);
-
+			
+//			System.out.println("final output:"+JsonUtils.toJson(output.data));
+//			
 //			System.out.println(label+"="+predictLabel+":"+label.equals(predictLabel));
 			
 			if(!label.equals(predictLabel)) {
@@ -221,7 +224,7 @@ public abstract class Optimizer {
 		
 		float error = 0.0f;
 		float trueCount = 0;
-		
+
 		for(int n = 0;n<output.number;n++) {
 			
 			String label = LabelUtils.vectorTolabel(labelData.getByNumber(n), labelSet);

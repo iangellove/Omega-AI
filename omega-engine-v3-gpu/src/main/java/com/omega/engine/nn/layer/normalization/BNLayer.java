@@ -5,6 +5,7 @@ import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BNKernel;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.model.LayerInit;
+import com.omega.engine.nn.network.Network;
 
 /**
  * 
@@ -35,10 +36,20 @@ public class BNLayer extends NormalizationLayer {
 	
 	public float[] deltaBeta;
 	
+	public float[] runingMean;
+	
+	public float[] runingVar;
+	
 	private BNKernel kernel;
+	
+	public boolean hasRuning = true;
 	
 	public BNLayer() {
 //		initParam();
+	}
+	
+	public BNLayer(Network network) {
+		this.network = network;
 	}
 	
 	@Override
@@ -48,9 +59,6 @@ public class BNLayer extends NormalizationLayer {
 		
 		if(preLayer == null) {
 			preLayer = this.network.getPreLayer(this.index);
-			if(this.parent != null) {
-				preLayer = this.parent.layers.get(index - 1);
-			}
 			this.channel = preLayer.oChannel;
 			this.height = preLayer.oHeight;
 			this.width = preLayer.oWidth;
@@ -82,12 +90,13 @@ public class BNLayer extends NormalizationLayer {
 		}
 		
 		if(this.number != this.output.number) {
+			this.diff.number = number;
+			this.output.number = number;
 			this.diff.data = new float[number * channel * height * width];
 			this.output.data = new float[number * channel * height * width];
 		}
 		
-		if(kernel == null) {
-
+		if(getKernel() == null) {
 			switch (this.getBnType()) {
 			case fully_bn:
 				kernel = new BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn", output, diff, deltaGama, deltaBeta, number, width, height, channel);
@@ -96,7 +105,12 @@ public class BNLayer extends NormalizationLayer {
 				kernel = new BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn", output, diff, deltaGama, deltaBeta, number, channel, height, width);
 				break;
 			}
-			
+		}
+		
+		if(!hasRuning) {
+			hasRuning = true;
+			kernel.setRuningMean(runingMean);
+			kernel.setRuningVar(runingVar);
 		}
 		
 	}
@@ -116,12 +130,12 @@ public class BNLayer extends NormalizationLayer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+
+		getKernel().setX(input, number);
 		
-		kernel.setX(input, number);
+		getKernel().setGama(gama, beta);
 		
-		kernel.setGama(gama, beta);
-		
-		kernel.forward(this.network.RUN_MODEL);
+		getKernel().forward(this.network.RUN_MODEL);
 		
 	}
 	
@@ -144,6 +158,7 @@ public class BNLayer extends NormalizationLayer {
 		 * 设置输入
 		 */
 		this.setInput();
+
 		/**
 		 * 计算输出
 		 */
@@ -167,9 +182,9 @@ public class BNLayer extends NormalizationLayer {
 		
 //		long start = System.nanoTime();
 		
-		kernel.setDelta(delta);
+		getKernel().setDelta(delta);
 		
-		kernel.backward();
+		getKernel().backward();
 		
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
 		
@@ -251,4 +266,47 @@ public class BNLayer extends NormalizationLayer {
 		
 	}
 
+	public BNKernel getKernel() {
+		return kernel;
+	}
+
+	@Override
+	public void forward(Tensor inpnut) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+
+		/**
+		 * 设置输入
+		 */
+		this.setInput(inpnut);
+
+		/**
+		 * 计算输出
+		 */
+		this.output();
+	}
+
+	@Override
+	public void back(Tensor delta) {
+		// TODO Auto-generated method stub
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff();
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+	}
+	
+
+	
 }

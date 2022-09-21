@@ -236,6 +236,64 @@ public class RandomUtils {
 	 * @param x
 	 * @return
 	 */
+	public static float[][][][] order(int c,int n,int x,int y,float a,float b){
+		float[][][][] temp = new float[c][n][x][y];
+		int index = 0;
+		for(int k = 0;k<c;k++) {
+			for(int l = 0;l<n;l++) {
+				for(int i = 0;i<x;i++) {
+					for(int j = 0;j<y;j++) {
+						temp[k][l][i][j] = index * a + b;
+						index++;
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[][] order(int x,int y,float a,float b){
+		float[][] temp = new float[x][y];
+		int index = 0;
+		for(int i = 0;i<x;i++) {
+			for(int j = 0;j<y;j++) {
+				temp[i][j] = index * a + b;
+				index++;
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[][][][] val(int c,int n,int x,int y,float val){
+		float[][][][] temp = new float[c][n][x][y];
+
+		for(int k = 0;k<c;k++) {
+			for(int l = 0;l<n;l++) {
+				for(int i = 0;i<x;i++) {
+					for(int j = 0;j<y;j++) {
+						temp[k][l][i][j] = val;
+					}
+				}
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
 	public static float[][][][] heRandom(int c,int n,int x,int y,int fanIn){
 		float[][][][] temp = new float[c][n][x][y];
 		float t = (float) Math.sqrt(2.0d/fanIn);

@@ -3,21 +3,15 @@ package com.omega.engine.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import static jcuda.driver.JCudaDriver.cuMemAlloc;
 
-import com.omega.common.utils.CheckArrayUtils;
-import com.omega.common.utils.Im2colToVector;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
-import com.omega.common.utils.RandomUtils;
 
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
 import jcuda.driver.CUfunction;
-import jcuda.driver.CUstream;
 import jcuda.driver.JCudaDriver;
 import jcuda.runtime.JCuda;
-import jcuda.runtime.cudaMemcpyKind;
-import jcuda.runtime.cudaStream_t;
 
 public class Col2imKernel {
 	

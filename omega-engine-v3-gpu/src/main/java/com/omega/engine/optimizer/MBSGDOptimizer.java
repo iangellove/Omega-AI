@@ -2,10 +2,12 @@ package com.omega.engine.optimizer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataExportUtils;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.PrintUtils;
 import com.omega.engine.controller.TrainTask;
+import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
@@ -61,6 +63,8 @@ public class MBSGDOptimizer extends Optimizer {
 
 		try {
 			
+			CUDAModules.initCUDAFunctions();
+
 			this.dataSize = trainingData.number;
 
 			if(isWarmUp()) {
@@ -81,18 +85,17 @@ public class MBSGDOptimizer extends Optimizer {
 
 				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
 
-
 //				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
 				
-//				int[][] indexs = new int[8][10];
+//				int[][] indexs = new int[390][128];
 //				
-//				DataExportUtils.importTXT(indexs, "H://index.txt");
-				
+//				DataExportUtils.importTXT(indexs, "H://index2.txt");
 				
 				/**
 				 * 遍历整个训练集
 				 */
 				for(int it = 0;it<indexs.length;it++) {
+//				for(int it = 0;it<1;it++) {
 					
 					if(Math.abs(this.currentError) <= this.error) {
 						break;
@@ -111,6 +114,8 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					Tensor output = this.network.forward(input);
 					
+//					System.out.println(JsonUtils.toJson(output.data));
+					
 					/**
 					 * loss
 					 */
@@ -120,6 +125,8 @@ public class MBSGDOptimizer extends Optimizer {
 					 * loss diff
 					 */
 					this.lossDiff = this.network.lossDiff(output, label);
+
+//					System.out.println(JsonUtils.toJson(lossDiff.data));
 					
 					/**
 					 * current time error
@@ -132,8 +139,6 @@ public class MBSGDOptimizer extends Optimizer {
 					this.network.back(this.lossDiff);
 					
 					float error = this.accuracy(output, label, trainingData.labelSet);
-					
-//					System.out.println(this.network.learnRate);
 					
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} currentError:"+this.currentError + " [costTime:"+(System.currentTimeMillis() - start)+"ms.]";
 					

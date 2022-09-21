@@ -412,6 +412,28 @@ public class GPUOP {
         cublasDestroy(handle);
     }
     
+    public void multiplyFloat(int m,int n,int k,Pointer dA,Pointer dB, Pointer dC,int CUBLAS_OP_A,int CUBLAS_OP_N_B,float alpha,float beta){
+    	
+    	try {
+    		
+            Pointer alphaP = Pointer.to(new float[]{ alpha });
+            Pointer betaP = Pointer.to(new float[]{ beta });
+            
+            int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
+            int ldb = CUBLAS_OP_N_B == CUBLAS_OP_N ? n : k;
+
+            int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, alphaP, 
+                dB, ldb, dA, lda, betaP, dC, n);
+            
+            cudaDeviceSynchronize();
+            
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+    
     public static GPUOP getInstance() {
     	
     	if(GPUOP.o == null) {

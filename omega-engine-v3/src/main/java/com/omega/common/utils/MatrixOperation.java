@@ -2508,6 +2508,39 @@ public class MatrixOperation {
 	 * @param paddingNum
 	 * @return x + padding * 2
 	 */
+	public static float[][][][] zeroPadding(float[][][][] x,int paddingNum,int adj){
+		float[][][][] temp = new float[x.length][x[0].length][x[0][0].length + paddingNum * 2 + adj][x[0][0][0].length + paddingNum * 2 + adj];
+
+		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		for(int n = 0;n<x.length;n++) {
+			final int index = n;
+			workers.add(new Task<Object>(index) {
+				@Override
+			    public Object call() throws Exception {
+					for(int c = 0;c<x[index].length;c++) {
+						for(int i = 0;i<x[index][c].length;i++) {
+							for(int j = 0;j<x[index][c][i].length;j++) {
+								temp[index][c][i+paddingNum][j+paddingNum] = x[index][c][i][j];
+							}
+						}
+					}
+					return null;
+				}
+			});
+		}
+		
+		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+		
+		return temp;
+	}
+	
+	/**
+	 * zeroPadding
+	 * @param x
+	 * @param paddingNum
+	 * @return x + padding * 2
+	 */
 	public static float[][][] zeroPadding(float[][][] x,int paddingNum){
 		float[][][] temp = new float[x.length][x[0].length + paddingNum * 2][x[0][0].length + paddingNum * 2];
 		for(int c = 0;c<x.length;c++) {
@@ -3426,6 +3459,8 @@ public class MatrixOperation {
 		
 		OP1dto4d.to1d(r, diff, N, kc, oHeight, oWidth);
 		
+		
+		
 //		System.out.println("++++++++++++++++++++++++++++++++++");
 //		
 //		PrintUtils.printImage(diff[2][0]);
@@ -4183,6 +4218,27 @@ public class MatrixOperation {
 		TaskEngine.getInstance(threadNum).dispatchTask(workers);
 		
 		return diff;
+	}
+	
+	/**
+	 * 
+	 * @Title: division
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static void division_self(float[] x,float b) {
+		
+		for(int i = 0;i<x.length;i++) {
+			x[i] = x[i] / b;
+		}
+
 	}
 	
 }

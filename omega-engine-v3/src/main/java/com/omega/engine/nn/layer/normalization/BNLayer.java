@@ -35,9 +35,9 @@ public class BNLayer extends NormalizationLayer {
 	
 //	public float[] std;
 	
-	private float[] runingMean;
+	public float[] runingMean;
 
-	private float[] runingVar;
+	public float[] runingVar;
 	
 	/**
 	 * if prelayer is conv layer meanNum = channel
@@ -110,8 +110,10 @@ public class BNLayer extends NormalizationLayer {
 			this.output = Blobs.zero(number, oChannel, oHeight, oWidth, this.output);
 			this.z = Blobs.zero(this.number, this.oChannel, this.oHeight, this.oWidth, this.z);
 		}
-		MatrixUtils.zero(this.mean);
-		MatrixUtils.zero(this.var);
+		if(mean != null) {
+			MatrixUtils.zero(this.mean);
+			MatrixUtils.zero(this.var);
+		}
 //		MatrixUtils.zero(this.std);
 	}
 	

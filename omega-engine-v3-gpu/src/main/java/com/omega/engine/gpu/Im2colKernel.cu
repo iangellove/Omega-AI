@@ -13,6 +13,7 @@ __global__ void im2col_gpu_kernel(float* data_im,float* data_col,int n,int heigh
         data_col_ptr += (c_col * oh + h_col) * ow + w_col;
         const float* data_im_ptr = data_im;
         data_im_ptr += (c_im * height + h_offset) * width + w_offset;
+        
         for (int i = 0; i < kh; ++i) {
             for (int j = 0; j < kw; ++j) {
                 int h_im = h_offset + i;
@@ -30,6 +31,7 @@ __global__ void im2col_gpu_kernel(float* data_im,float* data_col,int n,int heigh
 extern "C"
 __global__ void im2col_gpu_kernelV2(const float* data_im,float* data_col,const int n,const int height, const int width, const int kernel_h, const int kernel_w,
     const int stride,const int pad,const int height_col, const int width_col) {
+  
   for(int index = blockIdx.x * blockDim.x + threadIdx.x; index < n; index += blockDim.x * gridDim.x) {
     const int h_index = index / width_col;
     const int h_col = h_index % height_col;
@@ -42,6 +44,7 @@ __global__ void im2col_gpu_kernelV2(const float* data_im,float* data_col,const i
     data_col_ptr += (c_col * height_col + h_col) * width_col + w_col;
     const float* data_im_ptr = data_im;
     data_im_ptr += (c_im * height + h_offset) * width + w_offset;
+    
     for (int i = 0; i < kernel_h; ++i) {
       for (int j = 0; j < kernel_w; ++j) {
         int h_im = h_offset + i;

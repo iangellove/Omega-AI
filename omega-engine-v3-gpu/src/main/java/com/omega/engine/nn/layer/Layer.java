@@ -1,7 +1,5 @@
 package com.omega.engine.nn.layer;
 
-import java.util.List;
-
 import com.omega.common.data.Tensor;
 import com.omega.engine.gpu.data.CacheDataSet;
 import com.omega.engine.nn.model.LayerInit;
@@ -18,8 +16,6 @@ public abstract class Layer {
 	public Network network;
 	
 	public boolean PROPAGATE_DOWN = true;;
-	
-	public Layer parent;
 	
 	public int index = 0;
 	
@@ -68,16 +64,10 @@ public abstract class Layer {
 	
 	public Updater updater;
 	
-	public boolean isIdentity = false;
-	
 	/**
 	 * cache data
 	 */
 	private CacheDataSet tampDataSet;
-	
-
-	public List<Layer> layers = null;
-	
 	
 	public abstract void init();
 	
@@ -101,6 +91,10 @@ public abstract class Layer {
 	public abstract void forward();
 	
 	public abstract void back();
+	
+	public abstract void forward(Tensor inpnut);
+	
+	public abstract void back(Tensor delta);
 	
 	public abstract void update();
 	
@@ -129,61 +123,32 @@ public abstract class Layer {
 		return new LayerInit(this);
 	}
 	
+	public void setInput(Tensor input) {
+		this.input = input;
+	}
+	
 	/**
 	 * 转换并设置输入数据
 	 */
 	public void setInput() {
 		
-		if(parent == null) {
+		/**
+		 * 获取上一层的输出作为当前层的输入
+		 */
+		this.input = this.network.getPreLayer(this.index).output;
 
-			/**
-			 * 获取上一层的输出作为当前层的输入
-			 */
-			this.input = this.network.getPreLayer(this.index).output;
-			
-		}else {
-			/**
-			 * resnet block layer
-			 */
-			if(this.index == 0) {
-				this.input = parent.input;
-			}else {
-				this.input = this.parent.layers.get(index - 1).output;
-			}
-			
-		}
-		
 	}
 	
 	/**
 	 * 转换并设置输入数据
 	 */
 	public void setDelta() {
-//		
-//		System.out.println(this.getLayerType().toString() + this.index);
-//		
-//		MatrixOperation.printImage(this.network.getNextLayer(this.index).diff.maxtir[0][0]);
-//		
 
-		if(parent == null) {
+		/**
+		 * 获取上一层的输出作为当前层的输入
+		 */
+		this.delta = this.network.getNextLayer(this.index).diff;
 
-			/**
-			 * 获取上一层的输出作为当前层的输入
-			 */
-			this.delta = this.network.getNextLayer(this.index).diff;
-			
-		}else {
-			/**
-			 * resnet block layer
-			 */
-			if(this.index == parent.layers.size() - 1 || isIdentity) {
-				this.delta = parent.delta;
-			}else {
-				this.delta = parent.layers.get(index + 1).diff;
-			}
-			
-		}
-		
 	}
 	
 	/**

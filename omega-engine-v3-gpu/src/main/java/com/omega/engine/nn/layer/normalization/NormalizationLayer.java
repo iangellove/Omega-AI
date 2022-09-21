@@ -21,6 +21,16 @@ public abstract class NormalizationLayer extends Layer {
 		initParam();
 	}
 	
+	public void setPreLayer(Layer pre) {
+		preLayer = pre;
+		this.channel = preLayer.oChannel;
+		this.height = preLayer.oHeight;
+		this.width = preLayer.oWidth;
+		this.oChannel = this.channel;
+		this.oHeight = this.height;
+		this.oWidth = this.width;
+	}
+	
 	@Override
 	public void initBack() {
 		

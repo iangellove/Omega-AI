@@ -293,7 +293,6 @@ public class BNKernel {
 	}
 	
 	public void initForward() {
-		
 		/**
 		 * float* x,float* mean,int number,int channel,int height,int width
 		 */
@@ -693,7 +692,7 @@ public class BNKernel {
 	                Pointer.to(new int[] {N}),
 	                Pointer.to(new int[] {C}),
 	                Pointer.to(new int[] {H * W})
-	            ); 
+	            );
 			
 	        cuLaunchKernel(normalize_function,
 		            this.CAFFE_GET_BLOCKS(N * C * H * W),  1, 1,      // Grid dimension
@@ -1110,13 +1109,37 @@ public class BNKernel {
     	JCudaDriver.cuMemcpyDtoH(Pointer.to(data), d, data.length * Sizeof.FLOAT);
     }
     
+    public float[] getRuningMean() {
+    	if(rm == null){
+    		rm = new float[C];
+    	}
+    	JCudaDriver.cuMemcpyDtoH(Pointer.to(rm), d_runingMean, rm.length * Sizeof.FLOAT);
+    	return rm;
+    }
+    
+    public float[] getRuningVar() {
+    	if(rv == null){
+    		rv = new float[C];
+    	}
+    	JCudaDriver.cuMemcpyDtoH(Pointer.to(rv), d_runingVar, rv.length * Sizeof.FLOAT);
+    	return rv;
+    }
+    
+    public float[] setRuningMean(float[] rm) {
+    	JCudaDriver.cuMemcpyHtoD(d_runingMean, Pointer.to(rm), rm.length * Sizeof.FLOAT);
+    	return rm;
+    }
+    
+    public float[] setRuningVar(float[] rv) {
+    	JCudaDriver.cuMemcpyHtoD(d_runingVar, Pointer.to(rv), rv.length * Sizeof.FLOAT);
+    	return rm;
+    }
+    
     public void foward_cpu(float[][][][] x,float[][][][] out,float[][][][] delta,float[][][][] diff) {
-    	
     	
     	float[] mean = new float[C];
     	float[] var = new float[C];
 
-    	
     	MatrixOperation.meanV2(x, mean, 1);
 
 		/**

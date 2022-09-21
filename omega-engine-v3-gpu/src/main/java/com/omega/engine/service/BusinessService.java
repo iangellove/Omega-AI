@@ -38,4 +38,6 @@ public interface BusinessService {
 	
 	public void cnnNetwork_mnist(String sid,float lr);
 	
+	public void test_nn(String path);
+	
 }

@@ -9,6 +9,7 @@ import com.omega.common.task.TaskEngine;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.active.jobs.leakRelu.LeakyReluBackwardJob;
 import com.omega.engine.nn.layer.active.jobs.leakRelu.LeakyReluForwardJob;
+import com.omega.engine.nn.network.Network;
 
 /**
  * Relu active function Layer
@@ -20,7 +21,12 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 	private float leak = 0.2f;
 	
 	public LeakyReluLayer() {
-		
+
+	}
+	
+	public LeakyReluLayer(Network network) {
+		this.network = network;
+		this.number = this.network.number;
 	}
 	
 	public LeakyReluLayer(float leak) {
@@ -105,7 +111,7 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.relu;
+		return LayerType.leakyRelu;
 	}
 
 	@Override
@@ -146,6 +152,40 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 	public void initCache() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public void forward(Tensor inpnut) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+		/**
+		 * 设置输入
+		 */
+		this.setInput(inpnut);
+		/**
+		 * 计算输出
+		 */
+		this.output();
+	}
+
+	@Override
+	public void back(Tensor delta) {
+		// TODO Auto-generated method stub
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff();
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
 	}
 
 }

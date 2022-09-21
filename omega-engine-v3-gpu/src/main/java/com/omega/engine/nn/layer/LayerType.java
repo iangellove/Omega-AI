@@ -15,6 +15,7 @@ public enum LayerType {
 	softmax_cross_entropy("softmax_cross_entropy"),
 	sigmod("sigmod"),
 	relu("relu"),
+	leakyRelu("leakyRelu"),
 	tanh("tanh"),
 	bn("bn"),
 	block("block"),

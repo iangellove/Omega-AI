@@ -76,6 +76,7 @@ public class FullyLayer extends Layer{
 //		this.weight = MatrixOperation.gaussianRandom(this.width, this.oWidth, 0.01);
 		this.weight = RandomUtils.xavierRandom(this.width, this.oWidth, this.width, this.oWidth);
 //		this.weight = RandomUtils.val(this.width, this.oWidth, 0.1f);
+//		this.weight = RandomUtils.order(this.width, this.oWidth, 0.1f, 0.1f);
 //		this.weight = RandomUtils.heRandom(this.width, this.oWidth, this.width * this.oWidth);
 		this.bias = MatrixUtils.zero(this.oWidth);
 		this.deltaB = new float[this.oWidth];

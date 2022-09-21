@@ -1,12 +1,12 @@
 package com.omega.engine.nn.layer;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
 import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
+import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * resnet block layer
@@ -14,9 +14,21 @@ import com.omega.engine.nn.layer.normalization.BNLayer;
  *
  */
 public class BasicBlockLayer extends Layer {
+
+	private ConvolutionLayer identityConv;
 	
-	private Layer identity;
+	private BNLayer identityBN;
 	
+	private ConvolutionLayer conv1;
+	
+	private BNLayer bn1;
+	
+	private ActiveFunctionLayer a1;
+	
+	private ConvolutionLayer conv2;
+	
+	private BNLayer bn2;
+
 	private int kHeight = 3;
 	
 	private int kWidth = 3;
@@ -27,16 +39,16 @@ public class BasicBlockLayer extends Layer {
 	
 	private int fisrtLayerStride = 2;
 	
-	public BasicBlockLayer(int channel,int oChannel,int height,int width,boolean downSample) {
-		this.layers = new ArrayList<Layer>();
+	public BasicBlockLayer(int channel,int oChannel,int height,int width,boolean downSample, Network network) {
 		
+		this.network = network;
 		this.channel = channel;
 		this.oChannel = oChannel;
 		this.height = height;
 		this.width = width;
 		this.downSample = downSample;
 		
-		if(this.downSample) {
+		if(this.isDownSample()) {
 			this.oHeight = (height + padding * 2 - kHeight) / fisrtLayerStride + 1;
 			this.oWidth = (width + padding * 2 - kWidth) / fisrtLayerStride + 1;
 		}else {
@@ -44,50 +56,45 @@ public class BasicBlockLayer extends Layer {
 			this.oWidth = width;
 		}
 
-		initLayer();
+		initLayers();
 		
 	}
 	
-	public void initLayer() {
+	public void initLayers() {
 		
-		ConvolutionLayer conv1 = null;
-		
-		if(downSample) {
-			this.setIdentity(new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, fisrtLayerStride, false));
-			this.getIdentity().index = 0;
-			this.getIdentity().isIdentity = true;
-			this.getIdentity().parent = this;
-			conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, fisrtLayerStride, false);
-		}else {
-			conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, 1, false);
-		}
+		if(isDownSample()) {
 
-		BNLayer bn1 = new BNLayer();
+			identityConv = new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, fisrtLayerStride, false, this.network);
+			identityConv.setUpdater(UpdaterFactory.create(this.network.updater));
+			
+			identityBN = new BNLayer(this.network);
+			identityBN.setUpdater(UpdaterFactory.create(this.network.updater));
+			identityBN.setPreLayer(identityConv);
+
+			conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, fisrtLayerStride, false, this.network);
+		}else {
+			conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, 1, false, this.network);
+		}
 		
-		ReluLayer a1 = new ReluLayer();
+		conv1.setUpdater(UpdaterFactory.create(this.network.updater));
 		
-		ConvolutionLayer conv2 = new ConvolutionLayer(conv1.oChannel, oChannel, conv1.oWidth, conv1.oHeight, 3, 3, 1, 1, false);
+		bn1 = new BNLayer(this.network);
+		bn1.setUpdater(UpdaterFactory.create(this.network.updater));
+		bn1.setPreLayer(conv1);
 		
-		BNLayer bn = new BNLayer();
+		a1 = new ReluLayer(this.network);
+		a1.setUpdater(UpdaterFactory.create(this.network.updater));
+		a1.setPreLayer(bn1);
 		
-		this.addLayer(conv1);
-		this.addLayer(bn1);
-		this.addLayer(a1);
-		this.addLayer(conv2);
-		this.addLayer(bn);
+		conv2 = new ConvolutionLayer(conv1.oChannel, oChannel, conv1.oWidth, conv1.oHeight, 3, 3, 1, 1, false, this.network);
+		conv2.setUpdater(UpdaterFactory.create(this.network.updater));
+		
+		bn2 = new BNLayer(this.network);
+		bn2.setUpdater(UpdaterFactory.create(this.network.updater));
+		bn2.setPreLayer(conv2);
 		
 	}
-	
-	public void addLayer(Layer layer) {
-		
-		layer.setIndex(this.layers.size());
-		
-		layer.parent = this;
-		
-		this.layers.add(layer);
-		
-	}
-	
+
 	@Override
 	public void init() {
 		this.number = this.network.number;
@@ -111,20 +118,27 @@ public class BasicBlockLayer extends Layer {
 		
 		float[] x = this.input.data;
 		
-		if(getIdentity() != null) {
-			getIdentity().forward();
-			x = getIdentity().output.data;
+		if(isDownSample()) {
+			identityConv.forward(this.input);
+			identityBN.forward(identityConv.output);			
+			x = identityBN.output.data;
 		}
 		
+		conv1.forward(this.input);
+		bn1.forward(conv1.output);
+		a1.forward(bn1.output);
+		
+		conv2.forward(a1.output);
+		bn2.forward(conv2.output);
+		
+		float[] x2 = bn2.output.data;
+
 		/**
+		 * if downSample 
+		 * o = identity(x) + f(x)
+		 * else
 		 * o = x + f(x)
 		 */
-		for(Layer layer:layers) {
-			layer.forward();
-		}
-		
-		float[] x2 = layers.get(layers.size() - 1).output.data;
-		
 		this.output.data = MatrixOperation.add(x, x2);
 		
 	}
@@ -142,18 +156,22 @@ public class BasicBlockLayer extends Layer {
 		/**
 		 * deltax = deltao * (f'(x) + 1)
 		 */
-		for(int i = layers.size() - 1;i>=0;i--) {
-			Layer layer = layers.get(i);
-			layer.back();
-		}
+		bn2.back(delta);
+		conv2.back(bn2.diff);
 		
-		float[] delta2 = layers.get(0).diff.data;
+		a1.back(conv2.diff);
+		bn1.back(a1.diff);
+		conv1.back(bn1.diff);
 		
-		if(getIdentity() != null) {
-			getIdentity().back();
-			this.diff.data = MatrixOperation.add(delta2, getIdentity().diff.data);
+		if(isDownSample()) {
+			
+			identityBN.back(delta);
+			identityConv.back(identityBN.diff);
+			
+			this.diff.data = MatrixOperation.add(conv1.diff.data, identityConv.diff.data);
+			
 		}else {
-			this.diff.data = MatrixOperation.add(delta2, this.delta.data);
+			this.diff.data = MatrixOperation.add(conv1.diff.data, this.delta.data);
 		}
 
 	}
@@ -198,14 +216,17 @@ public class BasicBlockLayer extends Layer {
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		
-		for(Layer layer:layers) {
-			layer.update();
+
+		if(isDownSample()) {
+			identityConv.update();
+			identityBN.update();
 		}
 		
-		if(this.identity != null) {
-			this.identity.update();
-		}
+		conv1.update();
+		bn1.update();
+		a1.update();
+		conv2.update();
+		bn2.update();
 		
 	}
 
@@ -233,16 +254,45 @@ public class BasicBlockLayer extends Layer {
 
 	}
 
-	public List<Layer> getLayers() {
-		return layers;
+	public boolean isDownSample() {
+		return downSample;
 	}
 
-	public Layer getIdentity() {
-		return identity;
+	@Override
+	public void forward(Tensor inpnut) {
+		// TODO Auto-generated method stub
+
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+		
+		/**
+		 * 设置输入
+		 */
+		this.setInput(inpnut);
+
+		/**
+		 * 计算输出
+		 */
+		this.output();
+		
 	}
 
-	public void setIdentity(Layer identity) {
-		this.identity = identity;
+	@Override
+	public void back(Tensor delta) {
+		// TODO Auto-generated method stub
+
+		initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff();
+
 	}
 
 }

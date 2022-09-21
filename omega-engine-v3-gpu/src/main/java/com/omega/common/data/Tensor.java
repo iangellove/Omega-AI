@@ -48,6 +48,8 @@ public class Tensor implements Serializable{
 	public void copy(int n,float[] dest) {
 		if(n < number) {
 			System.arraycopy(data, n * channel * height * width, dest, 0, channel * height * width);
+		}else {
+			throw new RuntimeException("获取数据失败[下标超出长度].");
 		}
 	}
 	
