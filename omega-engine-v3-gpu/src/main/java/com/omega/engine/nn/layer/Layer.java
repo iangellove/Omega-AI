@@ -131,7 +131,7 @@ public abstract class Layer {
 	 * 转换并设置输入数据
 	 */
 	public void setInput() {
-		
+
 		/**
 		 * 获取上一层的输出作为当前层的输入
 		 */

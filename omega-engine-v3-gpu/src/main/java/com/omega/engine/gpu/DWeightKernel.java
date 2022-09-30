@@ -4,6 +4,8 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import static jcuda.jcublas.JCublas2.cublasGetVector;
 import static jcuda.jcublas.JCublas2.cublasSetVector;
 
+import org.bytedeco.cuda.cudart.cudaMemsetParams;
+
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 
@@ -153,11 +155,17 @@ public class DWeightKernel {
 	}
 	
 	public void sgemm() {
+		
 		/**
 		 * m k n
 		 */
 		GPUOP.getInstance().multiplyFloat(ko, ih, iw, dA, dy, dC, cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 1.0f);
 		
+	}
+	
+	public void showDM(Pointer d,float[] data) {
+		cublasGetVector(data.length, Sizeof.FLOAT, d, 1, Pointer.to(data), 1);
+	    System.out.println(JsonUtils.toJson(data[0]));
 	}
 	
 	public void im2col() {
@@ -201,8 +209,15 @@ public class DWeightKernel {
 	public void clear() {
 //		float[] temp = new float[out.length];
 //		cublasSetVector(temp.length, Sizeof.FLOAT, Pointer.to(temp), 1, dC, 1);
-		GPUOP.getInstance().free(dC);
-		this.dC = CUDAMemoryManager.getPointer(ko * ih);
+		JCuda.cudaMemset(dC, 0, out.length * Sizeof.FLOAT);
+//		GPUOP.getInstance().free(dC);
+//		System.out.println(this.dC);
+//		this.dC = CUDAMemoryManager.getPointer(ko * ih);
+//		System.out.println(this.dC);
+//		float[] data = new float[out.length];
+//		
+//		this.showDM(dC, data);
+		
 	}
 
     public static void main(String args[]){	

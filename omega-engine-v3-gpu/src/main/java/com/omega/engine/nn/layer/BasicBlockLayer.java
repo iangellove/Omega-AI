@@ -98,12 +98,16 @@ public class BasicBlockLayer extends Layer {
 	@Override
 	public void init() {
 		this.number = this.network.number;
-		this.output = new Tensor(number, oChannel, oHeight, oWidth);
+		if(this.output == null || this.output.number != this.network.number) {
+			this.output = new Tensor(number, oChannel, oHeight, oWidth);
+		}
 	}
 	
 	@Override
 	public void initBack() {
-		this.diff = new Tensor(number, channel, height, width);
+		if(this.diff == null || this.diff.number != this.network.number) {
+			this.diff = new Tensor(number, channel, height, width);
+		}
 	}
 
 	@Override

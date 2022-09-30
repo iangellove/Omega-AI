@@ -1,8 +1,11 @@
 package com.omega.test;
 
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.utils.Dilation;
+import com.omega.common.utils.Im2col;
 import com.omega.common.utils.Im2colForWeight;
 import com.omega.common.utils.Im2colToVector;
 import com.omega.common.utils.Im2colUtils;
@@ -10,6 +13,9 @@ import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.PrintUtils;
+import com.omega.common.utils.RandomUtils;
+import com.omega.engine.gpu.DWeightKernel;
+import com.omega.engine.gpu.GPUOP;
 
 public class TestUtils {
 	
@@ -417,6 +423,72 @@ public class TestUtils {
 		
 	}
 	
+	public static float[][] testDW(float[] ox,float[] od,int N,int C,int H,int W,int ko,int kh,int kw,int S,int dh,int dw) {
+		
+		float[][][][] x = MatrixUtils.transform(ox, N, C, H, W);
+		
+		float[][][][] d = MatrixUtils.transform(od, N, ko, dh, dw);
+
+
+		int oHeight = (H - dh) / S + 1;
+		int oWidth = (W - dw) / S + 1;
+		
+		int xm = C * oHeight * oWidth;
+		int xn = N * dh * dw;
+
+		int pLength = xm * xn;
+		
+		float[] y = new float[pLength];
+		
+		Im2colForWeight.im2col(x, y, dh, dw, S);
+		
+		float[][] col = MatrixUtils.transform(y, xm, xn);
+		
+//		PrintUtils.printImage(col);
+		
+		float[] d1 = Im2colUtils.kernalToVector(d, true);
+		
+//		PrintUtils.printImage(MatrixUtils.transform(d1, N * dh * dw, ko));
+		
+		float[] c = MatrixUtils.zero(xm * ko);
+		
+		GPUOP.getInstance().multiplyFloat(xm, xn, ko, y, d1, c);
+		
+		return MatrixUtils.transform(c, xm, ko);
+		
+	}
+	
+	public static float[][] testDW2(float[] ox,float[] od,int N,int C,int H,int W,int ko,int kh,int kw,int S,DWeightKernel dWKernel) {
+		
+		int oHeight = (H - kh) / S + 1;
+		int oWidth = (W - kw) / S + 1;
+		
+		int onceXLength = C * H * W;
+		
+		int  onceDiffLength = ko * oHeight * oWidth;
+		
+		float[] onceDiff = new float[onceDiffLength];
+		
+		float[] onceWX = new float[C * H * W];
+		
+		float[] diffW = new float[ko * C * kh * kw];
+		
+		for(int n = 0;n<N;n++) {
+			System.arraycopy(ox, n * onceXLength, onceWX, 0, onceXLength);
+			System.arraycopy(od, n * onceDiffLength, onceDiff, 0, onceDiffLength);
+			dWKernel.setX(onceWX);
+			dWKernel.setKernel(onceDiff);
+			dWKernel.conv();
+		}
+		
+		diffW = dWKernel.getOut_D2H();
+
+		dWKernel.clear();
+		
+		return MatrixUtils.transform(diffW, ko, C * kh * kw);
+		
+	}
+	
 	public static void main(String[] args) {
 		
 //		TestUtils.testIm2colInput();
@@ -495,7 +567,41 @@ public class TestUtils {
 //		
 //		System.out.println(CheckArrayUtils.check(dw, x1d));
 		
-		TestUtils.dilationTest();
+//		TestUtils.dilationTest();
+		
+		int N = 4;
+		int C = 3;
+
+		int H = 4;
+		int W = 4;
+		int S = 1;
+		
+		int dh = 3;
+		int dw = 3;
+		
+		int ko = 2;
+		int kh = 2;
+		int kw = 2;
+
+		float[] ox = RandomUtils.order(N * C * H * W, 1, 1);
+		
+		float[] od = RandomUtils.order(N * ko * dh * dw, 1, 1);
+		
+		float[] diffW = new float[ko * C * kh * kw];
+		
+		DWeightKernel dWKernel = new DWeightKernel("test", diffW, C, H, W, ko, kh, kw, S, 0);
+		
+		float[][] v1 = TestUtils.testDW(ox,od,N,C,H,W,ko,kh,kw,S,dh,dw);
+		
+		float[][] v2 = TestUtils.testDW2(ox,od,N,C,H,W,ko,kh,kw,S,dWKernel);
+		
+		System.out.println("*****************************************************");
+		
+		v2 = TestUtils.testDW2(ox,od,N,C,H,W,ko,kh,kw,S,dWKernel);
+		
+		PrintUtils.printImage(v1);
+		
+		PrintUtils.printImage(v2);
 		
 	}
 	

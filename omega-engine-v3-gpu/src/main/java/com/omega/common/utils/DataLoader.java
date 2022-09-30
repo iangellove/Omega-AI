@@ -681,7 +681,7 @@ public class DataLoader {
      * @param fileName the file of 'train' or 'test' about image
      * @return one row show a `picture`
      */
-    public static DataSet getImagesToDataSetByBin(String fileName,int number,int channel,int height,int width,int labelSize,boolean normalization,String[] labelSet) {
+    public static DataSet getImagesToDataSetByBin(String fileName,int number,int channel,int height,int width,int labelSize,String[] labelSet,boolean normalization) {
         float[] x = new float[number * channel * height * width];
         String[] labels = new String[number];
         float[] dataLabel = new float[number * labelSize];
@@ -756,7 +756,7 @@ public class DataLoader {
      * @param fileName the file of 'train' or 'test' about image
      * @return one row show a `picture`
      */
-    public static DataSet getImagesToDataSetByBin(String[] fileNames,int number,int channel,int height,int width,int labelSize,boolean normalization,String[] labelSet) {
+    public static DataSet getImagesToDataSetByBin(String[] fileNames,int number,int channel,int height,int width,int labelSize,String[] labelSet,boolean normalization) {
         
     	int batchSize = number * fileNames.length;
     	
@@ -773,12 +773,12 @@ public class DataLoader {
             	for(int n = 0;n<number;n++) {
             		int labelIndex = bin.read();
             		labels[index] = labelSet[labelIndex];
-            		System.arraycopy(LabelUtils.labelIndexToVector(labelIndex, labelSize), 0, dataLabel, n * labelSize, labelSize);
+            		System.arraycopy(LabelUtils.labelIndexToVector(labelIndex, labelSize), 0, dataLabel, index * labelSize, labelSize);
             		for(int i = 0;i<channel * height * width;i++) {
             			if(normalization) {
-        					x[n * channel * height * width + i] = (float) (bin.read() / 255.0d) ;
+        					x[index * channel * height * width + i] = (float) (bin.read() / 255.0d) ;
                 		}else{
-                			x[n * channel * height * width + i] = bin.read();
+                			x[index * channel * height * width + i] = bin.read();
                 		}
             		}
             		
@@ -953,7 +953,7 @@ public class DataLoader {
 
     	String[] labelSet = new String[] {"airplane","automobile","bird","cat","deer","dog","frog","horse","ship","truck"};
     	
-    	DataLoader.getImagesToDataSetByBin(fileName, 10000, 3, 32, 32, 10, false, labelSet);
+    	DataLoader.getImagesToDataSetByBin(fileName, 10000, 3, 32, 32, 10, labelSet, false);
 
     }
     

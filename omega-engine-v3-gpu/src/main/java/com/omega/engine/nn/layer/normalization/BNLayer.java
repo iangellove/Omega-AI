@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer.normalization;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BNKernel;
 import com.omega.engine.nn.layer.LayerType;
@@ -99,10 +100,10 @@ public class BNLayer extends NormalizationLayer {
 		if(getKernel() == null) {
 			switch (this.getBnType()) {
 			case fully_bn:
-				kernel = new BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn", output, diff, deltaGama, deltaBeta, number, width, height, channel);
+				kernel = new BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn", this.getBnType(), output, diff, deltaGama, deltaBeta, number, width, height, channel);
 				break;
 			case conv_bn:
-				kernel = new BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn", output, diff, deltaGama, deltaBeta, number, channel, height, width);
+				kernel = new BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn", this.getBnType(), output, diff, deltaGama, deltaBeta, number, channel, height, width);
 				break;
 			}
 		}
@@ -185,6 +186,10 @@ public class BNLayer extends NormalizationLayer {
 		getKernel().setDelta(delta);
 		
 		getKernel().backward();
+		
+//		MatrixOperation.division_self(deltaGama, number);
+//		
+//		MatrixOperation.division_self(deltaBeta, number);
 		
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
 		

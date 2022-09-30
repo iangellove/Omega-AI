@@ -440,6 +440,55 @@ public class ImageUtils {
 		return 16777216 + pixelColor; // pixelColor的值为负，经过实践得出：加上颜色最大值就是实际颜色值。
 	}
 	
+	public int[][] color2rgb(float[] data,int height,int width){
+		
+		int[][] rgb = new int[height][width];
+		int ocount = height * width;
+		
+		for(int i = 0;i<height;i++) {
+			for(int j = 0;j<width;j++) {
+				int index = i * width + j;
+				int r = (int) data[index];
+				int g = (int) data[ocount + index];
+				int b = (int) data[ocount * 2 + index];
+				
+				int orgb = colorToRGB(255, r, g, b);
+				
+				rgb[i][j] = orgb;
+				
+			}
+		}
+		
+		return rgb;
+	}
+	
+	public boolean createImage(int index,float[] data,String label,int height,int width,String filePath,String extName) {
+		
+		try {
+			
+			int[][] rgbInt = color2rgb(data, height, width);
+			
+			BufferedImage bufferedImage = this.convertRGBImage(rgbInt);
+			System.out.println(extName);
+			File outputfile = new File(filePath+"/"+index+"_"+label+"."+extName);
+			try {
+				System.out.println(ImageIO.write(bufferedImage, extName, outputfile));
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			}
+			
+			return true;
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		return false;
+	}
+	
 	/**
 	 * @param args
 	 */

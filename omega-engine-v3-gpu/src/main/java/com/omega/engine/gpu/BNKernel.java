@@ -10,6 +10,7 @@ import com.omega.common.task.TaskEngine;
 import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.updater.MWAUtils;
 
@@ -24,6 +25,8 @@ import jcuda.runtime.cudaError;
 public class BNKernel {
 	
 	private String id;
+	
+	private BNType bnType;
 	
 	private Tensor x;
 	private float[] gama;
@@ -141,8 +144,9 @@ public class BNKernel {
 	private float[] rv;
 
 
-	public BNKernel(String id,Tensor out,Tensor diff,float[] dgama,float[] dbeta,int N,int C,int H,int W) {
+	public BNKernel(String id,BNType bnType,Tensor out,Tensor diff,float[] dgama,float[] dbeta,int N,int C,int H,int W) {
 		this.id = id;
+		this.bnType = bnType;
 		this.N = N;
 		this.C = C;
 		this.H = H;
@@ -557,7 +561,7 @@ public class BNKernel {
 			 * var = 1/m ∑(x - mean)^2
 			 * std = (var + eta)^1/2
 			 */
-			if(H * W == 1){
+			if(bnType == BNType.fully_bn){
 				
 				mean();
 
@@ -758,7 +762,7 @@ public class BNKernel {
 		
 //		long start = System.nanoTime();
 		
-		if(H * W == 1){
+		if(bnType == BNType.fully_bn){
 			computeDelta_full();
 		}else {
 			computeDgama();
@@ -771,7 +775,7 @@ public class BNKernel {
 		
 		computeDxhat();
 		
-		if(H * W == 1){
+		if(bnType == BNType.fully_bn){
 			computeFullDmean();
 			computeFullDvar();
 		}else {
@@ -783,7 +787,7 @@ public class BNKernel {
 		
 //		long start3 = System.nanoTime();
 		
-		if(H * W == 1) {
+		if(bnType == BNType.fully_bn) {
 			computeDx_full();
 		}else {
 			computeDx();

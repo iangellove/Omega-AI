@@ -1,15 +1,20 @@
 package com.omega.engine.service.impl;
 
+import java.io.File;
+
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
 import com.omega.common.data.utils.NetworkUtils;
 import com.omega.common.utils.DataLoader;
 import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.LabelUtils;
+import com.omega.common.utils.MathUtils;
 import com.omega.engine.controller.TrainTask;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.loss.CrossEntropyLoss;
@@ -460,9 +465,9 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
 			
-			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, true, labelSet);
+			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true);
 	    	
-			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, true, labelSet);
+			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true);
 			
 			System.out.println("data is ready.");
 			
@@ -836,7 +841,7 @@ public class BusinessServiceImpl implements BusinessService {
     	
 		String test_data_filename = "H:/dataset/cifar-10-binary.tar/cifar-10-binary/cifar-10-batches-bin/test_batch.bin";
 		
-		DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, false, labelSet);
+		DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, false);
     	
 //		MatrixOperation.printImage(trainData.input.maxtir[0][0]);
 		
@@ -1026,6 +1031,10 @@ public class BusinessServiceImpl implements BusinessService {
 	    	
 			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 			
+//			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true);
+//	    	
+//			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true);
+			
 			System.out.println("data is ready.");
 			
 			/**
@@ -1048,7 +1057,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.0001f;
+			netWork.learnRate = 0.001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -1132,7 +1141,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -1762,7 +1771,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(sid, netWork, 20, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(sid, netWork, 30, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			TrainTask.addTask(sid, optimizer);
 			
@@ -2415,20 +2424,14 @@ public class BusinessServiceImpl implements BusinessService {
 			ReluLayer active9 = new ReluLayer();
 			
 			
-			PoolingLayer pool2 = new PoolingLayer(bl8.oChannel, bl8.oWidth, bl8.oHeight, 2, 2, 2, PoolingType.MEAN_POOLING);
+			PoolingLayer pool2 = new PoolingLayer(bl8.oChannel, bl8.oWidth, bl8.oHeight, 4, 4, 4, PoolingType.MEAN_POOLING);
 
 			int fInputCount = pool2.oChannel * pool2.oWidth * pool2.oHeight;
 			
-			int inputCount = (int) (Math.sqrt((fInputCount) + 10) + 10);
-			
 			FullyLayer full1 = new FullyLayer(fInputCount, 10, false);
-//
-//			BNLayer bn5 = new BNLayer();
-//			
-//			ReluLayer active13 = new ReluLayer();
-//			
-//			FullyLayer full2 = new FullyLayer(inputCount, 10);
-//			
+
+			BNLayer bn5 = new BNLayer();
+	
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
 			netWork.addLayer(inputLayer);
@@ -2471,12 +2474,10 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			netWork.addLayer(pool2);
 			netWork.addLayer(full1);
-//			netWork.addLayer(bn5);
-//			netWork.addLayer(active13);
-//			netWork.addLayer(full2);
+			netWork.addLayer(bn5);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 128, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -2526,6 +2527,10 @@ public class BusinessServiceImpl implements BusinessService {
 	    	
 			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 			
+//			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true);
+//	    	
+//			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true);
+			
 			System.out.println("data is ready.");
 			
 			/**
@@ -2548,7 +2553,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.0001f;
+			netWork.learnRate = 0.001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -2663,7 +2668,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full1);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -2729,6 +2734,80 @@ public class BusinessServiceImpl implements BusinessService {
 		
 	}
 	
+	public static void getImages() {
+		
+		try {
+			
+			int batchSize = 128;
+			
+			int channel = 3;
+			int height = 32;
+			int width = 32;
+			
+			String dpath = "H:/testImages/";
+			
+			String[] labelSet = new String[] {"airplane","automobile","bird","cat","deer","dog","frog","horse","ship","truck"};
+	    	
+			String[] train_data_filenames = new String[] {
+					"H:/dataset/cifar-10/data_batch_1.bin",
+					"H:/dataset/cifar-10/data_batch_2.bin",
+					"H:/dataset/cifar-10/data_batch_3.bin",
+					"H:/dataset/cifar-10/data_batch_4.bin",
+					"H:/dataset/cifar-10/data_batch_5.bin"
+			};
+			
+			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
+			
+			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, false);
+	    	
+			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, false);
+			
+			Tensor input = new Tensor(batchSize, channel, height, width);
+			
+			Tensor label = new Tensor(batchSize, 1, 1, testData.labelSize);
+			
+			/**
+			 * 随机裁剪
+			 */
+			DataTransforms.randomCrop(trainData.input, 32, 32, 4);
+			
+			/**
+			 * 随机翻转
+			 */
+			DataTransforms.randomHorizontalFilp(trainData.input);
+			
+			
+			ImageUtils iu = new ImageUtils();
+			
+			int[][] indexs = MathUtils.randomInts(testData.number, batchSize);
+
+			/**
+			 * 遍历整个训练集
+			 */
+			for(int it = 0;it<indexs.length;it++) {
+				String filePath = dpath + it + "/";
+				File file = new File(filePath);
+				
+				if(!file.exists()) {
+					file.mkdir();
+				}
+				
+				testData.getRandomData(indexs[it], input, label); 
+				
+				for(int n = 0;n<input.number;n++) {
+					String ol = LabelUtils.vectorTolabel(label.getByNumber(n), labelSet);
+					iu.createImage(n, input.getByNumber(n), ol, height, width, filePath, "png");
+				}
+				
+			}
+				
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -2741,13 +2820,16 @@ public class BusinessServiceImpl implements BusinessService {
 //			bs.cnnNetwork_mnist();
 //			bs.cnnNetwork_cifar10();
 
-			bs.resnet18_cifar10();
+//			bs.resnet18_cifar10();
 //			bs.resnet18_mnist();
 //			bs.vgg16_cifar10();
 //			bs.alexNet_mnist();
-//			bs.alexNet_cifar10();
+			bs.alexNet_cifar10();
 //			bs.cnnNetwork_vgg16_cifar10();
 //			bs.test_nn("H://test3.json");
+			
+//			BusinessServiceImpl.getImages();
+			
 		} finally {
 			// TODO: handle finally clause
 			CUDAMemoryManager.free();
