@@ -190,13 +190,13 @@ public class BusinessServiceImpl implements BusinessService {
 
 //			netWork.GRADIENT_CHECK = true;
 		
-			long start = System.currentTimeMillis();
+			long start = System.nanoTime();
 			
 			optimizer.train(trainData);
 			
 			optimizer.test(testData);
 			
-			System.out.println(((System.currentTimeMillis() - start) / 1000) + "s.");
+			System.out.println(((System.nanoTime() - start) / 1e6) + "s.");
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -1057,7 +1057,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.0001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -1141,7 +1141,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -2553,7 +2553,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.01f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -2668,7 +2668,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full1);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 128, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 50, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 			long start = System.currentTimeMillis();
 			

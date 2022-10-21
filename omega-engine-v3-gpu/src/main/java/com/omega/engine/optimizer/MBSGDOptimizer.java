@@ -135,6 +135,11 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					this.network.back(this.lossDiff);
 					
+					/**
+					 * update
+					 */
+					this.network.update();
+					
 					float error = this.accuracy(output, label, trainingData.labelSet);
 					
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} currentError:"+this.currentError + " [costTime:"+(System.currentTimeMillis() - start)+"ms.]";

@@ -18,6 +18,7 @@ import jcuda.driver.JCudaDriver;
 import jcuda.jcublas.cublasOperation;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
+import jcuda.runtime.cudaMemcpyKind;
 
 public class ConvKernel {
 	
@@ -136,7 +137,7 @@ public class ConvKernel {
 	
 	public void setX(float[] x) {
 		this.x = x;
-
+		
 		/**
 		 * 申请内存
 		 */

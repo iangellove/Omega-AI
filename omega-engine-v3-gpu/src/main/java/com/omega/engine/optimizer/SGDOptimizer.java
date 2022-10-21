@@ -91,6 +91,11 @@ public class SGDOptimizer extends Optimizer {
 				 */
 				this.network.back(this.lossDiff);
 				
+				/**
+				 * update
+				 */
+				this.network.update();
+
 				float error = this.accuracy(output, label, trainingData.labelSet);
 				
 				System.out.println("training["+this.trainIndex+"] accuracy:{"+error+"%} (lr:"+this.network.learnRate+") currentError:"+this.currentError);

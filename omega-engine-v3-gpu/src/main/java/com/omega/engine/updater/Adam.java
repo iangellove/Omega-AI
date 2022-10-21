@@ -6,6 +6,7 @@ import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.normalization.BNLayer;
+import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.jobs.AdamJob;
 
 /**
@@ -35,6 +36,10 @@ public class Adam extends Updater {
 	
 	private AdamJob adamJob;
 	
+	public Adam(Network net) {
+		this.net = net;
+	}
+	
 	@Override
 	public void update(Layer layer) {
 		// TODO Auto-generated method stub
@@ -53,7 +58,7 @@ public class Adam extends Updater {
 //		this.updateW(layer);
 //		
 
-		AdamJob adamJob = new AdamJob(layer.diffW.data, mw, vw, layer.weight.data, layer.learnRate, 0, layer.weight.getDataLength() - 1);
+		AdamJob adamJob = new AdamJob(layer.diffW.data, mw, vw, layer.weight.data, layer.learnRate, net.number, net.train_time, 0, layer.weight.getDataLength() - 1);
 		
 		ForkJobEngine.run(adamJob);
 
@@ -91,7 +96,7 @@ public class Adam extends Updater {
 			
 		}
 		
-		AdamJob adamJob = new AdamJob(conv.diffW.data, mw, vw, conv.weight.data, conv.learnRate, 0, conv.weight.getDataLength() - 1);
+		AdamJob adamJob = new AdamJob(conv.diffW.data, mw, vw, conv.weight.data, conv.learnRate, net.number, net.train_time, 0, conv.weight.getDataLength() - 1);
 		
 		ForkJobEngine.run(adamJob);
 

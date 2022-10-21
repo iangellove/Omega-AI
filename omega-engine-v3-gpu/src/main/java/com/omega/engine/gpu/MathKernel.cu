@@ -66,8 +66,8 @@ __global__ void var_cov(float* x,float* mean,float* var,int number,int channel,i
 			}
 		}	
 		
-		//var[index] = val / (number * height * width - 1);
-		var[index] = val / number * height * width;
+		var[index] = val / (number * height * width - 1);
+		//var[index] = val / number * height * width;
 	}
 
 }
@@ -90,8 +90,8 @@ __global__ void var_full(float* x,float* mean,float* var,int number,int width)
 	
 		}	
 		
-		//var[index] = val / (number - 1);
-		var[index] = val / number;
+		var[index] = val / (number - 1);
+		//var[index] = val / number;
 	}
 
 }
@@ -184,7 +184,7 @@ __global__ void  fast_variance_kernel(float *x, float *mean, int batch, int filt
         for(i = 0; i < threads; ++i){
             variance[filter] += local[i];
         }
-        //variance[filter] /= (spatial * batch - 1);
-        variance[filter] /= (spatial * batch);
+        variance[filter] /= (spatial * batch - 1);
+        //variance[filter] /= (spatial * batch);
     }
 }

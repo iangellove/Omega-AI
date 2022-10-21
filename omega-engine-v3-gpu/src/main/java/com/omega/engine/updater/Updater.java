@@ -2,6 +2,7 @@ package com.omega.engine.updater;
 
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
+import com.omega.engine.nn.network.Network;
 
 /**
  * Updater
@@ -10,6 +11,8 @@ import com.omega.engine.nn.layer.normalization.BNLayer;
  *
  */
 public abstract class Updater {
+	
+	public Network net;
 	
 	public UpdaterType updaterType;
 	

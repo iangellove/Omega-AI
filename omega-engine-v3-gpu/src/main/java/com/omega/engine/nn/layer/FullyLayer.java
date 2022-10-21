@@ -2,7 +2,6 @@ package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.GPUOP;
 
@@ -43,11 +42,7 @@ public class FullyLayer extends Layer{
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number){
 			this.diff = new Tensor(number, channel, height, width);
-		}else {
-			MatrixUtils.zero(this.diff.data);
 		}
-		MatrixUtils.zero(this.diffB.data);
-		MatrixUtils.zero(this.diffW.data);
 	}
 
 	@Override
@@ -56,8 +51,6 @@ public class FullyLayer extends Layer{
 		this.number = this.network.number;
 		if(this.output == null || this.number != this.output.number){
 			this.output = new Tensor(number, oChannel, oHeight, oWidth);
-		}else {
-			MatrixUtils.zero(this.output.data);
 		}
 	}
 	
@@ -131,8 +124,9 @@ public class FullyLayer extends Layer{
 		
 		if(hasBias) {
 			
-			for(int n = 0;n<this.number;n++) {
-				for(int ow = 0;ow<this.oWidth;ow++) {
+			for(int ow = 0;ow<this.oWidth;ow++) {
+				diffB.data[ow] = 0.0f;
+				for(int n = 0;n<this.number;n++) {
 					diffB.data[ow] += delta.data[n * oWidth + ow] / number;
 				}
 			}

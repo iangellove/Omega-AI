@@ -33,6 +33,8 @@ public abstract class Network {
 	public int trainingTime = 100;
 
 	public int currentTrainingTime = 0;
+	
+	public int train_time = 0;
 
 	public List<Layer> layerList = new ArrayList<Layer>();
 	
@@ -125,11 +127,27 @@ public abstract class Network {
 	public void addLayer(Layer layer) {
 		layer.setNetwork(this);
 		layer.setIndex(this.layerList.size());
-		layer.setUpdater(UpdaterFactory.create(this.updater));
+		layer.setUpdater(UpdaterFactory.create(this.updater, this));
 		if(layer.index <= 1) {
 			layer.PROPAGATE_DOWN = false;
 		}
 		this.layerList.add(layer);
+	}
+	
+	public void update() {
+		
+		this.train_time = train_time + 1;
+		
+		for(int i = layerCount - 1;i>=0;i--) {
+			
+			Layer layer = layerList.get(i);
+			
+			layer.learnRate = this.learnRate;
+
+			layer.update();
+			
+		}	
+		
 	}
 	
 	public NetworkInit save() {

@@ -65,10 +65,10 @@ public class BasicBlockLayer extends Layer {
 		if(isDownSample()) {
 
 			identityConv = new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, fisrtLayerStride, false, this.network);
-			identityConv.setUpdater(UpdaterFactory.create(this.network.updater));
+			identityConv.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
 			
 			identityBN = new BNLayer(this.network);
-			identityBN.setUpdater(UpdaterFactory.create(this.network.updater));
+			identityBN.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
 			identityBN.setPreLayer(identityConv);
 
 			conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, fisrtLayerStride, false, this.network);
@@ -76,21 +76,21 @@ public class BasicBlockLayer extends Layer {
 			conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, 1, false, this.network);
 		}
 		
-		conv1.setUpdater(UpdaterFactory.create(this.network.updater));
+		conv1.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
 		
 		bn1 = new BNLayer(this.network);
-		bn1.setUpdater(UpdaterFactory.create(this.network.updater));
+		bn1.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
 		bn1.setPreLayer(conv1);
 		
 		a1 = new ReluLayer(this.network);
-		a1.setUpdater(UpdaterFactory.create(this.network.updater));
+		a1.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
 		a1.setPreLayer(bn1);
 		
 		conv2 = new ConvolutionLayer(conv1.oChannel, oChannel, conv1.oWidth, conv1.oHeight, 3, 3, 1, 1, false, this.network);
-		conv2.setUpdater(UpdaterFactory.create(this.network.updater));
+		conv2.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
 		
 		bn2 = new BNLayer(this.network);
-		bn2.setUpdater(UpdaterFactory.create(this.network.updater));
+		bn2.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
 		bn2.setPreLayer(conv2);
 		
 	}

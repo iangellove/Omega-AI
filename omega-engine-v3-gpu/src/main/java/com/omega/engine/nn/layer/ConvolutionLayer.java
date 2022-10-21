@@ -139,7 +139,7 @@ public class ConvolutionLayer extends Layer {
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth,RandomUtils.order(kernelNum * channel * kHeight * kWidth, 0.1f, 0.1f));
 		this.bias = new Tensor(1, 1, 1, kernelNum);
 		this.diffB = new Tensor(1, 1, 1, kernelNum);
-		this.diffW = new Tensor(this.kernelNum,this.channel,this.kHeight,this.kWidth);
+		this.diffW = new Tensor(this.kernelNum, this.channel, this.kHeight, this.kWidth);
 	}
 
 	@Override

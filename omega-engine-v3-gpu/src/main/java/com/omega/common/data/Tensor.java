@@ -2,7 +2,12 @@ package com.omega.common.data;
 
 import java.io.Serializable;
 
+import com.omega.engine.gpu.CUDAMemoryManager;
+
 import jcuda.Pointer;
+import jcuda.Sizeof;
+import jcuda.runtime.JCuda;
+import jcuda.runtime.cudaMemcpyKind;
 
 public class Tensor implements Serializable{
 	
@@ -23,9 +28,11 @@ public class Tensor implements Serializable{
 	
 	public float[] data;
 	
-	private Pointer deviceData;
+	private Pointer gpuData;
 	
 	public float[] once;
+	
+	private boolean hasGPU = false;
 	
 	public Tensor(int number,int channel,int height,int width) {
 		this.number = number;
@@ -36,6 +43,18 @@ public class Tensor implements Serializable{
 		this.data = new float[this.dataLength];
 	}
 	
+	public Tensor(int number,int channel,int height,int width,boolean hasGPU) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.data = new float[this.dataLength];
+		if(hasGPU) {
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+		}
+	}
+	
 	public Tensor(int number,int channel,int height,int width,float[] data) {
 		this.number = number;
 		this.channel = channel;
@@ -43,6 +62,19 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = data;
+	}
+	
+	public Tensor(int number,int channel,int height,int width,float[] data,boolean hasGPU) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.data = data;
+		if(hasGPU) {
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+		}
 	}
 	
 	public void copy(int n,float[] dest) {
@@ -135,6 +167,18 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = new float[this.dataLength];
+	}
+
+	public Pointer getGpuData() {
+		return gpuData;
+	}
+	
+	public void syncHost() {
+		JCuda.cudaMemcpy(Pointer.to(data), gpuData, this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+	}
+	
+	public void clearGPU() {
+		JCuda.cudaMemset(gpuData, 0, data.length * Sizeof.FLOAT);
 	}
 	
 }

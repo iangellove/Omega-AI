@@ -72,6 +72,11 @@ public class BGDOptimizer extends Optimizer {
 				 */
 				this.network.back(this.lossDiff);
 				
+				/**
+				 * update
+				 */
+				this.network.update();
+				
 				this.trainIndex = i;
 			}
 			

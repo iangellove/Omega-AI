@@ -98,7 +98,7 @@ public class BPNetwork extends Network{
 			
 			layer.back();
 			
-			layer.update();
+//			layer.update();
 			
 		}
 		

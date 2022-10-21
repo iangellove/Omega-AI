@@ -10,6 +10,8 @@ import com.omega.common.task.TaskEngine;
 import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.updater.MWAUtils;
@@ -22,7 +24,7 @@ import jcuda.driver.JCudaDriver;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 
-public class BNKernel {
+public class BNKernel{
 	
 	private String id;
 	
@@ -297,6 +299,7 @@ public class BNKernel {
 	}
 	
 	public void initForward() {
+		
 		/**
 		 * float* x,float* mean,int number,int channel,int height,int width
 		 */
@@ -409,7 +412,7 @@ public class BNKernel {
 		 * 设置入参
 		 * float *dxhat, float *variance, int batch, int filters, float *mean_delta
 		 */
-		fullDmeanParameters =Pointer.to(
+		fullDmeanParameters = Pointer.to(
                 Pointer.to(d_diff),
                 Pointer.to(d_var),
                 Pointer.to(new int[] {N}),
@@ -885,7 +888,7 @@ public class BNKernel {
 	}
 	
 	private void computeFullDmean() {
-		
+
 		cuLaunchKernel(full_dmean_function,
 				this.CAFFE_GET_BLOCKS(C),  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
@@ -1026,83 +1029,89 @@ public class BNKernel {
 	}
 	
 	
-//    public static void main(String args[]){	
-//    	int N = 128;
-//    	int C = 4096;
-//    	int H = 1;
-//    	int W = 1;
+    public static void main(String args[]){	
+
+    	int N = 2;
+    	int C = 1;
+    	int H = 1;
+    	int W = 10;
+    	
+    	float[] x = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
+    	
+//    	float[] x = MatrixUtils.one(N * C * H * W);
+    	
+    	float[] gama = MatrixUtils.one(1 * 1 *1 * W);
+    	
+    	float[] beta = new float[W];
+    	
+    	float[] dgama = new float[W];
+    	
+    	float[] dbeta = new float[W];
+    	
+    	float[][][][] x_cpu = MatrixUtils.transform(x, N, C, H, W);
+    	
+    	float[][][][] out_cpu = new float[N][C][H][W];
+    	
+    	float[][][][] diff_cpu = new float[N][C][H][W];
+    	
+    	Tensor input = new Tensor(N, C, H, W, x);
+    	
+    	Tensor delta = new Tensor(N, C, H, W, x);
+    	
+    	Tensor ouput = new Tensor(N, C, H, W);
+    	
+    	Tensor diff = new Tensor(N, C, H, W);
+    	
+    	BNKernel bn = new BNKernel("test",BNType.fully_bn, ouput, diff, dgama, dbeta, N, W, H, C);
+    	
+    	for(int i = 0;i<1;i++) {
+
+        	long start = System.nanoTime();
+        	
+        	bn.setX(input, N);
+        	
+        	bn.setGama(gama, beta);
+        	
+        	bn.forward(RunModel.TRAIN);
+        	
+        	bn.setDelta(delta);
+        	
+        	bn.backward();
+        	
+        	System.out.println((System.nanoTime() - start) / 1e6+"ms.count");
+    	}
+    	
+    	bn.foward_cpu(x_cpu, out_cpu, x_cpu, diff_cpu, 0);
+    	
+//    	System.out.println(JsonUtils.toJson(x));
+    	
+    	System.out.println(JsonUtils.toJson(bn.getOut().data));
+    	System.out.println(JsonUtils.toJson(bn.getDiff().data));
 //    	
-//    	float[] x = RandomUtils.gaussianRandom(N * C * H * W, 0.01f);
+//    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(out_cpu)));
+//    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(diff_cpu)));
+//    	System.out.println("out error:"+CheckArrayUtils.oneCheck(MatrixUtils.transform(out_cpu), bn.getOut().data));
+    	
+//    	float[] mean = new float[C];
+//    	float[] var = new float[C];
+//    	float[] z = new float[N * C * H *W];
+    	
+//    	bn.showDM("var_gpu",bn.d_var, var);
+//    	bn.showDM("dmean_gpu",bn.d_dmean, mean);
+//    	bn.showDM(bn.d_out, z);
+//    	bn.showDM(bn.d_dmu, mean);
+    	
+//    	System.out.println(JsonUtils.toJson(bn.getDiff()));
 //    	
-////    	float[] x = MatrixUtils.one(N * C * H * W);
-//    	
-//    	float[] gama = RandomUtils.gaussianRandom(C, 0.1f);
-//    	
-//    	float[] beta = RandomUtils.gaussianRandom(C, 0.1f);
-//    	
-//    	float[] out = new float[N * C * H * W];
-//    	
-//    	float[] diff = new float[N * C * H * W];
-//    	
-//    	float[] dgama = new float[C];
-//    	
-//    	float[] dbeta = new float[C];
-//    	
-//    	float[][][][] x_cpu = MatrixUtils.transform(x, N, C, H, W);
-//    	
-//    	float[][][][] out_cpu = new float[N][C][H][W];
-//    	
-//    	float[][][][] diff_cpu = new float[N][C][H][W];
-//    	
-//    	BNKernel bn = new BNKernel("test",out, diff, dgama, dbeta, N, C, H, W);
-//    	
-//    	for(int i = 0;i<10;i++) {
-//
-//        	long start = System.nanoTime();
-//        	
-//        	bn.setX(x, N);
-//        	
-//        	bn.setGama(gama, beta);
-//        	
-//        	bn.forward(RunModel.TRAIN);
-//        	
-//        	bn.setDelta(x);
-//        	
-//        	bn.backward();
-//        	
-//        	System.out.println((System.nanoTime() - start) / 1e6+"ms.count");
-//    	}
-//    	
-//    	bn.foward_cpu(x_cpu, out_cpu, x_cpu, diff_cpu);
-//    	
-////    	System.out.println(JsonUtils.toJson(x));
-//    	
-////    	System.out.println(JsonUtils.toJson(bn.getOut()));
-////    	
-////    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(out_cpu)));
-//    	
-//    	System.out.println("out error:"+CheckArrayUtils.oneCheck(MatrixUtils.transform(out_cpu), bn.getOut()));
-//    	
-////    	float[] mean = new float[C];
-////    	float[] var = new float[C];
-////    	float[] z = new float[N * C * H *W];
-//    	
-////    	bn.showDM("var_gpu",bn.d_var, var);
-////    	bn.showDM("dmean_gpu",bn.d_dmean, mean);
-////    	bn.showDM(bn.d_out, z);
-////    	bn.showDM(bn.d_dmu, mean);
-//    	
-////    	System.out.println(JsonUtils.toJson(bn.getDiff()));
-////    	
-////    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(diff_cpu)));
-//    	
-//    	System.out.println("diff error:"+CheckArrayUtils.oneCheck(MatrixUtils.transform(diff_cpu), bn.getDiff()));
-//    	
-////    	System.out.println(JsonUtils.toJson(bn.getDiff()));
-//    	
-//    	bn.free();
-//    	
-//    }
+//    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(diff_cpu)));
+    	
+//    	System.out.println("diff error:"+CheckArrayUtils.oneCheck(MatrixUtils.transform(diff_cpu), bn.getDiff().data));
+    	
+//    	System.out.println(JsonUtils.toJson(bn.getDiff()));
+    	
+    	bn.free();
+    	
+    }
     
     public void showDM(String id,CUdeviceptr d,float[] data) {
     	JCudaDriver.cuMemcpyDtoH(Pointer.to(data), d, data.length * Sizeof.FLOAT);
@@ -1139,12 +1148,12 @@ public class BNKernel {
     	return rm;
     }
     
-    public void foward_cpu(float[][][][] x,float[][][][] out,float[][][][] delta,float[][][][] diff) {
+    public void foward_cpu(float[][][][] x,float[][][][] out,float[][][][] delta,float[][][][] diff,int type) {
     	
     	float[] mean = new float[C];
     	float[] var = new float[C];
 
-    	MatrixOperation.meanV2(x, mean, 1);
+    	MatrixOperation.meanV2(x, mean, type);
 
 		/**
 		 * 计算标准差
@@ -1152,12 +1161,12 @@ public class BNKernel {
 		 * std = (var + eta)^1/2
 		 */
 		
-		MatrixOperation.varV2(x, mean, var, 1);
+		MatrixOperation.varV2(x, mean, var, type);
 		
 		/**
 		 * zi = (xi - mean) / (std + eta)
 		 */
-		float[][][][] z = this.culOutput(x, out, mean, var);
+		float[][][][] z = this.culOutput(x, out, mean, var, type);
 		
 		float[] dvar = new float[C];
 
@@ -1167,7 +1176,7 @@ public class BNKernel {
 		
 		float[] dbeta = new float[C];
 		
-		computeDelta_cpu(delta, z, gama, dgama, dbeta, diff);
+		computeDelta_cpu(delta, z, gama, dgama, dbeta, diff, type);
 		
 		/**
 		 * 原论文公式
@@ -1175,39 +1184,61 @@ public class BNKernel {
 		 * 使用darknet公式
 		 * dmean = (∑ dxhat * -1 / (var + eta)^1/2)
 		 */
-		meanDzSum_cpu(dvar, mean, var, dmu, x, diff);
+		meanDzSum_cpu(dvar, mean, var, dmu, x, diff, type);
 
 //		System.out.println("dgama:"+JsonUtils.toJson(dgama));
 //		System.out.println("dbeta:"+JsonUtils.toJson(dbeta));
 		
 		System.out.println("dgama error:"+CheckArrayUtils.oneCheck(dgama, this.dgama));
 		System.out.println("dbeta error:"+CheckArrayUtils.oneCheck(dbeta, this.dbeta));
+		System.out.println("dgama-cpu:"+JsonUtils.toJson(dgama));
+		System.out.println("dbeta-cpu:"+JsonUtils.toJson(dbeta));
 		
 		//float[][][][] diff,float[][][][] x,float[] mean,float[] dmu,float[] std,float[] dvar
-		computeDiff_cpu(diff, x, mean, var, dmu, dvar);
+		computeDiff_cpu(diff, x, mean, var, dmu, dvar, type);
 //		float[][][][] delta,float[][][][] z,float[][][][] diff,float[] std,float[] gama,float[] dgama,float[] dbeta
 //		backward_caffe(delta, z, diff, std, gama, dgama, dbeta);
 		
     }
     
-    private void computeDelta_cpu(float[][][][] delta,float[][][][] z,float[] gama,float[] dgama,float[] dbeta,float[][][][] diff) {
-    	for(int c = 0;c<C;c++) {
-			dgama[c] = 0;
-			dbeta[c] = 0;
-			for(int m = 0;m<N;m++) {
-				for(int h = 0;h<H;h++) {
-					for(int w = 0;w<W;w++) {
-						// deltaGama = ∑ deta * z
-						dgama[c] += delta[m][c][h][w] * z[m][c][h][w];
-						// deltaBeta = ∑ deta
-						dbeta[c] += delta[m][c][h][w];
-						// dxhat = deta * gama
-						diff[m][c][h][w] = delta[m][c][h][w] * gama[c];
-					}
-				}
-			}
+    private void computeDelta_cpu(float[][][][] delta,float[][][][] z,float[] gama,float[] dgama,float[] dbeta,float[][][][] diff,int type) {
+    	
+    	if(type == 1){
 
-		}
+        	for(int c = 0;c<C;c++) {
+    			dgama[c] = 0;
+    			dbeta[c] = 0;
+    			for(int m = 0;m<N;m++) {
+    				for(int h = 0;h<H;h++) {
+    					for(int w = 0;w<W;w++) {
+    						// deltaGama = ∑ deta * z
+    						dgama[c] += delta[m][c][h][w] * z[m][c][h][w];
+    						// deltaBeta = ∑ deta
+    						dbeta[c] += delta[m][c][h][w];
+    						// dxhat = deta * gama
+    						diff[m][c][h][w] = delta[m][c][h][w] * gama[c];
+    					}
+    				}
+    			}
+
+    		}
+    	}else {
+
+        	for(int c = 0;c<C;c++) {
+    			dgama[c] = 0;
+    			dbeta[c] = 0;
+    			for(int m = 0;m<N;m++) {
+    				// deltaGama = ∑ deta * z
+					dgama[c] += delta[m][0][0][c] * z[m][0][0][c];
+					// deltaBeta = ∑ deta
+					dbeta[c] += delta[m][0][0][c];
+					// dxhat = deta * gama
+					diff[m][0][0][c] = delta[m][0][0][c] * gama[c];
+    			}
+
+    		}
+    	}
+    	
     }
     
     /**
@@ -1217,48 +1248,74 @@ public class BNKernel {
 	 * dmean = (∑ dxhat * -1 / (var + eta)^1/2)
 	 * dvar = ∑ dxhat * (xi - mean) * -1/2 * (var + eta)^-3/2
 	 */
-    private void meanDzSum_cpu(float[] dvar,float[] mean,float[] var,float[] dmu,float[][][][] x,float[][][][] dz) {
+    private void meanDzSum_cpu(float[] dvar,float[] mean,float[] var,float[] dmu,float[][][][] x,float[][][][] dz,int type) {
     	
-    	for(int c = 0;c<C;c++) {
-			float dvar_val = 0.0f;
-			float dmu_val = 0.0f;
-//			float dmu2_val = 0.0f;
-			for(int n = 0;n<N;n++) {
-				for(int h = 0;h<H;h++) {
-					for(int w = 0;w<W;w++) {
-						dvar_val += (x[n][c][h][w] - mean[c]) * dz[n][c][h][w];
-						dmu_val += -1.0f * dz[n][c][h][w] / (float) Math.sqrt(var[c] + eta);
-//						dmu2_val += -2.0f * (x[n][c][h][w] - mean[c]) * scale;
-					}
-				}
-			}
-			dvar[c] = (float) (dvar_val * -0.5f * Math.pow(var[c] + eta, -1.5));
-//			dmu[c] = dmu_val + dmu2_val * dvar[c];
-			dmu[c] = dmu_val;
-		}
+    	if(type == 1){
+        	for(int c = 0;c<C;c++) {
+    			float dvar_val = 0.0f;
+    			float dmu_val = 0.0f;
+    			for(int n = 0;n<N;n++) {
+    				for(int h = 0;h<H;h++) {
+    					for(int w = 0;w<W;w++) {
+    						dvar_val += (x[n][c][h][w] - mean[c]) * dz[n][c][h][w];
+    						dmu_val += -1.0f * dz[n][c][h][w] / (float) Math.sqrt(var[c] + eta);
+    					}
+    				}
+    			}
+    			dvar[c] = (float) (dvar_val * -0.5f * Math.pow(var[c] + eta, -1.5));
+    			dmu[c] = dmu_val;
+    		}
+    	}else {
+    		for(int c = 0;c<C;c++) {
+    			float dvar_val = 0.0f;
+    			float dmu_val = 0.0f;
+    			for(int n = 0;n<N;n++) {
+    				dvar_val += (x[n][0][0][c] - mean[c]) * dz[n][0][0][c];
+    				dmu_val += -1.0f * dz[n][0][0][c] / (float) Math.sqrt(var[c] + eta);
+    			}
+    			dvar[c] = (float) (dvar_val * -0.5f * Math.pow(var[c] + eta, -1.5));
+    			dmu[c] = dmu_val;
+    		}
+    	}
+    	
 //    	System.out.println("var_cpu:"+JsonUtils.toJson(var));
 //    	System.out.println("dmean_cpu:"+JsonUtils.toJson(dmu));
     	
     }
     
-    private void computeDiff_cpu(float[][][][] diff,float[][][][] x,float[] mean,float[] var,float[] dmu,float[] dvar) {
+    private void computeDiff_cpu(float[][][][] diff,float[][][][] x,float[] mean,float[] var,float[] dmu,float[] dvar,int type) {
     	
-    	for(int m = 0;m<N;m++) {
-			for(int c = 0;c<C;c++) {
-				for(int h = 0;h<H;h++) {
-					for(int w = 0;w<W;w++) {
-						
-						// dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/n
-						diff[m][c][h][w] = diff[m][c][h][w] / (float) Math.sqrt(var[c] + eta) + 2.0f * dvar[c] * (x[m][c][h][w] - mean[c]) * scale + dmu[c] * scale;
-						
-					}
-				}
-			}
-		}
+    	if(type == 1){
+
+        	for(int m = 0;m<N;m++) {
+    			for(int c = 0;c<C;c++) {
+    				for(int h = 0;h<H;h++) {
+    					for(int w = 0;w<W;w++) {
+    						
+    						// dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/n
+    						diff[m][c][h][w] = diff[m][c][h][w] / (float) Math.sqrt(var[c] + eta) + 2.0f * dvar[c] * (x[m][c][h][w] - mean[c]) * scale + dmu[c] * scale;
+    						
+    					}
+    				}
+    			}
+    		}
+        	
+    	}else {
+
+        	for(int m = 0;m<N;m++) {
+    			for(int c = 0;c<C;c++) {
+    				
+    				// dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/n
+    				diff[m][0][0][c] = diff[m][0][0][c] / (float) Math.sqrt(var[c] + eta) + 2.0f * dvar[c] * (x[m][0][0][c] - mean[c]) * scale + dmu[c] * scale;
+
+    			}
+    		}
+        	
+    	}
     	
     }
     
-    private float[][][][] culOutput(float[][][][] x,float[][][][] out,float[] m,float[] var) {
+    private float[][][][] culOutput(float[][][][] x,float[][][][] out,float[] m,float[] var, int type) {
 		
 		int N = x.length;
 		int C = x[0].length;
@@ -1268,23 +1325,44 @@ public class BNKernel {
 		float[][][][] z = new float[N][C][H][W];
 		
 		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+		
+		if(type == 1){
 
-		for(int n = 0;n<N;n++) {
-			final int index = n;
-			workers.add(new Task<Object>(index) {
-				@Override
-			    public Object call() throws Exception {
-					for(int c = 0;c<C;c++) {
-						for(int h = 0;h<H;h++) {
-							for(int w = 0;w<W;w++) {
-								z[index][c][h][w] = (x[index][c][h][w] - m[c]) / (float) Math.sqrt(var[c] + eta);
-								out[index][c][h][w] = z[index][c][h][w] * gama[c] + beta[c];
+			for(int n = 0;n<N;n++) {
+				final int index = n;
+				workers.add(new Task<Object>(index) {
+					@Override
+				    public Object call() throws Exception {
+						for(int c = 0;c<C;c++) {
+							for(int h = 0;h<H;h++) {
+								for(int w = 0;w<W;w++) {
+									z[index][c][h][w] = (x[index][c][h][w] - m[c]) / (float) Math.sqrt(var[c] + eta);
+									out[index][c][h][w] = z[index][c][h][w] * gama[c] + beta[c];
+								}
 							}
 						}
+						return null;
 					}
-					return null;
-				}
-			});
+				});
+				
+			}
+			
+		}else {
+
+			for(int n = 0;n<N;n++) {
+				final int index = n;
+				workers.add(new Task<Object>(index) {
+					@Override
+				    public Object call() throws Exception {
+						for(int w = 0;w<W;w++) {
+							z[index][0][0][w] = (x[index][0][0][w] - m[w]) / (float) Math.sqrt(var[w] + eta);
+							out[index][0][0][w] = z[index][0][0][w] * gama[w] + beta[w];
+						}
+						return null;
+					}
+				});
+				
+			}
 			
 		}
 		

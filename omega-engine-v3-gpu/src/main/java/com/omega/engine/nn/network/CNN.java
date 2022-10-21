@@ -193,8 +193,8 @@ public class CNN extends Network {
 			
 			layer.back();
 
-			layer.update();
-
+//			layer.update();
+//
 //			if(layer.getLayerType() == LayerType.conv) {
 //				convTime += System.nanoTime() - start2;
 //			}
