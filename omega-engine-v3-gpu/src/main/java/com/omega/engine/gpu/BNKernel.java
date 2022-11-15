@@ -1031,24 +1031,28 @@ public class BNKernel{
 	
     public static void main(String args[]){	
 
-    	int N = 2;
-    	int C = 1;
-    	int H = 1;
-    	int W = 10;
+    	int N = 128;
+    	int C = 512;
+    	int H = 8;
+    	int W = 8;
     	
     	float[] x = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
     	
+    	float[] d = RandomUtils.gaussianRandom(N * C * H * W, 0.1f);
+    	
 //    	float[] x = MatrixUtils.one(N * C * H * W);
     	
-    	float[] gama = MatrixUtils.one(1 * 1 *1 * W);
+    	float[] gama = MatrixUtils.one(1 * 1 * 1 * C);
     	
-    	float[] beta = new float[W];
+    	float[] beta = new float[C];
     	
-    	float[] dgama = new float[W];
+    	float[] dgama = new float[C];
     	
-    	float[] dbeta = new float[W];
+    	float[] dbeta = new float[C];
     	
     	float[][][][] x_cpu = MatrixUtils.transform(x, N, C, H, W);
+    	
+    	float[][][][] d_cpu = MatrixUtils.transform(d, N, C, H, W);
     	
     	float[][][][] out_cpu = new float[N][C][H][W];
     	
@@ -1056,13 +1060,13 @@ public class BNKernel{
     	
     	Tensor input = new Tensor(N, C, H, W, x);
     	
-    	Tensor delta = new Tensor(N, C, H, W, x);
+    	Tensor delta = new Tensor(N, C, H, W, d);
     	
     	Tensor ouput = new Tensor(N, C, H, W);
     	
     	Tensor diff = new Tensor(N, C, H, W);
     	
-    	BNKernel bn = new BNKernel("test",BNType.fully_bn, ouput, diff, dgama, dbeta, N, W, H, C);
+    	BNKernel bn = new BNKernel("test",BNType.conv_bn, ouput, diff, dgama, dbeta, N, C, H, W);
     	
     	for(int i = 0;i<1;i++) {
 
@@ -1081,16 +1085,16 @@ public class BNKernel{
         	System.out.println((System.nanoTime() - start) / 1e6+"ms.count");
     	}
     	
-    	bn.foward_cpu(x_cpu, out_cpu, x_cpu, diff_cpu, 0);
+    	bn.foward_cpu(x_cpu, out_cpu, d_cpu, diff_cpu, 1);
     	
 //    	System.out.println(JsonUtils.toJson(x));
     	
-    	System.out.println(JsonUtils.toJson(bn.getOut().data));
-    	System.out.println(JsonUtils.toJson(bn.getDiff().data));
+//    	System.out.println(JsonUtils.toJson(bn.getOut().data));
+//    	System.out.println(JsonUtils.toJson(bn.getDiff().data));
 //    	
 //    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(out_cpu)));
 //    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(diff_cpu)));
-//    	System.out.println("out error:"+CheckArrayUtils.oneCheck(MatrixUtils.transform(out_cpu), bn.getOut().data));
+    	System.out.println("out error:"+CheckArrayUtils.oneCheck(MatrixUtils.transform(out_cpu), bn.getOut().data));
     	
 //    	float[] mean = new float[C];
 //    	float[] var = new float[C];
@@ -1105,7 +1109,7 @@ public class BNKernel{
 //    	
 //    	System.out.println(JsonUtils.toJson(MatrixUtils.transform(diff_cpu)));
     	
-//    	System.out.println("diff error:"+CheckArrayUtils.oneCheck(MatrixUtils.transform(diff_cpu), bn.getDiff().data));
+    	System.out.println("diff error:"+CheckArrayUtils.oneCheck(MatrixUtils.transform(diff_cpu), bn.getDiff().data));
     	
 //    	System.out.println(JsonUtils.toJson(bn.getDiff()));
     	
@@ -1189,10 +1193,11 @@ public class BNKernel{
 //		System.out.println("dgama:"+JsonUtils.toJson(dgama));
 //		System.out.println("dbeta:"+JsonUtils.toJson(dbeta));
 		
+		
 		System.out.println("dgama error:"+CheckArrayUtils.oneCheck(dgama, this.dgama));
 		System.out.println("dbeta error:"+CheckArrayUtils.oneCheck(dbeta, this.dbeta));
-		System.out.println("dgama-cpu:"+JsonUtils.toJson(dgama));
-		System.out.println("dbeta-cpu:"+JsonUtils.toJson(dbeta));
+//		System.out.println("dgama-cpu:"+JsonUtils.toJson(dgama));
+//		System.out.println("dbeta-cpu:"+JsonUtils.toJson(dbeta));
 		
 		//float[][][][] diff,float[][][][] x,float[] mean,float[] dmu,float[] std,float[] dvar
 		computeDiff_cpu(diff, x, mean, var, dmu, dvar, type);
@@ -1204,7 +1209,7 @@ public class BNKernel{
     private void computeDelta_cpu(float[][][][] delta,float[][][][] z,float[] gama,float[] dgama,float[] dbeta,float[][][][] diff,int type) {
     	
     	if(type == 1){
-
+    		System.out.println(C+":"+N + ":" + H + ":" + W);
         	for(int c = 0;c<C;c++) {
     			dgama[c] = 0;
     			dbeta[c] = 0;

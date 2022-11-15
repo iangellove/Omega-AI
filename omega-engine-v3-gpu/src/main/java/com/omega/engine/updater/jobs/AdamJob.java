@@ -71,18 +71,14 @@ public class AdamJob extends RecursiveAction {
 	}
 	
 	private void exeute() {
-		
 		for (int i = start; i <= end; i++) {
-			
-			mw[i] = beta1 * mw[i] + (1 - beta1) * diffW[i];
-			vw[i] = beta2 * vw[i] + (1 - beta2) * diffW[i] * diffW[i];
+			float tmp = diffW[i] / batch;
+			mw[i] = beta1 * mw[i] + (1 - beta1) * tmp;
+			vw[i] = beta2 * vw[i] + (1 - beta2) * tmp * tmp;
 			float mhat = (float) (mw[i] / (1 - Math.pow(beta1, time)));
 			float vhat = (float) (vw[i] / (1 - Math.pow(beta2, time)));
-			
 			weight[i] = weight[i] - learnRate * mhat / ((float)Math.sqrt(vhat) + eta);
-			
 		}
-		
 	}
 	
 }

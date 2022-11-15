@@ -51,6 +51,7 @@ public class CUDAMemoryManager {
 	public static Pointer getPointer(int size) {
 		
 		Pointer p = new Pointer();
+
 		cudaMalloc(p, size * Sizeof.FLOAT);
 		
 		cu_porints.add(p);

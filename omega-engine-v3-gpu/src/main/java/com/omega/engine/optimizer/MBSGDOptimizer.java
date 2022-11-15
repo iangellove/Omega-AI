@@ -1,6 +1,8 @@
 package com.omega.engine.optimizer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.data.utils.DataExportUtils;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.controller.TrainTask;
@@ -73,7 +75,7 @@ public class MBSGDOptimizer extends Optimizer {
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize);
 			
 			for(int i = 0;i<this.trainTime;i++) {
-				
+			
 				if(this.trainIndex >= this.minTrainTime) {
 					break;
 				}
@@ -84,9 +86,9 @@ public class MBSGDOptimizer extends Optimizer {
 
 //				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
 				
-//				int[][] indexs = new int[390][128];
+//				int[][] indexs = new int[468][128];
 //				
-//				DataExportUtils.importTXT(indexs, "H://index2.txt");
+//				DataExportUtils.importTXT(indexs, "H://index3.txt");
 				
 				/**
 				 * 遍历整个训练集
@@ -106,6 +108,8 @@ public class MBSGDOptimizer extends Optimizer {
 					
 					trainingData.getRandomData(indexs[it], input, label); 
 					
+//					input.showDM();
+					
 					/**
 					 * forward
 					 */
@@ -122,6 +126,10 @@ public class MBSGDOptimizer extends Optimizer {
 					 * loss diff
 					 */
 					this.lossDiff = this.network.lossDiff(output, label);
+					
+//					System.out.println(JsonUtils.toJson(output.data));
+					
+//					System.out.println("=========>:"+JsonUtils.toJson(lossDiff.data));
 
 //					System.out.println(JsonUtils.toJson(lossDiff.data));
 					

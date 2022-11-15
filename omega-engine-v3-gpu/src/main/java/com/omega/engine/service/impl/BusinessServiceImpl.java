@@ -17,6 +17,7 @@ import com.omega.common.utils.LabelUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.engine.controller.TrainTask;
 import com.omega.engine.gpu.CUDAMemoryManager;
+import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.CrossEntropyLoss;
 import com.omega.engine.loss.SoftmaxWithCrossEntropyLoss;
 import com.omega.engine.nn.data.DataSet;
@@ -138,26 +139,26 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		DataSet testData = DataLoader.loadDataByUByte(mnist_test_data, mnist_test_label, labelSet, 1, 1 ,784, true);
 
-		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss(), UpdaterType.momentum);
+		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 		
 		netWork.learnRate = 0.001f;
 		int inputCount = (int) (Math.sqrt(794)+10);
 		
 		InputLayer inputLayer = new InputLayer(1,1,784);
 		
-		FullyLayer hidden1 = new FullyLayer(784, inputCount,false);
+		FullyLayer hidden1 = new FullyLayer(784, inputCount, false);
 		
 		BNLayer bn1 = new BNLayer();
 		
 		ReluLayer active1 = new ReluLayer();
 		
-		FullyLayer hidden2 = new FullyLayer(inputCount, inputCount,false);
+		FullyLayer hidden2 = new FullyLayer(inputCount, inputCount, false);
 		
 		BNLayer bn2 = new BNLayer();
 		
 		ReluLayer active2 = new ReluLayer();
 		
-		FullyLayer hidden3 = new FullyLayer(inputCount, inputCount,false);
+		FullyLayer hidden3 = new FullyLayer(inputCount, inputCount, false);
 		
 		BNLayer bn3 = new BNLayer();
 		
@@ -371,7 +372,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			BNLayer bn1 = new BNLayer();
 			
-			LeakyReluLayer active1 = new LeakyReluLayer();
+			ReluLayer active1 = new ReluLayer();
 			
 			PoolingLayer pool1 = new PoolingLayer(conv1.oChannel, conv1.oWidth, conv1.oHeight, 2, 2, 2, PoolingType.MAX_POOLING);
 			
@@ -379,7 +380,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			BNLayer bn2 = new BNLayer();
 			
-			LeakyReluLayer active2 = new LeakyReluLayer();
+			ReluLayer active2 = new ReluLayer();
 			
 			DropoutLayer drop1 = new DropoutLayer(0.5f);
 			
@@ -393,7 +394,7 @@ public class BusinessServiceImpl implements BusinessService {
 
 			BNLayer bn3 = new BNLayer();
 			
-			LeakyReluLayer active3 = new LeakyReluLayer();
+			ReluLayer active3 = new ReluLayer();
 			
 			FullyLayer full2 = new FullyLayer(inputCount, 10);
 			
@@ -401,23 +402,23 @@ public class BusinessServiceImpl implements BusinessService {
 
 			netWork.addLayer(inputLayer);
 			netWork.addLayer(conv1);
-			netWork.addLayer(bn1);
+//			netWork.addLayer(bn1);
 			netWork.addLayer(active1);
 			netWork.addLayer(pool1);
 			netWork.addLayer(conv2);
-			netWork.addLayer(bn2);
+//			netWork.addLayer(bn2);
 			netWork.addLayer(active2);
-			netWork.addLayer(drop1);
+//			netWork.addLayer(drop1);
 			netWork.addLayer(pool2);
 			netWork.addLayer(full1);
-			netWork.addLayer(bn3);
+//			netWork.addLayer(bn3);
 			netWork.addLayer(active3);
 			netWork.addLayer(full2);
 			netWork.addLayer(softmax);
 
 //			netWork.GRADIENT_CHECK = true;
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.0001f, 128, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -947,7 +948,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			ReluLayer active5 = new ReluLayer();
 			
-			FullyLayer full3 = new FullyLayer(512, 10);
+			FullyLayer full3 = new FullyLayer(512, 10, false);
 
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
@@ -982,7 +983,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 5, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 20, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -1037,17 +1038,17 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			System.out.println("data is ready.");
 			
-			/**
-			 * 随机裁剪
-			 */
-			DataTransforms.randomCrop(trainData.input, 32, 32, 4);
-			
-			/**
-			 * 随机翻转
-			 */
-			DataTransforms.randomHorizontalFilp(trainData.input);
-			
-			System.out.println("data transform finish.");
+//			/**
+//			 * 随机裁剪
+//			 */
+//			DataTransforms.randomCrop(trainData.input, 32, 32, 4);
+//			
+//			/**
+//			 * 随机翻转
+//			 */
+//			DataTransforms.randomHorizontalFilp(trainData.input);
+//			
+//			System.out.println("data transform finish.");
 			
 			int channel = 3;
 			
@@ -1057,7 +1058,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.0001f;
+			netWork.learnRate = 0.001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -1141,7 +1142,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 5, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -2374,53 +2375,53 @@ public class BusinessServiceImpl implements BusinessService {
 			/**
 			 * block1  64 * 28 * 28
 			 */
-			BasicBlockLayer bl1 = new BasicBlockLayer(pool1.oChannel, 64, pool1.oHeight, pool1.oWidth, false, netWork);
+			BasicBlockLayer bl1 = new BasicBlockLayer(pool1.oChannel, 64, pool1.oHeight, pool1.oWidth, 1, netWork);
 			ReluLayer active2 = new ReluLayer();
 
 			/**
 			 * block2  64 * 28 * 28
 			 */
-			BasicBlockLayer bl2 = new BasicBlockLayer(bl1.oChannel, 64, bl1.oHeight, bl1.oWidth, false, netWork);
+			BasicBlockLayer bl2 = new BasicBlockLayer(bl1.oChannel, 64, bl1.oHeight, bl1.oWidth, 1, netWork);
 			ReluLayer active3 = new ReluLayer();
 			
 			/**
 			 * block3  128 * 14 * 14
 			 * downSample 28 / 2 = 14
 			 */
-			BasicBlockLayer bl3 = new BasicBlockLayer(bl2.oChannel, 128, bl2.oHeight, bl2.oWidth, true, netWork);
+			BasicBlockLayer bl3 = new BasicBlockLayer(bl2.oChannel, 128, bl2.oHeight, bl2.oWidth, 2, netWork);
 			ReluLayer active4 = new ReluLayer();
 
 			/**
 			 * block4  128 * 14 * 14
 			 */
-			BasicBlockLayer bl4 = new BasicBlockLayer(bl3.oChannel, 128, bl3.oHeight, bl3.oWidth, false, netWork);
+			BasicBlockLayer bl4 = new BasicBlockLayer(bl3.oChannel, 128, bl3.oHeight, bl3.oWidth, 1, netWork);
 			ReluLayer active5 = new ReluLayer();
 
 			/**
 			 * block5  256 * 7 * 7
 			 * downSample 14 / 2 = 7
 			 */
-			BasicBlockLayer bl5 = new BasicBlockLayer(bl4.oChannel, 256, bl4.oHeight, bl4.oWidth, true, netWork);
+			BasicBlockLayer bl5 = new BasicBlockLayer(bl4.oChannel, 256, bl4.oHeight, bl4.oWidth, 2, netWork);
 			ReluLayer active6 = new ReluLayer();
 			
 			/**
 			 * block6  256 * 7 * 7
 			 */
-			BasicBlockLayer bl6 = new BasicBlockLayer(bl5.oChannel, 256, bl5.oHeight, bl5.oWidth, false, netWork);
+			BasicBlockLayer bl6 = new BasicBlockLayer(bl5.oChannel, 256, bl5.oHeight, bl5.oWidth, 1, netWork);
 			ReluLayer active7 = new ReluLayer();
 
 			/**
 			 * block7  512 * 4 * 4
 			 * downSample 7 / 2 = 4
 			 */
-			BasicBlockLayer bl7 = new BasicBlockLayer(bl6.oChannel, 512, bl6.oHeight, bl6.oWidth, true, netWork);
+			BasicBlockLayer bl7 = new BasicBlockLayer(bl6.oChannel, 512, bl6.oHeight, bl6.oWidth, 2, netWork);
 			ReluLayer active8 = new ReluLayer();
 			
 			
 			/**
 			 * block8  512 * 4 * 4
 			 */
-			BasicBlockLayer bl8 = new BasicBlockLayer(bl7.oChannel, 512, bl7.oHeight, bl7.oWidth, false, netWork);
+			BasicBlockLayer bl8 = new BasicBlockLayer(bl7.oChannel, 512, bl7.oHeight, bl7.oWidth, 1, netWork);
 			ReluLayer active9 = new ReluLayer();
 			
 			
@@ -2553,7 +2554,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.01f;
+			netWork.learnRate = 0.001f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -2568,53 +2569,53 @@ public class BusinessServiceImpl implements BusinessService {
 			/**
 			 * block1  64 * 32 * 32
 			 */
-			BasicBlockLayer bl1 = new BasicBlockLayer(conv1.oChannel, 64, conv1.oHeight, conv1.oWidth, false, netWork);
+			BasicBlockLayer bl1 = new BasicBlockLayer(conv1.oChannel, 64, conv1.oHeight, conv1.oWidth, 1, netWork);
 			ReluLayer active2 = new ReluLayer();
 
 			/**
 			 * block2  64 * 32 * 32
 			 */
-			BasicBlockLayer bl2 = new BasicBlockLayer(bl1.oChannel, 64, bl1.oHeight, bl1.oWidth, false, netWork);
+			BasicBlockLayer bl2 = new BasicBlockLayer(bl1.oChannel, 64, bl1.oHeight, bl1.oWidth, 1, netWork);
 			ReluLayer active3 = new ReluLayer();
 			
 			/**
 			 * block3  128 * 16 * 16
 			 * downSample 32 / 2 = 16
 			 */
-			BasicBlockLayer bl3 = new BasicBlockLayer(bl2.oChannel, 128, bl2.oHeight, bl2.oWidth, true, netWork);
+			BasicBlockLayer bl3 = new BasicBlockLayer(bl2.oChannel, 128, bl2.oHeight, bl2.oWidth, 2, netWork);
 			ReluLayer active4 = new ReluLayer();
 
 			/**
 			 * block4  128 * 16 * 16
 			 */
-			BasicBlockLayer bl4 = new BasicBlockLayer(bl3.oChannel, 128, bl3.oHeight, bl3.oWidth, false, netWork);
+			BasicBlockLayer bl4 = new BasicBlockLayer(bl3.oChannel, 128, bl3.oHeight, bl3.oWidth, 1, netWork);
 			ReluLayer active5 = new ReluLayer();
 
 			/**
 			 * block5  256 * 8 * 8
 			 * downSample 16 / 2 = 8
 			 */
-			BasicBlockLayer bl5 = new BasicBlockLayer(bl4.oChannel, 256, bl4.oHeight, bl4.oWidth, true, netWork);
+			BasicBlockLayer bl5 = new BasicBlockLayer(bl4.oChannel, 256, bl4.oHeight, bl4.oWidth, 2, netWork);
 			ReluLayer active6 = new ReluLayer();
 			
 			/**
 			 * block6  256 * 8 * 8
 			 */
-			BasicBlockLayer bl6 = new BasicBlockLayer(bl5.oChannel, 256, bl5.oHeight, bl5.oWidth, false, netWork);
+			BasicBlockLayer bl6 = new BasicBlockLayer(bl5.oChannel, 256, bl5.oHeight, bl5.oWidth, 1, netWork);
 			ReluLayer active7 = new ReluLayer();
 
 			/**
 			 * block7  512 * 4 * 4
 			 * downSample 8 / 2 = 4
 			 */
-			BasicBlockLayer bl7 = new BasicBlockLayer(bl6.oChannel, 512, bl6.oHeight, bl6.oWidth, true, netWork);
+			BasicBlockLayer bl7 = new BasicBlockLayer(bl6.oChannel, 512, bl6.oHeight, bl6.oWidth, 2, netWork);
 			ReluLayer active8 = new ReluLayer();
 			
 			
 			/**
 			 * block8  512 * 4 * 4
 			 */
-			BasicBlockLayer bl8 = new BasicBlockLayer(bl7.oChannel, 512, bl7.oHeight, bl7.oWidth, false, netWork);
+			BasicBlockLayer bl8 = new BasicBlockLayer(bl7.oChannel, 512, bl7.oHeight, bl7.oWidth, 1, netWork);
 			ReluLayer active9 = new ReluLayer();
 			
 			
@@ -2668,7 +2669,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full1);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 50, 0.0001f, 128, LearnRateUpdate.NONE, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.NONE, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -2692,6 +2693,175 @@ public class BusinessServiceImpl implements BusinessService {
 		
 	}
 
+	@Override
+	public void resnet1_cifar10() {
+		// TODO Auto-generated method stub
+
+		try {
+
+			String[] labelSet = new String[] {"airplane","automobile","bird","cat","deer","dog","frog","horse","ship","truck"};
+	    	
+			String[] train_data_filenames = new String[] {
+					"H:/dataset/cifar-10/data_batch_1.bin",
+					"H:/dataset/cifar-10/data_batch_2.bin",
+					"H:/dataset/cifar-10/data_batch_3.bin",
+					"H:/dataset/cifar-10/data_batch_4.bin",
+					"H:/dataset/cifar-10/data_batch_5.bin"
+			};
+			
+			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
+			
+			float[] mean = new float[] {0.485f, 0.456f, 0.406f};
+			float[] std = new float[] {0.229f, 0.224f, 0.225f};
+			
+			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
+	    	
+			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
+			
+//			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true);
+//	    	
+//			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true);
+			
+			System.out.println("data is ready.");
+			
+//			/**
+//			 * 随机裁剪
+//			 */
+//			DataTransforms.randomCrop(trainData.input, 32, 32, 4);
+//			
+//			/**
+//			 * 随机翻转
+//			 */
+//			DataTransforms.randomHorizontalFilp(trainData.input);
+//			
+//			System.out.println("data transform finish.");
+			
+			int channel = 3;
+			
+			int height = 32;
+			
+			int width = 32;
+			
+			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
+			
+			netWork.learnRate = 0.001f;
+			
+			InputLayer inputLayer = new InputLayer(channel, height, width);
+			
+			ConvolutionLayer conv1 = new ConvolutionLayer(channel, 8, width, height, 3, 3, 1, 1, false);
+			
+			BNLayer bn1 = new BNLayer();
+			
+			ReluLayer active1 = new ReluLayer();
+			
+//			PoolingLayer pool1 = new PoolingLayer(conv1.oChannel, conv1.oWidth, conv1.oHeight, 2, 2, 2, PoolingType.MAX_POOLING);
+			
+			/**
+			 * block1  64 * 32 * 32
+			 */
+			BasicBlockLayer bl1 = new BasicBlockLayer(conv1.oChannel, 8, conv1.oHeight, conv1.oWidth, 1, netWork);
+			ReluLayer active2 = new ReluLayer();
+
+			/**
+			 * block2  64 * 32 * 32
+			 */
+			BasicBlockLayer bl2 = new BasicBlockLayer(bl1.oChannel, 8, bl1.oHeight, bl1.oWidth, 1, netWork);
+			ReluLayer active3 = new ReluLayer();
+			
+			/**
+			 * block3  128 * 16 * 16
+			 * downSample 32 / 2 = 16
+			 */
+			BasicBlockLayer bl3 = new BasicBlockLayer(bl2.oChannel, 16, bl2.oHeight, bl2.oWidth, 2, netWork);
+			ReluLayer active4 = new ReluLayer();
+
+			/**
+			 * block4  128 * 16 * 16
+			 */
+			BasicBlockLayer bl4 = new BasicBlockLayer(bl3.oChannel, 128, bl3.oHeight, bl3.oWidth, 1, netWork);
+			ReluLayer active5 = new ReluLayer();
+
+			/**
+			 * block5  256 * 8 * 8
+			 * downSample 16 / 2 = 8
+			 */
+			BasicBlockLayer bl5 = new BasicBlockLayer(bl4.oChannel, 256, bl4.oHeight, bl4.oWidth, 2, netWork);
+			ReluLayer active6 = new ReluLayer();
+			
+			/**
+			 * block6  256 * 8 * 8
+			 */
+			BasicBlockLayer bl6 = new BasicBlockLayer(bl5.oChannel, 256, bl5.oHeight, bl5.oWidth, 1, netWork);
+			ReluLayer active7 = new ReluLayer();
+
+			/**
+			 * block7  512 * 4 * 4
+			 * downSample 8 / 2 = 4
+			 */
+			BasicBlockLayer bl7 = new BasicBlockLayer(bl6.oChannel, 512, bl6.oHeight, bl6.oWidth, 2, netWork);
+			ReluLayer active8 = new ReluLayer();
+			
+			
+			/**
+			 * block8  512 * 4 * 4
+			 */
+			BasicBlockLayer bl8 = new BasicBlockLayer(bl7.oChannel, 512, bl7.oHeight, bl7.oWidth, 1, netWork);
+			ReluLayer active9 = new ReluLayer();
+			
+			
+			PoolingLayer pool2 = new PoolingLayer(bl3.oChannel, bl3.oWidth, bl3.oHeight, 4, 4, 4, PoolingType.MEAN_POOLING);
+			
+			int fInputCount = pool2.oChannel * pool2.oWidth * pool2.oHeight;
+
+			FullyLayer full1 = new FullyLayer(fInputCount, 10);
+
+			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
+
+			netWork.addLayer(inputLayer);
+			netWork.addLayer(conv1);
+			netWork.addLayer(bn1);
+			netWork.addLayer(active1);
+//			netWork.addLayer(pool1);
+			
+			/**
+			 * block1  64
+			 */
+			netWork.addLayer(bl1);
+			netWork.addLayer(active2);
+			netWork.addLayer(bl2);
+			netWork.addLayer(active3);
+			
+			netWork.addLayer(bl3);
+			netWork.addLayer(active4);
+			
+			netWork.addLayer(pool2);
+			netWork.addLayer(full1);
+			netWork.addLayer(softmax);
+
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 5, 0.0001f, 3, LearnRateUpdate.NONE, false);
+
+			long start = System.currentTimeMillis();
+			
+			optimizer.train(trainData);
+
+			optimizer.test(testData);
+			
+			System.out.println(((System.currentTimeMillis() - start) / 1000) + "s.");
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+	}
+	
 	@Override
 	public void test_nn(String path) {
 		// TODO Auto-generated method stub
@@ -2813,6 +2983,9 @@ public class BusinessServiceImpl implements BusinessService {
 		try {
 
 			BusinessServiceImpl bs = new BusinessServiceImpl();
+			
+	    	CUDAModules.initContext();
+			
 //			bs.showImage();
 //			bs.bpNetwork_iris();
 //			bs.bpNetwork_mnist();
@@ -2820,11 +2993,12 @@ public class BusinessServiceImpl implements BusinessService {
 //			bs.cnnNetwork_mnist();
 //			bs.cnnNetwork_cifar10();
 
-//			bs.resnet18_cifar10();
+			bs.resnet18_cifar10();
+//			bs.resnet1_cifar10();
 //			bs.resnet18_mnist();
 //			bs.vgg16_cifar10();
 //			bs.alexNet_mnist();
-			bs.alexNet_cifar10();
+//			bs.alexNet_cifar10();
 //			bs.cnnNetwork_vgg16_cifar10();
 //			bs.test_nn("H://test3.json");
 			

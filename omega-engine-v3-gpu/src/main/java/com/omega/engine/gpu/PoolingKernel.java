@@ -4,6 +4,7 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.PrintUtils;
 import com.omega.engine.pooling.PoolingType;
 
 import jcuda.Pointer;
@@ -171,13 +172,13 @@ public class PoolingKernel {
 
     public static void main(String args[]){	
 
-    	int N = 128;
-    	int C = 512;
+    	int N = 2;
+    	int C = 3;
     	int H = 8;
     	int W = 8;
     	int ph = 2;
     	int pw = 2;
-    	int s = 1;
+    	int s = 2;
     	int oHeight = (H - ph) / s + 1;
 		int oWidth = (W - pw) / s + 1;
 
@@ -189,25 +190,34 @@ public class PoolingKernel {
     	
     	float[] mask = new float[C * oHeight * oWidth * ph * pw];
     	
+    	float[] allOut = new float[N * C * oHeight * oWidth];
+    	
     	PoolingKernel pooling = new PoolingKernel(PoolingType.MAX_POOLING, out, mask, C, H, W, ph, pw, s);
     	
     	long start = System.nanoTime();
     	
-		for(int c = 0;c<20;c++){
+//    	float[][][][] xm = MatrixUtils.transform(x, N, C, H, W);
+//    	
+//    	PrintUtils.printImage(xm);
+    	
+		for(int c = 0;c<1;c++){
 
 	    	long start3 = System.nanoTime();
 	    	for(int n = 0;n<N;n++) {
 	    		System.arraycopy(x, n * C * H * W, once, 0, C * H * W);
 	        	pooling.setX(once);
 	        	pooling.pooling();
+	        	System.arraycopy(out, 0, allOut, n * C * oHeight * oWidth, C * oHeight * oWidth);
+	        	
 	    	}
 	    	System.out.println((System.nanoTime() - start3) / 1e6 + "ms================>c.:"+c);
 	    	
 		}
 		
 		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
-//    	System.out.println(JsonUtils.toJson(out));
-//    	System.out.println(JsonUtils.toJson(mask));
+    	System.out.println(JsonUtils.toJson(out));
+    	System.out.println(JsonUtils.toJson(mask));
+    	System.out.println(JsonUtils.toJson(allOut));
     	
     	pooling.free();
 	    

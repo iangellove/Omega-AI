@@ -1,11 +1,13 @@
 package com.omega.engine.nn.network;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
+import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.updater.UpdaterType;
 
 /**
@@ -87,6 +89,9 @@ public class CNN extends Network {
 //			long start2 = System.nanoTime();
 			
 			layer.forward();
+			
+//			System.out.println(layer.getLayerType().toString()+layer.index+":");
+//			layer.output.showDM();
 			
 //			if(layer.getLayerType() == LayerType.conv) {
 //				convTime += System.nanoTime() - start2;
@@ -210,6 +215,17 @@ public class CNN extends Network {
 //			if(layer.getLayerType() == LayerType.pooling) {
 //				poolingTime += System.nanoTime() - start2;
 //			}
+			
+//			if(layer.weight != null) {
+//				System.out.print(layer.getLayerType().toString()+layer.index+"|diffW:");
+//				layer.diffW.showDM();
+//			}else if(layer.getLayerType() == LayerType.bn) {
+////				System.out.print(layer.getLayerType().toString()+layer.index+":");
+////				BNLayer bnl = (BNLayer) layer;
+////				System.out.println(JsonUtils.toJson(bnl.gama));
+////				System.out.println(JsonUtils.toJson(bnl.beta));
+//			}
+			
 			
 //			layer.showDiff();
 			

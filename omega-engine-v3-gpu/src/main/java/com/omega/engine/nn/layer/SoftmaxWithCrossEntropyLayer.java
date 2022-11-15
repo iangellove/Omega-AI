@@ -1,7 +1,9 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.engine.gpu.SoftmaxKernel;
 
 /**
  * SoftmaxWithCrossEntropyLayer
@@ -17,6 +19,12 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 	
 	private Tensor currentLabel;
 	
+	private SoftmaxKernel kernel;
+	
+	private Tensor cl;
+	
+	private Tensor x;
+	
 	public SoftmaxWithCrossEntropyLayer(int inputNum) {
 		this.channel = 1;
 		this.height = 1;
@@ -31,7 +39,12 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
-		this.output = new Tensor(number, oChannel, oHeight, oWidth);
+		if(this.output == null || this.number != this.output.number) {
+			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+		}
+		if(kernel == null) {
+			kernel = new SoftmaxKernel();
+		}
 	}
 
 	@Override
@@ -42,36 +55,68 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		this.diff = new Tensor(number, channel, height, width);
+		
+		if(this.diff == null || this.number != this.diff.number) {
+			this.diff = new Tensor(number, channel, height, width, true);
+		}
 	}
 	
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		float[] dest = new float[channel * height * width];
+//		System.out.println("softmax-in:");
 		
-		for(int n = 0;n<this.number;n++) {
-			input.copy(n, dest);
-			float max = MatrixOperation.max(dest);
-			float[] temp = MatrixOperation.subtraction(dest, max);
-			temp = MatrixOperation.exp(temp);
-			float sum = MatrixOperation.sum(temp);
-			for(int i = 0;i<temp.length;i++) {
-				this.output.data[n * channel * height * width + i] = temp[i] / sum;
-			}
+		if(x == null) {
+			x = new Tensor(number, channel, height, width, input.data, true);
+		}else {
+			x.setData(input.data);
 		}
+		
+		kernel.forward(x, output);
+//		
+//		float[] dest = new float[channel * height * width];
+//		
+//		for(int n = 0;n<this.number;n++) {
+//			input.copy(n, dest);
+//			float max = MatrixOperation.max(dest);
+//			float[] temp = MatrixOperation.subtraction(dest, max);
+//			temp = MatrixOperation.exp(temp);
+//			float sum = MatrixOperation.sum(temp);
+//			for(int i = 0;i<temp.length;i++) {
+//				this.output.data[n * channel * height * width + i] = temp[i] / sum;
+//			}
+//		}
+//		
+		output.syncHost();
+		
+//		output.showDM();
 		
 	}
 
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+//		
+//		for(int i = 0;i<this.delta.getDataLength();i++) {
+//			this.diff.data[i] = this.output.data[i] - this.currentLabel.data[i];
+//		}
+//		
 		
-		for(int i = 0;i<this.delta.getDataLength();i++) {
-			this.diff.data[i] = this.output.data[i] - this.currentLabel.data[i];
+		if(cl == null) {
+			cl = new Tensor(number, channel, height, width, currentLabel.data, true);
+		}else {
+			cl.setData(currentLabel.data);
 		}
-
+		
+		kernel.backward(output, cl, diff);
+		
+		diff.syncHost();
+		
+//		diff.showDM();
+		
+//		diff.showDM();
+		
 	}
 
 	@Override
@@ -90,6 +135,10 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 		this.output();
 
 //		MatrixOperation.printImage(this.output.maxtir[0]);
+		
+//		output.syncHost();
+//		
+//		output.showDM();
 		
 		
 	}

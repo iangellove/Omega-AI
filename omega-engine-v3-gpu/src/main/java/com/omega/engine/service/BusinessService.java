@@ -28,6 +28,8 @@ public interface BusinessService {
 	
 	public void resnet18_cifar10();
 	
+	public void resnet1_cifar10();
+	
 	public void bpNetwork_mnist(String sid,float lr);
 	
 	public void alexNet_mnist(String sid,float lr);

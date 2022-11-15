@@ -16,6 +16,7 @@ import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
 import jcuda.jcublas.cublasOperation;
 import jcuda.runtime.JCuda;
+import jcuda.runtime.cudaError;
 
 public class DWeightKernel {
 	
@@ -120,8 +121,7 @@ public class DWeightKernel {
                 Pointer.to(new int[]{oHeight}),
                 Pointer.to(new int[]{oWidth})
             );
-        
-        
+
 	}
 	
 	public void setX(float[] x) {
@@ -145,17 +145,22 @@ public class DWeightKernel {
 	}
 	
 	public void conv() {
-
+		
 		if(kh > 1) {
 			im2col();
 		}
 
 		sgemm();
-
+//
+//		System.out.println("*************");
+//		float[] tmp_dA = new float[ko * ih];
+//		showDM(dC, tmp_dA);
+//		System.out.println("*************");
+		
 	}
 	
 	public void sgemm() {
-		
+
 		/**
 		 * m k n
 		 */
@@ -165,7 +170,7 @@ public class DWeightKernel {
 	
 	public void showDM(Pointer d,float[] data) {
 		cublasGetVector(data.length, Sizeof.FLOAT, d, 1, Pointer.to(data), 1);
-	    System.out.println(JsonUtils.toJson(data[0]));
+	    System.out.println(JsonUtils.toJson(data));
 	}
 	
 	public void im2col() {
@@ -209,7 +214,7 @@ public class DWeightKernel {
 	public void clear() {
 //		float[] temp = new float[out.length];
 //		cublasSetVector(temp.length, Sizeof.FLOAT, Pointer.to(temp), 1, dC, 1);
-		JCuda.cudaMemset(dC, 0, out.length * Sizeof.FLOAT);
+		checkCUDA(JCuda.cudaMemset(dC, 0, out.length * Sizeof.FLOAT));
 //		GPUOP.getInstance().free(dC);
 //		System.out.println(this.dC);
 //		this.dC = CUDAMemoryManager.getPointer(ko * ih);
@@ -219,25 +224,31 @@ public class DWeightKernel {
 //		this.showDM(dC, data);
 		
 	}
+	
+	public void checkCUDA(int code) {
+		if(code != cudaError.cudaSuccess) {
+			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
+		}
+	}
 
     public static void main(String args[]){	
     	int N = 2;
     	int C = 3;
     	int H = 8;
     	int W = 8;
-    	int ko = 20;
-    	int kh = 1;
-    	int kw = 1;
+    	int ko = 2;
+    	int kh = 3;
+    	int kw = 3;
     	int s = 1;
     	int p = 0;
-    	int oHeight = ((H + 2 *  - kh) / s) + 1;
-		int oWidth = ((W + 2 *  - kw) / s) + 1;
+    	int oHeight = ((H + 2 * p - kh) / s) + 1;
+		int oWidth = ((W + 2 * p - kw) / s) + 1;
 		int oh = ko;
 		int ow = C * kh * kw;
 		
-    	float[] x1 = RandomUtils.gaussianRandom(N * C * H * W, 0.1f);
+    	float[] x1 = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
     	
-    	float[] diff = RandomUtils.gaussianRandom(N * ko * oHeight * oWidth, 0.1f);
+    	float[] diff = RandomUtils.order(N * ko * oHeight * oWidth, 0.1f, 0.1f);
     	
     	float[] out = new float[oh * ow];
 
@@ -256,12 +267,14 @@ public class DWeightKernel {
     		ck.setX(once);
     		ck.setKernel(d);
         	ck.conv();
-        	System.out.println(JsonUtils.toJson(ck.getOut_D2H()));
+//        	System.out.println(JsonUtils.toJson(ck.getOut_D2H()));
 //        	System.arraycopy(ck.getOut(), 0, out2, i * oh * ow, oh * ow);
 //        	MatrixUtils.col2im4d(ck.getOut(), out2, n, ko, oHeight, oWidth);
 //        	System.out.println((System.nanoTime() - start2) / 1e6 + "ms.:"+i);
     	}
 
+    	System.out.println(JsonUtils.toJson(ck.getOut_D2H()));
+    	
 		CUDAMemoryManager.free();
 		
     }

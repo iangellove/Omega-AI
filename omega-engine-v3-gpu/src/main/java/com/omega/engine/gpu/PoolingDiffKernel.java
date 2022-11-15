@@ -4,6 +4,7 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.pooling.PoolingType;
 
 import jcuda.Pointer;
@@ -169,10 +170,10 @@ public class PoolingDiffKernel {
 
     public static void main(String args[]){	
 
-    	int N = 1;
-    	int C = 1;
-    	int H = 4;
-    	int W = 4;
+    	int N = 2;
+    	int C = 3;
+    	int H = 8;
+    	int W = 8;
     	int ph = 2;
     	int pw = 2;
     	int s = 2;
@@ -181,13 +182,19 @@ public class PoolingDiffKernel {
 
     	float[] x = MatrixUtils.order(N * C * H * W, 1, 1);
     	
+    	float[] d = RandomUtils.order(N * C * oHeight * oWidth, 0.1f, 0.1f);
+    	
     	float[] once = new float[C * H * W];
     	
     	float[] out = new float[C * oHeight * oWidth];
     	
     	float[] mask = new float[C * oHeight * oWidth * ph * pw];
     	
+    	float[] onceDetla = new float[C * oHeight * oWidth];
+    	
     	float[] diff = new float[C * H * W];
+    	
+    	float[] allDiff = new float[N * C * H * W];
     	
     	PoolingKernel pooling = new PoolingKernel(PoolingType.MAX_POOLING, out, mask, C, H, W, ph, pw, s);
     	
@@ -195,16 +202,19 @@ public class PoolingDiffKernel {
     	
     	long start = System.nanoTime();
     	
-		for(int c = 0;c<20;c++){
+		for(int c = 0;c<1;c++){
 
 	    	long start3 = System.nanoTime();
 	    	for(int n = 0;n<N;n++) {
 	    		System.arraycopy(x, n * C * H * W, once, 0, C * H * W);
 	    		pooling.setX(once);
 	        	pooling.pooling();
-	    		poolingDiff.setX(pooling.getOut());
+	        	
+	        	System.arraycopy(d, n * C * oHeight * oWidth, onceDetla, 0, C * oHeight * oWidth);
+	    		poolingDiff.setX(onceDetla);
 	    		poolingDiff.setMask(pooling.getMask());
 	    		poolingDiff.diff();
+	    		System.arraycopy(diff, 0, allDiff, n * C * H * W, C * H * W);
 	    	}
 	    	System.out.println((System.nanoTime() - start3) / 1e6 + "ms================>c.:"+c);
 	    	
@@ -214,6 +224,7 @@ public class PoolingDiffKernel {
     	System.out.println(JsonUtils.toJson(out));
     	System.out.println(JsonUtils.toJson(mask));
     	System.out.println(JsonUtils.toJson(diff));
+    	System.out.println(JsonUtils.toJson(allDiff));
     	
     	pooling.free();
 		poolingDiff.free();

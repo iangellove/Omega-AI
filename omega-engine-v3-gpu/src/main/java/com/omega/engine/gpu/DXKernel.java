@@ -16,6 +16,7 @@ import jcuda.jcublas.JCublas2;
 import jcuda.jcublas.cublasOperation;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
+import jcuda.runtime.cudaMemcpyKind;
 
 public class DXKernel {
 	
@@ -150,17 +151,18 @@ public class DXKernel {
 		if(kh > 1) {
 			col2im();
 		}else {
-			JCublas2.cublasGetVector(out.length, Sizeof.FLOAT, dC, 1, Pointer.to(out), 1);
+			JCublas2.cublasGetVector(ih * iw, Sizeof.FLOAT, dC, 1, Pointer.to(out), 1);
 		}
 		
 	}
 	
 	public void sgemm() {
-		
 		/**
 		 * k n m
 		 */
 		GPUOP.getInstance().multiplyFloat(ih, iw, ko, dA, dB, dC, cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
+//		float[] t = new float[ih * iw];
+//		showDM(dC, t);
 		
 	}
 	
@@ -194,18 +196,25 @@ public class DXKernel {
 		}
 	}
 	
+	public void showDM(Pointer d,float[] data) {
+		JCuda.cudaMemcpy(Pointer.to(data), d, data.length * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+    	System.out.println(JsonUtils.toJson(data));
+    }
+	
     public static void main(String args[]){	
-    	int N = 3;
-    	int C = 20;
-    	int H = 12;
-    	int W = 12;
-    	int ko = 50;
+    	int N = 2;
+    	int C = 3;
+    	int H = 8;
+    	int W = 8;
+    	int ko = 2;
     	int kh = 1;
     	int kw = 1;
-    	int s = 1;
+    	int s = 2;
     	int p = 0;
     	int oHeight = ((H + 2 * p - kh) / s) + 1;
 		int oWidth = ((W + 2 * p - kw) / s) + 1;
+		
+		System.out.println(oHeight);
 		
     	float[] x1 = RandomUtils.gaussianRandom(N * ko * oHeight * oWidth, 0.1f);
     	
@@ -231,7 +240,6 @@ public class DXKernel {
 //        	MatrixUtils.col2im4d(ck.getOut(), out2, n, ko, oHeight, oWidth);
 //        	System.out.println((System.nanoTime() - start2) / 1e6 + "ms.:"+i);
     	}
-
 
 		CUDAMemoryManager.free();
     }

@@ -1,7 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.GPUOP;
 
@@ -57,10 +57,10 @@ public class FullyLayer extends Layer{
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub
-		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.xavierReluRandom(this.width * this.oWidth, this.width, this.oWidth));
-//		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaimingNormalRandom(this.width * this.oWidth, 0, this.oWidth));
+//		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.xavierReluRandom(this.width * this.oWidth, this.width, this.oWidth));
+		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaimingNormalRandom(this.width * this.oWidth, 0, this.width));
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.xavierRandom(this.width * this.oWidth, this.width, this.oWidth));
-//		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.order(this.width * this.oWidth, 0.1f, 0.1f));
+//		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.order(this.width * this.oWidth, 0.1f, 0.01f));
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.val(this.width * this.oWidth, 0.1f));
 //		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.heRandom(this.width * this.oWidth, this.width * this.oWidth));
 		this.bias = new Tensor(1, 1, 1, oWidth);
@@ -79,6 +79,9 @@ public class FullyLayer extends Layer{
 			
 			GPUOP.getInstance().multiplyFloat(this.number, this.oWidth, this.width, input.data, weight.data, output.data, 
 					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f, this.width, this.oWidth, this.oWidth);
+			
+//			System.out.println(JsonUtils.toJson(output.data));
+//			System.out.println("");
 
 			if(hasBias) {
 
@@ -89,6 +92,12 @@ public class FullyLayer extends Layer{
 				}
 			
 			}
+
+//			if(index == 7) {
+////				input.showDM();
+//				System.out.println("7-out:");
+//				System.out.println(JsonUtils.toJson(bias.data));
+//			}
 			
 		}
 		
@@ -101,6 +110,8 @@ public class FullyLayer extends Layer{
 		
 //		System.out.println("index-delta:"+index);
 		
+//		System.out.println(JsonUtils.toJson(delta.data));
+		
 		/**
 		 * deltaW = inputT * delta
 		 * int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta
@@ -110,9 +121,12 @@ public class FullyLayer extends Layer{
 		 */
 		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, input.data, delta.data, diffW.data,
 				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f, this.width, this.oWidth, this.oWidth);
-
-		MatrixOperation.multiplication_self(diffW.data, (1.0f / this.number));
-		
+//		
+//		System.out.println("diffW:");
+//		System.out.println(JsonUtils.toJson(diffW.data));
+//
+//		MatrixOperation.multiplication_self(diffW.data, (1.0f / this.number));
+//		
 		/**
 		 * diff = delta * weightT
 		 * number * ow
@@ -122,16 +136,21 @@ public class FullyLayer extends Layer{
 		GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.data, weight.data, diff.data,
 				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f, this.oWidth, this.oWidth, this.width);
 		
+//		System.out.println(JsonUtils.toJson(delta.data));
+//		System.out.println("---delta---");
+		
 		if(hasBias) {
 			
 			for(int ow = 0;ow<this.oWidth;ow++) {
 				diffB.data[ow] = 0.0f;
 				for(int n = 0;n<this.number;n++) {
-					diffB.data[ow] += delta.data[n * oWidth + ow] / number;
+					diffB.data[ow] += delta.data[n * oWidth + ow];
 				}
 			}
 		
 		}
+		
+//		diff.showDM();
 		
 	}
 

@@ -19,6 +19,7 @@ public enum LayerType {
 	tanh("tanh"),
 	bn("bn"),
 	block("block"),
+	shortcut("shortcut"),
 	dropout("dropout");
 	
 	private String key;

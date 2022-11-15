@@ -2,6 +2,7 @@ package com.omega.common.data;
 
 import java.io.Serializable;
 
+import com.omega.common.utils.JsonUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 
 import jcuda.Pointer;
@@ -50,8 +51,11 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = new float[this.dataLength];
+		this.hasGPU = hasGPU;
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaDeviceSynchronize();
 		}
 	}
 	
@@ -71,9 +75,11 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = data;
+		this.hasGPU = hasGPU;
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
 			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaDeviceSynchronize();
 		}
 	}
 	
@@ -131,8 +137,11 @@ public class Tensor implements Serializable{
 
 	public void setData(float[] data) {
 		this.data = data;
+		if(hasGPU) {
+			this.hostToDevice();
+		}
 	}
-
+	
 	public float getByIndex(int n,int c,int h,int w) {
 		return this.data[n * channel * height * width + c * height * width + h * width + w];
 	}
@@ -175,6 +184,28 @@ public class Tensor implements Serializable{
 	
 	public void syncHost() {
 		JCuda.cudaMemcpy(Pointer.to(data), gpuData, this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+	}
+	
+	public void hostToDevice() {
+		if(gpuData == null) {
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+		}
+		JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+		JCuda.cudaDeviceSynchronize();
+	}
+	
+	public void showDM() {
+		if(hasGPU) {
+			syncHost();
+		}
+	    System.out.println(JsonUtils.toJson(data));
+	}
+	
+	public void showDM2() {
+		syncHost();
+	    for(float t:data) {
+	    	System.out.println(t);
+	    }
 	}
 	
 	public void clearGPU() {

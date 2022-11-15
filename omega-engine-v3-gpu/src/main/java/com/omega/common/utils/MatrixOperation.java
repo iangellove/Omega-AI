@@ -1711,9 +1711,9 @@ public class MatrixOperation {
 	 * @throws
 	 */
 	public static float max(float[] x) {
-		float max = 0.0f;
+		float max = -3.402823466e+38F;
 		if(x.length > 0) {
-			max = x[0];
+//			max = x[0];
 			for(int i= 0;i<x.length;i++) {
 				if(max <= x[i]) {
 					max = x[i];

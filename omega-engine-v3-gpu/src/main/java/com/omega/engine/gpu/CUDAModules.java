@@ -250,6 +250,10 @@ public class CUDAModules {
 		CUDAModules.context = context;
 	}
 	
+	public static void initContext() {
+		getContext();
+	}
+	
 	public static void initCUDAFunctions() {
 		for(String key:functions.keySet()) {
 			CUDAModules.getFunctionByModule(functions.get(key), key);

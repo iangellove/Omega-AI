@@ -15,9 +15,9 @@ import com.omega.engine.updater.UpdaterFactory;
  */
 public class BasicBlockLayer extends Layer {
 
-	private ConvolutionLayer identityConv;
-	
-	private BNLayer identityBN;
+//	private ConvolutionLayer identityConv;
+//	
+//	private BNLayer identityBN;
 	
 	private ConvolutionLayer conv1;
 	
@@ -28,6 +28,8 @@ public class BasicBlockLayer extends Layer {
 	private ConvolutionLayer conv2;
 	
 	private BNLayer bn2;
+	
+	private ShortcutLayer shortcut;
 
 	private int kHeight = 3;
 	
@@ -35,20 +37,18 @@ public class BasicBlockLayer extends Layer {
 	
 	private int padding = 1;
 	
-	private boolean downSample = false;
-	
 	private int fisrtLayerStride = 2;
 	
-	public BasicBlockLayer(int channel,int oChannel,int height,int width,boolean downSample, Network network) {
+	public BasicBlockLayer(int channel,int oChannel,int height,int width,int fisrtLayerStride, Network network) {
 		
 		this.network = network;
 		this.channel = channel;
 		this.oChannel = oChannel;
 		this.height = height;
 		this.width = width;
-		this.downSample = downSample;
+		this.fisrtLayerStride = fisrtLayerStride;
 		
-		if(this.isDownSample()) {
+		if(fisrtLayerStride != 1) {
 			this.oHeight = (height + padding * 2 - kHeight) / fisrtLayerStride + 1;
 			this.oWidth = (width + padding * 2 - kWidth) / fisrtLayerStride + 1;
 		}else {
@@ -62,20 +62,7 @@ public class BasicBlockLayer extends Layer {
 	
 	public void initLayers() {
 		
-		if(isDownSample()) {
-
-			identityConv = new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, fisrtLayerStride, false, this.network);
-			identityConv.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
-			
-			identityBN = new BNLayer(this.network);
-			identityBN.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
-			identityBN.setPreLayer(identityConv);
-
-			conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, fisrtLayerStride, false, this.network);
-		}else {
-			conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, 1, false, this.network);
-		}
-		
+		conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, fisrtLayerStride, false, this.network);
 		conv1.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
 		
 		bn1 = new BNLayer(this.network);
@@ -83,7 +70,6 @@ public class BasicBlockLayer extends Layer {
 		bn1.setPreLayer(conv1);
 		
 		a1 = new ReluLayer(this.network);
-		a1.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
 		a1.setPreLayer(bn1);
 		
 		conv2 = new ConvolutionLayer(conv1.oChannel, oChannel, conv1.oWidth, conv1.oHeight, 3, 3, 1, 1, false, this.network);
@@ -92,6 +78,8 @@ public class BasicBlockLayer extends Layer {
 		bn2 = new BNLayer(this.network);
 		bn2.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
 		bn2.setPreLayer(conv2);
+		
+		shortcut = new ShortcutLayer(bn2.oChannel, bn2.oHeight, bn2.oWidth, a1.oChannel, a1.oHeight, a1.oWidth, this.network);
 		
 	}
 
@@ -119,15 +107,9 @@ public class BasicBlockLayer extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		
-		float[] x = this.input.data;
-		
-		if(isDownSample()) {
-			identityConv.forward(this.input);
-			identityBN.forward(identityConv.output);			
-			x = identityBN.output.data;
-		}
-		
+//		
+//		float[] x = this.input.data;
+//		
 		conv1.forward(this.input);
 		bn1.forward(conv1.output);
 		a1.forward(bn1.output);
@@ -135,15 +117,25 @@ public class BasicBlockLayer extends Layer {
 		conv2.forward(a1.output);
 		bn2.forward(conv2.output);
 		
-		float[] x2 = bn2.output.data;
-
-		/**
-		 * if downSample 
-		 * o = identity(x) + f(x)
-		 * else
-		 * o = x + f(x)
-		 */
-		this.output.data = MatrixOperation.add(x, x2);
+		bn2.output.hostToDevice();
+		input.hostToDevice();
+		
+		shortcut.forward(this.input, bn2.output);
+		
+		this.output = bn2.output;
+		
+//		float[] x2 = bn2.output.data;
+//		
+//		/**
+//		 * if downSample 
+//		 * o = identity(x) + f(x)
+//		 * else
+//		 * o = x + f(x)
+//		 */
+//		this.output.data = MatrixOperation.add(x, x2);
+//		
+//		System.out.print("conv2.diffW:");
+//		conv2.diffW.showDM();
 		
 	}
 
@@ -156,28 +148,62 @@ public class BasicBlockLayer extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		
+//		System.out.print("block"+index+"-delta :");
+//		delta.showDM();
 		/**
 		 * deltax = deltao * (f'(x) + 1)
 		 */
 		bn2.back(delta);
+//		System.out.print("bn2:");
+//		bn2.diff.showDM();
 		conv2.back(bn2.diff);
+//		System.out.println("-----------");
+//		conv2.diffW.showDM();
+//		System.out.println("-----------");
 		
 		a1.back(conv2.diff);
 		bn1.back(a1.diff);
 		conv1.back(bn1.diff);
 		
-		if(isDownSample()) {
-			
-			identityBN.back(delta);
-			identityConv.back(identityBN.diff);
-			
-			this.diff.data = MatrixOperation.add(conv1.diff.data, identityConv.diff.data);
-			
-		}else {
-			this.diff.data = MatrixOperation.add(conv1.diff.data, this.delta.data);
-		}
+		delta.hostToDevice();
+		conv1.diff.hostToDevice();
+		
+		shortcut.back(delta, conv1.diff);
+		
+		this.diff = conv1.diff;
+		
+//		if(isDownSample()) {
+//			
+//			identityBN.back(delta);
+//			identityConv.back(identityBN.diff);
+//			
+//			System.out.print("identityConv.diff:");
+//			identityConv.diff.showDM();
+//			
+//			this.diff.data = MatrixOperation.add(conv1.diff.data, identityConv.diff.data);
+//			
+//		}else {
+//			this.diff.data = MatrixOperation.add(conv1.diff.data, this.delta.data);
+//		}
 
+		
+//		System.out.print("3:");
+
+//		
+//		conv1.diffW.showDM();
+//		System.out.println("-----------");
+//		conv2.delta.showDM();
+//		conv2.input.showDM();
+//		System.out.println("=============");
+//		conv2.diffW.showDM();
+//		System.out.println("-----------");
+		
+//		System.out.println(JsonUtils.toJson(bn1.gama));
+//		System.out.println(JsonUtils.toJson(bn1.beta));
+//		System.out.println(JsonUtils.toJson(bn2.gama));
+//		System.out.println(JsonUtils.toJson(bn2.beta));
+//		System.out.print("block"+index+"-diff   :");
+//		diff.showDM();
 	}
 
 	@Override
@@ -220,12 +246,12 @@ public class BasicBlockLayer extends Layer {
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-
-		if(isDownSample()) {
-			identityConv.update();
-			identityBN.update();
-		}
-		
+//
+//		if(isDownSample()) {
+//			identityConv.update();
+//			identityBN.update();
+//		}
+//		
 		conv1.update();
 		bn1.update();
 		a1.update();
@@ -256,10 +282,6 @@ public class BasicBlockLayer extends Layer {
 	public void initCache() {
 		// TODO Auto-generated method stub
 
-	}
-
-	public boolean isDownSample() {
-		return downSample;
 	}
 
 	@Override

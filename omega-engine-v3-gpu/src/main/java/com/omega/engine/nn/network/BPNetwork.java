@@ -98,6 +98,11 @@ public class BPNetwork extends Network{
 			
 			layer.back();
 			
+//			if(layer.diff != null) {
+//				System.out.println(layer.getLayerType());
+//				layer.diff.showDM();
+//			}
+
 //			layer.update();
 			
 		}

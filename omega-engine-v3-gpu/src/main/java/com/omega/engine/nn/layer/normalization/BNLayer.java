@@ -1,7 +1,7 @@
 package com.omega.engine.nn.layer.normalization;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BNKernel;
 import com.omega.engine.nn.layer.LayerType;
@@ -137,6 +137,9 @@ public class BNLayer extends NormalizationLayer {
 		getKernel().setGama(gama, beta);
 		
 		getKernel().forward(this.network.RUN_MODEL);
+//		
+//		System.out.println("bn-output:");
+//		System.out.println(JsonUtils.toJson(output.data));
 		
 	}
 	
@@ -186,11 +189,7 @@ public class BNLayer extends NormalizationLayer {
 		getKernel().setDelta(delta);
 		
 		getKernel().backward();
-		
-//		MatrixOperation.division_self(deltaGama, number);
-//		
-//		MatrixOperation.division_self(deltaBeta, number);
-		
+
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
 		
 	}

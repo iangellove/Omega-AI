@@ -18,7 +18,9 @@ import com.omega.engine.nn.network.Network;
  *
  */
 public class ConvolutionLayer extends Layer {
-
+	
+	public String id;
+	
 	public int kernelNum = 0;
 	
 	public int kWidth = 0;
@@ -130,13 +132,13 @@ public class ConvolutionLayer extends Layer {
 		this.oWidth = (this.width + this.padding * 2 - kWidth) / this.stride + 1;
 		this.oHeight = (this.height + this.padding * 2 - kHeight) / this.stride + 1;
 		
-		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierReluRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth));
-//		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaimingNormalRandom(kernelNum * channel * kHeight * kWidth, 0, kernelNum * kHeight * kWidth));
+//		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierReluRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth));
+		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaimingNormalRandom(kernelNum * channel * kHeight * kWidth, 0, channel * kHeight * kWidth));
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth));
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.kHeight, this.kWidth * this.kHeight * this.kWidth));
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.heRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.oChannel * this.kHeight * this.kWidth));
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.val(kernelNum * channel * kHeight * kWidth, 0.1f));
-//		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth,RandomUtils.order(kernelNum * channel * kHeight * kWidth, 0.1f, 0.1f));
+//		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.order(kernelNum * channel * kHeight * kWidth, 0.1f, 0.01f));
 		this.bias = new Tensor(1, 1, 1, kernelNum);
 		this.diffB = new Tensor(1, 1, 1, kernelNum);
 		this.diffW = new Tensor(this.kernelNum, this.channel, this.kHeight, this.kWidth);
@@ -232,12 +234,12 @@ public class ConvolutionLayer extends Layer {
 			for(int n = 0;n<this.number;n++) {
 				for(int i = 0;i<onceOutLength;i++) {
 					int c = i / (height * width);
-					diffB.data[c] += delta.data[n * onceOutLength + i] / number;
+					diffB.data[c] += delta.data[n * onceOutLength + i];
 				}
 			}
 			
 		}
-		
+//		System.out.println("in:"+PROPAGATE_DOWN);
 		/**
 		 * 计算diff
 		 */
@@ -316,7 +318,7 @@ public class ConvolutionLayer extends Layer {
 		// TODO Auto-generated method stub
 //		long start = System.nanoTime();
 		if(this.updater != null){
-			this.updater.updateForMatrix(this);
+			this.updater.update(this);
 		}else{
 			
 			for(int i = 0;i<this.weight.getDataLength();i++) {
@@ -381,6 +383,8 @@ public class ConvolutionLayer extends Layer {
 		
 		float[] onceDiff = new float[onceDiffLength];
 
+		dWKernel.clear();
+
 		for(int n = 0;n<number;n++) {
 			System.arraycopy(input.data, n * onceXLength, onceWX, 0, onceXLength);
 			System.arraycopy(delta.data, n * onceDiffLength, onceDiff, 0, onceDiffLength);
@@ -391,9 +395,7 @@ public class ConvolutionLayer extends Layer {
 		
 		diffW.data = dWKernel.getOut_D2H();
 
-		dWKernel.clear();
-
-		MatrixOperation.division_self(diffW.data, number);
+//		MatrixOperation.division_self(diffW.data, number);
 		
 	}
 

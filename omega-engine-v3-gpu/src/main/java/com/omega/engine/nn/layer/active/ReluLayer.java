@@ -59,6 +59,9 @@ public class ReluLayer extends ActiveFunctionLayer {
 		// TODO Auto-generated method stub
 		ReluBackwardJob backward = new ReluBackwardJob(input.data, delta.data,diff.data, 0, diff.dataLength - 1);
 		ForkJobEngine.run(backward);
+//		System.out.print("relu"+index+"-delta  :");
+//		delta.showDM();
+//		System.out.print("relu"+index+"-diff   :");
 	}
 
 	@Override

@@ -99,7 +99,9 @@ public class PoolingLayer extends Layer {
 			System.arraycopy(pooling.getMask(), 0, this.mask, n * onceMask.length, onceMask.length);
 			System.arraycopy(pooling.getOut(), 0, this.output.data, n * onceOutLength, onceOutLength);
 		}
-		
+//		System.out.print("pooling-output:");
+//		System.out.println(output.dataLength);
+//		output.showDM();
 	}
 
 	@Override
@@ -114,7 +116,10 @@ public class PoolingLayer extends Layer {
 			diffKernel.diff();
 			System.arraycopy(diffKernel.getOut(), 0, this.diff.data, n * onceLength, onceLength);
 		}
-		
+//		System.out.print("pooling-delta:");
+//		delta.showDM();
+//		System.out.print("pooling-diff:");
+//		diff.showDM();
 	}
 
 	@Override
