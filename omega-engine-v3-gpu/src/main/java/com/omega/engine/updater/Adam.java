@@ -2,18 +2,13 @@ package com.omega.engine.updater;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.task.ForkJobEngine;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
-import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.normalization.BNLayer;
-import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.gpu.AdamKernel;
 import com.omega.engine.updater.jobs.AdamJob;
-
-import jcuda.driver.JCudaDriver;
 
 /**
  * Adam Updater
@@ -51,10 +46,6 @@ public class Adam extends Updater {
 	private Tensor bias;
 	
 	private Tensor diffB;
-	
-	public Adam(Network net) {
-		this.net = net;
-	}
 	
 	@Override
 	public void update(Layer layer) {

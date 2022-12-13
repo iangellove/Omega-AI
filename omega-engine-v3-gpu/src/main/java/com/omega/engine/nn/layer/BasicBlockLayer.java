@@ -15,9 +15,9 @@ import com.omega.engine.updater.UpdaterFactory;
  */
 public class BasicBlockLayer extends Layer {
 
-//	private ConvolutionLayer identityConv;
-//	
-//	private BNLayer identityBN;
+	private ConvolutionLayer identityConv;
+	
+	private BNLayer identityBN;
 	
 	private ConvolutionLayer conv1;
 	
@@ -29,7 +29,7 @@ public class BasicBlockLayer extends Layer {
 	
 	private BNLayer bn2;
 	
-	private ShortcutLayer shortcut;
+//	private ShortcutLayer shortcut;
 
 	private int kHeight = 3;
 	
@@ -38,6 +38,8 @@ public class BasicBlockLayer extends Layer {
 	private int padding = 1;
 	
 	private int fisrtLayerStride = 2;
+	
+	private boolean downsample = false;
 	
 	public BasicBlockLayer(int channel,int oChannel,int height,int width,int fisrtLayerStride, Network network) {
 		
@@ -55,6 +57,10 @@ public class BasicBlockLayer extends Layer {
 			this.oHeight = height;
 			this.oWidth = width;
 		}
+		
+		if(channel != oChannel) {
+			downsample = true;
+		}
 
 		initLayers();
 		
@@ -63,23 +69,31 @@ public class BasicBlockLayer extends Layer {
 	public void initLayers() {
 		
 		conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, fisrtLayerStride, false, this.network);
-		conv1.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
+		conv1.setUpdater(UpdaterFactory.create(this.network.updater));
 		
 		bn1 = new BNLayer(this.network);
-		bn1.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
+		bn1.setUpdater(UpdaterFactory.create(this.network.updater));
 		bn1.setPreLayer(conv1);
 		
 		a1 = new ReluLayer(this.network);
 		a1.setPreLayer(bn1);
 		
 		conv2 = new ConvolutionLayer(conv1.oChannel, oChannel, conv1.oWidth, conv1.oHeight, 3, 3, 1, 1, false, this.network);
-		conv2.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
+		conv2.setUpdater(UpdaterFactory.create(this.network.updater));
 		
 		bn2 = new BNLayer(this.network);
-		bn2.setUpdater(UpdaterFactory.create(this.network.updater, this.network));
+		bn2.setUpdater(UpdaterFactory.create(this.network.updater));
 		bn2.setPreLayer(conv2);
 		
-		shortcut = new ShortcutLayer(bn2.oChannel, bn2.oHeight, bn2.oWidth, a1.oChannel, a1.oHeight, a1.oWidth, this.network);
+//		shortcut = new ShortcutLayer(bn2.oChannel, bn2.oHeight, bn2.oWidth, a1.oChannel, a1.oHeight, a1.oWidth, this.network);
+		
+		if(downsample) {
+			identityConv = new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, fisrtLayerStride, false, this.network); 
+			identityConv.setUpdater(UpdaterFactory.create(this.network.updater));
+			identityBN = new BNLayer(this.network);
+			identityBN.setUpdater(UpdaterFactory.create(this.network.updater));
+			identityBN.setPreLayer(identityConv);
+		}
 		
 	}
 
@@ -117,12 +131,19 @@ public class BasicBlockLayer extends Layer {
 		conv2.forward(a1.output);
 		bn2.forward(conv2.output);
 		
-		bn2.output.hostToDevice();
-		input.hostToDevice();
+//		bn2.output.hostToDevice();
+//		input.hostToDevice();
+
+		if(downsample) {
+			identityConv.forward(this.input);
+			identityBN.forward(identityConv.output);
+			this.output.data = MatrixOperation.add(identityBN.output.data, bn2.output.data);
+		}else {
+			this.output.data = MatrixOperation.add(input.data, bn2.output.data);
+		}
 		
-		shortcut.forward(this.input, bn2.output);
-		
-		this.output = bn2.output;
+//		shortcut.forward(this.input, bn2.output);
+//		this.output = bn2.output;
 		
 //		float[] x2 = bn2.output.data;
 //		
@@ -154,42 +175,29 @@ public class BasicBlockLayer extends Layer {
 		 * deltax = deltao * (f'(x) + 1)
 		 */
 		bn2.back(delta);
-//		System.out.print("bn2:");
-//		bn2.diff.showDM();
 		conv2.back(bn2.diff);
-//		System.out.println("-----------");
-//		conv2.diffW.showDM();
-//		System.out.println("-----------");
-		
+
 		a1.back(conv2.diff);
 		bn1.back(a1.diff);
 		conv1.back(bn1.diff);
 		
-		delta.hostToDevice();
-		conv1.diff.hostToDevice();
+//		delta.hostToDevice();
+//		conv1.diff.hostToDevice();
 		
-		shortcut.back(delta, conv1.diff);
+		if(downsample) {
+			identityBN.back(delta);
+			identityConv.back(identityBN.diff);
+			
+			this.diff.data = MatrixOperation.add(conv1.diff.data, identityConv.diff.data);
+		}else {
+			this.diff.data = MatrixOperation.add(conv1.diff.data, this.delta.data);
+		}
 		
-		this.diff = conv1.diff;
-		
-//		if(isDownSample()) {
-//			
-//			identityBN.back(delta);
-//			identityConv.back(identityBN.diff);
-//			
-//			System.out.print("identityConv.diff:");
-//			identityConv.diff.showDM();
-//			
-//			this.diff.data = MatrixOperation.add(conv1.diff.data, identityConv.diff.data);
-//			
-//		}else {
-//			this.diff.data = MatrixOperation.add(conv1.diff.data, this.delta.data);
-//		}
-
+//		shortcut.back(delta, conv1.diff);
+//		this.diff = conv1.diff;
 		
 //		System.out.print("3:");
 
-//		
 //		conv1.diffW.showDM();
 //		System.out.println("-----------");
 //		conv2.delta.showDM();
@@ -246,17 +254,17 @@ public class BasicBlockLayer extends Layer {
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-//
-//		if(isDownSample()) {
-//			identityConv.update();
-//			identityBN.update();
-//		}
-//		
+
 		conv1.update();
 		bn1.update();
-		a1.update();
+
 		conv2.update();
 		bn2.update();
+
+		if(downsample) {
+			identityBN.update();
+			identityConv.update();
+		}
 		
 	}
 

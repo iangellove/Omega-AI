@@ -1,7 +1,6 @@
 package com.omega.engine.gpu;
 
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
-import static jcuda.driver.JCudaDriver.cuMemAlloc;
 import static jcuda.jcublas.JCublas2.cublasSetVector;
 
 import com.omega.common.utils.JsonUtils;
@@ -37,6 +36,8 @@ public class DXKernel {
 	private int ih;
 	private int iw;
 	private int numKernels;
+	private boolean is_1x1 = false;
+	
 	private CUfunction function;
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
@@ -64,6 +65,10 @@ public class DXKernel {
 		this.ih = C * kh * kw;
 		this.iw = oHeight * oWidth;
 		this.numKernels = C * H * W;
+		if(kh == 1 && kw == 1 && s == 1 && pad == 0) {
+			is_1x1 = true;
+		}
+		
 		init();
 		
 //        System.out.println((System.nanoTime() - start1) / 1e6 + "ms.1111");
@@ -85,6 +90,7 @@ public class DXKernel {
 	}
 	
 	public void init() {
+		
 		/**
 		 * 初始化cuda函数
 		 */
@@ -94,7 +100,7 @@ public class DXKernel {
         this.dB = CUDAMemoryManager.getPointer(ko * iw);
         this.dC = CUDAMemoryManager.getPointer(ih * iw);
         
-        if(kh > 1){
+        if(!is_1x1){
 
     		/**
     		 * 申请显存
@@ -148,7 +154,7 @@ public class DXKernel {
 
 		sgemm();
 		
-		if(kh > 1) {
+		if(!is_1x1) {
 			col2im();
 		}else {
 			JCublas2.cublasGetVector(ih * iw, Sizeof.FLOAT, dC, 1, Pointer.to(out), 1);
@@ -203,10 +209,10 @@ public class DXKernel {
 	
     public static void main(String args[]){	
     	int N = 2;
-    	int C = 3;
+    	int C = 64;
     	int H = 8;
     	int W = 8;
-    	int ko = 2;
+    	int ko = 128;
     	int kh = 1;
     	int kw = 1;
     	int s = 2;
@@ -216,13 +222,15 @@ public class DXKernel {
 		
 		System.out.println(oHeight);
 		
-    	float[] x1 = RandomUtils.gaussianRandom(N * ko * oHeight * oWidth, 0.1f);
+    	float[] x1 = RandomUtils.order(N * ko * oHeight * oWidth, 0.1f, 0.1f);
     	
-    	float[] k1 = RandomUtils.gaussianRandom(ko * C * kh * kw, 0.1f);
+    	float[] k1 = RandomUtils.order(ko * C * kh * kw, 0.1f, 0.1f);
     	
     	float[] out = new float[C * H * W];
 
     	float[] once = new float[ko * oHeight * oWidth];
+    	
+    	float[] all_out = new float[N * C * H * W];
     	
     	DXKernel ck = new DXKernel("conv1", out, C, H, W, ko, kh, kw, p, s);
     	
@@ -235,12 +243,15 @@ public class DXKernel {
     		System.arraycopy(x1, n * ko * oHeight * oWidth, once, 0, ko * oHeight * oWidth);
     		ck.setDelta(once);
         	ck.conv();
-        	System.out.println(JsonUtils.toJson(ck.getOut()));
+        	System.arraycopy(ck.getOut(), 0, all_out, n * C * H * W, C * H * W);
+//        	System.out.println(JsonUtils.toJson(ck.getOut()));
 //        	System.arraycopy(ck.getOut(), 0, out2, i * oh * ow, oh * ow);
 //        	MatrixUtils.col2im4d(ck.getOut(), out2, n, ko, oHeight, oWidth);
 //        	System.out.println((System.nanoTime() - start2) / 1e6 + "ms.:"+i);
     	}
 
+    	System.out.println(JsonUtils.toJson(all_out));
+    	
 		CUDAMemoryManager.free();
     }
 	

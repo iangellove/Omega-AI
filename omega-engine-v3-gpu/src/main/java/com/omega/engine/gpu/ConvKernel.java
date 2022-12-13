@@ -39,6 +39,8 @@ public class ConvKernel {
 	private int ih;
 	private int iw;
 	private int numKernels;
+	private boolean is_1x1 = false;
+	
 	private CUfunction function;
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
@@ -66,11 +68,12 @@ public class ConvKernel {
 		this.ih = C * kh * kw;
 		this.iw = oHeight * oWidth;
 		this.numKernels = C * oHeight * oWidth; 
-//		long start1 = System.nanoTime();
-		
+		if(kh == 1 && kw == 1 && s == 1 && p == 0) {
+			is_1x1 = true;
+		}
+
 		init();
 		
-//        System.out.println((System.nanoTime() - start1) / 1e6 + "ms.1111");
 	}
 	
 	public void initFunction() {
@@ -101,7 +104,7 @@ public class ConvKernel {
 		 */
 		this.dx = CUDAMemoryManager.getDevice(C * H * W);
 		
-		if(kh == 1) {
+		if(is_1x1) {
 			dy = dx;
 		}else {
 			this.dy = CUDAMemoryManager.getDevice(ih * iw);
@@ -109,12 +112,7 @@ public class ConvKernel {
 		
         this.dA = CUDAMemoryManager.getPointer(ko * ih);
         this.dC = CUDAMemoryManager.getPointer(ko * iw);
-//		this.dx = CUDAMemoryManager.getDevice(id + "_dx", C * H * W);
-//		this.dy = CUDAMemoryManager.getDevice(id + "_dy", ih * iw);
-//		
-//        this.dA = CUDAMemoryManager.getPointer(id + "_dA", ko * ih);
-//        this.dC = CUDAMemoryManager.getPointer(id + "_dC", ko * iw);
-		
+
         /**
          * 设置入参
          * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
@@ -162,7 +160,7 @@ public class ConvKernel {
 		 * if kernel size is 1 * 1.
 		 * im2col(input) = input
 		 */
-		if(kh > 1) {
+		if(!is_1x1) {
 			im2col();
 		}
 		

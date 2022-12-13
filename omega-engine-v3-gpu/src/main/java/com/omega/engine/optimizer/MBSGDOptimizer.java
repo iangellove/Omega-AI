@@ -82,9 +82,9 @@ public class MBSGDOptimizer extends Optimizer {
 				
 				this.trainIndex = i;
 
-				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+//				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
 
-//				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
+				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
 				
 //				int[][] indexs = new int[468][128];
 //				

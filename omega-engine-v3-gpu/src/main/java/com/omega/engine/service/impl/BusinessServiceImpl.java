@@ -15,6 +15,7 @@ import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.LabelUtils;
 import com.omega.common.utils.MathUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.controller.TrainTask;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
@@ -2521,8 +2522,8 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
 			
-			float[] mean = new float[] {0.485f, 0.456f, 0.406f};
-			float[] std = new float[] {0.229f, 0.224f, 0.225f};
+			float[] mean = new float[] {0.4914f, 0.4822f, 0.4465f};
+			float[] std = new float[] {0.2023f, 0.1994f, 0.2010f};
 			
 			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 	    	
@@ -2534,17 +2535,17 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			System.out.println("data is ready.");
 			
-			/**
-			 * 随机裁剪
-			 */
-			DataTransforms.randomCrop(trainData.input, 32, 32, 4);
-			
-			/**
-			 * 随机翻转
-			 */
-			DataTransforms.randomHorizontalFilp(trainData.input);
-			
-			System.out.println("data transform finish.");
+//			/**
+//			 * 随机裁剪
+//			 */
+//			DataTransforms.randomCrop(trainData.input, 32, 32, 4);
+//			
+//			/**
+//			 * 随机翻转
+//			 */
+//			DataTransforms.randomHorizontalFilp(trainData.input);
+//			
+//			System.out.println("data transform finish.");
 			
 			int channel = 3;
 			
@@ -2554,7 +2555,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.1f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
@@ -2619,7 +2620,7 @@ public class BusinessServiceImpl implements BusinessService {
 			ReluLayer active9 = new ReluLayer();
 			
 			
-			PoolingLayer pool2 = new PoolingLayer(bl8.oChannel, bl8.oWidth, bl8.oHeight, 4, 4, 1, PoolingType.MEAN_POOLING);
+			PoolingLayer pool2 = new PoolingLayer(bl8.oChannel, bl8.oWidth, bl8.oHeight, 4, 4, 4, PoolingType.MEAN_POOLING);
 			
 			int fInputCount = pool2.oChannel * pool2.oWidth * pool2.oHeight;
 
@@ -2982,6 +2983,8 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		try {
 
+			RandomUtils.setSeed(100);
+			
 			BusinessServiceImpl bs = new BusinessServiceImpl();
 			
 	    	CUDAModules.initContext();

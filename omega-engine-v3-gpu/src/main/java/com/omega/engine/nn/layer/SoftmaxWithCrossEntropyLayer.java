@@ -90,7 +90,7 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 //		
 		output.syncHost();
 		
-//		output.showDM();
+		output.showDM();
 		
 	}
 

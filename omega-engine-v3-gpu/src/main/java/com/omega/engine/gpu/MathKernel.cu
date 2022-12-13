@@ -113,7 +113,7 @@ extern "C"
 __global__ void mwa(float* mean,float* var,float* runingMean,float* runingVar,int n)
 {
     
-    float alpha = 0.1;
+    float alpha = 0.99;
     
     for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < n; index += blockDim.x * gridDim.x) {
 		

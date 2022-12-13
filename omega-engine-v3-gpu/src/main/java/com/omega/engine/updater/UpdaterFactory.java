@@ -1,7 +1,5 @@
 package com.omega.engine.updater;
 
-import com.omega.engine.nn.network.Network;
-
 /**
  * Updater Factory
  * @author Administrator
@@ -19,13 +17,13 @@ public class UpdaterFactory {
 	 * momentum
 	 * adam
 	 */
-	public static Updater create(UpdaterType type,Network net) {
+	public static Updater create(UpdaterType type) {
 		
 		switch (type) {
 		case momentum:
 			return new Momentum();
 		case adam:
-			return new Adam(net);
+			return new Adam();
 		default:
 			return null;
 		}

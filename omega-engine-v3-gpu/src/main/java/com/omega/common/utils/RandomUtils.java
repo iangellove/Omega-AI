@@ -13,6 +13,10 @@ public class RandomUtils {
 	
 	private static Random instance;
 	
+	public static void setSeed(long seed) {
+		getInstance().setSeed(seed);
+	}
+	
 	public static Random getInstance() {
 		if(instance == null) {
 			instance = new Random();

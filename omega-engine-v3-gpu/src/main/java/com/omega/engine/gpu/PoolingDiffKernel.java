@@ -172,11 +172,11 @@ public class PoolingDiffKernel {
 
     	int N = 2;
     	int C = 3;
-    	int H = 8;
-    	int W = 8;
-    	int ph = 2;
-    	int pw = 2;
-    	int s = 2;
+    	int H = 4;
+    	int W = 4;
+    	int ph = 4;
+    	int pw = 4;
+    	int s = 4;
     	int oHeight = (H - ph) / s + 1;
 		int oWidth = (W - pw) / s + 1;
 
@@ -196,9 +196,9 @@ public class PoolingDiffKernel {
     	
     	float[] allDiff = new float[N * C * H * W];
     	
-    	PoolingKernel pooling = new PoolingKernel(PoolingType.MAX_POOLING, out, mask, C, H, W, ph, pw, s);
+    	PoolingKernel pooling = new PoolingKernel(PoolingType.MEAN_POOLING, out, mask, C, H, W, ph, pw, s);
     	
-    	PoolingDiffKernel poolingDiff = new PoolingDiffKernel(PoolingType.MAX_POOLING, diff, C, H, W, ph, pw, s);
+    	PoolingDiffKernel poolingDiff = new PoolingDiffKernel(PoolingType.MEAN_POOLING, diff, C, H, W, ph, pw, s);
     	
     	long start = System.nanoTime();
     	
@@ -223,7 +223,7 @@ public class PoolingDiffKernel {
 		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
     	System.out.println(JsonUtils.toJson(out));
     	System.out.println(JsonUtils.toJson(mask));
-    	System.out.println(JsonUtils.toJson(diff));
+//    	System.out.println(JsonUtils.toJson(diff));
     	System.out.println(JsonUtils.toJson(allDiff));
     	
     	pooling.free();

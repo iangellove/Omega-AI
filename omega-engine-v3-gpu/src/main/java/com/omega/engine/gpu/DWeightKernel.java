@@ -4,8 +4,6 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import static jcuda.jcublas.JCublas2.cublasGetVector;
 import static jcuda.jcublas.JCublas2.cublasSetVector;
 
-import org.bytedeco.cuda.cudart.cudaMemsetParams;
-
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 
@@ -37,6 +35,8 @@ public class DWeightKernel {
 	private int ih;
 	private int iw;
 	private int numKernels;
+	private boolean is_1x1 = false;
+	
 	private CUfunction function;
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
@@ -64,6 +64,10 @@ public class DWeightKernel {
 		this.ih = C * kh * kw;
 		this.iw = oHeight * oWidth;
 		this.numKernels = C * oHeight * oWidth; 
+		if(kh == 1 && kw == 1 && s == 1 && p == 0) {
+			is_1x1 = true;
+		}
+		
 		init();
 	}
 	
@@ -95,7 +99,7 @@ public class DWeightKernel {
 		 */
 		this.dx = CUDAMemoryManager.getDevice(C * H * W);
 		
-		if(kh == 1) {
+		if(is_1x1) {
 			this.dy = this.dx;
 		}else {
 			this.dy = CUDAMemoryManager.getDevice(ih * iw);
@@ -146,17 +150,12 @@ public class DWeightKernel {
 	
 	public void conv() {
 		
-		if(kh > 1) {
+		if(!is_1x1) {
 			im2col();
 		}
 
 		sgemm();
-//
-//		System.out.println("*************");
-//		float[] tmp_dA = new float[ko * ih];
-//		showDM(dC, tmp_dA);
-//		System.out.println("*************");
-		
+
 	}
 	
 	public void sgemm() {

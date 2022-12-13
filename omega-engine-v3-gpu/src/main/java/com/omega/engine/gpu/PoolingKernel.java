@@ -174,11 +174,11 @@ public class PoolingKernel {
 
     	int N = 2;
     	int C = 3;
-    	int H = 8;
-    	int W = 8;
-    	int ph = 2;
-    	int pw = 2;
-    	int s = 2;
+    	int H = 4;
+    	int W = 4;
+    	int ph = 4;
+    	int pw = 4;
+    	int s = 4;
     	int oHeight = (H - ph) / s + 1;
 		int oWidth = (W - pw) / s + 1;
 
@@ -192,7 +192,7 @@ public class PoolingKernel {
     	
     	float[] allOut = new float[N * C * oHeight * oWidth];
     	
-    	PoolingKernel pooling = new PoolingKernel(PoolingType.MAX_POOLING, out, mask, C, H, W, ph, pw, s);
+    	PoolingKernel pooling = new PoolingKernel(PoolingType.MEAN_POOLING, out, mask, C, H, W, ph, pw, s);
     	
     	long start = System.nanoTime();
     	
