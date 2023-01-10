@@ -79,6 +79,8 @@ public abstract class Optimizer {
 	
 	public abstract void train(BaseData trainingData,BaseData testData);
 	
+	public abstract void train(BaseData trainingData,BaseData validata,BaseData testData);
+	
 	/**
 	 * 
 	 * @param network

@@ -449,7 +449,28 @@ __global__ void full_mean_delta_kernel(float *dxhat, float *variance, int batch,
 
 }
 
-//dmean = (∑ dxhat * -1 / (var + eta)^1/2)
+
+//dmean = (∑ dxhat * -1 / (var + eta)^1/2) + dvar * 1 / N * ∑ -2 * (x - mean)
+extern "C"
+__global__ void full_mean_delta_ov_kernel(float *dxhat, float *variance, float *mean, float *x, float *dvar, int batch, int filters, float *mean_delta)
+{
+    
+    for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < filters; index += blockDim.x * gridDim.x) {
+			
+		float val = 0;
+		float sum = 0;
+		
+		for(int n = 0;n<batch;n++) {	
+			val += dxhat[n * filters + index] * (-1.0f / sqrtf(variance[index] + .00001f));
+			sum += - 2.0f * (x[n * filters + index] - mean[index]);
+		}	
+		
+		mean_delta[index] = val + dvar[index] * sum / batch;
+	}
+
+}
+
+//dmean = (∑ dxhat * -1 / (var + eta)^1/2) + dvar * 1 / N * ∑ -2 * (x - mean)
 extern "C"
 __global__ void fast_mean_delta_kernel(float *dxhat, float *variance, int batch, int filters, int spatial, float *mean_delta)
 {
@@ -480,6 +501,45 @@ __global__ void fast_mean_delta_kernel(float *dxhat, float *variance, int batch,
     }
 }
 
+//dL_davg = (-1.0 / torch.sqrt(variance + eps) * dL_dxi_hat).sum((0, 2, 3), keepdim=True) + (dL_dvar * (-2.0 * (input - mean)).sum((0, 2, 3), keepdim=True) / B)
+//dmean = (∑ dxhat * -1 / (var + eta)^1/2) + dvar * 1 / N * ∑ -2 * (x - mean)
+extern "C"
+__global__ void fast_mean_delta_ov_kernel(float *dxhat, float *variance, float *mean, float *x, float *dvar, int batch, int filters, int spatial, float *mean_delta)
+{
+    const int threads = BLOCK;
+    __shared__ float local[threads];
+    __shared__ float local2[threads];
+
+    int id = threadIdx.x;
+    local[id] = 0;
+    local2[id] = 0;
+
+    int filter = blockIdx.x;
+
+    int i, j;
+    for(j = 0; j < batch; ++j){
+        for(i = 0; i < spatial; i += threads){
+            int index = j*spatial*filters + filter*spatial + i + id;
+            local[id] += (i+id < spatial) ? dxhat[index] : 0;
+            local2[id] += (i+id < spatial) ? -2.f * (x[index] - mean[filter])  : 0;
+        }
+    }
+
+    __syncthreads();
+
+    if(id == 0){
+        float tmp = 0;
+        float sum = 0;
+        for(i = 0; i < threads; ++i){
+           tmp += local[i];
+           sum += local2[i];
+        }
+        tmp *= (-1.f/sqrtf(variance[filter] + .00001f));
+        mean_delta[filter] = tmp + dvar[filter] * sum / batch / spatial;
+    }
+}
+
+//dL_dvar = (-0.5 * dL_dxi_hat * (input - mean)).sum((0, 2, 3), keepdim=True)  * ((variance + eps) ** -1.5) # edit
 extern "C"
 __global__ void full_var_delta_kernel(float *x, float *dxhat, float *mean, float *variance, int batch, int filters, float *variance_delta)
 {
@@ -492,7 +552,7 @@ __global__ void full_var_delta_kernel(float *x, float *dxhat, float *mean, float
 			val += dxhat[n * filters + index] * (x[n * filters + index] - mean[index]);
 		}	
 		
-		variance_delta[index] = val * -.5f * powf(variance[index] + .00001f, (float)(-3.f/2.f));
+		variance_delta[index] = val * -0.5f * powf(variance[index] + .00001f, -1.5f);
 	}
 
 }
@@ -525,12 +585,12 @@ __global__ void fast_variance_delta_kernel(float *x, float *dxhat, float *mean, 
         for(i = 0; i < threads; ++i){
             variance_delta[filter] += local[i];
         }
-        variance_delta[filter] *= -.5f * powf(variance[filter] + .00001f, (float)(-3.f/2.f));
+        variance_delta[filter] *= -0.5f * powf(variance[filter] + .00001f, -1.5f);
     }
 }
 
 
-//dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / n + dmean * 1/N
+//dx = dxhat * 1 / (var + eta)^1/2 + dvar * 2(x - mean) / N + dmean * 1/N
 extern "C"
 __global__ void dx_kernel(int N, float *x, float *mean, float *variance, float *mean_delta, float *variance_delta, int batch, int filters, int spatial, float *diff)
 {
@@ -538,10 +598,11 @@ __global__ void dx_kernel(int N, float *x, float *mean, float *variance, float *
     if (index >= N) return;
     int f = (index/spatial)%filters;
 
-    diff[index] = diff[index] * 1.f/(sqrtf(variance[f] + .00001f)) + variance_delta[f] * 2.f * (x[index] - mean[f]) / (spatial * batch) + mean_delta[f] / (spatial * batch);
+    diff[index] = diff[index] / (sqrtf(variance[f] + .00001f)) + variance_delta[f] * 2.f * (x[index] - mean[f]) / (spatial * batch) + mean_delta[f] / (spatial * batch);
 }
 
 
+//  dL_dxi = (dL_dxi_hat / torch.sqrt(variance + eps)) + (2.0 * dL_dvar * (input - mean) / B) + (dL_davg / B)
 extern "C"
 __global__ void dx_kernel_full(float *x, float *mean, float *variance, float *mean_delta, float *variance_delta, int batch, int filters, float *diff)
 {
@@ -550,12 +611,12 @@ __global__ void dx_kernel_full(float *x, float *mean, float *variance, float *me
 		
 		float dvar_val = variance_delta[index];
 		float dmu_val = mean_delta[index];
-		float std_val = (sqrtf(variance[index] + .00001f));
+		float std_val = sqrtf(variance[index] + .00001f);
 		float mean_val = mean[index];
 		
 		for(int n = 0;n<batch;n++) {	
 			int xIndex = n * filters + index;
-			diff[xIndex] = diff[xIndex] / std_val + 2.0 * dvar_val * (x[xIndex] - mean_val) / batch + dmu_val / batch;
+			diff[xIndex] = (diff[xIndex] / std_val) + (2.0f * dvar_val * (x[xIndex] - mean_val) / batch) + (dmu_val / batch);
 		}	
 		
 	}

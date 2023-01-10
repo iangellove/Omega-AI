@@ -5,16 +5,19 @@
  * 
  * @author leo
  * @date 2020-08-11
- * @version 1.0.2
+ * @version 1.0.1
  * @email 465973119@qq.com
  * @remark 
- * 		version 1.0.2
- * 		update in 2021-06-03 16:19:33
+ * 		version 1.0.1
+ * 		update in 2020-08-11 18:40:10
  * 		update remark:
- * 			1.添加资源管理器
- * 			2.添加帧动画
- * 			3.添加图片加载
- *      version 1.0.2
+ * 			1.添加click,mousedown,mousemove,mouseup事件监听
+ * 			2.优化坐标整形计算提高fps
+ * 			3.优化播放动画方法
+ * 			4.优化原始图形统一渲染
+ * 			5.添加离屏渲染
+ *          6.添加线与方形碰撞测试
+ *      version 1.0.1.1
  * 		update in 2020-12-07 21:40:10
  * 		update remark:
  *          1.添加方形与方形碰撞测试
@@ -49,7 +52,7 @@ Engine2D.instance = function(){
 	this.mouseY = 0;
 	this.width = 0;
 	this.height = 0;
-	this.fps = 60;
+	this.fps = 30;
 	this.showFPS = false;
 	this.cache = false;
 	this.cacheContext = null;
@@ -92,7 +95,6 @@ Engine2D.instance = function(){
 	}
 	
 	this.FPS = function(){
-		
 		if(this.showFPS){
 			if(!Engine2D.lastCalledTime) {
 				Engine2D.lastCalledTime = Date.now();
@@ -104,7 +106,6 @@ Engine2D.instance = function(){
 			    console.log(Engine2D.fps);
 			}
 		}
-		
 	}
 	
 	this.click = function(){
@@ -139,7 +140,6 @@ Engine2D.scene = function(){
 	this.hitTest = false;
 	this.childs = new Array();
 	this.rigidBodyChilds = new Array();
-	this.status = 0;
 	
 	this.addLayer = function(layer){
 		if(layer != null){
@@ -187,25 +187,21 @@ Engine2D.scene = function(){
 	}
 	
 	this.run = function(){
-		
-		if(this.status == 0){
 
-			if(window.requestAnimationFrame){
-				Engine2D.play(this.play,this);
-			}else{
-				throw new Error("not support this browser,plase use the chrome browse open this html.");
-//				setInterval(function(){
-//					that.play(that);
-//				},1000/that.fps);
-			}
-			this.status = 1;
+		if(window.requestAnimationFrame){
+			Engine2D.play(this.play,this);
+		}else{
+			throw new Error("not support this browser,plase use the chrome browse open this html.");
+//			setInterval(function(){
+//				that.play(that);
+//			},1000/that.fps);
 		}
 		
 	}
 	
 	this.play = function(o){
 		o.update();
-		//o.instance.FPS();
+//		o.instance.FPS();
 		if(o.hitTest){
 			Engine2D.engine.hitTest(o);
 			Engine2D.engine.afterHitTest(o);
@@ -313,19 +309,12 @@ Engine2D.spirit = function(){
 	this.scene = null;
 	this.layer = null;
 	this.childs = {};
-	this.image = null;
-	this.animationId = null;
-	/*
-	 * frameAnimation object
-	 */
-	this.animations = {};
 	
 	/*
 	 * properties
 	 */
 	this.style = null;
 	this.alpha = 1;
-	this.display = true;
 	
 	this.centerX = function(){
 		if(this.orgType == 1){
@@ -377,17 +366,6 @@ Engine2D.spirit = function(){
 		}
 	}
 	
-	this.addAnimation = function(animation){
-		if(animation != null){
-			animation.spirit = this;
-			this.animations[animation.id] = animation;
-		}
-	}
-	
-	this.playAnimation = function(animationId){
-		this.animationId = animationId;
-	}
-	
 	this.runAction = function(action){
 		action();
 	}
@@ -403,7 +381,6 @@ Engine2D.spirit = function(){
 	this.run = function(){
 		this.update();
 		this.draw();
-		
 		/**
 		 * childs run
 		 */
@@ -434,36 +411,33 @@ Engine2D.spirit = function(){
 		 */
 		this.fixedPosition();
 		
-		if(this.display){
+		switch (this.spiritType) {
+		case 0:
 			
-			switch (this.spiritType) {
+			switch (this.orgType) {
 			case 0:
-				
-				switch (this.orgType) {
-				case 0:
-					Engine2D.util.drawRect2(this);
-					break;
-				case 1:
-					Engine2D.util.drawCircles(this);
-					break;
-				case 2:
-					Engine2D.util.drawLine(this);
-					break;
-				case 3:
-					Engine2D.util.drawText(this);
-					break;
-				}
-				
+				Engine2D.util.drawRect2(this);
 				break;
 			case 1:
-				Engine2D.util.drawImage(this);
+				Engine2D.util.drawCircles(this);
 				break;
 			case 2:
-				this.animations[this.animationId].play(this);
+				Engine2D.util.drawLine(this);
+				break;
+			case 3:
+				Engine2D.util.drawText(this);
 				break;
 			}
+			
+			break;
+		case 1:
+			Engine2D.util.drawImage(this);
+			break;
+		case 2:
+	
+			break;
 		}
-
+		
 	}
 	
 	this.update = function(){
@@ -472,62 +446,28 @@ Engine2D.spirit = function(){
 	
 }
 
-Engine2D.resource._import = function(key,res){
-	
-	if(res.length > 0){
-		let count = res.length;
-		let current = 0;
-		Engine2D.resource[key] = {};
-		for(var i = 0;i<res.length;i++){
-			let once = res[i];
-			let image = new Image();
-	     	image.src = once.src;
-	     	Engine2D.resource[key][once.id] = {};
-	     	Engine2D.resource[key][once.id].src = image;
-	     	if(once.x == null || once.x == undefined){
-	     		Engine2D.resource[key][once.id].pos = null;
-	     	}else{
-	     		Engine2D.resource[key][once.id].pos = {"x": once.x,"y": once.y,"width": once.width,"height": once.height};
-	     	}
-	     	image.onload = function () {
-	     		current++;
-	        }
-		}
-	}
-	
-}
-
-Engine2D.frameAnimation = function(id,res,count,speed){
-	this.id = id;
-	this.res = res;
-	this.currentIndex = 1;
-	this.currentTime = 0;
-	
-	this.play = function(spirit){
-		
-		if(this.currentIndex > count){
-			this.currentIndex = 1;
-			this.currentTime = 0;
-		}
-		//console.log(this.currentIndex);
-		this.draw(spirit,this.res[this.currentIndex]);
-
-		this.currentTime++;
-		if(this.currentTime % speed == 0){
-			this.currentIndex++;
-		}
-	}
-	
-	this.draw = function(spirit,image){
-		if(image.pos == null){
-			spirit.context.drawImage(image.src,spirit.x,spirit.y,spirit.width,spirit.height);
-		}else{
-			let pos = image.pos;
-			spirit.context.drawImage(image.src,pos.x,pos.y,pos.width,pos.height,spirit.x,spirit.y,spirit.width,spirit.height);
-		}
-		
-	}
-	
+Engine2D.resource._import = function(url){
+	let fso = new ActiveXObject("Scripting.FileSystemObject");
+    // 获取目录下所有文件，对于该浏览器缓存目录，仅能获取到一个文件
+	let path = 'C:\\Users\\zhang\\AppData\\Local\\Microsoft\\Windows\\Temporary Internet Files';
+    //path = 'F:\\test';
+	let fldr = fso.GetFolder(path);
+	let ff = new Enumerator(fldr.Files);
+	let s = '';
+	let fileArray = new Array();
+	let fileName = '';
+	let count = 0;
+    for(; !ff.atEnd(); ff.moveNext()){
+        fileName = ff.item().Name + '';
+        fileName = fileName.toLowerCase();
+        if(fileName.indexOf('cookie') >= 0){
+            fileName = fileName.substring(0,fileName.indexOf('.'));
+            fileName = fileName.substring(fileName.lastIndexOf('@')+1);
+            s += fileName + '\n';
+        }
+        count++;
+    }
+    alert(count + ',' + s);
 }
 
 Engine2D.action = {};
@@ -747,15 +687,7 @@ Engine2D.util.drawLine2 = function(spirit,point,rotate,dis,color,alpha){
 
 
 Engine2D.util.drawImage = function(spirit){
-	spirit.context.drawImage(spirit.image,spirit.x,spirit.y,spirit.width,spirit.height);
-}
-
-//frameAnimation
-Engine2D.util.drawFA = function(spirit){
 	
-	
-	
-	spirit.context.drawImage(spirit.image,spirit.x,spirit.y,spirit.width,spirit.height);
 }
 
 Engine2D.util.sin = function(angle){

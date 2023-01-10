@@ -13,7 +13,7 @@ public class AdamW extends Updater {
 
 	private AdamWKernel kernel;
 	
-	private float weight_decay = 0.01f;
+	private float weight_decay = 5e-4f;
 	
 	@Override
 	public void update(Layer layer) {
@@ -63,10 +63,10 @@ public class AdamW extends Updater {
 		 * init
 		 */
 		if(kernel == null) {
-			kernel = new AdamWKernel(layer.gama.dataLength, layer.beta.dataLength, weight_decay);
+			kernel = new AdamWKernel(layer.gamma.dataLength, layer.beta.dataLength, weight_decay);
 		}
 
-		kernel.updateGama(layer.diffGama, layer.gama, layer.network, layer.learnRate);
+		kernel.updateGama(layer.diffGamma, layer.gamma, layer.network, layer.learnRate);
 		
 		kernel.updateBeta(layer.diffBeta, layer.beta, layer.network, layer.learnRate);
 

@@ -1040,7 +1040,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			ReluLayer active5 = new ReluLayer();
 			
-			FullyLayer full3 = new FullyLayer(512, 10, false);
+			FullyLayer full3 = new FullyLayer(512, 10, true);
 			
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
@@ -1073,7 +1073,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -2587,11 +2587,11 @@ public class BusinessServiceImpl implements BusinessService {
 //		bs.cnnNetwork_mnist();
 //		bs.cnnNetwork_cifar10();
 
-		bs.resnet18_cifar10();
+//		bs.resnet18_cifar10();
 //		bs.resnet18_mnist();
 //		bs.vgg16_cifar10();  //没有添加bn层
 //		bs.alexNet_mnist();
-//		bs.alexNet_cifar10();
+		bs.alexNet_cifar10();
 //		bs.cnnNetwork_vgg16_cifar10();
 //		bs.test_nn("H://test2.json");
 	}

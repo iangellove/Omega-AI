@@ -1,5 +1,5 @@
 #define BLOCK 1024 
-#define ETA 10e-8 
+#define ETA 1e-8 
 
 extern "C"
 __global__ void adam(float *diffW, float *weight,float *mw,float *vw,float beta1,float beta2,float learnRate, int n, int batch, int t)

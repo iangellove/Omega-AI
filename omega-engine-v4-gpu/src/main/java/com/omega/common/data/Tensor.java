@@ -84,6 +84,21 @@ public class Tensor implements Serializable{
 		}
 	}
 	
+	public Tensor(int number,int channel,int height,int width,int val,boolean hasGPU) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.data = new float[this.dataLength];
+		this.hasGPU = hasGPU;
+		if(hasGPU) {
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+			valueGPU(val);
+			JCuda.cudaDeviceSynchronize();
+		}
+	}
+	
 	public void copy(int n,float[] dest) {
 		if(n < number) {
 			System.arraycopy(data, n * channel * height * width, dest, 0, channel * height * width);
@@ -203,6 +218,10 @@ public class Tensor implements Serializable{
 	
 	public void clearGPU() {
 		checkCUDA(JCuda.cudaMemset(gpuData, 0, this.dataLength * Sizeof.FLOAT));
+	}
+	
+	public void valueGPU(int val) {
+		checkCUDA(JCuda.cudaMemset(gpuData, val, this.dataLength * Sizeof.FLOAT));
 	}
 	
 	public void checkCUDA(int code) {

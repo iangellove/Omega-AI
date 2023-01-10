@@ -61,10 +61,10 @@ public class Adam extends Updater {
 		 * init
 		 */
 		if(kernel == null) {
-			kernel = new AdamKernel(layer.gama.dataLength, layer.beta.dataLength);
+			kernel = new AdamKernel(layer.gamma.dataLength, layer.beta.dataLength);
 		}
 
-		kernel.updateGama(layer.diffGama, layer.gama, layer.network, layer.learnRate);
+		kernel.updateGama(layer.diffGamma, layer.gamma, layer.network, layer.learnRate);
 		
 		kernel.updateBeta(layer.diffBeta, layer.beta, layer.network, layer.learnRate);
 

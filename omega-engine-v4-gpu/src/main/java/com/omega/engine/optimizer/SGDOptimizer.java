@@ -115,4 +115,10 @@ public class SGDOptimizer extends Optimizer {
 		
 	}
 
+	@Override
+	public void train(BaseData trainingData, BaseData validata, BaseData testData) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

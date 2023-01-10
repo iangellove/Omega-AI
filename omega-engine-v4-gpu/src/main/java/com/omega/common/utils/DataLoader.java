@@ -758,52 +758,6 @@ public class DataLoader {
      */
     public static DataSet getImagesToDataSetByBin(String[] fileNames,int number,int channel,int height,int width,int labelSize,String[] labelSet,boolean normalization) {
         
-    	int batchSize = number * fileNames.length;
-    	
-    	float[] x = new float[batchSize * channel * height * width];
-        String[] labels = new String[batchSize];
-        float[] dataLabel = new float[batchSize * labelSize];
-
-    	int index = 0;
-    	
-        for(String fileName:fileNames) {
-
-            try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(fileName))) {
-            	
-            	for(int n = 0;n<number;n++) {
-            		int labelIndex = bin.read();
-            		labels[index] = labelSet[labelIndex];
-            		System.arraycopy(LabelUtils.labelIndexToVector(labelIndex, labelSize), 0, dataLabel, index * labelSize, labelSize);
-            		for(int i = 0;i<channel * height * width;i++) {
-            			if(normalization) {
-        					x[index * channel * height * width + i] = (float) (bin.read() / 255.0d) ;
-                		}else{
-                			x[index * channel * height * width + i] = bin.read();
-                		}
-            		}
-            		
-            		index++;
-            	}
-            	
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            
-        }
-        
-        DataSet data = new DataSet(batchSize, channel, height, width, labelSize, x, dataLabel, labels, labelSet);
-        
-        return data;
-    }
-    
-    /**
-     * get images of 'train' or 'test'
-     *
-     * @param fileName the file of 'train' or 'test' about image
-     * @return one row show a `picture`
-     */
-    public static DataSet getImagesToDataSetByBin(String[] fileNames,int number,int channel,int height,int width,int labelSize,String[] labelSet,boolean normalization,float[] mean,float[] std) {
-        
     	int fileNumber = fileNames.length;
     	
     	int batchSize = number * fileNumber;
@@ -829,7 +783,7 @@ public class DataLoader {
             			if(normalization) {
 //        					x[n][c][h][w] = (bin.read()&0xff)/128.0f-1;//normalize and centerlize(-1,1)
 //        					x[n][c][h][w] = (float) (bin.read() / 255.0d) - 0.5f;
-        					x[index * channel * height * width + i] = (float) ((bin.read() / 255.0f) - mean[c]) / std[c];
+        					x[index * channel * height * width + i] = (float) (bin.read() / 255.0f);
                 		}else{
                 			x[index * channel * height * width + i] = bin.read();
                 		}

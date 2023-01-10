@@ -2,9 +2,8 @@ package com.omega.engine.nn.layer.normalization;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.engine.gpu.cudnn.BNCudnnKernel;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.normalization.gpu.BNKernel;
-import com.omega.engine.nn.layer.normalization.gpu.BNKernel2;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
 
@@ -29,15 +28,17 @@ public class BNLayer extends NormalizationLayer {
 	 */
 	private int meanNum = 0;
 	
-	public Tensor gama;
+	public Tensor gamma;
 	
 	public Tensor beta;
 	
-	public Tensor diffGama;
+	public Tensor diffGamma;
 	
 	public Tensor diffBeta;
 	
-	private BNKernel kernel;
+//	private BNKernel kernel;
+	
+	private BNCudnnKernel kernel;
 	
 //	private com.omega.engine.gpu.BNKernel kernelv3;
 //	
@@ -82,10 +83,10 @@ public class BNLayer extends NormalizationLayer {
 			}
 		}
 		
-		if(this.gama == null || this.beta == null) {
-			this.gama = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
+		if(this.gamma == null || this.beta == null) {
+			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
 			this.beta = new Tensor(1, 1, 1, meanNum, true);
-			this.diffGama = new Tensor(1, 1, 1, meanNum, true);
+			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
 			this.diffBeta = new Tensor(1, 1, 1, meanNum, true);
 		}
 
@@ -96,7 +97,8 @@ public class BNLayer extends NormalizationLayer {
 		}
 		
 		if(kernel == null) {
-			kernel = new BNKernel(this.getBnType(), channel, height, width);
+//			kernel = new BNKernel(this.getBnType(), channel, height, width);
+			kernel = new BNCudnnKernel(this.getBnType(), channel, height, width);
 		}
 		
 //		if(kernelv3 == null) {
@@ -136,7 +138,7 @@ public class BNLayer extends NormalizationLayer {
 	public void output() {
 		// TODO Auto-generated method stub
 
-		kernel.forward(this.network.RUN_MODEL, gama, beta, input, output);
+		kernel.forward(this.network.RUN_MODEL, gamma, beta, input, output);
 //		
 //		System.out.println("bn-output:");
 //		output.showDM();
@@ -199,7 +201,7 @@ public class BNLayer extends NormalizationLayer {
 		
 //		long start = System.nanoTime();
 		
-		kernel.backward(input, delta, diff, gama, diffGama, diffBeta);
+		kernel.backward(input, delta, diff, gamma, diffGamma, diffBeta);
 
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
 		
@@ -232,8 +234,8 @@ public class BNLayer extends NormalizationLayer {
 		if(this.updater != null){
 			this.updater.updateForBN(this);
 		}else{
-			for(int i = 0;i<this.gama.dataLength;i++) {
-				this.gama.data[i] -= this.learnRate * this.diffGama.data[i];
+			for(int i = 0;i<this.gamma.dataLength;i++) {
+				this.gamma.data[i] -= this.learnRate * this.diffGamma.data[i];
 			}
 			for(int i = 0;i<this.beta.dataLength;i++) {
 				this.beta.data[i] -= this.learnRate * this.diffBeta.data[i];
@@ -279,10 +281,6 @@ public class BNLayer extends NormalizationLayer {
 	public void initCache() {
 		// TODO Auto-generated method stub
 		
-	}
-
-	public BNKernel getKernel() {
-		return kernel;
 	}
 
 	@Override

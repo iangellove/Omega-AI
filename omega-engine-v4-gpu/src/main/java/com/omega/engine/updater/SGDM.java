@@ -50,11 +50,11 @@ public class SGDM extends Updater {
 		 * init
 		 */
 		if(kernel == null) {
-			kernel = new SGDKernel(layer.gama.dataLength, layer.beta.dataLength);
+			kernel = new SGDKernel(layer.gamma.dataLength, layer.beta.dataLength);
 			kernel.weight_decay = 0.0f;
 		}
 
-		kernel.updateW(layer.diffGama, layer.gama, layer.network, layer.learnRate);
+		kernel.updateW(layer.diffGamma, layer.gamma, layer.network, layer.learnRate);
 		
 		kernel.updateB(layer.diffBeta, layer.beta, layer.network, layer.learnRate);
 

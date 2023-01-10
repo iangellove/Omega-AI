@@ -115,9 +115,9 @@ __global__ void mwa(float* mean,float* var,float* runingMean,float* runingVar,in
     
     for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < n; index += blockDim.x * gridDim.x) {
 		
-		runingMean[index] = (1.0f - momentum) * runingMean[index] + momentum * mean[index];
+		runingMean[index] = momentum * runingMean[index] + (1.0f - momentum) * mean[index];
 		
-		runingVar[index] = (1.0f - momentum) * runingVar[index] + momentum * var[index];
+		runingVar[index] = momentum * runingVar[index] + (1.0f - momentum) * var[index];
 		
 	}
 
