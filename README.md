@@ -104,19 +104,19 @@ iris（鸢尾花数据集）
 
 mnist（手写数字数据集）
 
-cifat_10 （cifat_10数据集）
+cifar_10 （cifar_10数据集）
 
 ### 数据集成绩
 
-iris 训练次数8 bp神经网络[3层全连接层]  测试数据集准确率100%
+iris echo:5 bp神经网络[3层全连接层]  测试数据集准确率100%
 
-mnist 训练次数10 alexnet 测试数据集准确率98.6% 
+mnist echo:10 alexnet 测试数据集准确率98.6% 
 
-cifat_10 训练次数10 alexnet 测试数据集准确率76.6%
+cifar_10 echo:50 alexnet 测试数据集准确率76.6%
 
-cifat_10 训练次数10 vgg16 测试数据集准确率86.45%
+cifar_10 echo:50 vgg16 测试数据集准确率86.45%
 
-cifat_10 训练次数10 resnet18 [batchSize:128,learningRate:0.001] 测试数据集准确率93.22% 
+cifar_10 echo:300 resnet18 [batchSize:128,初始learningRate:0.1,learnRateUpdate:GD_GECAY,optimizer:adamw] 数据预处理[randomCrop,randomHorizontalFilp,cutout,normalize] 测试数据集准确率91.23% 
 
 ## 事例代码
 
@@ -430,7 +430,7 @@ http://119.3.123.193:8011/AICar
 
 4.参考darknet对学习率更新机制进行升级，目前已支持RANDOM、POLY、STEP、EXP、SIG等多种学习率更新方法，并且实现学习率warmup功能
 
-5.添加basicblock模块，新增resnet模型支持，目前该模型在cifar10数据集上的表现，训练次数10，测试数据集准确率为93.22%
+5.添加basicblock模块，新增resnet模型支持，目前该模型在cifar10数据集上的表现，echo:300，测试数据集准确率为91.23%
 
 ### omega-engine-v3-gpu
 #### 2022-07-02
@@ -451,6 +451,17 @@ http://119.3.123.193:8011/AICar
 3.全面优化gpu计算，更新cuda核函数实现，使得训练与预测计算效获得大大提升
 
 4.后续版本将进一步优化gpu版本，预计将整个计算过程搬迁入gpu计算，从而减少主机与设备(显卡)之间传输，希望进一步获得更快的计算速度
+
+#### 2023-01-10
+1.开启omega-engine-v4-gpu版本开发，该版本将实现对omega-engine的CUDNN全面支持.
+
+2.新增全局平均池化层实现
+
+3.将softmax与cross_entropy结合成softmax_with_cross_entropy作为损失函数使用(注意:使用softmax_with_cross_entropy损失函数,将不需要额外添加SoftmaxLayer).
+
+4.新增BN层对CUDNN支持，实现源码请移步BNCudnnKernel.java
+
+5.后续版本将逐渐实现引擎对CUDNN支持
 
 
 ## 欢迎打扰
