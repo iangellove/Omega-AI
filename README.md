@@ -108,15 +108,15 @@ cifar_10 （cifar_10数据集）
 
 ### 数据集成绩
 
-iris echo:5 bp神经网络[3层全连接层]  测试数据集准确率100%
+iris epoch:5 bp神经网络[3层全连接层]  测试数据集准确率100%
 
-mnist echo:10 alexnet 测试数据集准确率98.6% 
+mnist epoch:10 alexnet 测试数据集准确率98.6% 
 
-cifar_10 echo:50 alexnet 测试数据集准确率76.6%
+cifar_10 epoch:50 alexnet 测试数据集准确率76.6%
 
-cifar_10 echo:50 vgg16 测试数据集准确率86.45%
+cifar_10 epoch:50 vgg16 测试数据集准确率86.45%
 
-cifar_10 echo:300 resnet18 [batchSize:128,初始learningRate:0.1,learnRateUpdate:GD_GECAY,optimizer:adamw] 数据预处理[randomCrop,randomHorizontalFilp,cutout,normalize] 测试数据集准确率91.23% 
+cifar_10 epoch:300 resnet18 [batchSize:128,初始learningRate:0.1,learnRateUpdate:GD_GECAY,optimizer:adamw] 数据预处理[randomCrop,randomHorizontalFilp,cutout,normalize] 测试数据集准确率91.23% 
 
 ## 事例代码
 
@@ -430,7 +430,7 @@ http://119.3.123.193:8011/AICar
 
 4.参考darknet对学习率更新机制进行升级，目前已支持RANDOM、POLY、STEP、EXP、SIG等多种学习率更新方法，并且实现学习率warmup功能
 
-5.添加basicblock模块，新增resnet模型支持，目前该模型在cifar10数据集上的表现，echo:300，测试数据集准确率为91.23%
+5.添加basicblock模块，新增resnet模型支持，目前该模型在cifar10数据集上的表现，epoch:300，测试数据集准确率为91.23%
 
 ### omega-engine-v3-gpu
 #### 2022-07-02
