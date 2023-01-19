@@ -2,6 +2,9 @@ package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.gpu.cudnn.ConvCudnnKernel;
+import com.omega.engine.nn.layer.gpu.BiasKernel;
+import com.omega.engine.nn.layer.gpu.ConvBaseKernel;
 import com.omega.engine.nn.layer.gpu.ConvKernel;
 import com.omega.engine.nn.model.ConvLayerInit;
 import com.omega.engine.nn.model.LayerInit;
@@ -26,7 +29,9 @@ public class ConvolutionLayer extends Layer {
 	
 	public int padding = 0;
 	
-	private ConvKernel kernel;
+	private ConvBaseKernel kernel;
+	
+	private BiasKernel biasKernel;
 	
 	/**
 	 * ConvolutionLayer
@@ -132,7 +137,15 @@ public class ConvolutionLayer extends Layer {
 			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		}
 		if(kernel == null){
-			kernel = new ConvKernel(channel, height, width, kernelNum, kHeight, kWidth, stride, padding);
+			if(this.network.CUDNN) {
+				kernel = new ConvCudnnKernel(this.network, channel, height, width, kernelNum, kHeight, kWidth, stride, padding);
+			}else {
+				kernel = new ConvKernel(channel, height, width, kernelNum, kHeight, kWidth, stride, padding);
+			}
+			
+			if(this.hasBias) {
+				biasKernel = new BiasKernel();
+			} 
 		}
 	}
 
@@ -152,7 +165,7 @@ public class ConvolutionLayer extends Layer {
 		kernel.conv(input, weight, output);
 
 		if(this.hasBias) {
-			kernel.addBias(output, bias);
+			biasKernel.addConvBias(output, bias);
 		}
 		
 //		System.out.println(JsonUtils.toJson(output.getByNumberAndChannel(0, 0)));
@@ -184,7 +197,7 @@ public class ConvolutionLayer extends Layer {
 		 * 计算deltaB
 		 */
 		if(this.hasBias) {
-			kernel.backwardBias(diffB, delta);
+			biasKernel.backwardConvBias(diffB, delta);
 		}
 		
 		/**

@@ -4,6 +4,8 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.cudnn.BNCudnnKernel;
 import com.omega.engine.nn.layer.LayerType;
+import com.omega.engine.nn.layer.gpu.BNBaseKernel;
+import com.omega.engine.nn.layer.normalization.gpu.BNKernel;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
 
@@ -36,17 +38,10 @@ public class BNLayer extends NormalizationLayer {
 	
 	public Tensor diffBeta;
 	
-//	private BNKernel kernel;
+	private BNBaseKernel kernel;
 	
-	private BNCudnnKernel kernel;
-	
-//	private com.omega.engine.gpu.BNKernel kernelv3;
-//	
-//	private Tensor output2;
-//	
-//	public float[] deltaGama;
-//	
-//	public float[] deltaBeta;
+//	private BNCudnnKernel kernel;
+
 	
 	public boolean hasRuning = true;
 	
@@ -97,28 +92,13 @@ public class BNLayer extends NormalizationLayer {
 		}
 		
 		if(kernel == null) {
-//			kernel = new BNKernel(this.getBnType(), channel, height, width);
-			kernel = new BNCudnnKernel(this.getBnType(), channel, height, width);
+			
+			if(this.network.CUDNN) {
+				kernel = new BNCudnnKernel(this.getBnType(), channel, height, width);
+			}else {
+				kernel = new BNKernel(this.getBnType(), channel, height, width);	
+			}
 		}
-		
-//		if(kernelv3 == null) {
-//			this.deltaGama = MatrixUtils.zero(this.meanNum);
-//			this.deltaBeta = MatrixUtils.zero(this.meanNum);
-//			switch (this.getBnType()) {
-//			case fully_bn:
-//				kernelv3 = new com.omega.engine.gpu.BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn", this.getBnType(), output2, diff, deltaGama, deltaBeta, number, width, height, channel);
-//				break;
-//			case conv_bn:
-//				kernelv3 = new com.omega.engine.gpu.BNKernel(this.preLayer.index+":"+this.preLayer.getLayerType()+"_bn", this.getBnType(), output2, diff, deltaGama, deltaBeta, number, channel, height, width);
-//				break;
-//			}
-//		}
-		
-//		if(!hasRuning) {
-//			hasRuning = true;
-//			kernel.setRuningMean(runingMean);
-//			kernel.setRuningVar(runingVar);
-//		}
 		
 	}
 	
@@ -142,20 +122,7 @@ public class BNLayer extends NormalizationLayer {
 //		
 //		System.out.println("bn-output:");
 //		output.showDM();
-//		
-//		input.syncHost();
-//		gama.syncHost();
-//		beta.syncHost();
-//		
-//		kernelv3.setX(input, number);
-//		
-//		kernelv3.setGama(gama.data, beta.data);
-//		
-//		kernelv3.forward(this.network.RUN_MODEL);
-//		
-//		System.out.println("bn-outputv3:");
-//		System.out.println(JsonUtils.toJson(output2.data));
-//		
+
 	}
 	
 	@Override

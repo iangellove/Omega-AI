@@ -4,7 +4,7 @@ import static jcuda.jcudnn.cudnnDataType.CUDNN_DATA_FLOAT;
 import static jcuda.jcudnn.cudnnTensorFormat.CUDNN_TENSOR_NCHW;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.nn.layer.gpu.BNBaseKernel;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.network.RunModel;
 
@@ -18,7 +18,7 @@ import jcuda.jcudnn.cudnnTensorDescriptor;
  * @author Administrator
  *
  */
-public class BNCudnnKernel extends BaseKernel{
+public class BNCudnnKernel extends BNBaseKernel{
 	
 	private BNType bnType;
 
@@ -75,8 +75,7 @@ public class BNCudnnKernel extends BaseKernel{
 			var = new Tensor(1, 1, 1, C, true);
 		    
 		    runingMean = new Tensor(1, 1, 1, C, true);
-		    runingVar = new Tensor(1, 1, 1, C, true);
-		    
+		    runingVar = new Tensor(1, 1, 1, C, true); 
 		}
 		
 	    xDesc = new cudnnTensorDescriptor();
@@ -150,7 +149,7 @@ public class BNCudnnKernel extends BaseKernel{
 		CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationBackward(CudnnHandleManager.getHandle(), mode,
 	    		alpha_P, beta_P, alpha_P, alpha_P, xDesc, input.getGpuData(), dyDesc, delta.getGpuData(), dxDesc, diff.getGpuData(),
 	    		dBnScaleBiasDesc, gamma.getGpuData(), dgamma.getGpuData(), dbeta.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
-
+		
 	}	
 		
 }

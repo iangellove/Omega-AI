@@ -2699,6 +2699,8 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.sgd);
 			
+			netWork.CUDNN = true;
+			
 			netWork.learnRate = 0.1f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
@@ -2818,7 +2820,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full1);
 //			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 300, 0.001f, 128, LearnRateUpdate.GD_GECAY, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 250, 0.001f, 128, LearnRateUpdate.GD_GECAY, false);
 
 			long start = System.currentTimeMillis();
 			

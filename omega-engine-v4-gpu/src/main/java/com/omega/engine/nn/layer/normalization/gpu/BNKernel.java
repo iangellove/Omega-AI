@@ -9,9 +9,9 @@ import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.PrintUtils;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
+import com.omega.engine.nn.layer.gpu.BNBaseKernel;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.network.RunModel;
 
@@ -24,7 +24,7 @@ import jcuda.runtime.cudaError;
 
 
 
-public class BNKernel extends BaseKernel{
+public class BNKernel extends BNBaseKernel{
 	
 	private BNType bnType;
 
@@ -805,9 +805,9 @@ public class BNKernel extends BaseKernel{
 			computeDgama();
 			computeDbeta();
 		}else {
-//			computeDgama();
-//			computeDbeta();
-			computeDParams(delta, dgama, dbeta);
+			computeDgama();
+			computeDbeta();
+//			computeDParams(delta, dgama, dbeta);
 		}
 
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.1");
@@ -1056,8 +1056,8 @@ public class BNKernel extends BaseKernel{
     	
     	CUDAModules.initContext();
     	
+//    	test1d();
     	test2d();
-//    	test2d();
 //    	System.out.println(gradientCheck());
     	
     }

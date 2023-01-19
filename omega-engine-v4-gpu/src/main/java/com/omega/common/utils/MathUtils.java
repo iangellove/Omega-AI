@@ -44,7 +44,7 @@ public class MathUtils {
 	 */
 	public static int[][] randomInts(int length,int batchSize) {
 		
-		int itc = new BigDecimal(length).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		int itc = new BigDecimal(length).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_DOWN).intValue();
 		
 		int[][] tmp = new int[itc][batchSize];
 		
@@ -76,7 +76,7 @@ public class MathUtils {
 	 */
 	public static int[][] sortInt(int length,int batchSize) {
 		
-		int itc = new BigDecimal(length).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		int itc = new BigDecimal(length).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_DOWN).intValue();
 		
 		int[][] tmp = new int[itc][batchSize];
 		

@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import com.omega.common.data.Tensor;
 import com.omega.common.task.TaskEngine;
 import com.omega.common.utils.LabelUtils;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.network.Network;
@@ -74,6 +75,10 @@ public abstract class Optimizer {
 	public int lrStartTime = 5;
 	
 	public float max_lr = 0.1f;
+	
+	public float min_loss = Float.NEGATIVE_INFINITY;
+	
+	public int counter = 0;
 	
 	public abstract void train(BaseData trainingData);
 	
@@ -208,6 +213,64 @@ public abstract class Optimizer {
 		
 	}
 	
+	public void updateLR(float loss) {
+		
+		if(warmUp && batchIndex < burnIn) {
+			this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+		}else {
+			
+			switch (this.learnRateUpdate) {
+			case LR_DECAY:
+				this.network.learnRate = LRDecay.decayedLR(this.max_lr, this.network.learnRate, this.trainIndex, 5);
+				break;
+			case GD_GECAY:
+				this.network.learnRate = GDDecay.decayedLR(this.max_lr, this.trainIndex);
+				break;
+			case NONE:
+				break;
+			case CONSTANT:
+				break;
+			case COSINE:
+				if(this.trainIndex >= lrStartTime) {
+					this.network.learnRate = (float) (0.5d * max_lr * (Math.cos(this.trainIndex/trainTime * Math.PI)) + 1.0d) * this.network.learnRate;
+				}else {
+					this.network.learnRate = this.trainIndex * this.network.learnRate / lrStartTime;
+				}
+				break;
+			case RANDOM:
+				this.network.learnRate = (float) Math.pow(RandomUtils.getInstance().nextFloat(), power) * this.lr;
+				break;
+			case POLY:
+				float t = batchIndex * 1.0f / trainTime / dataSize * batchSize;
+				this.network.learnRate = (float) (this.lr * Math.pow((1.0f - t), power));
+				break;
+			case STEP:
+				this.network.learnRate = (float) (this.lr * Math.pow(this.scale, batchIndex / step));
+				break;
+			case EXP:
+				this.network.learnRate = (float) (this.lr * Math.pow(this.gama, batchIndex));
+				break;
+			case SIG:
+				this.network.learnRate = (float) (this.lr / (1.0f + Math.pow(Math.E, this.gama * (batchIndex - step))));
+				break;
+			case HALF:
+				this.network.learnRate = HalfDecay.decayedLR(this.network.learnRate, this.trainIndex, 10);
+				break;
+			case SMART_HALF:
+				if(loss <= min_loss) {
+					this.network.learnRate = HalfDecay.decayedLR(this.network.learnRate, this.counter, 10);
+					min_loss = loss;
+					this.counter = 0;
+				}else {
+					this.counter++;
+				}
+				break;
+			}
+			
+		}
+		
+	}
+	
 	public float test(BaseData testData) {
 		// TODO Auto-generated method stub
 		float error = 0.0f;
@@ -286,6 +349,57 @@ public abstract class Optimizer {
 		System.out.println("training["+this.trainIndex+"] vail accuracy:{"+ error * 100 +"%}"+" [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
 		
 		return error;
+	}
+	
+	public float testAndLoss(BaseData testData,int batchSize) {
+		// TODO Auto-generated method stub
+		float error = 0.0f;
+		
+		float trueCount = 0;
+		
+		float vailLoss = 0.0f;
+		
+		long startTime = System.nanoTime();
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		Tensor input = new Tensor(batchSize, testData.channel, testData.height, testData.width, true);
+		
+		Tensor label = new Tensor(batchSize, testData.label.channel, testData.label.height, testData.label.width);
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_DOWN).intValue();
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.getBatchData(pageIndex, batchSize, input, label);
+			
+			input.hostToDevice();
+			
+			Tensor output = this.network.predict(input);
+			
+			/**
+			 * loss
+			 */
+			Tensor loss = this.network.loss(output, label);
+			
+			/**
+			 * current time error
+			 */
+			vailLoss += MatrixOperation.sum(loss.syncHost()) / batchSize;
+			
+			output.syncHost();
+			
+			trueCount += this.accuracyTrueCount(output, label, testData.labelSet);
+
+		}
+		
+		error = trueCount / itc / batchSize;
+		
+		vailLoss = vailLoss / itc;
+		
+		System.out.println("training["+this.trainIndex+"] vail accuracy:{"+ error * 100 +"%} vail loss:{"+vailLoss+"} "+" [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
+		
+		return vailLoss;
 	}
 	
 	public float accuracy(Tensor output,Tensor labelData,String[] labelSet) {

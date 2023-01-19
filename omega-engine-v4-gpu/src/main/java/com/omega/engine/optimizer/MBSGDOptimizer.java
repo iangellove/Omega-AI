@@ -2,13 +2,11 @@ package com.omega.engine.optimizer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.controller.TrainTask;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
-import com.omega.engine.nn.data.DataSet;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
@@ -489,7 +487,7 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					this.network.update();
 					
-					JCudaDriver.cuCtxSynchronize();
+//					JCudaDriver.cuCtxSynchronize();
 					
 //					System.out.println("back:"+(System.nanoTime() - back_start) / 1e6 + "ms.");
 
@@ -502,7 +500,7 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
 					
-					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} currentError:"+this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
 					System.out.println(msg);
 					
@@ -514,24 +512,20 @@ public class MBSGDOptimizer extends Optimizer {
 						TrainTask.sendMsg(this.getSid(), msg);
 						
 					}
-					
-//					/**
-//					 * update learning rate
-//					 */
-//					this.updateLR();
-					
+
 					this.batchIndex++;
 				}
 				
 				/**
-				 * update learning rate
-				 */
-				this.updateLR();
-				
-				/**
 				 * vail data test
 				 */
-				this.test(validata, this.batchSize);
+				float vail_loss = this.testAndLoss(validata, this.batchSize);
+
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(vail_loss);
+				
 			}
 			
 			/**

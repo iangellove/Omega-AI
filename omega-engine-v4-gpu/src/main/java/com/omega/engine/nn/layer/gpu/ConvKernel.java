@@ -5,7 +5,6 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.gpu.GPUOP;
@@ -18,7 +17,7 @@ import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 import jcuda.runtime.cudaMemcpyKind;
 
-public class ConvKernel extends BaseKernel{
+public class ConvKernel extends ConvBaseKernel{
 
 	private int C;
 	private int H;
@@ -134,6 +133,7 @@ public class ConvKernel extends BaseKernel{
 			}
 			
 			sgemm(kernel, output, i);
+			
 		}
 		
 	}

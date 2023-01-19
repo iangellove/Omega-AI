@@ -46,6 +46,7 @@ public class SGDM extends Updater {
 	@Override
 	public void updateForBN(BNLayer layer) {
 		// TODO Auto-generated method stub
+		
 		/**
 		 * init
 		 */

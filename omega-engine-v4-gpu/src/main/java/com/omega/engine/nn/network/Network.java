@@ -10,6 +10,8 @@ import com.omega.engine.nn.model.NetworkInit;
 import com.omega.engine.updater.UpdaterFactory;
 import com.omega.engine.updater.UpdaterType;
 
+import jcuda.Pointer;
+
 /**
  * base network
  * 
@@ -17,6 +19,8 @@ import com.omega.engine.updater.UpdaterType;
  *
  */
 public abstract class Network {
+	
+	public boolean CUDNN = false;
 	
 	private int threadNum = 8;
 	
@@ -68,6 +72,10 @@ public abstract class Network {
 	public int oWidth = 0;
 	
 	public int train_time = 0;
+
+	public long workspaceSize = 0;
+	
+	public Pointer workspace;
 	
 	public abstract void init() throws Exception;
 	
