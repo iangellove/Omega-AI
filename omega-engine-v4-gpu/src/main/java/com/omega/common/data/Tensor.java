@@ -3,6 +3,7 @@ package com.omega.common.data;
 import java.io.Serializable;
 
 import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 
 import jcuda.Pointer;
@@ -90,12 +91,10 @@ public class Tensor implements Serializable{
 		this.height = height;
 		this.width = width;
 		this.dataLength = number * channel * height * width;
-		this.data = new float[this.dataLength];
+		this.data = MatrixUtils.val(this.dataLength, val);
 		this.hasGPU = hasGPU;
 		if(hasGPU) {
-			gpuData = CUDAMemoryManager.getPointer(dataLength);
-			valueGPU(val);
-			JCuda.cudaDeviceSynchronize();
+			hostToDevice();
 		}
 	}
 	
@@ -196,6 +195,10 @@ public class Tensor implements Serializable{
 
 	public Pointer getGpuData() {
 		return gpuData;
+	}
+	
+	public void setGpuData(Pointer gpuData) {
+		this.gpuData = gpuData;
 	}
 	
 	public float[] syncHost() {

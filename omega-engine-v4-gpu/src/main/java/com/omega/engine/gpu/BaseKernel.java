@@ -21,4 +21,10 @@ public class BaseKernel {
 	    System.out.println(JsonUtils.toJson(data));
 	}
 	
+	public void showDM(Pointer p,int size) {
+		float[] data = new float[size];
+		JCuda.cudaMemcpy(Pointer.to(data), p, data.length * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+	    System.out.println(JsonUtils.toJson(data));
+	}
+	
 }

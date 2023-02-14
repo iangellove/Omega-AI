@@ -1,5 +1,6 @@
 package com.omega.common.utils;
 
+import java.security.SecureRandom;
 import java.util.Random;
 
 import com.omega.engine.active.ActiveType;
@@ -91,9 +92,50 @@ public class RandomUtils {
 		 * std = gain / math.sqrt(fan)
 		 */
 		float std = (float) (gain / Math.sqrt(fan));
-		
+		float mean = 0;
 		for(int i = 0;i<x;i++) {
+//			temp[i] = (float) (Math.sqrt(std) * getInstance().nextGaussian() + mean);
 			temp[i] = (float) (getInstance().nextGaussian() * std);
+		}
+		return temp;
+	}
+	
+//	/**
+//	 * kaiming初始化(0,std)
+//	 * N～ (0,std)
+//	 * std = sqrt(2/(1+a^2)*fan_in)
+//	 * a 为激活函数的负半轴的斜率，relu 是 0
+//	 * @param x
+//	 * @return
+//	 */
+//	public static float[] kaimingNormalRandom(int x,float a,float fan){
+//		float[] temp = new float[x];
+//		/**
+//		 * std = gain / math.sqrt(fan)
+//		 */
+//		float std = (float) Math.sqrt(2 / (1 + Math.pow(a, 2)) * fan);
+//		float mean = 0;
+//		for(int i = 0;i<x;i++) {
+//			temp[i] = (float) (std * getInstance().nextGaussian() + mean);
+//		}
+//		return temp;
+//	}
+	
+	/**
+	 * kaiming初始化(均值分布)
+	 * N～ (0,std)
+	 * std = sqrt(2/(1+a^2)*fan_in)
+	 * a 为激活函数的负半轴的斜率，relu 是 0
+	 * @param x
+	 * @return
+	 */
+	public static float[] kaimingUniformRandom(int x,float a,float fan){
+		float[] temp = new float[x];
+		float bound = (float) Math.sqrt(6/(1+Math.pow(a, 2))*fan);
+		float max = bound;
+		float min = - bound;
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) Math.random() * (max - min) + min;
 		}
 		return temp;
 	}
@@ -106,11 +148,13 @@ public class RandomUtils {
 	 * @param x
 	 * @return
 	 */
-	public static float[] kaimingUniformRandom(int x,float a,float n){
+	public static float[] kaimingUniformBias(int x,float n){
 		float[] temp = new float[x];
-		float t = (float) Math.sqrt(6.0d / (1 + a * a) * n);
+		float bound = (float) (1 / Math.sqrt(n));
+		float max = bound;
+		float min = - bound;
 		for(int i = 0;i<x;i++) {
-			temp[i] = (float) Math.random() * (t - (-t)) + t;
+			temp[i] = (float) Math.random() * (max - min) + min;
 		}
 		return temp;
 	}

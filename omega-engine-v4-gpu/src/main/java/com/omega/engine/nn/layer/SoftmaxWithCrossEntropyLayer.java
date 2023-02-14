@@ -76,7 +76,7 @@ public class SoftmaxWithCrossEntropyLayer extends Layer {
 	public void diff() {
 		// TODO Auto-generated method stub
 		
-		kernel.backward(output, currentLabel, diff);
+		kernel.backward2(output, currentLabel, diff);
 //		diff.showDM();
 //
 //		System.out.println("softmax-diff:");

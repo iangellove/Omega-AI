@@ -428,7 +428,7 @@ __global__ void dx_kernel_full(float *z, float *std, float *diff, float *mean_dz
 		for(int n = 0;n<batch;n++) {	
 			int xIndex = n * filters + index;
 			diff[xIndex] = 1.0f / std[index] * (diff[index] - mean_dz[index] - z[xIndex] * mean_dzxz[index]);
-		}	
+		}
 		
 	}
 

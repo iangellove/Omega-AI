@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
+import com.omega.common.data.utils.TrainDataLoader;
 import com.omega.common.utils.DataLoader;
 import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.JsonUtils;
@@ -904,7 +905,9 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 28;
 			
-			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
+			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adamw);
+			
+			netWork.CUDNN = true;
 			
 			netWork.learnRate = 0.1f;
 			
@@ -959,7 +962,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			ReluLayer active5 = new ReluLayer();
 			
-			FullyLayer full3 = new FullyLayer(512, 10, false);
+			FullyLayer full3 = new FullyLayer(512, 10);
 
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
@@ -994,7 +997,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full3);
 			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.0001f, 128, LearnRateUpdate.GD_GECAY, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -1040,27 +1043,10 @@ public class BusinessServiceImpl implements BusinessService {
 			float[] std = new float[] {0.229f, 0.224f, 0.225f};
 			
 			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true);
-	    	
+
 			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 			
 			System.out.println("data is ready.");
-//			
-//			/**
-//			 * 随机裁剪
-//			 */
-//			DataTransforms.randomCrop(trainData.input, 32, 32, 4);
-//			
-//			/**
-//			 * 随机翻转
-//			 */
-//			DataTransforms.randomHorizontalFilp(trainData.input);
-//			
-//			/**
-//			 * cutcout
-//			 */
-//			DataTransforms.cutout(trainData.input, 16);
-//			
-//			System.out.println("data transform finish.");
 			
 			int channel = 3;
 			
@@ -1068,7 +1054,9 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 32;
 			
-			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw);
+			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.sgd);
+			
+			netWork.CUDNN = true;
 			
 			netWork.learnRate = 0.1f;
 			
@@ -1131,7 +1119,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			FullyLayer full3 = new FullyLayer(4096, 10);
 			
-//			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
+			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
 			netWork.addLayer(inputLayer);
 			netWork.addLayer(conv1);
@@ -1161,13 +1149,13 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(bn7);
 			netWork.addLayer(active7);
 			netWork.addLayer(full3);
-//			netWork.addLayer(softmax);
+			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 50, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 50, 0.0001f, 128, LearnRateUpdate.GD_GECAY, false);
 
 			long start = System.currentTimeMillis();
 			
-			optimizer.train(trainData, testData);
+			optimizer.train(trainData, testData, mean, std);
 			
 			optimizer.test(testData);
 			
@@ -2682,11 +2670,11 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
 			
-			float[] mean = new float[] {0.485f, 0.456f, 0.406f};
-			float[] std = new float[] {0.229f, 0.224f, 0.225f};
+			float[] mean = new float[] {0.491f, 0.482f, 0.446f};
+			float[] std = new float[] {0.247f, 0.243f, 0.261f};
 			
 			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true);
-	    	
+
 			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 			
 			System.out.println("data is ready.");
@@ -2697,7 +2685,9 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 32;
 			
-			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.sgd);
+			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw);
+			
+//			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.sgd);
 			
 			netWork.CUDNN = true;
 			
@@ -2773,7 +2763,7 @@ public class BusinessServiceImpl implements BusinessService {
 			 * fully  512 * 1 * 1
 			 */
 			int fInputCount = pool2.oChannel * pool2.oWidth * pool2.oHeight;
-
+			
 			FullyLayer full1 = new FullyLayer(fInputCount, 10);
 
 //			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
@@ -2841,6 +2831,7 @@ public class BusinessServiceImpl implements BusinessService {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
 		}
 		
 	}

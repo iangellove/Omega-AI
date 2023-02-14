@@ -76,3 +76,13 @@ __global__ void softmax_back(float *output, float *currentLabel, float *diff, in
 	diff[id] = output[id] - currentLabel[id];    
 
 }
+
+extern "C"
+__global__ void softmax_back2(float *output, float *currentLabel, float *diff, int n, int batch)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= n) return;
+	
+	diff[id] = (output[id] - currentLabel[id]) / batch;    
+
+}

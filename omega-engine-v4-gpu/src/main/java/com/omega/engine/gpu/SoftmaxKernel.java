@@ -19,11 +19,15 @@ public class SoftmaxKernel extends BaseKernel{
 	
 	private CUfunction softmax_backward_function;
 	
+	private CUfunction softmax_backward_function2;
+	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
 	private Pointer kernelParameters;
 	
 	private Pointer backKernelParameters;
+	
+	private Pointer backKernelParameters2;
 	
 	public SoftmaxKernel() {
 		init();
@@ -48,6 +52,12 @@ public class SoftmaxKernel extends BaseKernel{
 			if(softmax_backward_function == null) {
 				
 				softmax_backward_function = CUDAModules.getFunctionByModule("H://SoftmaxKernel.cu", "softmax_back");
+        
+			}
+			
+			if(softmax_backward_function2 == null) {
+				
+				softmax_backward_function2 = CUDAModules.getFunctionByModule("H://SoftmaxKernel.cu", "softmax_back2");
         
 			}
 			
@@ -147,6 +157,34 @@ public class SoftmaxKernel extends BaseKernel{
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
 	            backKernelParameters, null // Kernel- and extra parameters
+	        );
+		
+//		JCudaDriver.cuCtxSynchronize();
+		
+	}
+	
+	public void backward2(Tensor output,Tensor currentLabel,Tensor diff) {
+
+		if(backKernelParameters2 == null) {
+
+			/**
+			 * float* x,float* mean,float* var,int number,int channel,int height,int width
+			 */
+			backKernelParameters2 = Pointer.to(
+	                Pointer.to(output.getGpuData()),
+	                Pointer.to(currentLabel.getGpuData()),
+	                Pointer.to(diff.getGpuData()),
+	                Pointer.to(new int[] {diff.dataLength}),
+	                Pointer.to(new int[] {N})
+	            );
+
+		}
+		
+		cuLaunchKernel(softmax_backward_function2,
+				this.CAFFE_GET_BLOCKS(diff.dataLength),  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            backKernelParameters2, null // Kernel- and extra parameters
 	        );
 		
 //		JCudaDriver.cuCtxSynchronize();

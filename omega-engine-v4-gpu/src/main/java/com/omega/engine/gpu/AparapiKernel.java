@@ -74,34 +74,30 @@ public class AparapiKernel extends Kernel{
 
 	public static void main(String args[]) {
 		
-//		System.out.println(Range.MAX_GROUP_SIZE);
-//		
-//		System.out.println(Range.MAX_OPENCL_GROUP_SIZE);
-//
-//		int w = 3;
-//		int h = 3;
-//		int c = 3;
-//		int n = 4;
-//		int kn = 4;
-//		int kh = 2;
-//		int kw = 2;
-//		int size = n * c * h * w;
-//		int kSize = kn * c * kh * kw;
-//		
-//		AparapiKernel k = new AparapiKernel(n,c,h,w, kn, kh, kw);
-//		
-//		k.input = MatrixUtils.val(size, 1);
-//		k.k = MatrixUtils.val(kSize, 2);
-//
-//		Range r = Range.create3D(k.odims[3], k.odims[2], kn);
-//		
-//		k.execute(r, n);
-//		
-//		PrintUtils.printImage(k.output);
+		System.out.println(Range.MAX_GROUP_SIZE);
 		
-		System.out.println(Math.pow(2, -3.0 / 2));
+		System.out.println(Range.MAX_OPENCL_GROUP_SIZE);
+
+		int w = 3;
+		int h = 3;
+		int c = 3;
+		int n = 4;
+		int kn = 4;
+		int kh = 2;
+		int kw = 2;
+		int size = n * c * h * w;
+		int kSize = kn * c * kh * kw;
 		
-		System.out.println(Math.pow(2, -3.0));
+		AparapiKernel k = new AparapiKernel(n,c,h,w, kn, kh, kw);
+		
+		k.input = MatrixUtils.val(size, 1);
+		k.k = MatrixUtils.val(kSize, 2);
+
+		Range r = Range.create3D(k.odims[3], k.odims[2], kn);
+		
+		k.execute(r, n);
+		
+		PrintUtils.printImage(k.output);
 		
 	}
 	

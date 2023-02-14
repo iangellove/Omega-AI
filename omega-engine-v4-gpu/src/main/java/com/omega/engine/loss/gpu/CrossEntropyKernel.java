@@ -3,6 +3,9 @@ package com.omega.engine.loss.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAModules;
 
@@ -10,6 +13,30 @@ import jcuda.Pointer;
 import jcuda.driver.CUfunction;
 import jcuda.runtime.cudaError;
 
+/**
+ * CrossEntropyLoss = softmax + NLLLoss
+ * 
+ * softmax(x) = exp(x - m) / sum(exp(x - m))
+ * m = ax(X)
+ * 
+ * NLLLoss(x) = -log(x)
+ * 
+ * detail:
+ * 	loss = NLLLoss(softmax(x))
+ * 	S = softmax(X)
+ *  L = -log(S)
+ *  loss = sum(L) / batch
+ *  
+ *  label is a one hot data
+ *  label = [[0,0,1],[1,0,0],[0,1,0]]
+ *  
+ *  NLLLoss(S)' = - 1 / S
+ *  softmax(x)' = softmax(x) * (label - softmax(x))
+ *  x' = (softmax(x) - label) / batch
+
+ * @author Administrator
+ *
+ */
 public class CrossEntropyKernel extends BaseKernel {
 	
 	private CUfunction loss_function;
@@ -31,6 +58,8 @@ public class CrossEntropyKernel extends BaseKernel {
 	private Pointer checkParameters;
 	
 	private Pointer backKernelParameters;
+	
+//	private RunModel model = RunModel.TRAIN;
 	
 	public CrossEntropyKernel() {
 		init();
@@ -91,7 +120,10 @@ public class CrossEntropyKernel extends BaseKernel {
 	
 	public void forward(Tensor input,Tensor currentLabel,Tensor output) {
 		
-		if(log_softmax_nl_loss_kernelParameters == null || this.N != output.number) {
+//		if(log_softmax_nl_loss_kernelParameters == null || this.N != output.number || model != this.model) {
+			
+//			this.model = model;
+			
 			/**
 			 * float *input, float *label, float *output, int batch, int n
 			 */
@@ -105,7 +137,7 @@ public class CrossEntropyKernel extends BaseKernel {
 			
 			this.N = output.number;
 			
-		}
+//		}
 		
 		cuLaunchKernel(log_softmax_nl_loss_function,
 				input.number,  1, 1,      // Grid dimension
@@ -179,6 +211,74 @@ public class CrossEntropyKernel extends BaseKernel {
 		if(code != cudaError.cudaSuccess) {
 			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
 		}
+	}
+	
+	public static void check() {
+		
+		int N = 2;
+		int C = 1;
+		int H = 1;
+		int W = 10;
+		
+		int size = N * C * H * W;
+		
+		float[] x = RandomUtils.x2Random(size);
+		
+		float[] lx = new float[] {0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0};
+		
+		Tensor input = new Tensor(N, C, H, W, x, true);
+		Tensor label = new Tensor(N, C, H, W, lx, true);
+		Tensor output = new Tensor(N, 1, 1, 1, 1, true);
+		
+		loss_gpu(input, label, output);
+		
+		System.out.println("gpu:"+JsonUtils.toJson(output.syncHost()));
+		
+		for(int i = 0;i<N;i++) {
+			System.out.println(loss_cpu(input.getByNumber(i),label.getByNumber(i)));
+		}
+		
+	}
+	
+	public static void loss_gpu(Tensor input,Tensor label,Tensor output) {
+		
+		CrossEntropyKernel kernel = new CrossEntropyKernel();
+		
+		kernel.forward(input, label, output);
+		
+	}
+	
+	public static float loss_cpu(float[] input,float[] label) {
+		
+//		System.out.println(JsonUtils.toJson(label));
+		
+		float sum = 0.0f;
+		
+		float loss = 0.0f;
+		
+		/**
+		 * max
+		 */
+		float max = MatrixOperation.max(input);
+		
+		/**
+		 * sum
+		 */
+		for(int i = 0;i<input.length;i++) {
+			sum += Math.exp(input[i] - max);
+		}
+		
+		/**
+		 * softmax + log + nlloss
+		 */
+		for(int i = 0;i<input.length;i++) {
+			loss += (float) (-((input[i] - max) - Math.log(sum)) * label[i]);
+		}
+		return loss;
+	}
+	
+	public static void main(String args[]) {
+		check();
 	}
 	
 }

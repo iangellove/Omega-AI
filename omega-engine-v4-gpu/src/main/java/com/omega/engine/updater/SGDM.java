@@ -52,7 +52,7 @@ public class SGDM extends Updater {
 		 */
 		if(kernel == null) {
 			kernel = new SGDKernel(layer.gamma.dataLength, layer.beta.dataLength);
-			kernel.weight_decay = 0.0f;
+			//kernel.weight_decay = 0.0f;
 		}
 
 		kernel.updateW(layer.diffGamma, layer.gamma, layer.network, layer.learnRate);

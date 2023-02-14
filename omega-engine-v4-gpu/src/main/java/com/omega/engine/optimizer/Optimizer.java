@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.task.TaskEngine;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.LabelUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
@@ -76,7 +77,7 @@ public abstract class Optimizer {
 	
 	public float max_lr = 0.1f;
 	
-	public float min_loss = Float.NEGATIVE_INFINITY;
+	public float min_loss = Float.POSITIVE_INFINITY;
 	
 	public int counter = 0;
 	
@@ -205,7 +206,13 @@ public abstract class Optimizer {
 				this.network.learnRate = (float) (this.lr / (1.0f + Math.pow(Math.E, this.gama * (batchIndex - step))));
 				break;
 			case HALF:
-				this.network.learnRate = HalfDecay.decayedLR(this.network.learnRate, this.trainIndex, 10);
+				if(counter % 10 == 0) {
+					this.network.learnRate = HalfDecay.decayedLR(this.network.learnRate);
+				}
+				break;
+			case SMART_HALF:
+				break;
+			default:
 				break;
 			}
 			
@@ -254,15 +261,20 @@ public abstract class Optimizer {
 				this.network.learnRate = (float) (this.lr / (1.0f + Math.pow(Math.E, this.gama * (batchIndex - step))));
 				break;
 			case HALF:
-				this.network.learnRate = HalfDecay.decayedLR(this.network.learnRate, this.trainIndex, 10);
+				if(counter % 10 == 0) {
+					this.network.learnRate = HalfDecay.decayedLR(this.network.learnRate);
+				}
 				break;
 			case SMART_HALF:
 				if(loss <= min_loss) {
-					this.network.learnRate = HalfDecay.decayedLR(this.network.learnRate, this.counter, 10);
+					System.out.println("Validation loss decreased ("+min_loss+" --> "+loss+")");
 					min_loss = loss;
 					this.counter = 0;
 				}else {
 					this.counter++;
+				}
+				if(this.counter >= 10) {
+					this.network.learnRate = HalfDecay.decayedLR(this.network.learnRate);
 				}
 				break;
 			}
@@ -375,6 +387,8 @@ public abstract class Optimizer {
 			
 			input.hostToDevice();
 			
+			label.hostToDevice();
+			
 			Tensor output = this.network.predict(input);
 			
 			/**
@@ -396,6 +410,59 @@ public abstract class Optimizer {
 		error = trueCount / itc / batchSize;
 		
 		vailLoss = vailLoss / itc;
+		
+		System.out.println("training["+this.trainIndex+"] vail accuracy:{"+ error * 100 +"%} vail loss:{"+vailLoss+"} "+" [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
+		
+		return vailLoss;
+	}
+	
+	public float testAndLoss(BaseData testData,Tensor input,Tensor label,int batchSize) {
+		// TODO Auto-generated method stub
+		float error = 0.0f;
+		
+		float trueCount = 0;
+		
+		float vailLoss = 0.0f;
+		
+		long startTime = System.nanoTime();
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_DOWN).intValue();
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.getBatchData(pageIndex, batchSize, input, label);
+			
+			input.hostToDevice();
+			
+			label.hostToDevice();
+			
+			Tensor output = this.network.predict(input);
+
+			/**
+			 * loss
+			 */
+			Tensor loss = this.network.loss(output, label);
+			
+			/**
+			 * current time error
+			 */
+			vailLoss += MatrixOperation.sum(loss.syncHost());
+			
+			output.syncHost();
+
+			int currentError = this.accuracyTrueCount(output, label, testData.labelSet);
+			
+			trueCount += currentError;
+			
+//			System.out.println("vaildating["+pageIndex+"] vail accuracy:{"+ currentError * 100 / batchSize +"%} vail loss:{"+currentLoss / batchSize+"}]");
+			
+		}
+		
+		error = trueCount / itc / batchSize;
+		
+		vailLoss = vailLoss / itc / batchSize;
 		
 		System.out.println("training["+this.trainIndex+"] vail accuracy:{"+ error * 100 +"%} vail loss:{"+vailLoss+"} "+" [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
 		
@@ -424,10 +491,27 @@ public abstract class Optimizer {
 		return error;
 	}
 	
+	public float testLoss(Tensor output,Tensor labelData) {
+		
+		float[] data = new float[output.number];
+		
+		float loss = 0.0f;
+		
+		for(int n = 0;n<output.number;n++) {
+			float onceLoss = testLoss(output.getByNumber(n), labelData.getByNumber(n));
+			loss += onceLoss;
+			data[n] = onceLoss;
+		}
+		
+		System.out.println("cpu_loss:"+JsonUtils.toJson(data));
+		
+		return loss;
+	}
+	
 	public int accuracyTrueCount(Tensor output,Tensor labelData,String[] labelSet) {
 
 		int trueCount = 0;
-
+		
 		for(int n = 0;n<output.number;n++) {
 			
 			String label = LabelUtils.vectorTolabel(labelData.getByNumber(n), labelSet);
@@ -439,10 +523,78 @@ public abstract class Optimizer {
 			}
 			
 		}
-		
+
 		return trueCount;
 	}
+	
+	public float testLoss(float[] output,float[] label) {
+		
+//		System.out.println(JsonUtils.toJson(label));
+		
+		float sum = 0.0f;
+		
+		float loss = 0.0f;
+		
+		/**
+		 * max
+		 */
+		float max = MatrixOperation.max(output);
+		
+		/**
+		 * sum
+		 */
+		for(int i = 0;i<output.length;i++) {
+			sum += Math.exp(output[i] - max);
+		}
+		
+		/**
+		 * softmax + log + nlloss
+		 */
+		for(int i = 0;i<output.length;i++) {
+			loss += (float) (-((output[i] - max) - Math.log(sum)) * label[i]);
+		}
+		return loss;
+	}
+	
+	public static float testLoss2(float[] output,float[] label) {
+		
+//		System.out.println(JsonUtils.toJson(label));
+		
+		float sum = 0.0f;
+		
+		float loss = 0.0f;
+		
+		/**
+		 * max
+		 */
+		float max = MatrixOperation.max(output);
+		
+		/**
+		 * sum
+		 */
+		for(int i = 0;i<output.length;i++) {
+			sum += Math.exp(output[i] - max);
+		}
+		
+		/**
+		 * softmax + log + nlloss
+		 */
+		for(int i = 0;i<output.length;i++) {
+			loss += (float) (-((output[i] - max) - Math.log(sum)) * label[i]);
+		}
+		return loss;
+	}
 
+	public static void main(String[] args) {
+		
+		float[] x = new float[] {0.6079413f,-1.1546507f,1.444119f,1.5811894f,1.131686f,1.5374337f,0.39088273f,-0.19011068f,-0.010914803f,-1.4776193f};
+		
+		float[] l = new float[] {0,0,0,1,0,0,0,0,0,0};
+		
+		System.out.println(testLoss2(x, l));
+		
+	}
+	
 	public boolean isWarmUp() {
 		return warmUp;
 	}

@@ -132,7 +132,6 @@ public class LabelUtils {
 	 * @return
 	 */
 	public static String vectorTolabel(float[] vector,String[] labelSet) {
-//		System.out.println(JsonUtils.toJson(vector));
 		int index = MatrixOperation.maxIndex(vector);
 		return labelSet[index];
 	}

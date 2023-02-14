@@ -92,10 +92,12 @@ public class CrossEntropyLoss2 extends LossFunction {
 	}
 	
 	public static void main(String[] args) {
-		float[] x = new float[] {56.771366f,-7.2310443f,39.634228f,24.728638f,-17.958973f,55.25164f,-52.31639f,-36.3225f,-29.619461f,55.247528f};
-		Tensor xt = new Tensor(1, 1, 1, 10, x, true);
-		float[] label = new float[] {0,0,0,0,0,0,0,0,0,1};
-		Tensor labelt = new Tensor(1, 1, 1, 10, label, true);
+		float[] x = new float[] {56.771366f,-7.2310443f,39.634228f,24.728638f,-17.958973f,55.25164f,-52.31639f,-36.3225f,-29.619461f,55.247528f,
+				56.771366f,-7.2310443f,39.634228f,24.728638f,-17.958973f,55.25164f,-52.31639f,-36.3225f,-29.619461f,55.247528f};
+		Tensor xt = new Tensor(2, 1, 1, 10, x, true);
+		float[] label = new float[] {0,0,0,0,0,0,0,0,0,1,
+				0,0,0,0,0,0,0,0,0,1};
+		Tensor labelt = new Tensor(2, 1, 1, 10, label, true);
 		
 		float max = MatrixOperation.max(x);
 		
@@ -111,9 +113,9 @@ public class CrossEntropyLoss2 extends LossFunction {
 		
 		System.out.println();
 		
-		System.out.println("loss:"+JsonUtils.toJson(MatrixOperation.sum(loss.syncHost())/128));
+		System.out.println("loss:"+JsonUtils.toJson(MatrixOperation.sum(loss.syncHost())/2));
 		
-		Tensor diff = CrossEntropyLoss2.operation().diff(xt,labelt);
+		Tensor diff = CrossEntropyLoss2.operation().diff(xt, labelt);
 		
 		System.out.println("diff:"+JsonUtils.toJson(diff.syncHost()));
 		

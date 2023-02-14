@@ -12,6 +12,7 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
+import com.omega.engine.nn.layer.gpu.BNBaseKernel;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.network.RunModel;
 
@@ -33,7 +34,7 @@ import jcuda.runtime.cudaError;
  * dxhati = gama * deltai
  * dxi = 1 / std * (dxhati - mean(dxhat) - xhati * mean(dxhat * xhat))
  */
-public class BNKernel2 extends BaseKernel{
+public class BNKernel2 extends BNBaseKernel{
 	
 	private BNType bnType;
 

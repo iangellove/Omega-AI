@@ -46,6 +46,8 @@ public class SoftmaxWithCrossEntropyLoss extends LossFunction {
 			}
 		}
 		
+		temp.hostToDevice();
+		
 		return temp;
 	}
 
@@ -58,7 +60,7 @@ public class SoftmaxWithCrossEntropyLoss extends LossFunction {
 			temp.data[i] = - label.data[i] / x.data[i];
 //			System.out.println(temp.data[i]);
 		}
-		
+		temp.hostToDevice();
 		return temp;
 	}
 	

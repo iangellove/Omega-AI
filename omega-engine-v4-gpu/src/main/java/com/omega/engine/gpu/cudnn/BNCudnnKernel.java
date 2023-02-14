@@ -29,7 +29,7 @@ public class BNCudnnKernel extends BNBaseKernel{
 	private int W;
 	
 	private double eps = 1e-5;
-	private double momentum = 0.01f;
+	private double momentum = 0.1f;
     
 	private Pointer alpha_P = Pointer.to(new float[] { 1 });
 	private Pointer beta_P = Pointer.to(new float[] { 0 });

@@ -72,8 +72,8 @@ __global__ void sgd_bn(float *diffW, float *v,float *weight,float momentum,float
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if (i >= n) return;
-    //float tmp = (diffW[i] / batch) + weight[i] * weight_decay;
-    float tmp = diffW[i] + weight[i] * weight_decay;
+    float tmp = (diffW[i] / batch) + weight[i] * weight_decay;
+    //float tmp = diffW[i] + weight[i] * weight_decay;
     v[i] = v[i] * momentum + tmp;
 	weight[i] = weight[i] - learnRate * v[i];
 }

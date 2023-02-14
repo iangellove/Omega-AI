@@ -6,6 +6,7 @@ import com.omega.engine.gpu.cudnn.BNCudnnKernel;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.BNBaseKernel;
 import com.omega.engine.nn.layer.normalization.gpu.BNKernel;
+import com.omega.engine.nn.layer.normalization.gpu.BNKernel3;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
 
@@ -96,7 +97,12 @@ public class BNLayer extends NormalizationLayer {
 			if(this.network.CUDNN) {
 				kernel = new BNCudnnKernel(this.getBnType(), channel, height, width);
 			}else {
-				kernel = new BNKernel(this.getBnType(), channel, height, width);	
+//				kernel = new BNKernel(this.getBnType(), channel, height, width);
+				if(this.getBnType() == BNType.fully_bn) {
+					kernel = new BNKernel3(width, 1, 1);
+				}else {
+					kernel = new BNKernel3(channel, height, width);
+				}
 			}
 		}
 		
@@ -177,6 +183,7 @@ public class BNLayer extends NormalizationLayer {
 	@Override
 	public void back() {
 		// TODO Auto-generated method stub
+//		System.out.println(bnType);
 		this.initBack();
 		/**
 		 * 设置梯度

@@ -147,7 +147,7 @@ public class MBSGDOptimizer extends Optimizer {
 					/**
 					 * current time error
 					 */
-					this.currentError = MatrixOperation.sum(this.loss.data) / this.batchSize;
+					this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
 					
 //					long back_start = System.nanoTime();
 					
@@ -303,6 +303,8 @@ public class MBSGDOptimizer extends Optimizer {
 
 //					long back_start = System.nanoTime();
 					
+//					loss.hostToDevice();
+					
 //					lossDiff.hostToDevice();
 					
 					/**
@@ -386,6 +388,11 @@ public class MBSGDOptimizer extends Optimizer {
 			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
+			
+//			/**
+//			 * normalize vailSet
+//			 */
+//			DataTransforms.normalize(validata.input, mean, std);
 
 			if(isWarmUp()) {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
@@ -397,6 +404,10 @@ public class MBSGDOptimizer extends Optimizer {
 			
 			Tensor transData = new Tensor(trainingData.number, trainingData.channel, trainingData.height, trainingData.width);
 			
+			Tensor vail_input = new Tensor(batchSize, validata.channel, validata.height, validata.width, true);
+			
+			Tensor vail_label = new Tensor(batchSize, 1, 1, validata.labelSize, true);
+
 			for(int i = 0;i<this.trainTime;i++) {
 				
 				if(this.trainIndex >= this.minTrainTime) {
@@ -409,52 +420,32 @@ public class MBSGDOptimizer extends Optimizer {
 				
 				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
 
-//				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
-				
-//				int[][] indexs = new int[468][128];
-//				
-//				DataExportUtils.importTXT(indexs, "H://index3.txt");
-				
 				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				float train_loss = 0.0f;
 				
 				/**
 				 * 遍历整个训练集
 				 */
 				for(int it = 0;it<indexs.length;it++) {
-//				for(int it = 0;it<1;it++) {
-					
+
+					long start = System.nanoTime();
+
 					if(Math.abs(this.currentError) <= this.error) {
 						break;
 					}
-					
-					long start = System.nanoTime();
 
-//					this.loss.clear();
-//					
-//					this.lossDiff.clear();
-					
 					trainingData.randomData(indexs[it], transData.data, input, label);
 
 					input.hostToDevice();
 					
 					label.hostToDevice();
-					
-//					input.showDM();
-					
-//					long output_start = System.nanoTime();
-					
+
 					/**
 					 * forward
 					 */
 					Tensor output = this.network.forward(input);
-					
-//					System.out.println(JsonUtils.toJson(output.data));
-//					System.out.println("output1:"+(System.nanoTime() - output_start) / 1e6 + "ms.");
-					
-//					System.out.println(JsonUtils.toJson(output.data));
-					
-//					System.out.println("output2:"+(System.nanoTime() - output_start) / 1e6 + "ms.");
-					
+
 					/**
 					 * loss
 					 */
@@ -465,18 +456,6 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					this.lossDiff = this.network.lossDiff(output, label);
 					
-//					System.out.println(JsonUtils.toJson(label.syncHost()));
-//					
-//					System.out.println(JsonUtils.toJson(output.syncHost()));
-//					
-//					System.out.println(JsonUtils.toJson(this.lossDiff.syncHost()));
-					
-//					System.out.println("=========>:"+JsonUtils.toJson(lossDiff.data));
-
-//					long back_start = System.nanoTime();
-					
-//					lossDiff.hostToDevice();
-					
 					/**
 					 * back
 					 */
@@ -486,19 +465,17 @@ public class MBSGDOptimizer extends Optimizer {
 					 * update
 					 */
 					this.network.update();
-					
-//					JCudaDriver.cuCtxSynchronize();
-					
-//					System.out.println("back:"+(System.nanoTime() - back_start) / 1e6 + "ms.");
 
 					output.syncHost();
-					
+
 					float error = this.accuracy(output, label, trainingData.labelSet);
 
 					/**
 					 * current time error
 					 */
 					this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
+					
+					train_loss += this.currentError;
 					
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
@@ -516,15 +493,17 @@ public class MBSGDOptimizer extends Optimizer {
 					this.batchIndex++;
 				}
 				
+				System.out.println("training["+this.trainIndex+"] train loss:{"+train_loss/indexs.length+"} ");
+				
 				/**
 				 * vail data test
 				 */
-				float vail_loss = this.testAndLoss(validata, this.batchSize);
+				float vail_loss = this.testAndLoss(validata, vail_input, vail_label, this.batchSize);
 
 				/**
 				 * update learning rate
 				 */
-				this.updateLR(vail_loss);
+				this.updateLR(vail_loss/indexs.length);
 				
 			}
 			
@@ -532,7 +511,6 @@ public class MBSGDOptimizer extends Optimizer {
 			 * 停止训练
 			 */
 			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
-//			System.out.println(JsonUtils.toJson(this.network.layerList));
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -553,15 +531,26 @@ public class MBSGDOptimizer extends Optimizer {
 		DataTransforms.randomHorizontalFilp(transData, transData);
 		
 		/**
+		 * normalize
+		 */
+		DataTransforms.normalize(transData, transData, mean, std);
+
+		/**
 		 * cutcout
 		 */
 		DataTransforms.cutout(transData, transData, 16);
 		
+		System.out.println("data transform finish.");
+		
+	}
+	
+	public void transforms2(Tensor trainData,Tensor transData, float[] mean,float[] std){
+		
 		/**
 		 * normalize
 		 */
-		DataTransforms.normalize(transData, transData, mean, std);
-		
+		DataTransforms.normalize(trainData, transData, mean, std);
+
 		System.out.println("data transform finish.");
 		
 	}
