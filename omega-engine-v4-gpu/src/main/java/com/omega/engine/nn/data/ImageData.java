@@ -12,9 +12,13 @@ public class ImageData {
 	
 	private int[][] b;
 	
-	private int[][] gray; 
+	private int[][] gray;
+	
+	private int[] color;
 	
 	private String label;
+	
+	private String name;
 	
 	private String fileName;
 	
@@ -38,6 +42,17 @@ public class ImageData {
 		this.r = r;
 		this.g = g;
 		this.b = b;
+		this.fileName = fileName;
+		this.extName = extName;
+	}
+	
+	public ImageData(int weight,int height,int[][] r,int[][] g,int[][] b,int[] color,String fileName,String extName) {
+		this.weight = weight;
+		this.height = height;
+		this.r = r;
+		this.g = g;
+		this.b = b;
+		this.color = color;
 		this.fileName = fileName;
 		this.extName = extName;
 	}
@@ -130,6 +145,22 @@ public class ImageData {
 
 	public void setGray(int[][] gray) {
 		this.gray = gray;
+	}
+
+	public int[] getColor() {
+		return color;
+	}
+
+	public void setColor(int[] color) {
+		this.color = color;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
 	}
 
 }

@@ -13,7 +13,7 @@ public class AdamW extends Updater {
 
 	private AdamWKernel kernel;
 	
-	private float weight_decay = 5e-4f;
+	private float weight_decay = 0.01f;
 	
 	@Override
 	public void update(Layer layer) {

@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.active.ActiveFunction;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
 import com.omega.engine.nn.layer.gpu.RNNKernel;
@@ -27,17 +28,35 @@ public class RNNLayer extends Layer{
 	
 	private Tensor bias_v;
 	
-	private Tensor pre_z;
+	private Tensor[] pre_z;
 	
 	private Tensor zt;
 	
 	private Tensor o1;
 	
+	private Tensor aout;
+	
 	private Tensor o2;
+	
+	private Tensor du;
+	
+	private Tensor dw;
+	
+	private Tensor dv;
+	
+	private Tensor dbu;
+	
+	private Tensor dbv;
+	
+	private Tensor delta_t;
+	
+	private Tensor delta_t_next;
+	
+	private Tensor delta_a_next;
 	
 	private RNNKernel kernel;
 	
-	private ActiveFunctionLayer a1;
+	private ActiveFunction a1;
 	
 	@Override
 	public void init() {
@@ -69,23 +88,23 @@ public class RNNLayer extends Layer{
 			
 			for(int t = 0;t<time;t++) {
 				
-				GPUOP.getInstance().multiplyFloat(number, oWidth, width, input.getGpuData().withByteOffset(t * Sizeof.FLOAT), weight_u.getGpuData(), o1.getGpuData(),
+				GPUOP.getInstance().multiplyFloat(number, oWidth, width, input.getGpuData().withByteOffset(t * Sizeof.FLOAT), weight_u.getGpuData(), o1.getGpuData().withByteOffset(t * Sizeof.FLOAT),
 						cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 				
-				GPUOP.getInstance().multiplyFloat(number, oWidth, width, pre_z.getGpuData(), weight_w.getGpuData(), o2.getGpuData(),
+				GPUOP.getInstance().multiplyFloat(number, oWidth, width, pre_z[t].getGpuData(), weight_w.getGpuData(), o2.getGpuData().withByteOffset(t * Sizeof.FLOAT),
 						cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f); 
 				
 				if(hasBias) {
-					kernel.addOutputBias(o1, o2, bias_u);
+					kernel.addOutputBias(o1, o2, bias_u, t);
 				}else {
-					kernel.addOutput(o1, o2);
+					kernel.addOutput(o1, o2, t);
 				}
 				
-				a1.forward(o1);
+				a1.active(o1, aout);
 				
-				pre_z = a1.output;
+				pre_z[t] = aout;
 				
-				GPUOP.getInstance().multiplyFloat(number, oWidth, width, a1.output.getGpuData(), weight_v.getGpuData(), output.getGpuData().withByteOffset(t * Sizeof.FLOAT),
+				GPUOP.getInstance().multiplyFloat(number, oWidth, width, aout.getGpuData(), weight_v.getGpuData(), output.getGpuData().withByteOffset(t * Sizeof.FLOAT),
 						cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 				
 				if(hasBias) {
@@ -109,11 +128,54 @@ public class RNNLayer extends Layer{
 		
 		/**
 		 * E = ∑et
-		 * delta_u = ∑de/du
-		 * delta_v = ∑de/dv
-		 * delta_w = ∑de/dw
+		 * du = ∑de/du
+		 * dv = ∑de/dv
+		 * dw = ∑de/dw
 		 * 
+		 * dv = htT * delta
+		 * dbv = delta
+		 * dhtt = vT * delta + wT * A't+1 * dht+1
+		 * if t = t end
+		 * dhtt = vT * delta
+		 * dw = A't * dhtt * ht-1T
+		 * dbu = A't * dhtt
+		 * du = A't * dhtt * xtT
 		 */
+		
+		for(int t = time-1;t>=0;t--) {
+			
+			/**
+			 * dv = htT * delta
+			 */
+			GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, pre_z[t].getGpuData(), delta.getGpuData().withByteOffset(t * Sizeof.FLOAT), dv.getGpuData(),
+					cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
+			
+			/**
+			 * dbv = delta
+			 */
+			if(hasBias) {
+				kernel.backwardBias(dbv, delta);
+			}
+			
+			a1.diff(o1, delta);
+			
+			/**
+			 * dhtt = vT * delta + wT * A't+1 * dht+1
+			 * if t = t end
+			 * dhtt = vT * delta
+			 */
+			GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData().withByteOffset(t * Sizeof.FLOAT), weight_v.getGpuData(), delta_t.getGpuData(),
+					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
+			
+			if(t == time - 1) {
+				
+			}else {
+				
+			}
+			
+			delta_t_next = delta_t;
+			
+		}
 		
 	}
 

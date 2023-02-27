@@ -503,7 +503,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR(vail_loss/indexs.length);
+				this.updateLR(vail_loss);
 				
 			}
 			

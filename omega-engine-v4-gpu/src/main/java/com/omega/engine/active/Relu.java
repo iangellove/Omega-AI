@@ -1,5 +1,6 @@
 package com.omega.engine.active;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 
@@ -200,6 +201,18 @@ public class Relu extends ActiveFunction{
 		float error = function.gradientCheck(x);
 		System.out.println("error:"+error);
 		System.out.println(JsonUtils.toJson(function));
+	}
+
+	@Override
+	public void active(Tensor x, Tensor out) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void diff(Tensor x, Tensor diff) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

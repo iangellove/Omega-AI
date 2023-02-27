@@ -1,5 +1,6 @@
 package com.omega.engine.active;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
@@ -38,7 +39,11 @@ public abstract class ActiveFunction {
 	
 	public abstract float[] active(float[] x);
 	
+	public abstract void active(Tensor x,Tensor out);
+	
 	public abstract float[] diff();
+	
+	public abstract void diff(Tensor x,Tensor diff);
 	
 	public abstract float[] activeTemp(float[] x);
 	

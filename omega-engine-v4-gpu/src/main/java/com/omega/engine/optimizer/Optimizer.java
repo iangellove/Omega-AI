@@ -272,9 +272,11 @@ public abstract class Optimizer {
 					this.counter = 0;
 				}else {
 					this.counter++;
+					System.out.println("Validation loss decreased ("+min_loss+" < "+loss+") update counter:"+this.counter);
 				}
-				if(this.counter >= 10) {
+				if(this.counter >= 9) {
 					this.network.learnRate = HalfDecay.decayedLR(this.network.learnRate);
+					this.counter = 0;
 				}
 				break;
 			}

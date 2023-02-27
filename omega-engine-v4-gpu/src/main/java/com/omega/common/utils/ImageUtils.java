@@ -1,7 +1,9 @@
 package com.omega.common.utils;
 
 import java.awt.AWTException;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.Robot;
 import java.awt.Toolkit;
@@ -38,8 +40,8 @@ public class ImageUtils {
 		int height = bi.getHeight();
 		int minx = bi.getMinX();
 		int miny = bi.getMinY();
-		System.out.println("width=" + width + ",height=" + height + ".");
-		System.out.println("minx=" + minx + ",miniy=" + miny + ".");
+//		System.out.println("width=" + width + ",height=" + height + ".");
+//		System.out.println("minx=" + minx + ",miniy=" + miny + ".");
 		for (int i = minx; i < width; i++) {
 			for (int j = miny; j < height; j++) {
 				int pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
@@ -71,8 +73,8 @@ public class ImageUtils {
 		int minx = bi.getMinX();
 		int miny = bi.getMinY();
 		float[][][][] gray = new float[1][1][1][width * height];
-		System.out.println("width=" + width + ",height=" + height + ".");
-		System.out.println("minx=" + minx + ",miniy=" + miny + ".");
+//		System.out.println("width=" + width + ",height=" + height + ".");
+//		System.out.println("minx=" + minx + ",miniy=" + miny + ".");
 		for (int i = miny; i < height; i++) {
 			for (int j = minx; j < width; j++) {
 				int pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
@@ -105,8 +107,8 @@ public class ImageUtils {
 		int minx = bi.getMinX();
 		int miny = bi.getMinY();
 		float[][][][] gray = new float[1][1][height][width];
-		System.out.println("width=" + width + ",height=" + height + ".");
-		System.out.println("minx=" + minx + ",miniy=" + miny + ".");
+//		System.out.println("width=" + width + ",height=" + height + ".");
+//		System.out.println("minx=" + minx + ",miniy=" + miny + ".");
 		for (int i = miny; i < height; i++) {
 			for (int j = minx; j < width; j++) {
 				int pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
@@ -137,8 +139,8 @@ public class ImageUtils {
 		int minx = bi.getMinX();
 		int miny = bi.getMinY();
 		float[][][][] gray = new float[1][1][1][width * height];
-		System.out.println("width=" + width + ",height=" + height + ".");
-		System.out.println("minx=" + minx + ",miniy=" + miny + ".");
+//		System.out.println("width=" + width + ",height=" + height + ".");
+//		System.out.println("minx=" + minx + ",miniy=" + miny + ".");
 		for (int i = miny; i < height; i++) {
 			for (int j = minx; j < width; j++) {
 				int rgb = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
@@ -218,7 +220,7 @@ public class ImageUtils {
         ImageIO.write(grayImage, "png", newFile);
     }
 	
-    private int colorToRGB(int alpha, int red, int green, int blue) {
+    private static int colorToRGB(int alpha, int red, int green, int blue) {
     	 
         int newPixel = 0;
         newPixel += alpha;
@@ -289,17 +291,23 @@ public class ImageUtils {
 		int miny = bi.getMinY();
 //		System.out.println("width=" + width + ",height=" + height + ".");
 //		System.out.println("minx=" + minx + ",miniy=" + miny + ".");
-//		
+		
 		int[][] r = new int[width][height];
 		int[][] g = new int[width][height];
 		int[][] b = new int[width][height];
+		int size = height * width * 3;
+		int[] color = new int[size];
 		
-		for (int i = minx; i < width; i++) {
-			for (int j = miny; j < height; j++) {
+		for (int j = miny; j < height; j++) {
+			for (int i = minx; i < width; i++) {
 				int pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+//				System.out.println(pixel);
 				r[i][j] = (pixel & 0xff0000) >> 16;
 				g[i][j] = (pixel & 0xff00) >> 8;
 				b[i][j] = (pixel & 0xff);
+				color[0 * width * height + i * height + j] = r[i][j];
+				color[1 * width * height + i * height + j] = g[i][j];
+				color[2 * width * height + i * height + j] = b[i][j];
 			}
 		}
 		
@@ -307,18 +315,67 @@ public class ImageUtils {
 
 		extName = extName.replace(".", "");
 		
-		ImageData data = new ImageData(width, height, r, g, b,file.getName(),extName);
+		ImageData data = new ImageData(width, height, r, g, b, color, file.getName(), extName);
+
+		return data;
+	}
+	
+	/**
+	 * 读取一张图片的RGB值
+	 * 
+	 * @throws Exception
+	 */
+	public ImageData getImageData(File file) throws Exception {
+
+		BufferedImage bi = null;
+		try {
+			bi = ImageIO.read(file);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		int width = bi.getWidth();
+		int height = bi.getHeight();
+		int minx = bi.getMinX();
+		int miny = bi.getMinY();
+//		System.out.println("width=" + width + ",height=" + height + ".");
+//		System.out.println("minx=" + minx + ",miniy=" + miny + ".");
+		
+		int[][] r = new int[width][height];
+		int[][] g = new int[width][height];
+		int[][] b = new int[width][height];
+		int size = height * width * 3;
+		int[] color = new int[size];
+		
+		for (int j = miny; j < height; j++) {
+			for (int i = minx; i < width; i++) {
+				int pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+//				System.out.println(pixel);
+				r[i][j] = (pixel & 0xff0000) >> 16;
+				g[i][j] = (pixel & 0xff00) >> 8;
+				b[i][j] = (pixel & 0xff);
+				color[0 * width * height + i * height + j] = r[i][j];
+				color[1 * width * height + i * height + j] = g[i][j];
+				color[2 * width * height + i * height + j] = b[i][j];
+			}
+		}
+		
+		String extName = file.getName().substring(file.getName().lastIndexOf("."));
+
+		extName = extName.replace(".", "");
+		
+		ImageData data = new ImageData(width, height, r, g, b, color, file.getName(), extName);
 
 		return data;
 	}
 	
 	public BufferedImage convertRGBImage(int[][] rgbValue){
-		int height = rgbValue.length;
-		int width = rgbValue[0].length;
+		int height = rgbValue[0].length;
+		int width = rgbValue.length;
+//		System.out.println(width + ":" + height);
 		BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		for(int y=0;y<height;y++){
-			for(int x=0;x<width;x++){
-				bufferedImage.setRGB(x, y, rgbValue[y][x]);
+		for(int x=0;x<width;x++){
+			for(int y=0;y<height;y++){
+				bufferedImage.setRGB(x, y, rgbValue[x][y]);
 			}
 		}
 		return bufferedImage;
@@ -327,7 +384,7 @@ public class ImageUtils {
 	public boolean createRGBImage(String path,String extName,int[][] rgb) {
 		
 		BufferedImage bufferedImage = this.convertRGBImage(rgb);
-		System.out.println(extName);
+//		System.out.println(extName);
 		File outputfile = new File(path);
 		try {
 			System.out.println(ImageIO.write(bufferedImage, extName, outputfile));
@@ -340,6 +397,107 @@ public class ImageUtils {
 		return true;
 	}
 	
+	public boolean createRGBImage(String path,String extName,int[][] rgb,int[][] bbox) {
+		
+		BufferedImage bufferedImage = this.convertRGBImage(rgb);
+		bufferedImage.getGraphics().setColor(Color.RED);
+        for(int[] box:bbox) {
+        	int x = box[1] - box[3] / 2;
+        	int y = box[2] - box[4] / 2;
+        	bufferedImage.getGraphics().drawRect(x, y, box[3] , box[4]);
+        }
+//		System.out.println(extName);
+		File outputfile = new File(path);
+//		System.out.println(path);
+		try {
+			System.out.println(ImageIO.write(bufferedImage, extName, outputfile));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
+	}
+	
+	public boolean createRGBImage(String path,String extName,int[][] rgb,int weight,int height) {
+		
+		BufferedImage bufferedImage = this.convertRGBImage(rgb);
+//		System.out.println(extName);
+		File outputfile = new File(path);
+		try {
+			if(!outputfile.exists()) {
+				BufferedImage output = resizeImage(bufferedImage, weight, height);
+				ImageIO.write(output, extName, outputfile);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
+	}
+	
+	public boolean createRGBImage(String path,String extName,int[][] rgb,int weight,int height,int[][] bbox) {
+		
+		BufferedImage bufferedImage = this.convertRGBImage(rgb);
+//		System.out.println(extName);
+		File outputfile = new File(path);
+		try {
+			BufferedImage output = resizeImage(bufferedImage, weight, height, bbox);
+			ImageIO.write(output, extName, outputfile);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
+	}
+	
+	/**
+     * 通过BufferedImage图片流调整图片大小
+     * 指定压缩后长宽
+     */
+    public static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight) throws IOException {
+        Image resultingImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_AREA_AVERAGING);
+        BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+        outputImage.getGraphics().drawImage(resultingImage, 0, 0, null);
+        return outputImage;
+    }
+    
+	/**
+     * 通过BufferedImage图片流调整图片大小
+     * 指定压缩后长宽
+     */
+    public static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight,int[][] bbox) throws IOException {
+        Image resultingImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_AREA_AVERAGING);
+        BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+        outputImage.getGraphics().drawImage(resultingImage, 0, 0, null);
+        outputImage.getGraphics().setColor(Color.red);
+        for(int[] box:bbox) {
+        	int x = box[1] - box[3] / 2;
+        	int y = box[2] - box[4] / 2;
+        	outputImage.getGraphics().drawRect(x, y, box[3] , box[4]);
+        }
+        return outputImage;
+    }
+	
+	/**
+     * 通过BufferedImage图片流调整图片大小
+     * 指定压缩后长宽
+     */
+    public static BufferedImage createRGBImage(BufferedImage originalImage,int[][] bbox) throws IOException {
+    	originalImage.getGraphics().setColor(Color.red);
+        for(int[] box:bbox) {
+        	int x = box[1];
+        	int y = box[2];
+        	originalImage.getGraphics().drawRect(x, y, box[3] , box[4]);
+        }
+        return originalImage;
+    }
+    
 	/**
 	 * red 1 green 2 bule 3
 	 * @param path
@@ -440,7 +598,7 @@ public class ImageUtils {
 		return 16777216 + pixelColor; // pixelColor的值为负，经过实践得出：加上颜色最大值就是实际颜色值。
 	}
 	
-	public int[][] color2rgb(float[] data,int height,int width){
+	public static int[][] color2rgb(float[] data,int height,int width){
 		
 		int[][] rgb = new int[height][width];
 		int ocount = height * width;
@@ -451,6 +609,28 @@ public class ImageUtils {
 				int r = (int) data[index];
 				int g = (int) data[ocount + index];
 				int b = (int) data[ocount * 2 + index];
+				
+				int orgb = colorToRGB(255, r, g, b);
+				
+				rgb[i][j] = orgb;
+				
+			}
+		}
+		
+		return rgb;
+	}
+	
+	public static int[][] color2rgb(int[] data,int width,int height){
+		
+		int[][] rgb = new int[width][height];
+		int ocount = height * width;
+		
+		for(int i = 0;i<width;i++) {
+			for(int j = 0;j<height;j++) {
+				int index = i * height + j;
+				int r = data[index];
+				int g = data[ocount + index];
+				int b = data[ocount * 2 + index];
 				
 				int orgb = colorToRGB(255, r, g, b);
 				
@@ -494,15 +674,15 @@ public class ImageUtils {
 	 */
 	public static void main(String[] args) throws Exception {
 		
-		String testPath = "E:\\2.png";
-		
-		String testOutPath = "E:\\2_R.png";
+		String testPath = "I:\\000005.jpg";
 		
 		ImageUtils rc = new ImageUtils();
 		
 		ImageData data =  rc.getImageData(testPath);
+
+		String testOutPath = "I:\\_"+data.getFileName();
 		
-		rc.createRGBImage(testOutPath, data.getExtName(), data.getR());
+		rc.createRGBImage(testOutPath, data.getExtName(), color2rgb(data.getColor(), data.getWeight(), data.getHeight()));
 		
 	}
 

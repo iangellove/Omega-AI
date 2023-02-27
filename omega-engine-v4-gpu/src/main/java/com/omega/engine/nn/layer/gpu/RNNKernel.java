@@ -158,7 +158,7 @@ public class RNNKernel extends BaseKernel{
 		
 	}
 	
-	public void addOutputBias(Tensor o1,Tensor o2, Tensor bias) {
+	public void addOutputBias(Tensor o1,Tensor o2, Tensor bias, int t) {
 		
 		try {
 			
@@ -169,8 +169,8 @@ public class RNNKernel extends BaseKernel{
 		         * float* output, float* biases, int batch, int n, int size
 		         */ 
 				outputBiasKernelParameters = Pointer.to(
-		        		Pointer.to(o1.getGpuData()),
-		        		Pointer.to(o2.getGpuData()),
+		        		Pointer.to(o1.getGpuData().withByteOffset(t * Sizeof.FLOAT)),
+		        		Pointer.to(o2.getGpuData().withByteOffset(t * Sizeof.FLOAT)),
 		                Pointer.to(bias.getGpuData()),
 		                Pointer.to(new int[]{o1.getNumber()}),
 		                Pointer.to(new int[]{o1.getWidth()}),
@@ -195,7 +195,7 @@ public class RNNKernel extends BaseKernel{
 		
 	}
 	
-	public void addOutput(Tensor o1,Tensor o2) {
+	public void addOutput(Tensor o1,Tensor o2,int t) {
 		
 		try {
 			
@@ -206,8 +206,8 @@ public class RNNKernel extends BaseKernel{
 		         * float* output, float* biases, int batch, int n, int size
 		         */ 
 				outputKernelParameters = Pointer.to(
-		        		Pointer.to(o1.getGpuData()),
-		        		Pointer.to(o2.getGpuData()),
+		        		Pointer.to(o1.getGpuData().withByteOffset(t * Sizeof.FLOAT)),
+		        		Pointer.to(o2.getGpuData().withByteOffset(t * Sizeof.FLOAT)),
 		                Pointer.to(new int[]{o1.getNumber()}),
 		                Pointer.to(new int[]{o1.getWidth()}),
 		                Pointer.to(new int[]{1})
@@ -223,6 +223,43 @@ public class RNNKernel extends BaseKernel{
 		            0, null,               // Shared memory size and stream
 		            outputKernelParameters, null // Kernel- and extra parameters
 		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backwardBias(Tensor diffB,Tensor delta) {
+		
+		try {
+			
+			diffB.clearGPU();
+			
+			if(kernelBackParameters == null) {
+
+		        /**
+		         * 设置入参
+		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+		         */ 
+				kernelBackParameters = Pointer.to(
+		        		Pointer.to(diffB.getGpuData()),
+		                Pointer.to(delta.getGpuData()),
+		                Pointer.to(new int[]{delta.getNumber()}),
+		                Pointer.to(new int[]{delta.getWidth()})
+		            );
+		        
+			}
+			
+			cuLaunchKernel(back_function,
+		            this.CAFFE_GET_BLOCKS(delta.getWidth()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelBackParameters, null // Kernel- and extra parameters
+		        );
+
+//	        JCudaDriver.cuCtxSynchronize();
 
 		} catch (Exception e) {
 			// TODO: handle exception
