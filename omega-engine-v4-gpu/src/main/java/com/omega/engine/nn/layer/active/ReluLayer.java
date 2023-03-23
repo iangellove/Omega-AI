@@ -5,6 +5,7 @@ import java.util.Vector;
 import com.omega.common.data.Tensor;
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
+import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.active.gpu.ReluKernel;
 import com.omega.engine.nn.network.Network;
@@ -22,6 +23,15 @@ public class ReluLayer extends ActiveFunctionLayer {
 
 	}
 	
+	public ReluLayer(Layer preLayer) {
+		this.width = preLayer.width;
+		this.height = preLayer.height;
+		this.oWidth = preLayer.oWidth;
+		this.oHeight = preLayer.oHeight;
+		this.channel = preLayer.channel;
+		this.oChannel = preLayer.oChannel;
+	}
+	
 	public ReluLayer(Network network) {
 		this.network = network;
 	}
@@ -31,10 +41,6 @@ public class ReluLayer extends ActiveFunctionLayer {
 		if(kernel == null) {
 			kernel = new ReluKernel();
 		}
-	}
-	
-	public void initBack() {
-		
 	}
 	
 	@Override
@@ -156,7 +162,11 @@ public class ReluLayer extends ActiveFunctionLayer {
 		// TODO Auto-generated method stub
 		
 	}
-
+	
+	public void initBack(Tensor diff) {
+		this.diff = diff;
+	}
+	
 	@Override
 	public void forward(Tensor inpnut) {
 		// TODO Auto-generated method stub
@@ -177,7 +187,7 @@ public class ReluLayer extends ActiveFunctionLayer {
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
-		this.initBack();
+		this.initBack(delta);
 		/**
 		 * 设置梯度
 		 */

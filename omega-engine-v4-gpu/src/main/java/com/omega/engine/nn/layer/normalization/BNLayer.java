@@ -3,9 +3,9 @@ package com.omega.engine.nn.layer.normalization;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.cudnn.BNCudnnKernel;
+import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.BNBaseKernel;
-import com.omega.engine.nn.layer.normalization.gpu.BNKernel;
 import com.omega.engine.nn.layer.normalization.gpu.BNKernel3;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
@@ -48,6 +48,17 @@ public class BNLayer extends NormalizationLayer {
 	
 	public BNLayer() {
 //		initParam();
+		this.hasParams = true;
+	}
+	
+	public BNLayer(Layer preLayer) {
+		this.width = preLayer.width;
+		this.height = preLayer.height;
+		this.oWidth = preLayer.oWidth;
+		this.oHeight = preLayer.oHeight;
+		this.channel = preLayer.channel;
+		this.oChannel = preLayer.oChannel;
+		this.hasParams = true;
 	}
 	
 	public BNLayer(Network network) {
@@ -87,7 +98,8 @@ public class BNLayer extends NormalizationLayer {
 		}
 
 		if(this.output == null || this.number != this.output.number) {
-			this.diff = new Tensor(number, channel, height, width, true);
+//			this.diff = new Tensor(number, channel, height, width, true);
+//			this.diff = this.network.getNextLayer(this.index).diff;
 			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 //			this.output2 = new Tensor(number, oChannel, oHeight, oWidth);
 		}
@@ -115,15 +127,19 @@ public class BNLayer extends NormalizationLayer {
 	
 	@Override
 	public void initBack() {
-//		if(this.diff == null || this.number != this.diff.number) {
-//			this.diff = new Tensor(number, oChannel, oHeight, oWidth);
-//		}
+		if(this.diff == null) {
+			this.diff = this.network.getNextLayer(this.index).diff;
+		}
+	}
+	
+	public void initBack(Tensor diff) {
+		this.diff = diff;
 	}
 
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-
+//		System.out.println(this.index+":"+input.number+":"+input.channel+":"+input.height+":"+input.width);
 		kernel.forward(this.network.RUN_MODEL, gamma, beta, input, output);
 //		
 //		System.out.println("bn-output:");
@@ -279,7 +295,7 @@ public class BNLayer extends NormalizationLayer {
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
-		this.initBack();
+		this.initBack(delta);
 		/**
 		 * 设置梯度
 		 */

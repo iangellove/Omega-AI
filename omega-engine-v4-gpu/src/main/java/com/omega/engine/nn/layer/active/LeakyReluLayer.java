@@ -3,14 +3,11 @@ package com.omega.engine.nn.layer.active;
 import java.util.Vector;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.task.ForkJobEngine;
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
+import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.active.gpu.LeakyReluKernel;
-import com.omega.engine.nn.layer.active.gpu.SigmodKernel;
-import com.omega.engine.nn.layer.active.jobs.leakRelu.LeakyReluBackwardJob;
-import com.omega.engine.nn.layer.active.jobs.leakRelu.LeakyReluForwardJob;
 import com.omega.engine.nn.network.Network;
 
 /**
@@ -26,6 +23,15 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 	
 	public LeakyReluLayer() {
 
+	}
+	
+	public LeakyReluLayer(Layer preLayer) {
+		this.width = preLayer.width;
+		this.height = preLayer.height;
+		this.oWidth = preLayer.oWidth;
+		this.oHeight = preLayer.oHeight;
+		this.channel = preLayer.channel;
+		this.oChannel = preLayer.oChannel;
 	}
 	
 	public LeakyReluLayer(Network network) {
@@ -158,6 +164,10 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 		// TODO Auto-generated method stub
 		
 	}
+	
+	public void initBack(Tensor diff) {
+		this.diff = diff;
+	}
 
 	@Override
 	public void forward(Tensor inpnut) {
@@ -179,7 +189,7 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
-		this.initBack();
+		this.initBack(delta);
 		/**
 		 * 设置梯度
 		 */

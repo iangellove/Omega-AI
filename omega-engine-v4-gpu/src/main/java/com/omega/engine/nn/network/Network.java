@@ -111,7 +111,7 @@ public abstract class Network {
 	}
 	
 	public Layer getLastLayer() {
-		return this.layerList.get(this.layerCount - 1);
+		return this.layerList.get(this.layerList.size() - 1);
 	}
 	
 	public Layer getPreLayer(int index) {

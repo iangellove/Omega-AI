@@ -11,6 +11,7 @@ import com.omega.engine.nn.network.RunModel;
 import jcuda.Pointer;
 import jcuda.jcudnn.JCudnn;
 import jcuda.jcudnn.cudnnBatchNormMode;
+import jcuda.jcudnn.cudnnBatchNormOps;
 import jcuda.jcudnn.cudnnTensorDescriptor;
 
 /**
@@ -129,7 +130,7 @@ public class BNCudnnKernel extends BNBaseKernel{
 		initForward(input);
 		
 		if(RUN_MODEL == RunModel.TRAIN) {
-
+			
 			CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationForwardTraining(CudnnHandleManager.getHandle(), mode,
 			    		alpha_P, beta_P, xDesc, input.getGpuData(), yDesc, output.getGpuData(),
 			    		gbmvDesc, gamma.getGpuData(), beta.getGpuData(), momentum, runingMean.getGpuData(), runingVar.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));

@@ -368,6 +368,51 @@ public class ImageUtils {
 		return data;
 	}
 	
+	/**
+	 * 读取一张图片的RGB值
+	 * 
+	 * @throws Exception
+	 */
+	public float[] getImageData(File file,boolean normalization) throws Exception {
+
+		BufferedImage bi = null;
+		try {
+			bi = ImageIO.read(file);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		int width = bi.getWidth();
+		int height = bi.getHeight();
+		int minx = bi.getMinX();
+		int miny = bi.getMinY();
+
+		int[][] r = new int[width][height];
+		int[][] g = new int[width][height];
+		int[][] b = new int[width][height];
+		int size = height * width * 3;
+		float[] color = new float[size];
+		
+		float n = 1.0f;
+		
+		if(normalization) {
+			n = 255.0f;
+		}
+		
+		for (int j = miny; j < height; j++) {
+			for (int i = minx; i < width; i++) {
+				int pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+				r[i][j] = (pixel & 0xff0000) >> 16;
+				g[i][j] = (pixel & 0xff00) >> 8;
+				b[i][j] = (pixel & 0xff);
+				color[0 * width * height + i * height + j] = r[i][j] * 1.0f / n;
+				color[1 * width * height + i * height + j] = g[i][j] * 1.0f / n;
+				color[2 * width * height + i * height + j] = b[i][j] * 1.0f / n;
+			}
+		}
+		
+		return color;
+	}
+	
 	public BufferedImage convertRGBImage(int[][] rgbValue){
 		int height = rgbValue[0].length;
 		int width = rgbValue.length;

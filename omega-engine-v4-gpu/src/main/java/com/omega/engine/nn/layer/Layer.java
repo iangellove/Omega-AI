@@ -69,6 +69,8 @@ public abstract class Layer {
 	 */
 	private CacheDataSet tampDataSet;
 	
+	public boolean hasParams = false;
+	
 	public abstract void init();
 	
 	public abstract void initBack();
@@ -143,16 +145,19 @@ public abstract class Layer {
 	 * 转换并设置输入数据
 	 */
 	public void setDelta() {
+		
+		if(this.delta == null) {
+			/**
+			 * 获取上一层的输出作为当前层的输入
+			 */
+			if(this.index < this.network.layerList.size() - 1) {
+				this.delta = this.network.getNextLayer(this.index).diff;
+			}else {
+				this.delta = this.network.lossDiff;
+			}
 
-		/**
-		 * 获取上一层的输出作为当前层的输入
-		 */
-		if(this.index < this.network.layerList.size() - 1) {
-			this.delta = this.network.getNextLayer(this.index).diff;
-		}else {
-			this.delta = this.network.lossDiff;
 		}
-
+		
 	}
 	
 	/**

@@ -170,7 +170,7 @@ public class BNKernel3 extends BNBaseKernel{
 	}
 	
 	private void initKernel() {
-		
+//		System.out.println(C);
 		/**
 		 * 申请向前传播参数显存
 		 */

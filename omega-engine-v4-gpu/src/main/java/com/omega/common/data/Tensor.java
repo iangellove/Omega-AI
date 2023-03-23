@@ -53,7 +53,7 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = new float[this.dataLength];
-		this.hasGPU = hasGPU;
+		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
 			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
@@ -77,7 +77,7 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = data;
-		this.hasGPU = hasGPU;
+		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
 			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
@@ -92,7 +92,7 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = MatrixUtils.val(this.dataLength, val);
-		this.hasGPU = hasGPU;
+		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			hostToDevice();
 		}
@@ -152,7 +152,7 @@ public class Tensor implements Serializable{
 
 	public void setData(float[] data) {
 		this.data = data;
-		if(hasGPU) {
+		if(isHasGPU()) {
 			this.hostToDevice();
 		}
 	}
@@ -214,9 +214,25 @@ public class Tensor implements Serializable{
 		JCuda.cudaDeviceSynchronize();
 	}
 	
+	public void freeGPU() {
+		if(gpuData != null) {
+			JCuda.cudaFree(gpuData);
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+		}
+	}
+	
 	public void showDM() {
 		syncHost();
 	    System.out.println(JsonUtils.toJson(data));
+	}
+	
+	public boolean checkDM() {
+		for(float val:syncHost()) {
+			if(val > 0) {
+				return true;
+			}
+		}
+	    return false;
 	}
 	
 	public void clearGPU() {
@@ -231,6 +247,14 @@ public class Tensor implements Serializable{
 		if(code != cudaError.cudaSuccess) {
 			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
 		}
+	}
+
+	public boolean isHasGPU() {
+		return hasGPU;
+	}
+
+	public void setHasGPU(boolean hasGPU) {
+		this.hasGPU = hasGPU;
 	}
 	
 }

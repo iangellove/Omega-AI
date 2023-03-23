@@ -26,15 +26,18 @@ public abstract class ActiveFunctionLayer extends Layer {
 			output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		}
 		
-		if(diff == null || number != output.number) {
-			diff = new Tensor(number, channel, height, width, true);
-		}
+//		if(diff == null || number != output.number) {
+//			diff = new Tensor(number, channel, height, width, true);
+//		}
 		
 	}
 	
 	@Override
 	public void initBack() {
-		
+//		System.out.println(this.index);
+		if(this.diff == null) {
+			this.diff = this.network.getNextLayer(this.index).diff;
+		}
 	}
 	
 	public void setPreLayer(Layer pre) {

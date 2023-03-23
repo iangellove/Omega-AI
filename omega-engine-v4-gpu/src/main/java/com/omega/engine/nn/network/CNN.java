@@ -92,7 +92,7 @@ public class CNN extends Network {
 //			long start2 = System.nanoTime();
 			
 			layer.forward();
-			
+
 //			System.out.println(layer.getLayerType().toString()+layer.index+":");
 //			layer.output.showDM();
 			

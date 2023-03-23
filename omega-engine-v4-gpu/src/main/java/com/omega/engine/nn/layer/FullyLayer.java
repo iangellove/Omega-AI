@@ -26,6 +26,7 @@ public class FullyLayer extends Layer{
 		this.oChannel = channel;
 		this.oHeight = height;
 		this.oWidth = outputNum;
+		this.hasParams = true;
 		this.initParam();
 		initKernel();
 	}
@@ -38,6 +39,7 @@ public class FullyLayer extends Layer{
 		this.oHeight = height;
 		this.oWidth = outputNum;
 		this.hasBias = hasBias;
+		this.hasParams = true;
 		this.initParam();
 		initKernel();
 	}
@@ -123,8 +125,11 @@ public class FullyLayer extends Layer{
 		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, input.getGpuData(), delta.getGpuData(), diffW.getGpuData(),
 				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 
-//		MatrixOperation.multiplication_self(diffW.data, (1.0f / this.number));
 		
+		if(hasBias) {
+			kernel.backwardBias(diffB, delta);
+		}
+
 		/**
 		 * diff = delta * weightT
 		 * number * ow
@@ -133,13 +138,6 @@ public class FullyLayer extends Layer{
 		 */
 		GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData(), weight.getGpuData(), diff.getGpuData(),
 				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
-		
-//		delta.showDM();
-//		System.out.println("---delta---");
-		
-		if(hasBias) {
-			kernel.backwardBias(diffB, delta);
-		}
 		
 //		diff.showDM();
 		

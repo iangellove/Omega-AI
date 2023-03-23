@@ -55,6 +55,7 @@ public class ConvolutionLayer extends Layer {
 		this.kHeight = kHeight;
 		this.padding = padding;
 		this.stride = stride;
+		this.hasParams = true;
 		this.initParam();
 	}
 	
@@ -81,6 +82,7 @@ public class ConvolutionLayer extends Layer {
 		this.padding = padding;
 		this.stride = stride;
 		this.hasBias = hasBias;
+		this.hasParams = true;
 		this.initParam();
 	}
 	
@@ -108,6 +110,7 @@ public class ConvolutionLayer extends Layer {
 		this.stride = stride;
 		this.hasBias = hasBias;
 		this.network = network;
+		this.hasParams = true;
 		this.initParam();
 	}
 	

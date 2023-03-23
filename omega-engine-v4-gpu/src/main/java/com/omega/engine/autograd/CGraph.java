@@ -73,15 +73,7 @@ public class CGraph implements Serializable{
 		
 		float[][][][] xData = new float[][][][] {{{{3}}}};
 		
-		float[][][][] wData = new float[][][][] {{{{0.1f}}}};
-		
-		float[][][][] bData = new float[][][][] {{{{0.2f}}}};
-		
-		float[][][][] grad = new float[][][][] {{{{0.01f}}}};
-		
 		Tensor x = new Tensor(xData);
-		Tensor w = new Tensor(wData);
-		Tensor b = new Tensor(bData);
 		
 		try {
 			
@@ -122,6 +114,8 @@ public class CGraph implements Serializable{
 			z.setGrad(new float[][][][] {{{{1}}}});
 			
 			z.backward();
+			
+			System.out.println(JsonUtils.toJson(z.getData()));
 			
 			System.out.println(JsonUtils.toJson(x.getGrad()));
 			

@@ -2,7 +2,6 @@ package com.omega.engine.service.impl;
 
 import java.io.File;
 
-import org.nd4j.linalg.schedule.RampSchedule;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Async;
@@ -10,13 +9,11 @@ import org.springframework.stereotype.Service;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
-import com.omega.common.data.utils.TrainDataLoader;
 import com.omega.common.utils.DataLoader;
 import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.LabelUtils;
 import com.omega.common.utils.MathUtils;
-import com.omega.common.utils.RandomUtils;
 import com.omega.engine.controller.TrainTask;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
@@ -613,7 +610,9 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 32;
 			
-			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
+			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.sgd);
+			
+			netWork.CUDNN = true;
 			
 			netWork.learnRate = 0.01f;
 			
@@ -746,7 +745,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			FullyLayer full3 = new FullyLayer(inputCount, 10);
 
-			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
+//			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 			
 			/**
 			 * 装载网络
@@ -821,7 +820,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(bn15);
 			netWork.addLayer(active15);
 			netWork.addLayer(full3);
-			netWork.addLayer(softmax);
+//			netWork.addLayer(softmax);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.001f, 128, LearnRateUpdate.COSINE, false);
 
@@ -1210,7 +1209,9 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 32;
 			
-			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
+			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adam);
+			
+			netWork.CUDNN = true;
 			
 			netWork.learnRate = 0.001f;
 			
@@ -1318,7 +1319,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			FullyLayer full3 = new FullyLayer(inputCount, 10);
 
-			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
+//			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 			
 			/**
 			 * 装载网络
@@ -1382,7 +1383,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full2);
 			netWork.addLayer(active15);
 			netWork.addLayer(full3);
-			netWork.addLayer(softmax);
+//			netWork.addLayer(softmax);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.001f, 128, LearnRateUpdate.CONSTANT, false);
 
@@ -2810,7 +2811,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full1);
 //			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 250, 0.001f, 128, LearnRateUpdate.GD_GECAY, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 250, 0.001f, 256, LearnRateUpdate.GD_GECAY, false);
 
 			long start = System.currentTimeMillis();
 			

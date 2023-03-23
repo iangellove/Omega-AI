@@ -2,6 +2,7 @@ package com.omega.engine.optimizer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.controller.TrainTask;
@@ -10,6 +11,8 @@ import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
+import com.omega.yolo.utils.BaseDataLoader;
+import com.omega.yolo.utils.YoloDataLoader;
 
 import jcuda.driver.JCudaDriver;
 
@@ -126,7 +129,7 @@ public class MBSGDOptimizer extends Optimizer {
 //					System.out.println(JsonUtils.toJson(output.data));
 //					System.out.println("output1:"+(System.nanoTime() - output_start) / 1e6 + "ms.");
 					
-					output.syncHost();
+//					output.syncHost();
 					
 //					System.out.println(JsonUtils.toJson(output.data));
 					
@@ -163,7 +166,9 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					this.network.update();
 					
-					JCudaDriver.cuCtxSynchronize();
+					output.syncHost();
+					
+//					JCudaDriver.cuCtxSynchronize();
 					
 //					System.out.println("back:"+(System.nanoTime() - back_start) / 1e6 + "ms.");
 					
@@ -511,6 +516,303 @@ public class MBSGDOptimizer extends Optimizer {
 			 * 停止训练
 			 */
 			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void train(BaseDataLoader trainingData) {
+		// TODO Auto-generated method stub
+
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+			
+//			/**
+//			 * normalize vailSet
+//			 */
+//			DataTransforms.normalize(validata.input, mean, std);
+
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			
+			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = trainingData.shuffle();
+
+				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				float train_loss = 0.0f;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+
+					long start = System.nanoTime();
+
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					trainingData.loadData(indexs[it], input, label);
+					
+//					System.out.println(JsonUtils.toJson(label.data));
+					
+					input.hostToDevice();
+					
+					label.hostToDevice();
+
+					/**
+					 * forward
+					 */
+					Tensor output = this.network.forward(input);
+					
+//					System.out.println(JsonUtils.toJson(output.syncHost()));
+					
+					/**
+					 * loss
+					 */
+					this.loss = this.network.loss(output, label);
+					
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = this.network.lossDiff(output, label);
+					
+					/**
+					 * back
+					 */
+					this.network.back(this.lossDiff);
+					
+					/**
+					 * update
+					 */
+					this.network.update();
+
+					output.syncHost();
+
+//					float error = this.accuracy(output, label, trainingData.labelSet);
+
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / this.batchSize;
+					}
+
+					train_loss += this.currentError;
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+					
+					/**
+					 * 发送消息
+					 */
+					if(isOnline && this.getSid() != null) {
+						
+						TrainTask.sendMsg(this.getSid(), msg);
+						
+					}
+
+					this.batchIndex++;
+				}
+				
+				System.out.println("training["+this.trainIndex+"] train loss:{"+train_loss/indexs.length+"} ");
+				
+//				/**
+//				 * vail data test
+//				 */
+//				float vail_loss = this.testAndLoss(validata, vail_input, vail_label, this.batchSize);
+
+				/**
+				 * update learning rate
+				 */
+				this.updateLR();
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void trainObjectRecognition(BaseData trainingData) {
+		// TODO Auto-generated method stub
+
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			
+			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+
+//				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
+				
+//				int[][] indexs = new int[468][128];
+//				
+//				DataExportUtils.importTXT(indexs, "H://index3.txt");
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+//				for(int it = 0;it<1;it++) {
+					
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+
+					this.loss.clear();
+					
+					this.lossDiff.clear();
+					
+					trainingData.getRandomData(indexs[it], input, label); 
+
+					input.hostToDevice();
+					
+					label.hostToDevice();
+					
+//					input.showDM();
+					
+//					long output_start = System.nanoTime();
+					
+					/**
+					 * forward
+					 */
+					Tensor output = this.network.forward(input);
+					
+//					System.out.println(JsonUtils.toJson(output.data));
+//					System.out.println("output1:"+(System.nanoTime() - output_start) / 1e6 + "ms.");
+					
+					output.syncHost();
+					
+//					System.out.println(JsonUtils.toJson(output.data));
+					
+//					System.out.println("output2:"+(System.nanoTime() - output_start) / 1e6 + "ms.");
+					
+					/**
+					 * loss
+					 */
+					this.loss = this.network.loss(output, label);
+					
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = this.network.lossDiff(output, label);
+					
+//					System.out.println("=========>:"+JsonUtils.toJson(lossDiff.data));
+
+					/**
+					 * current time error
+					 */
+					this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
+					
+//					long back_start = System.nanoTime();
+					
+					lossDiff.hostToDevice();
+					
+					/**
+					 * back
+					 */
+					this.network.back(this.lossDiff);
+					
+					/**
+					 * update
+					 */
+					this.network.update();
+					
+					JCudaDriver.cuCtxSynchronize();
+					
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / this.batchSize;
+					}
+					
+//					System.out.println("back:"+(System.nanoTime() - back_start) / 1e6 + "ms.");
+					
+					float error = 0.0f;
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} currentError:"+this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+					
+					/**
+					 * 发送消息
+					 */
+					if(isOnline && this.getSid() != null) {
+						
+						TrainTask.sendMsg(this.getSid(), msg);
+						
+					}
+					
+//					/**
+//					 * update learning rate
+//					 */
+//					this.updateLR();
+					
+					this.batchIndex++;
+				}
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR();
+
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+//			System.out.println(JsonUtils.toJson(this.network.layerList));
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

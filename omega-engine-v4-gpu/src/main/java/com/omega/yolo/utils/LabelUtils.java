@@ -1,8 +1,11 @@
 package com.omega.yolo.utils;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 
-import com.omega.common.utils.JsonUtils;
+import com.omega.common.data.Tensor;
 
 /**
  * yolo label transform to the location
@@ -10,6 +13,30 @@ import com.omega.common.utils.JsonUtils;
  *
  */
 public class LabelUtils {
+	
+	public static void loadLabel(String labelPath,Tensor label) {
+		
+		try (FileInputStream fin = new FileInputStream(labelPath);
+			InputStreamReader reader = new InputStreamReader(fin);	
+		    BufferedReader buffReader = new BufferedReader(reader);){
+			
+			String strTmp = "";
+			int idx = 0;
+			int onceSize = label.channel * label.height * label.width;
+	        while((strTmp = buffReader.readLine())!=null){
+	        	String[] list = strTmp.split(" ");
+	        	for(int i = 1;i<list.length;i++) {
+	        		label.data[idx * onceSize + i-1] = Float.parseFloat(list[i]);
+	        	}
+	        	idx++;
+	        }
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
 	
 	/**
 	 * labelToLocation
@@ -159,7 +186,9 @@ public class LabelUtils {
 	 * px = (cx - (gridx * cellSize)) / cellSize
 	 * py = (cy - (gridy * cellSize)) / cellSize
 	 */
-	public static float[] labelToYolo(int[][] bbox,int stride) {
+	public static float[] labelToYolo(int[][] data,int stride) {
+		
+		float[][] bbox = normalization(data);
 		
 		float cellSize = 1.0f / stride;
 		
@@ -169,14 +198,14 @@ public class LabelUtils {
 		
 		for(int i = 0;i<bbox.length;i++) {
 			
-			int cx = bbox[i][1];
-			int cy = bbox[i][2];
-			int w = bbox[i][3];
-			int h = bbox[i][4];
-			int clazz = bbox[i][0];
+			float cx = bbox[i][1];
+			float cy = bbox[i][2];
+			float w = bbox[i][3];
+			float h = bbox[i][4];
+			int clazz = new Float(bbox[i][0]).intValue();
 //			System.out.println(new BigDecimal(cx * 1.0f / 448.0f).divide(new BigDecimal(cellSize), BigDecimal.ROUND_CEILING).intValue());
-			int gridx = new BigDecimal(cx / 448.0f).divide(new BigDecimal(cellSize), BigDecimal.ROUND_CEILING).intValue();
-			int gridy = new BigDecimal(cy / 448.0f).divide(new BigDecimal(cellSize), BigDecimal.ROUND_CEILING).intValue();
+			int gridx = new BigDecimal(cx).divide(new BigDecimal(cellSize), BigDecimal.ROUND_CEILING).intValue();
+			int gridy = new BigDecimal(cy).divide(new BigDecimal(cellSize), BigDecimal.ROUND_CEILING).intValue();
 			
 //			System.out.println(cx+":"+cy+":"+gridx+":"+gridy);
 			
@@ -189,23 +218,23 @@ public class LabelUtils {
 			 */
 			target[gridx * stride * 30 + gridy * 30 + 5] = 1.0f;
 			
-			float px = (cx * 1.0f / 448.0f / cellSize) - gridx;
-			float py = (cy * 1.0f / 448.0f / cellSize) - gridy;
+			float px = (cx - gridx * cellSize) / cellSize;
+			float py = (cy - gridy * cellSize) / cellSize;
 			
 			/**
 			 * x1,y1,w1,h1
 			 */
 			target[gridx * stride * 30 + gridy * 30 + 1] = px;
 			target[gridx * stride * 30 + gridy * 30 + 2] = py;
-			target[gridx * stride * 30 + gridy * 30 + 3] = w * 1.0f / 448.0f;
-			target[gridx * stride * 30 + gridy * 30 + 4] = h * 1.0f / 448.0f;
+			target[gridx * stride * 30 + gridy * 30 + 3] = w;
+			target[gridx * stride * 30 + gridy * 30 + 4] = h;
 			/**
 			 * x2,y2,w2,h2
 			 */
 			target[gridx * stride * 30 + gridy * 30 + 6] = px;
 			target[gridx * stride * 30 + gridy * 30 + 7] = py;
-			target[gridx * stride * 30 + gridy * 30 + 8] = w * 1.0f / 448.0f;
-			target[gridx * stride * 30 + gridy * 30 + 9] = h * 1.0f / 448.0f;
+			target[gridx * stride * 30 + gridy * 30 + 8] = w;
+			target[gridx * stride * 30 + gridy * 30 + 9] = h;
 		
 			/**
 			 * class
@@ -215,6 +244,23 @@ public class LabelUtils {
 		}
 		
 		return target;
+	}
+	
+	public static float[][] normalization(int[][] data){
+		
+		float[][] bbox = new float[data.length][data[0].length];
+		
+		for(int i = 0;i<bbox.length;i++) {
+			
+			for(int j = 0;j<bbox[i].length;j++) {
+				
+				bbox[i][j] = data[i][j] * 1.0f / 448.0f;
+				
+			}
+			
+		}
+		
+		return bbox;
 	}
 	
 }

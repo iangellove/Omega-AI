@@ -7,6 +7,8 @@ import java.io.FileWriter;
 import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.w3c.dom.Document;
@@ -14,9 +16,12 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.JsonUtils;
+import com.omega.engine.nn.data.DataSet;
 import com.omega.engine.nn.data.ImageData;
+import com.omega.yolo.model.YoloDataSet;
 import com.omega.yolo.model.YoloImage;
 
 
@@ -420,7 +425,7 @@ public class YoloImageUtils {
 			
 			File file = new File(srcDir);
 			
-			Map<String, Object> bboxList = new HashMap<String, Object>(); 
+			Map<String, Object> bboxList = new LinkedHashMap<String, Object>(); 
 			
 			if(file.exists() && file.isDirectory()) {
 				
@@ -433,7 +438,6 @@ public class YoloImageUtils {
 				}
 				
 			}
-			
 			
 			File txt = new File(bboxPath);
 			
@@ -463,6 +467,62 @@ public class YoloImageUtils {
 				e.printStackTrace();
 			}
 			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static YoloDataSet loadImgData(String dirPath,String labelPath,int channel,int height,int width,int labelSize) {
+		
+		try {
+			
+			File file = new File(dirPath);
+			
+			if(file.exists() && file.isDirectory()) {
+				
+				File[] files = file.listFiles();
+				
+				YoloDataSet set = new YoloDataSet(files.length, channel, height, width, labelSize);
+				
+				for(int i = 0;i<files.length;i++) {
+					
+					File img = files[i];
+					
+					float[] data =  IU().getImageData(img, true);
+					
+					System.arraycopy(data, 0, set.input.data, i * channel * height * width, channel * height * width);
+
+				}
+				
+				LabelUtils.loadLabel(labelPath, set.label);
+				
+				return set;
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		return null;
+	} 
+	
+	public static void loadImgDataToTensor(String filePath,Tensor out,int idx) {
+		
+		try {
+			
+			File file = new File(filePath);
+			
+			if(file.exists()) {
+				
+				float[] data =  IU().getImageData(file, true);
+				
+				System.arraycopy(data, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
+				
+			}
 			
 		} catch (Exception e) {
 			// TODO: handle exception

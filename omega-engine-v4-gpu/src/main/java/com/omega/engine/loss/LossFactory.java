@@ -1,5 +1,6 @@
 package com.omega.engine.loss;
 
+import com.omega.yolo.loss.YoloLoss;
 
 /**
  * LossFactory
@@ -25,6 +26,8 @@ public class LossFactory {
 			return new CrossEntropyLoss();
 		case softmax_with_cross_entropy:
 			return new CrossEntropyLoss2();
+		case yolo:
+			return new YoloLoss();
 		default:
 			return null;
 		}

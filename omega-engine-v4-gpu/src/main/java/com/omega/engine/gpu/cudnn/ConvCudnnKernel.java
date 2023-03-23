@@ -134,7 +134,7 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 	public void conv(Tensor input,Tensor kernel,Tensor output) {
 		
 		this.init(input.number);
-		
+
 		handle(JCudnn.cudnnConvolutionForward(CudnnHandleManager.getHandle(), alpha_P, xDesc, input.getGpuData(), kernelDesc, kernel.getGpuData(), convDesc, fw_algo,
 				this.network.workspace, this.network.workspaceSize, beta_P, yDesc, output.getGpuData()));
 		

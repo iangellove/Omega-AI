@@ -3,14 +3,11 @@ package com.omega.engine.nn.layer.active;
 import java.util.Vector;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.task.ForkJobEngine;
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
+import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.active.gpu.ReluKernel;
 import com.omega.engine.nn.layer.active.gpu.SigmodKernel;
-import com.omega.engine.nn.layer.active.jobs.sigmod.SigmodBackwardJob;
-import com.omega.engine.nn.layer.active.jobs.sigmod.SigmodForwardJob;
 import com.omega.engine.nn.network.Network;
 
 /**
@@ -24,6 +21,15 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	
 	public SigmodLayer() {
 
+	}
+	
+	public SigmodLayer(Layer preLayer) {
+		this.width = preLayer.width;
+		this.height = preLayer.height;
+		this.oWidth = preLayer.oWidth;
+		this.oHeight = preLayer.oHeight;
+		this.channel = preLayer.channel;
+		this.oChannel = preLayer.oChannel;
 	}
 	
 	public SigmodLayer(Network network) {
@@ -46,7 +52,7 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		kernel.forward();
+		kernel.forward(input, output);
 	}
 
 	@Override
@@ -58,7 +64,7 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		kernel.backward();
+		kernel.backward(delta, diff);
 	}
 
 	@Override
@@ -148,6 +154,9 @@ public class SigmodLayer extends ActiveFunctionLayer {
 		
 	}
 
+	public void initBack(Tensor diff) {
+		this.diff = diff;
+	}
 
 	@Override
 	public void forward(Tensor inpnut) {
@@ -169,7 +178,7 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
-		this.initBack();
+		this.initBack(delta);
 		/**
 		 * 设置梯度
 		 */

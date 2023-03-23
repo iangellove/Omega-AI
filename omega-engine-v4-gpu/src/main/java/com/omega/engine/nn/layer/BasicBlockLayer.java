@@ -112,8 +112,11 @@ public class BasicBlockLayer extends Layer {
 	
 	@Override
 	public void initBack() {
-		if(this.diff == null || this.diff.number != this.network.number) {
-			this.diff = new Tensor(number, channel, height, width, true);
+//		if(this.diff == null || this.diff.number != this.network.number) {
+//			this.diff = new Tensor(number, channel, height, width, true);
+//		}
+		if(this.diff == null) {
+			this.diff = this.network.getNextLayer(this.index).diff;
 		}
 	}
 
@@ -170,10 +173,12 @@ public class BasicBlockLayer extends Layer {
 		bn1.back(a1.diff);
 		conv1.back(bn1.diff);
 		
+//		System.out.println("basicBlock2:"+conv1.diff.checkDM());
+		
 		if(downsample) {
 			identityBN.back(delta);
 			identityConv.back(identityBN.diff);
-			
+//			System.out.println("identityConv:"+identityConv.diff.checkDM());
 			kernel.add(conv1.diff, identityConv.diff, diff);
 		}else {
 			kernel.add(conv1.diff, delta, diff);
