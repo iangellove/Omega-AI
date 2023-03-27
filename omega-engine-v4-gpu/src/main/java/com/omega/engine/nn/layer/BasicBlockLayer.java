@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
 import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.gpu.BasicBlockKernel;
@@ -31,8 +32,6 @@ public class BasicBlockLayer extends Layer {
 	
 	private BNLayer bn2;
 	
-//	private ShortcutLayer shortcut;
-	
 	private int kHeight = 3;
 	
 	private int kWidth = 3;
@@ -42,6 +41,10 @@ public class BasicBlockLayer extends Layer {
 	private int fisrtLayerStride = 2;
 	
 	private boolean downsample = false;
+	
+	private BaseKernel baseKernel;
+	
+	private Tensor cache_delta;
 	
 	public BasicBlockLayer(int channel,int oChannel,int height,int width,int fisrtLayerStride, Network network) {
 		
@@ -65,6 +68,8 @@ public class BasicBlockLayer extends Layer {
 		}
 		
 		kernel = new BasicBlockKernel();
+		
+		baseKernel = new BaseKernel();
 		
 		initLayers();
 		
@@ -111,12 +116,10 @@ public class BasicBlockLayer extends Layer {
 	
 	@Override
 	public void initBack() {
-//		if(this.diff == null || this.number != this.diff.number){
-//			this.diff = new Tensor(number, channel, height, width, true);
-//		}
-		if(this.diff == null) {
+		if(this.diff == null || conv1.number != conv1.diff.number){
 			conv1.initBack();
 			this.diff = conv1.diff;
+			this.cache_delta = new Tensor(number, oChannel, oHeight, oWidth, true);
 		}
 	}
 
@@ -160,6 +163,8 @@ public class BasicBlockLayer extends Layer {
 		/**
 		 * deltax = deltao * (f'(x) + 1)
 		 */
+		baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
+		
 		bn2.back(delta);
 
 		conv2.back(bn2.diff);
@@ -171,12 +176,11 @@ public class BasicBlockLayer extends Layer {
 //		System.out.println("basicBlock2:"+conv1.diff.checkDM());
 		
 		if(downsample) {
-			identityBN.back(delta);
+			identityBN.back(this.cache_delta);
 			identityConv.back(identityBN.diff);
-//			System.out.println("identityConv:"+identityConv.diff.checkDM());
 			kernel.add(conv1.diff, identityConv.diff, this.diff);
 		}else {
-			kernel.add(conv1.diff, delta, this.diff);
+			kernel.add(conv1.diff, this.cache_delta, this.diff);
 		}
 		
 //		shortcut.back(delta, conv1.diff);
