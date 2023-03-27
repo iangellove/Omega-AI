@@ -2811,7 +2811,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full1);
 //			netWork.addLayer(softmax);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 250, 0.001f, 256, LearnRateUpdate.GD_GECAY, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 250, 0.001f, 128, LearnRateUpdate.GD_GECAY, false);
 
 			long start = System.currentTimeMillis();
 			

@@ -139,7 +139,7 @@ public class Tensor implements Serializable{
 	}
 
 	public int getDataLength() {
-		return dataLength;
+		return number * channel * height * width;
 	}
 
 	public void setDataLength(int dataLength) {

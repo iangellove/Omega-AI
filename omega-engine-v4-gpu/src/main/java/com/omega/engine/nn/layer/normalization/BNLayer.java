@@ -189,7 +189,7 @@ public class BNLayer extends NormalizationLayer {
 	public void diff() {
 		
 //		long start = System.nanoTime();
-		
+//		System.out.println(index);
 		kernel.backward(input, delta, diff, gamma, diffGamma, diffBeta);
 
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");

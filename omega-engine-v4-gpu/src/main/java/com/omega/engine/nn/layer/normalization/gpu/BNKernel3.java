@@ -10,7 +10,6 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.layer.gpu.BNBaseKernel;
-import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.network.RunModel;
 
 import jcuda.Pointer;
@@ -283,7 +282,7 @@ public class BNKernel3 extends BNBaseKernel{
 
 		if(dgammaParameters == null) {
 
-			diff.setGpuData(delta.getGpuData());
+//			diff.setGpuData(delta.getGpuData());
 			
 			/**
 			 * float *x_norm, float *delta, int batch, int n, int size, float *scale_updates

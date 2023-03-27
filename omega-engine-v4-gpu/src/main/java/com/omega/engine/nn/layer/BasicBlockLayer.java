@@ -2,7 +2,6 @@ package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
-import com.omega.engine.nn.layer.active.LeakyReluLayer;
 import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.gpu.BasicBlockKernel;
 import com.omega.engine.nn.layer.normalization.BNLayer;
@@ -112,11 +111,12 @@ public class BasicBlockLayer extends Layer {
 	
 	@Override
 	public void initBack() {
-//		if(this.diff == null || this.diff.number != this.network.number) {
+//		if(this.diff == null || this.number != this.diff.number){
 //			this.diff = new Tensor(number, channel, height, width, true);
 //		}
 		if(this.diff == null) {
-			this.diff = this.network.getNextLayer(this.index).diff;
+			conv1.initBack();
+			this.diff = conv1.diff;
 		}
 	}
 
@@ -145,11 +145,6 @@ public class BasicBlockLayer extends Layer {
 			kernel.add(input, bn2.output, output);
 		}
 		
-//		shortcut.forward(this.input, bn2.output);
-//		this.output = bn2.output;
-		
-//		output.showDM();
-		
 	}
 
 	@Override
@@ -161,7 +156,7 @@ public class BasicBlockLayer extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-
+//		System.out.println(index);
 		/**
 		 * deltax = deltao * (f'(x) + 1)
 		 */
@@ -179,9 +174,9 @@ public class BasicBlockLayer extends Layer {
 			identityBN.back(delta);
 			identityConv.back(identityBN.diff);
 //			System.out.println("identityConv:"+identityConv.diff.checkDM());
-			kernel.add(conv1.diff, identityConv.diff, diff);
+			kernel.add(conv1.diff, identityConv.diff, this.diff);
 		}else {
-			kernel.add(conv1.diff, delta, diff);
+			kernel.add(conv1.diff, delta, this.diff);
 		}
 		
 //		shortcut.back(delta, conv1.diff);

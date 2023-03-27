@@ -4,15 +4,19 @@ import static jcuda.jcudnn.cudnnDataType.CUDNN_DATA_FLOAT;
 import static jcuda.jcudnn.cudnnTensorFormat.CUDNN_TENSOR_NCHW;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.CheckArrayUtils;
+import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.nn.layer.gpu.BNBaseKernel;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.network.RunModel;
 
 import jcuda.Pointer;
+import jcuda.Sizeof;
 import jcuda.jcudnn.JCudnn;
 import jcuda.jcudnn.cudnnBatchNormMode;
-import jcuda.jcudnn.cudnnBatchNormOps;
 import jcuda.jcudnn.cudnnTensorDescriptor;
+import jcuda.runtime.JCuda;
+import jcuda.runtime.cudaMemcpyKind;
 
 /**
  * BNCudnnKernel
@@ -41,13 +45,11 @@ public class BNCudnnKernel extends BNBaseKernel{
 	private Tensor runingMean;
 	private Tensor runingVar;
 	
-	private cudnnTensorDescriptor xDesc;
-	private cudnnTensorDescriptor yDesc;
-	private cudnnTensorDescriptor gbmvDesc;
+	private cudnnTensorDescriptor normTensorDesc;
+	private cudnnTensorDescriptor dstTensorDesc;
 	
-	private cudnnTensorDescriptor dyDesc;
-	private cudnnTensorDescriptor dxDesc;
-	private cudnnTensorDescriptor dBnScaleBiasDesc;
+	private Pointer diff;
+	
 	
 	public BNCudnnKernel(BNType bnType,int C,int H,int W) {
 		this.bnType = bnType;
@@ -79,20 +81,12 @@ public class BNCudnnKernel extends BNBaseKernel{
 		    runingVar = new Tensor(1, 1, 1, C, true); 
 		}
 		
-	    xDesc = new cudnnTensorDescriptor();
-	    yDesc = new cudnnTensorDescriptor();
-	    gbmvDesc = new cudnnTensorDescriptor();
-	    JCudnn.cudnnCreateTensorDescriptor(xDesc);
-	    JCudnn.cudnnCreateTensorDescriptor(yDesc);
-	    JCudnn.cudnnCreateTensorDescriptor(gbmvDesc);
+		normTensorDesc = new cudnnTensorDescriptor();
+		dstTensorDesc = new cudnnTensorDescriptor();
+	   
+	    JCudnn.cudnnCreateTensorDescriptor(normTensorDesc);
+	    JCudnn.cudnnCreateTensorDescriptor(dstTensorDesc);
 	    
-	    dyDesc = new cudnnTensorDescriptor();
-	    dxDesc = new cudnnTensorDescriptor();
-	    dBnScaleBiasDesc = new cudnnTensorDescriptor();
-	    JCudnn.cudnnCreateTensorDescriptor(dyDesc);
-	    JCudnn.cudnnCreateTensorDescriptor(dxDesc);
-	    JCudnn.cudnnCreateTensorDescriptor(dBnScaleBiasDesc);
-		
 	}
 	
 	public void initForward(Tensor input) {
@@ -103,22 +97,14 @@ public class BNCudnnKernel extends BNBaseKernel{
 			
 			if(bnType == BNType.fully_bn) {
 
-				JCudnn.cudnnSetTensor4dDescriptor(xDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, W, 1, 1);
-			    JCudnn.cudnnSetTensor4dDescriptor(yDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, W, 1, 1);
-			    JCudnn.cudnnSetTensor4dDescriptor(gbmvDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, W, 1, 1);
-			    
-			    JCudnn.cudnnSetTensor4dDescriptor(dyDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, W, 1, 1);
-			    JCudnn.cudnnSetTensor4dDescriptor(dxDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, W, 1, 1);
-			    JCudnn.cudnnSetTensor4dDescriptor(dBnScaleBiasDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, W, 1, 1);
+				JCudnn.cudnnSetTensor4dDescriptor(dstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, W, 1, 1);
+				
+			    JCudnn.cudnnSetTensor4dDescriptor(normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, W, 1, 1);
 			}else {
 
-				JCudnn.cudnnSetTensor4dDescriptor(xDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
-			    JCudnn.cudnnSetTensor4dDescriptor(yDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
-			    JCudnn.cudnnSetTensor4dDescriptor(gbmvDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, C, 1, 1);
+				JCudnn.cudnnSetTensor4dDescriptor(dstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
 			    
-			    JCudnn.cudnnSetTensor4dDescriptor(dyDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
-			    JCudnn.cudnnSetTensor4dDescriptor(dxDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
-			    JCudnn.cudnnSetTensor4dDescriptor(dBnScaleBiasDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, C, 1, 1);
+			    JCudnn.cudnnSetTensor4dDescriptor(normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, C, 1, 1);
 			}
 			
 		}
@@ -132,13 +118,13 @@ public class BNCudnnKernel extends BNBaseKernel{
 		if(RUN_MODEL == RunModel.TRAIN) {
 			
 			CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationForwardTraining(CudnnHandleManager.getHandle(), mode,
-			    		alpha_P, beta_P, xDesc, input.getGpuData(), yDesc, output.getGpuData(),
-			    		gbmvDesc, gamma.getGpuData(), beta.getGpuData(), momentum, runingMean.getGpuData(), runingVar.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
+			    		alpha_P, beta_P, dstTensorDesc, input.getGpuData(), dstTensorDesc, output.getGpuData(),
+			    		normTensorDesc, gamma.getGpuData(), beta.getGpuData(), momentum, runingMean.getGpuData(), runingVar.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
 
 		}else {
 
 			CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationForwardInference(CudnnHandleManager.getHandle(), mode,
-		    		alpha_P, beta_P, xDesc, input.getGpuData(), yDesc, output.getGpuData(), gbmvDesc, gamma.getGpuData(), beta.getGpuData(),
+		    		alpha_P, beta_P, dstTensorDesc, input.getGpuData(), dstTensorDesc, output.getGpuData(), normTensorDesc, gamma.getGpuData(), beta.getGpuData(),
 		    		runingMean.getGpuData(), runingVar.getGpuData(), eps));
 			
 		}
@@ -147,9 +133,29 @@ public class BNCudnnKernel extends BNBaseKernel{
 	
 	public void backward(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
 		
+//		System.out.println(delta.channel+":"+C);
+//		
+//		if(this.diff == null) {
+//			this.diff = CUDAMemoryManager.getPointer(diff.getDataLength());
+//		}
+//		
+//		CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationBackward(CudnnHandleManager.getHandle(), mode,
+//	    		alpha_P, beta_P, alpha_P, alpha_P, dstTensorDesc, input.getGpuData(), dstTensorDesc, delta.getGpuData(), dstTensorDesc, this.diff,
+//	    		normTensorDesc, gamma.getGpuData(), dgamma.getGpuData(), dbeta.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
+		
 		CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationBackward(CudnnHandleManager.getHandle(), mode,
-	    		alpha_P, beta_P, alpha_P, alpha_P, xDesc, input.getGpuData(), dyDesc, delta.getGpuData(), dxDesc, diff.getGpuData(),
-	    		dBnScaleBiasDesc, gamma.getGpuData(), dgamma.getGpuData(), dbeta.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
+	    		alpha_P, beta_P, alpha_P, alpha_P, dstTensorDesc, input.getGpuData(), dstTensorDesc, delta.getGpuData(), dstTensorDesc, diff.getGpuData(),
+	    		normTensorDesc, gamma.getGpuData(), dgamma.getGpuData(), dbeta.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
+		
+//		float[] test = new float[diff.getDataLength()];
+//		
+//		JCuda.cudaMemcpy(Pointer.to(test), this.diff, test.length * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+//		
+//		System.out.println(diff.getDataLength()+":"+test.length);
+//		
+//		System.out.println(CheckArrayUtils.check(test, diff.syncHost()));
+//		
+//		copy_gpu(this.diff, diff.getGpuData(), diff.getDataLength(), 1, 1);
 		
 	}	
 		

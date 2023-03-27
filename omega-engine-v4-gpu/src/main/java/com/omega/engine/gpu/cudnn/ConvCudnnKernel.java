@@ -225,7 +225,7 @@ public class ConvCudnnKernel extends ConvBaseKernel{
                      results[algoIndex].algo, results[algoIndex].time, 
                      (long)results[algoIndex].memory, "["+result+"]");
              }
-             return results[0].algo;            
+             return results[0].algo;
          } else {
              return convAlgorithm;
          }
