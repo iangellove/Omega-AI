@@ -20,7 +20,7 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ### Demo展示
 [基于卷积神经网络mnist手写数字识别](http://120.237.148.121:8011/mnist)
-![输入图片说明](QQ%E6%88%AA%E5%9B%BE20230413155027.png)
+![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230413155027.png)
 
 [基于yolo算法目标识别]()
 
@@ -562,7 +562,7 @@ public void yolov1_tiny() {
 ### 训练情况可视化
 
 支持动态调参，可视化训练
-![输入图片说明](omega-engine-v4-gpu/8bd006e4fc1442cfbc2d5e3682a2c5f1.png)
+
 
 ### 彩蛋
 
