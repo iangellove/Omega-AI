@@ -20,7 +20,8 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ### Demo展示
 [基于卷积神经网络mnist手写数字识别](http://120.237.148.121:8011/mnist)
-![在这里插入图片描述](https://img-blog.csdnimg.cn/b9b5846af6624bdf8f5d570c5052bc64.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTMyODMzMDQ=,size_1,color_FFFFFF,t_70#pic_center)
+![输入图片说明](omega-engine-v4-gpu/b9b5846af6624bdf8f5d570c5052bc64.png)
+
 ##  功能介绍
 #### 支持的网络层类型：
 
@@ -411,7 +412,7 @@ public void cnnNetwork_cifar10() {
 ### 训练情况可视化
 
 支持动态调参，可视化训练
-![在这里插入图片描述](https://img-blog.csdnimg.cn/8bd006e4fc1442cfbc2d5e3682a2c5f1.png#pic_center)
+![输入图片说明](omega-engine-v4-gpu/8bd006e4fc1442cfbc2d5e3682a2c5f1.png)
 
 ### 彩蛋
 
