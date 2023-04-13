@@ -32,6 +32,9 @@ public class YoloImageUtils {
 	                                                         "aeroplane", "bicycle", "boat", "bus", "car", "motorbike", "train",
 	                                                         "bottle", "chair", "diningtable", "pottedplant", "sofa", "tvmonitor"};
 	
+	public float[] mean = new float[] {0.491f, 0.482f, 0.446f};
+	public float[] std = new float[] {0.247f, 0.243f, 0.261f};
+	
 	public static final int YOLO_IMG_SIZE = 448;
 	
 	public static final int GRID_SIZE = 7;
@@ -357,7 +360,7 @@ public class YoloImageUtils {
 			obj.setWidth(YOLO_IMG_SIZE);
 			obj.setBbox(bbox);
 			obj.setData(resizeData);
-			obj.setYoloLabel(LabelUtils.labelToYolo(bbox, GRID_SIZE));
+			obj.setYoloLabel(LabelUtils.labelToYolo(bbox, GRID_SIZE, YOLO_IMG_SIZE));
 			
 			return obj;
 		} catch (Exception e) {
@@ -408,7 +411,7 @@ public class YoloImageUtils {
 			obj.setBbox(bbox);
 			obj.setData(resizeData);
 //			System.out.println(dataName+":");
-			obj.setYoloLabel(LabelUtils.labelToYolo(bbox, GRID_SIZE));
+			obj.setYoloLabel(LabelUtils.labelToYolo(bbox, GRID_SIZE, YOLO_IMG_SIZE));
 			
 			return obj;
 		} catch (Exception e) {
@@ -510,6 +513,37 @@ public class YoloImageUtils {
 		return null;
 	} 
 	
+	public static void loadImgDataToTensor(String filePath,Tensor out,int idx, boolean normalization) {
+		
+		try {
+			
+			File file = new File(filePath);
+			
+			if(file.exists()) {
+				
+				if(normalization) {
+
+					float[] data =  IU().getImageData(file, true, true);
+					
+					System.arraycopy(data, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
+					
+				}else {
+
+					float[] data =  IU().getImageData(file, false);
+					
+					System.arraycopy(data, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
+					
+				}
+				
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public static void loadImgDataToTensor(String filePath,Tensor out,int idx) {
 		
 		try {
@@ -518,7 +552,7 @@ public class YoloImageUtils {
 			
 			if(file.exists()) {
 				
-				float[] data =  IU().getImageData(file, true);
+				float[] data =  IU().getImageData(file, true, true);
 				
 				System.arraycopy(data, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
 				

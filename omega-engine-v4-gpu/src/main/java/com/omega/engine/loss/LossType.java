@@ -7,6 +7,6 @@ package com.omega.engine.loss;
  */
 public enum LossType {
 	
-	square_loss,cross_entropy,softmax_with_cross_entropy,detection,yolo
+	square_loss,cross_entropy,softmax_with_cross_entropy,detection,yolo,yolo2,yolo3
 	
 }

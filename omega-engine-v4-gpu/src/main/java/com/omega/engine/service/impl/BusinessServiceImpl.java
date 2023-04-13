@@ -2688,8 +2688,6 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw);
 			
-//			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.sgd);
-			
 			netWork.CUDNN = true;
 			
 			netWork.learnRate = 0.1f;
@@ -2701,8 +2699,6 @@ public class BusinessServiceImpl implements BusinessService {
 			BNLayer bn1 = new BNLayer();
 			
 			ReluLayer active1 = new ReluLayer();
-			
-//			PoolingLayer pool1 = new PoolingLayer(conv1.oChannel, conv1.oWidth, conv1.oHeight, 2, 2, 2, PoolingType.MAX_POOLING);
 			
 			/**
 			 * block1  64 * 32 * 32
@@ -2756,8 +2752,6 @@ public class BusinessServiceImpl implements BusinessService {
 			BasicBlockLayer bl8 = new BasicBlockLayer(bl7.oChannel, 512, bl7.oHeight, bl7.oWidth, 1, netWork);
 			ReluLayer active9 = new ReluLayer();
 			
-//			PoolingLayer pool2 = new PoolingLayer(bl8.oChannel, bl8.oWidth, bl8.oHeight, 4, 4, 4, PoolingType.MEAN_POOLING);
-			
 			AVGPoolingLayer pool2 = new AVGPoolingLayer(bl8.oChannel, bl8.oWidth, bl8.oHeight);
 			
 			/**
@@ -2767,13 +2761,10 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			FullyLayer full1 = new FullyLayer(fInputCount, 10);
 
-//			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
-
 			netWork.addLayer(inputLayer);
 			netWork.addLayer(conv1);
 			netWork.addLayer(bn1);
 			netWork.addLayer(active1);
-//			netWork.addLayer(pool1);
 			
 			/**
 			 * block1  64
@@ -2809,7 +2800,6 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			netWork.addLayer(pool2);
 			netWork.addLayer(full1);
-//			netWork.addLayer(softmax);
 
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 250, 0.001f, 128, LearnRateUpdate.GD_GECAY, false);
 

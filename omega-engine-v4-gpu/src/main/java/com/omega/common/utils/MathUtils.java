@@ -69,6 +69,15 @@ public class MathUtils {
 		return tmp;
 	}
 	
+	public static void main(String[] args) {
+		
+		int length = 1000;
+		int batchSize = 64;
+		
+		System.out.println(JsonUtils.toJson(randomInts(length, batchSize)));
+		
+	}
+	
 	/**
 	 * 生成随机数组
 	 * @param length

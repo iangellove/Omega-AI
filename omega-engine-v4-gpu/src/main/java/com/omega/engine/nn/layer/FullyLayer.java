@@ -115,6 +115,8 @@ public class FullyLayer extends Layer{
 		
 //		System.out.println(JsonUtils.toJson(delta.syncHost()));
 		
+//		delta.showDM();
+		
 		/**
 		 * deltaW = inputT * delta
 		 * int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta

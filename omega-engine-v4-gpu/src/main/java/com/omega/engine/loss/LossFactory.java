@@ -1,6 +1,8 @@
 package com.omega.engine.loss;
 
 import com.omega.yolo.loss.YoloLoss;
+import com.omega.yolo.loss.YoloLoss2;
+import com.omega.yolo.loss.YoloLoss3;
 
 /**
  * LossFactory
@@ -28,6 +30,10 @@ public class LossFactory {
 			return new CrossEntropyLoss2();
 		case yolo:
 			return new YoloLoss();
+		case yolo2:
+			return new YoloLoss2();
+		case yolo3:
+			return new YoloLoss3();
 		default:
 			return null;
 		}

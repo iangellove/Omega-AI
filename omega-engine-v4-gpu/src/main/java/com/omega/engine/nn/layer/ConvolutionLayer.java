@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.cudnn.ConvCudnnKernel;
 import com.omega.engine.nn.layer.gpu.BiasKernel;
@@ -187,6 +188,10 @@ public class ConvolutionLayer extends Layer {
 		// TODO Auto-generated method stub
 
 //		long start = System.nanoTime();
+//		if(oWidth == 7) {
+//			System.out.println(JsonUtils.toJson(delta.syncHost()));
+//			
+//		}
 		
 		/**
 		 * 计算deltaW

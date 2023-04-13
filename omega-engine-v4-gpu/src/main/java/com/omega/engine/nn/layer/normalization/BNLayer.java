@@ -210,8 +210,6 @@ public class BNLayer extends NormalizationLayer {
 		 */
 		this.diff();
 		
-//		this.diff_caffe();
-		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}

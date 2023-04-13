@@ -61,16 +61,39 @@ public abstract class BaseData {
 		return data;
 	}
 	
+	public Tensor getOnceLabel(int index) {
+		Tensor data = Tensors.tensor(1, label.channel, label.height, label.width);
+		this.label.copy(index, data.data);
+		return data;
+	}
+	
 	public void getOnceData(int index,Tensor x) {
 		this.input.copy(index, x.data);
 		x.hostToDevice();
 	}
 	
 	public void getBatchData(int pageIndex,int batchSize,Tensor input,Tensor label) {
-		int input_start = pageIndex * batchSize * channel * height * width;
-		int label_start = pageIndex * batchSize * labelSize;
-		System.arraycopy(this.input.data, input_start, input.data, 0, batchSize * channel * height * width);
-		System.arraycopy(this.label.data, label_start, label.data, 0, batchSize * labelSize);
+		if((pageIndex + 1) * batchSize > this.number) {
+			int input_start = ((pageIndex) * batchSize - ((pageIndex + 1) * batchSize - this.number)) * channel * height * width;
+			int label_start = ((pageIndex) * batchSize - ((pageIndex + 1) * batchSize - this.number)) * labelSize;
+			System.arraycopy(this.input.data, input_start, input.data, 0, batchSize * channel * height * width);
+			System.arraycopy(this.label.data, label_start, label.data, 0, batchSize * labelSize);
+		}else {
+			int input_start = pageIndex * batchSize * channel * height * width;
+			int label_start = pageIndex * batchSize * labelSize;
+			System.arraycopy(this.input.data, input_start, input.data, 0, batchSize * channel * height * width);
+			System.arraycopy(this.label.data, label_start, label.data, 0, batchSize * labelSize);
+		}
+	}
+	
+	public void getBatchData(int pageIndex,int batchSize,Tensor input) {
+		if((pageIndex + 1) * batchSize > this.number) {
+			int input_start = ((pageIndex) * batchSize - ((pageIndex + 1) * batchSize - this.number)) * channel * height * width;
+			System.arraycopy(this.input.data, input_start, input.data, 0, batchSize * channel * height * width);
+		}else {
+			int input_start = pageIndex * batchSize * channel * height * width;
+			System.arraycopy(this.input.data, input_start, input.data, 0, batchSize * channel * height * width);
+		}
 	}
 	
 }

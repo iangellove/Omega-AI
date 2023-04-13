@@ -110,6 +110,11 @@ public abstract class Network {
 		return this.getLastLayer().getOutput();
 	}
 	
+	public int getOutputNum() {
+		int num = this.getLastLayer().getOutput().channel * this.getLastLayer().getOutput().height * this.getLastLayer().getOutput().width;
+		return num;
+	}
+	
 	public Layer getLastLayer() {
 		return this.layerList.get(this.layerList.size() - 1);
 	}
@@ -130,6 +135,16 @@ public abstract class Network {
 		}
 		
 		return null;
+	}
+	
+	public Tensor getDelta(int index) {
+		
+		if(index > 0 && index < this.layerCount - 1) {
+			return this.layerList.get(index + 1).diff;
+		}else {
+			return this.lossDiff;
+		}
+		
 	}
 	
 	public void addLayer(Layer layer) {

@@ -35,9 +35,8 @@ public class YoloLoss extends LossFunction {
 	}
 	
 	public void init(Tensor input) {
-		if(loss == null || loss.number != input.number) {
+		if(loss == null || diff.number != input.number) {
 			this.loss = new Tensor(1, 1, 1, 1);
-//			this.output = new Tensor(input.number, input.channel, input.height, input.width, true);
 			this.diff = new Tensor(input.number, input.channel, input.height, input.width, true);
 		}
 	}
@@ -53,13 +52,9 @@ public class YoloLoss extends LossFunction {
 		
 		if(x.isHasGPU()) {
 			x.syncHost();
-			label.syncHost();
 		}
 		
 		float coor_loss = 0.0f;
-		float obj_confi_loss = 0.0f;
-		float noobj_confi_loss = 0.0f;
-		float class_loss = 0.0f;
 		
 		this.diff.data = new float[this.diff.data.length];
 		
@@ -73,34 +68,44 @@ public class YoloLoss extends LossFunction {
 				 */
 				if(label.data[bg_idx + 0] == 1.0f) {
 					
+					int bestIndex = 0;
+					
 					float[] ious = iou(b, gridIdx, x.data, label.data);
 					
-					if(ious[0] >= ious[1]) {
-						coor_loss += (float) (5.0f * (Math.pow((x.data[bg_idx + 1] - label.data[bg_idx + 1]), 2.0f) + Math.pow((x.data[bg_idx + 2] - label.data[bg_idx + 2]), 2.0f)));
-						coor_loss += (float) (5.0f * (Math.pow((Math.sqrt(x.data[bg_idx + 3]) - Math.sqrt(label.data[bg_idx + 3])), 2.0f) + Math.pow((Math.sqrt(x.data[bg_idx + 4]) - Math.sqrt(label.data[bg_idx + 4])), 2.0f)));
-						this.diff.data[bg_idx + 1] = 5.0f * (x.data[bg_idx + 1] - label.data[bg_idx + 1]);
-						this.diff.data[bg_idx + 2] = 5.0f * (x.data[bg_idx + 2] - label.data[bg_idx + 2]);
-						this.diff.data[bg_idx + 3] = (float) ((5.0f * Math.sqrt(x.data[bg_idx + 3]) - Math.sqrt(label.data[bg_idx + 3])) / Math.sqrt(x.data[bg_idx + 3]));
-						this.diff.data[bg_idx + 4] = (float) ((5.0f * Math.sqrt(x.data[bg_idx + 4]) - Math.sqrt(label.data[bg_idx + 4])) / Math.sqrt(x.data[bg_idx + 4]));
+					if(ious[0] > 0 || ious[1] > 0) {
 						
-						obj_confi_loss += Math.pow(x.data[bg_idx + 0] - ious[0], 2.0f);
-						this.diff.data[bg_idx + 0] = x.data[bg_idx + 0] - ious[0];
+						if(ious[1] > ious[0]) {
+							bestIndex = 1;
+						}
 						
-						noobj_confi_loss += 0.5f *  Math.pow(x.data[bg_idx + 5] - 0, 2.0f);
-						this.diff.data[bg_idx + 5] = 0.5f * (x.data[bg_idx + 5] - 0);
 					}else {
-						coor_loss += (float) (5.0f * (Math.pow((x.data[bg_idx + 6] - label.data[bg_idx + 6]), 2.0f) + Math.pow((x.data[bg_idx + 7] - label.data[bg_idx + 7]), 2.0f)));
-						coor_loss += (float) (5.0f * (Math.pow((Math.sqrt(x.data[bg_idx + 8]) - Math.sqrt(label.data[bg_idx + 8])), 2.0f) + Math.pow((Math.sqrt(x.data[bg_idx + 9]) - Math.sqrt(label.data[bg_idx + 9])), 2.0f)));
-						this.diff.data[bg_idx + 6] = 5.0f * (x.data[bg_idx + 6] - label.data[bg_idx + 6]);
-						this.diff.data[bg_idx + 7] = 5.0f * (x.data[bg_idx + 7] - label.data[bg_idx + 7]);
-						this.diff.data[bg_idx + 8] = (float) ((5.0f * Math.sqrt(x.data[bg_idx + 8]) - Math.sqrt(label.data[bg_idx + 8])) / Math.sqrt(x.data[bg_idx + 8]));
-						this.diff.data[bg_idx + 9] = (float) ((5.0f * Math.sqrt(x.data[bg_idx + 9]) - Math.sqrt(label.data[bg_idx + 9])) / Math.sqrt(x.data[bg_idx + 9]));
+
+						float[] rmse = box_rmse(b, gridIdx, x.data, label.data);
 						
-						obj_confi_loss += Math.pow(x.data[bg_idx + 5] - ious[1], 2.0f);
-						this.diff.data[bg_idx + 5] = x.data[bg_idx + 5] - ious[1];
+						if(rmse[1] < rmse[0]) {
+							bestIndex = 1;
+						}
 						
-						noobj_confi_loss += 0.5f *  Math.pow(x.data[bg_idx + 0] - 0, 2.0f);
-						this.diff.data[bg_idx + 0] = 0.5f * (x.data[bg_idx + 0] - 0);
+					}
+					
+					if(bestIndex == 0) {
+						coor_loss += 5.0f * Math.pow((1.0f - x.data[bg_idx + 0]), 2.0f);
+						coor_loss += Math.pow((1.0f - ious[0]), 2.0f);
+
+						this.diff.data[bg_idx + 0] = 5.0f * (1.0f - x.data[bg_idx + 0]);
+						this.diff.data[bg_idx + 1] = 5.0f * (label.data[bg_idx + 1] - x.data[bg_idx + 1]);
+						this.diff.data[bg_idx + 2] = 5.0f * (label.data[bg_idx + 2] - x.data[bg_idx + 2]);
+						this.diff.data[bg_idx + 3] = (float) (5.0f * (Math.sqrt(label.data[bg_idx + 3]) - x.data[bg_idx + 3]));
+						this.diff.data[bg_idx + 4] = (float) (5.0f * (Math.sqrt(label.data[bg_idx + 4]) - x.data[bg_idx + 4]));
+					}else {
+						coor_loss += 5.0f * Math.pow((1.0f - x.data[bg_idx + 5]), 2.0f);
+						coor_loss += Math.pow((1.0f - ious[1]), 2.0f);
+
+						this.diff.data[bg_idx + 5] = 5.0f * (1.0f - x.data[bg_idx + 5]);
+						this.diff.data[bg_idx + 6] = 5.0f * (label.data[bg_idx + 6] - x.data[bg_idx + 6]);
+						this.diff.data[bg_idx + 7] = 5.0f * (label.data[bg_idx + 7] - x.data[bg_idx + 7]);
+						this.diff.data[bg_idx + 8] = (float) (5.0f * (Math.sqrt(label.data[bg_idx + 8]) - x.data[bg_idx + 8]));
+						this.diff.data[bg_idx + 9] = (float) (5.0f * (Math.sqrt(label.data[bg_idx + 9]) - x.data[bg_idx + 9]));
 					}
 					
 					/**
@@ -108,29 +113,29 @@ public class YoloLoss extends LossFunction {
 					 */
 					for(int cn = 0;cn<class_number;cn++) {
 						int idx = bg_idx + 10 + cn;
-						class_loss = class_loss + (x.data[idx] - label.data[idx]) * (x.data[idx] - label.data[idx]);
-						this.diff.data[idx] = (x.data[idx] - label.data[idx]);
+						coor_loss += (label.data[idx] - x.data[idx]) * (label.data[idx] - x.data[idx]);
+						this.diff.data[idx] = (label.data[idx] - x.data[idx]);
 					}
 				}else {
 					/**
 					 * not has obj
 					 */
-					noobj_confi_loss += (float) (0.5f * Math.pow(x.data[bg_idx + 0], 2.0) + Math.pow(x.data[bg_idx + 5], 2.0f));
-					this.diff.data[bg_idx + 0] = 0.5f * (x.data[bg_idx + 0]);
-					this.diff.data[bg_idx + 5] = 0.5f * (x.data[bg_idx + 5]);
+					coor_loss += (float) (0.5f * Math.pow(x.data[bg_idx + 0], 2.0) + 0.5f * Math.pow(x.data[bg_idx + 5], 2.0f));
+					this.diff.data[bg_idx + 0] = 0.5f * (0.0f - x.data[bg_idx + 0]);
+					this.diff.data[bg_idx + 5] = 0.5f * (0.0f - x.data[bg_idx + 5]);
 				}
 				
 			}
 			
 		}
 //		System.out.println(coor_loss + obj_confi_loss + noobj_confi_loss + class_loss);
-		this.loss.data[0] = coor_loss + obj_confi_loss + noobj_confi_loss + class_loss;
+		this.loss.data[0] = coor_loss;
 //		System.out.println("out yolo loss.");
-		if(this.loss.data[0] > 1000) {
-			System.out.println(coor_loss+":"+obj_confi_loss+":"+noobj_confi_loss+":"+class_loss);
-			System.out.println(JsonUtils.toJson(x.data));
-			System.out.println(JsonUtils.toJson(label.data));
-		}
+//		if(this.loss.data[0] > 1000) {
+			System.out.println(coor_loss);
+//			System.out.println(JsonUtils.toJson(x.data));
+//			System.out.println(JsonUtils.toJson(diff.data));
+//		}
 		return loss;
 	}
 
@@ -176,17 +181,17 @@ public class YoloLoss extends LossFunction {
 		float iou[] = new float[2];
 		
 		float[] b1 = new float[] {
-				predBBox[b * once_size + gridIdx * 30 + 1] / grid_number - predBBox[b * once_size + gridIdx * 30 + 3] / 2.0f,
-				predBBox[b * once_size + gridIdx * 30 + 2] / grid_number - predBBox[b * once_size + gridIdx * 30 + 4] / 2.0f,
-				predBBox[b * once_size + gridIdx * 30 + 1] / grid_number + predBBox[b * once_size + gridIdx * 30 + 3] / 2.0f,
-				predBBox[b * once_size + gridIdx * 30 + 2] / grid_number + predBBox[b * once_size + gridIdx * 30 + 4] / 2.0f
+				predBBox[b * once_size + gridIdx * 30 + 1] / grid_number - predBBox[b * once_size + gridIdx * 30 + 3] * predBBox[b * once_size + gridIdx * 30 + 3] / 2.0f,
+				predBBox[b * once_size + gridIdx * 30 + 2] / grid_number - predBBox[b * once_size + gridIdx * 30 + 4] * predBBox[b * once_size + gridIdx * 30 + 4] / 2.0f,
+				predBBox[b * once_size + gridIdx * 30 + 1] / grid_number + predBBox[b * once_size + gridIdx * 30 + 3] * predBBox[b * once_size + gridIdx * 30 + 3] / 2.0f,
+				predBBox[b * once_size + gridIdx * 30 + 2] / grid_number + predBBox[b * once_size + gridIdx * 30 + 4] * predBBox[b * once_size + gridIdx * 30 + 4] / 2.0f
 		};
 		
 		float[] b2 = new float[] {
-				predBBox[b * once_size + gridIdx * 30 + 6] / grid_number - predBBox[b * once_size + gridIdx * 30 + 6] / 2.0f,
-				predBBox[b * once_size + gridIdx * 30 + 7] / grid_number - predBBox[b * once_size + gridIdx * 30 + 7] / 2.0f,
-				predBBox[b * once_size + gridIdx * 30 + 8] / grid_number + predBBox[b * once_size + gridIdx * 30 + 8] / 2.0f,
-				predBBox[b * once_size + gridIdx * 30 + 9] / grid_number + predBBox[b * once_size + gridIdx * 30 + 9] / 2.0f
+				predBBox[b * once_size + gridIdx * 30 + 6] / grid_number - predBBox[b * once_size + gridIdx * 30 + 8] * predBBox[b * once_size + gridIdx * 30 + 8] / 2.0f,
+				predBBox[b * once_size + gridIdx * 30 + 7] / grid_number - predBBox[b * once_size + gridIdx * 30 + 9] * predBBox[b * once_size + gridIdx * 30 + 9] / 2.0f,
+				predBBox[b * once_size + gridIdx * 30 + 6] / grid_number + predBBox[b * once_size + gridIdx * 30 + 8] * predBBox[b * once_size + gridIdx * 30 + 8] / 2.0f,
+				predBBox[b * once_size + gridIdx * 30 + 7] / grid_number + predBBox[b * once_size + gridIdx * 30 + 9] * predBBox[b * once_size + gridIdx * 30 + 9] / 2.0f
 		};
 		
 		float[] bl = new float[] {
@@ -196,27 +201,6 @@ public class YoloLoss extends LossFunction {
 				labelBBox[b * once_size + gridIdx * 30 + 2] / grid_number + labelBBox[b * once_size + gridIdx * 30 + 4] / 2.0f
 		};
 		
-
-//		float[] b1 = new float[] {
-//				predBBox[b * once_size + gridIdx * 30 + 1] / 1 - predBBox[b * once_size + gridIdx * 30 + 3] / 2.0f,
-//				predBBox[b * once_size + gridIdx * 30 + 2] / 1 - predBBox[b * once_size + gridIdx * 30 + 4] / 2.0f,
-//				predBBox[b * once_size + gridIdx * 30 + 1] / 1 + predBBox[b * once_size + gridIdx * 30 + 3] / 2.0f,
-//				predBBox[b * once_size + gridIdx * 30 + 2] / 1 + predBBox[b * once_size + gridIdx * 30 + 4] / 2.0f
-//		};
-//		
-//		float[] b2 = new float[] {
-//				predBBox[b * once_size + gridIdx * 30 + 6] / 1 - predBBox[b * once_size + gridIdx * 30 + 6] / 2.0f,
-//				predBBox[b * once_size + gridIdx * 30 + 7] / 1 - predBBox[b * once_size + gridIdx * 30 + 7] / 2.0f,
-//				predBBox[b * once_size + gridIdx * 30 + 8] / 1 + predBBox[b * once_size + gridIdx * 30 + 8] / 2.0f,
-//				predBBox[b * once_size + gridIdx * 30 + 9] / 1 + predBBox[b * once_size + gridIdx * 30 + 9] / 2.0f
-//		};
-//		
-//		float[] bl = new float[] {
-//				labelBBox[b * once_size + gridIdx * 30 + 1] / 1 - labelBBox[b * once_size + gridIdx * 30 + 3] / 2.0f,
-//				labelBBox[b * once_size + gridIdx * 30 + 2] / 1 - labelBBox[b * once_size + gridIdx * 30 + 4] / 2.0f,
-//				labelBBox[b * once_size + gridIdx * 30 + 1] / 1 + labelBBox[b * once_size + gridIdx * 30 + 3] / 2.0f,
-//				labelBBox[b * once_size + gridIdx * 30 + 2] / 1 + labelBBox[b * once_size + gridIdx * 30 + 4] / 2.0f
-//		};
 		
 //		System.out.println(JsonUtils.toJson(b1));
 //		System.out.println(JsonUtils.toJson(b2));
@@ -225,6 +209,30 @@ public class YoloLoss extends LossFunction {
 		iou[0] = iou(b1, bl);
 		iou[1] = iou(b2, bl);
 		return iou;
+	}
+	
+	public float[] box_rmse(int b,int gridIdx,float[] predBBox,float[] labelBBox){
+		
+		float rmse[] = new float[2];
+		
+		float ax1 = predBBox[b * once_size + gridIdx * 30 + 1] / grid_number;
+		float ay1 = predBBox[b * once_size + gridIdx * 30 + 2] / grid_number;
+		float aw1 = predBBox[b * once_size + gridIdx * 30 + 3] * predBBox[b * once_size + gridIdx * 30 + 3];
+		float ah1 = predBBox[b * once_size + gridIdx * 30 + 4] * predBBox[b * once_size + gridIdx * 30 + 4];
+		
+		float ax2 = predBBox[b * once_size + gridIdx * 30 + 6] / grid_number;
+		float ay2 = predBBox[b * once_size + gridIdx * 30 + 7] / grid_number;
+		float aw2 = predBBox[b * once_size + gridIdx * 30 + 8] * predBBox[b * once_size + gridIdx * 30 + 8];
+		float ah2 = predBBox[b * once_size + gridIdx * 30 + 9] * predBBox[b * once_size + gridIdx * 30 + 9];
+		
+		float bx = labelBBox[b * once_size + gridIdx * 30 + 1] / grid_number;
+		float by = labelBBox[b * once_size + gridIdx * 30 + 2] / grid_number;
+		float bw = labelBBox[b * once_size + gridIdx * 30 + 3];
+		float bh = labelBBox[b * once_size + gridIdx * 30 + 4];
+		
+		rmse[0] = (float) Math.sqrt((ax1 - bx) * (ax1 - bx) + (ay1 - by) * (ay1 - by) + (aw1 - bw) * (aw1 - bw) + (ah1 - bh) * (ah1 - bh));
+		rmse[1] = (float) Math.sqrt((ax2 - bx) * (ax2 - bx) + (ay2 - by) * (ay2 - by) + (aw2 - bw) * (aw2 - bw) + (ah2 - bh) * (ah2 - bh));
+	    return rmse;
 	}
 	
 }

@@ -3,25 +3,15 @@ package com.omega.engine.nn.layer.active.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.RandomUtils;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
 import jcuda.driver.CUfunction;
-import jcuda.driver.JCudaDriver;
 
 public class SigmodKernel extends BaseKernel{
-	
-	public Tensor input;
-	
-	public Tensor output;
-	
-	public Tensor delta;
-	
-	public Tensor diff;
 	
 	private CUfunction function;
 	
@@ -33,11 +23,8 @@ public class SigmodKernel extends BaseKernel{
 	
 	private Pointer backwardKernelParameters;
 	
-	public SigmodKernel(Tensor input,Tensor output,Tensor delta,Tensor diff) {
-		this.input = input;
-		this.output = output;
-		this.delta = delta;
-		this.diff = diff;
+	public SigmodKernel() {
+		
 		init();
 	}
 	
@@ -76,44 +63,6 @@ public class SigmodKernel extends BaseKernel{
 	    return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
 	}
 	
-	public void forward() {
-		
-		try {
-
-			if(forwardKernelParameters == null || this.N != output.number) {
-				
-				System.out.println(input);
-				
-		        /**
-		         * 设置入参
-		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
-		         */ 
-				forwardKernelParameters = Pointer.to(
-		        		Pointer.to(input.getGpuData()),
-		                Pointer.to(output.getGpuData()),
-		                Pointer.to(new int[]{output.dataLength})
-		            );
-				
-				this.N = output.number;
-					
-			}
-
-			cuLaunchKernel(function,
-		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
-		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
-		            0, null,               // Shared memory size and stream
-		            forwardKernelParameters, null // Kernel- and extra parameters
-		        );
-
-	        JCudaDriver.cuCtxSynchronize();
-
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-		
-	}
-	
 	public void forward(Tensor input,Tensor output) {
 		
 		try {
@@ -141,7 +90,7 @@ public class SigmodKernel extends BaseKernel{
 		            forwardKernelParameters, null // Kernel- and extra parameters
 		        );
 
-	        JCudaDriver.cuCtxSynchronize();
+//	        JCudaDriver.cuCtxSynchronize();
 
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -150,7 +99,7 @@ public class SigmodKernel extends BaseKernel{
 		
 	}
 	
-	public void backward() {
+	public void backward(Tensor output,Tensor delta,Tensor diff) {
 		
 		try {
 			
@@ -176,43 +125,10 @@ public class SigmodKernel extends BaseKernel{
 		            backwardKernelParameters, null // Kernel- and extra parameters
 		        );
 
-	        JCudaDriver.cuCtxSynchronize();
-
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-		
-	}
-	
-	public void backward(Tensor delta,Tensor diff) {
-		
-		try {
+//			delta.showDM();
 			
-			if(backwardKernelParameters == null) {
-
-		        /**
-		         * 设置入参
-		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
-		         */ 
-				backwardKernelParameters = Pointer.to(
-						Pointer.to(output.getGpuData()),
-		        		Pointer.to(delta.getGpuData()),
-		                Pointer.to(diff.getGpuData()),
-		                Pointer.to(new int[]{output.dataLength})
-		            );
-		        
-			}
+//			JCudaDriver.cuCtxSynchronize();
 			
-			cuLaunchKernel(function_back,
-		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
-		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
-		            0, null,               // Shared memory size and stream
-		            backwardKernelParameters, null // Kernel- and extra parameters
-		        );
-
-	        JCudaDriver.cuCtxSynchronize();
-
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -228,7 +144,7 @@ public class SigmodKernel extends BaseKernel{
 	    	
 	    	float[] x1 = new float[] {1,2,3,4,-5,6,-7,-8,9,10,11,-12,13,14,15,-16};
 	    	
-	    	float[] bias1 = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
+	    	float[] bias1 = MatrixUtils.one(x1.length);
 	    	
 	    	Tensor input = new Tensor(N, C, H, W, x1, true);
 	    	
@@ -238,23 +154,19 @@ public class SigmodKernel extends BaseKernel{
 	    	
 	    	Tensor diff = new Tensor(N, C, H, W, true);
 	    	
-	    	SigmodKernel k = new SigmodKernel(input, output, delta, diff);
+	    	SigmodKernel k = new SigmodKernel();
 
-//	    	output.showDM(new float[N * C * H * W]);
+	    	k.forward(input, output);
+	    	
+	    	k.backward(output, delta, diff);
 
-	    	k.forward();
+	    	output.showDM();
 	    	
-	    	k.backward();
-
-//	    	output.showDM(new float[N * C * H * W]);
-
-	    	output.syncHost();
+	    	diff.showDM();
 	    	
-	    	System.out.println(JsonUtils.toJson(output.getData()));
+	    	k.backward(output, delta, diff);
 	    	
-	    	diff.syncHost();
-	    	
-	    	System.out.println(JsonUtils.toJson(diff.getData()));
+	    	diff.showDM();
 	    	
 			CUDAMemoryManager.free();
 			

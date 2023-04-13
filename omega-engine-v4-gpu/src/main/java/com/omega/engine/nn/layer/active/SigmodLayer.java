@@ -45,7 +45,7 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	public void init() {
 		super.init();
 		if(kernel == null || number != output.number) {
-			kernel = new SigmodKernel(input, output, delta, diff);
+			kernel = new SigmodKernel();
 		}
 	}
 	
@@ -64,7 +64,7 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		kernel.backward(delta, diff);
+		kernel.backward(output, delta, diff);
 	}
 
 	@Override

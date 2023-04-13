@@ -11,7 +11,6 @@ import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
 import jcuda.driver.CUfunction;
-import jcuda.driver.JCudaDriver;
 
 public class LeakyReluKernel extends BaseKernel{
 	
@@ -91,7 +90,7 @@ public class LeakyReluKernel extends BaseKernel{
 		            forwardKernelParameters, null // Kernel- and extra parameters
 		        );
 
-	        JCudaDriver.cuCtxSynchronize();
+//	        JCudaDriver.cuCtxSynchronize();
 
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -126,7 +125,7 @@ public class LeakyReluKernel extends BaseKernel{
 		            backwardKernelParameters, null // Kernel- and extra parameters
 		        );
 
-	        JCudaDriver.cuCtxSynchronize();
+//	        JCudaDriver.cuCtxSynchronize();
 
 		} catch (Exception e) {
 			// TODO: handle exception

@@ -22,6 +22,9 @@ import com.omega.engine.nn.data.ImageData;
 @Component
 public class ImageUtils {
 	
+	public static float[] mean = new float[] {0.491f, 0.482f, 0.446f};
+	public static float[] std = new float[] {0.247f, 0.243f, 0.261f};
+	 
 	/**
 	 * 读取一张图片的RGB值
 	 * 
@@ -413,6 +416,54 @@ public class ImageUtils {
 		return color;
 	}
 	
+	public float[] getImageData(File file,boolean normalization,boolean meanStd) throws Exception {
+
+		BufferedImage bi = null;
+		try {
+			bi = ImageIO.read(file);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		int width = bi.getWidth();
+		int height = bi.getHeight();
+		int minx = bi.getMinX();
+		int miny = bi.getMinY();
+
+		int[][] r = new int[width][height];
+		int[][] g = new int[width][height];
+		int[][] b = new int[width][height];
+		int size = height * width * 3;
+		float[] color = new float[size];
+		
+		float n = 1.0f;
+		
+		if(normalization) {
+			n = 255.0f;
+		}
+		
+		for (int j = miny; j < height; j++) {
+			for (int i = minx; i < width; i++) {
+				int pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+				r[i][j] = (pixel & 0xff0000) >> 16;
+				g[i][j] = (pixel & 0xff00) >> 8;
+				b[i][j] = (pixel & 0xff);
+				
+				if(meanStd) {
+					color[0 * width * height + i * height + j] = (float) ((r[i][j] * 1.0f / n) - mean[0]) / std[0];
+					color[1 * width * height + i * height + j] = (float) ((r[i][j] * 1.0f / n) - mean[1]) / std[1];
+					color[2 * width * height + i * height + j] = (float) ((r[i][j] * 1.0f / n) - mean[2]) / std[2];
+				}else {
+					color[0 * width * height + i * height + j] = r[i][j] * 1.0f / n;
+					color[1 * width * height + i * height + j] = g[i][j] * 1.0f / n;
+					color[2 * width * height + i * height + j] = b[i][j] * 1.0f / n;
+				}
+				
+			}
+		}
+		
+		return color;
+	}
+	
 	public BufferedImage convertRGBImage(int[][] rgbValue){
 		int height = rgbValue[0].length;
 		int width = rgbValue.length;
@@ -520,13 +571,28 @@ public class ImageUtils {
         Image resultingImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_AREA_AVERAGING);
         BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
         outputImage.getGraphics().drawImage(resultingImage, 0, 0, null);
-        outputImage.getGraphics().setColor(Color.red);
+        outputImage.getGraphics().setColor(Color.BLUE);
         for(int[] box:bbox) {
-        	int x = box[1] - box[3] / 2;
-        	int y = box[2] - box[4] / 2;
-        	outputImage.getGraphics().drawRect(x, y, box[3] , box[4]);
+        	int w = (box[3] - box[1]);
+        	int h = (box[4] - box[2]);
+        	outputImage.getGraphics().drawRect(box[1], box[2], w, h);
         }
         return outputImage;
+    }
+    
+	/**
+     * 通过BufferedImage图片流调整图片大小
+     * 指定压缩后长宽
+     */
+    public static BufferedImage drawImage(BufferedImage originalImage, int targetWidth, int targetHeight,int[][] bbox) throws IOException {
+    	originalImage.getGraphics().drawImage(originalImage, 0, 0, null);
+    	originalImage.getGraphics().setColor(Color.BLUE);
+        for(int[] box:bbox) {
+        	int w = (box[3] - box[1]);
+        	int h = (box[4] - box[2]);
+        	originalImage.getGraphics().drawRect(box[1], box[2], w, h);
+        }
+        return originalImage;
     }
 	
 	/**
@@ -654,6 +720,55 @@ public class ImageUtils {
 				int r = (int) data[index];
 				int g = (int) data[ocount + index];
 				int b = (int) data[ocount * 2 + index];
+//				System.out.println(r);
+				int orgb = colorToRGB(255, r, g, b);
+				
+				rgb[i][j] = orgb;
+				
+			}
+		}
+		
+		return rgb;
+	}
+	
+	public static int[][] color2rgb2(float[] data,int height,int width){
+		
+		int[][] rgb = new int[height][width];
+		int ocount = height * width;
+		
+		for(int i = 0;i<height;i++) {
+			for(int j = 0;j<width;j++) {
+				int index = i * width + j;
+				int r = (int) data[index];
+				int g = (int) data[ocount + index];
+				int b = (int) data[ocount * 2 + index];
+//				System.out.println(r);
+				int orgb = colorToRGB(255, r, g, b);
+				
+				rgb[i][j] = orgb;
+				
+			}
+		}
+		
+		return rgb;
+	}
+	
+	public static int[][] color2rgb2(float[] data,int height,int width,boolean format){
+		
+		int[][] rgb = new int[height][width];
+		int ocount = height * width;
+		
+		for(int i = 0;i<height;i++) {
+			for(int j = 0;j<width;j++) {
+				int index = i * width + j;
+				int r = (int) data[index];
+				int g = (int) data[ocount + index];
+				int b = (int) data[ocount * 2 + index];
+				if(format) {
+					r = (int) ((r * std[0] + mean[0]) * 255);
+					g = (int) ((g * std[0] + mean[0]) * 255);
+					b = (int) ((b * std[0] + mean[0]) * 255);
+				}
 				
 				int orgb = colorToRGB(255, r, g, b);
 				

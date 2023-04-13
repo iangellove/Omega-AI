@@ -36,7 +36,7 @@ public abstract class ActiveFunctionLayer extends Layer {
 	public void initBack() {
 //		System.out.println(this.index);
 		if(this.diff == null) {
-			this.diff = this.network.getNextLayer(this.index).diff;
+			this.diff = this.network.getDelta(this.index);
 		}
 	}
 	

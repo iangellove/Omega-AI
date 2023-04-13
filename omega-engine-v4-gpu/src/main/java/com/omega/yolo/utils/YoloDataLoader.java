@@ -7,8 +7,8 @@ import java.util.Comparator;
 import java.util.List;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
+import com.omega.engine.nn.data.DataSet;
 
 /**
  * DataLoader
@@ -21,13 +21,29 @@ public class YoloDataLoader extends BaseDataLoader{
 	
 	private String[] idxSet;
 	
+	private Tensor imgSet;
+	
 	private Tensor labelSet;
 
-	public YoloDataLoader(String imgDirPath,String labelPath,int batchSize,int channel ,int height,int width,int labelSize) {
+	public YoloDataLoader(String imgDirPath,String labelPath,int batchSize,int channel ,int height,int width,int labelSize,LabelType mode,boolean normalization) {
 		this.batchSize = batchSize;
 		this.imgDirPath = imgDirPath;
 		this.labelSize = labelSize;
-		loadDataIdx(imgDirPath, labelPath);
+		switch (mode) {
+		case text:
+			loadDataIdx(imgDirPath, labelPath);
+			break;
+		case csv:
+			loadDataIdxFromCSV(imgDirPath, labelPath, channel, width, height, labelSize, normalization);
+			break;
+		default:
+			break;
+		}
+		
+	}
+	
+	public DataSet getDataSet() {
+		return new DataSet(number, imgSet.channel, imgSet.height, imgSet.width, labelSet.channel, labelSize, imgSet.data, labelSet.data);
 	}
 	
 	public void loadDataIdx(String imgDirPath,String labelPath) {
@@ -54,9 +70,47 @@ public class YoloDataLoader extends BaseDataLoader{
 				
 				orderByName();
 				
-				labelSet = new Tensor(files.length, 1, 1, labelSize);
+				setLabelSet(new Tensor(files.length, 1, 1, labelSize));
 				
-				LabelUtils.loadLabel(labelPath, labelSet);
+				LabelUtils.loadLabel(labelPath, getLabelSet());
+				
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void loadDataIdxFromCSV(String imgDirPath,String label_csv_Path,int channel,int width,int height,int labelSize,boolean normalization) {
+		try {
+			
+			File file = new File(imgDirPath);
+			
+			if(file.exists() && file.isDirectory()) {
+				
+				File[] files = file.listFiles();
+				
+				number = files.length;
+				
+				idxSet = new String[files.length];
+				
+				setLabelSet(new Tensor(files.length, 1, 1, labelSize));
+				
+				LabelUtils.loadLabelCSV(label_csv_Path, getLabelSet(), idxSet);
+				
+				setImgSet(new Tensor(files.length, channel, height, width));
+				
+				int index = 0;
+				
+				for(String filename:idxSet) {
+					
+					String filePath = imgDirPath + "/" + filename;
+					
+					YoloImageUtils.loadImgDataToTensor(filePath, getImgSet(), index, normalization);
+					
+					index++;
+				}
 				
 			}
 			
@@ -90,9 +144,25 @@ public class YoloDataLoader extends BaseDataLoader{
 			
 			YoloImageUtils.loadImgDataToTensor(filePath, input, i);
 			
-			System.arraycopy(this.labelSet.data, index * labelSize, label.data, i * labelSize, labelSize);
+			System.arraycopy(this.getLabelSet().data, index * labelSize, label.data, i * labelSize, labelSize);
 		}
 		
+	}
+
+	public Tensor getImgSet() {
+		return imgSet;
+	}
+
+	public void setImgSet(Tensor imgSet) {
+		this.imgSet = imgSet;
+	}
+
+	public Tensor getLabelSet() {
+		return labelSet;
+	}
+
+	public void setLabelSet(Tensor labelSet) {
+		this.labelSet = labelSet;
 	}
 	
 }

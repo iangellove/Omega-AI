@@ -66,6 +66,9 @@ public class ModelLoader {
 			case "maxpool":
 				addMaxPoolingLayer(cfg, nn);
 				break;
+			case "meanpool":
+				addMeanPoolingLayer(cfg, nn);
+				break;
 			case "avgpool":
 				addAvgPoolingLayer(cfg, nn);
 				break;
@@ -107,6 +110,22 @@ public class ModelLoader {
 		int stride = getInt(cfg.get("stride").toString());
 //		System.out.println(pre.oWidth);
 		PoolingLayer pool1 = new PoolingLayer(pre.oChannel, pre.oWidth, pre.oHeight, size, size, stride, PoolingType.MAX_POOLING);
+		
+		nn.addLayer(pool1);
+	}
+	
+	public static void addMeanPoolingLayer(Map<String,Object> cfg,Network nn) {
+		
+		Layer pre = nn.getLastLayer();
+		
+		if(pre == null) {
+			throw new RuntimeException("the pooling layer cant be the fisrt layer.");
+		}
+		
+		int size = getInt(cfg.get("size").toString());
+		int stride = getInt(cfg.get("stride").toString());
+//		System.out.println(pre.oWidth);
+		PoolingLayer pool1 = new PoolingLayer(pre.oChannel, pre.oWidth, pre.oHeight, size, size, stride, PoolingType.MEAN_POOLING);
 		
 		nn.addLayer(pool1);
 	}
@@ -182,7 +201,7 @@ public class ModelLoader {
 		int bn = 0;
 		boolean hasBias = true;
 		
-		if(cfg.get("batch_normalize") != null) {
+		if(cfg.get("batch_normalize") != null && cfg.get("batch_normalize").toString().equals("1")) {
 			bn = getInt(cfg.get("batch_normalize").toString());
 			hasBias = false;
 		}

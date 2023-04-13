@@ -3,6 +3,8 @@ package com.omega.common.data;
 import java.io.Serializable;
 
 import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 
 import jcuda.Pointer;
@@ -25,15 +27,24 @@ public class Tensor implements Serializable{
 
 	public int width = 0;
 	
-	public int dataLength = 0;
-	
-	public float[] data;
-	
 	private Pointer gpuData;
 	
 	public float[] once;
 	
 	private boolean hasGPU = false;
+	
+	public boolean requiresGrad = false;
+	
+	public int dataLength = 0;
+	
+	public float[] data;
+	
+	public float[] grad;
+	
+	public Tensor[] dependency;
+	
+	private OPType opType;
+	
 	
 	public Tensor(int number,int channel,int height,int width) {
 		this.number = number;
@@ -42,6 +53,10 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = new float[this.dataLength];
+		if(requiresGrad) {
+			grad = new float[dataLength];
+			dependency = new Tensor[2];
+		}
 	}
 	
 	public Tensor(int number,int channel,int height,int width,boolean hasGPU) {
@@ -57,6 +72,10 @@ public class Tensor implements Serializable{
 			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
 		}
+		if(requiresGrad) {
+			grad = new float[dataLength];
+			dependency = new Tensor[2];
+		}
 	}
 	
 	public Tensor(int number,int channel,int height,int width,float[] data) {
@@ -66,6 +85,10 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = data;
+		if(requiresGrad) {
+			grad = new float[dataLength];
+			dependency = new Tensor[2];
+		}
 	}
 	
 	public Tensor(int number,int channel,int height,int width,float[] data,boolean hasGPU) {
@@ -81,6 +104,14 @@ public class Tensor implements Serializable{
 			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
 		}
+		if(requiresGrad) {
+			grad = new float[dataLength];
+			dependency = new Tensor[2];
+		}
+	}
+	
+	public void clearGrad() {
+		grad = new float[grad.length];
 	}
 	
 	public void copy(int n,float[] dest) {
@@ -210,6 +241,50 @@ public class Tensor implements Serializable{
 	
 	public void clearGPU() {
 		JCuda.cudaMemset(gpuData, 0, data.length * Sizeof.FLOAT);
+	}
+	
+	public void backward(float[] grad) {
+		
+		if(requiresGrad) {
+			
+			if(grad == null) {
+				grad = MatrixUtils.one(this.grad.length);
+			}
+			
+			this.grad = MatrixOperation.add(this.grad, grad);
+			
+			dependency[0].backward(dependency[0].gradFunction(this.grad, dependency[1]));
+			dependency[1].backward(dependency[1].gradFunction(this.grad, dependency[0]));
+		}
+		
+	}
+	
+	public float[] gradFunction(float[] grad,Tensor dep) {
+		
+		switch (this.opType) {
+		case add:
+			return grad;
+		case sub:
+			return grad;
+		case mul:
+			return MatrixOperation.multiplication(grad, dep.data);
+		case div:
+			return MatrixOperation.division(grad, dep.data);
+		case dot:
+			
+			break;
+		default:
+			return null;
+		}
+		
+		return null;
+	}
+	
+	public Tensor add(Tensor other) {
+		this.opType = OPType.add;
+		float[] val = MatrixOperation.add(this.data, other.data);
+		
+		return new Tensor(number, channel, height, width, val);
 	}
 	
 }
