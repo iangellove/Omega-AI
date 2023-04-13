@@ -20,7 +20,13 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ### Demo展示
 [基于卷积神经网络mnist手写数字识别](http://120.237.148.121:8011/mnist)
-![在这里插入图片描述](https://img-blog.csdnimg.cn/b9b5846af6624bdf8f5d570c5052bc64.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTMyODMzMDQ=,size_1,color_FFFFFF,t_70#pic_center)
+![输入图片说明](QQ%E6%88%AA%E5%9B%BE20230413155027.png)
+
+[基于yolo算法目标识别]()
+
+![输入图片说明](0.png)![输入图片说明](11.png)![输入图片说明](49.png)![输入图片说明](35.png)![输入图片说明](32.png)![输入图片说明](41.png)
+
+
 ##  功能介绍
 #### 支持的网络层类型：
 
@@ -28,7 +34,9 @@ Fullylayer 全连接层
 
 ConvolutionLayer 卷积层
 
-PoolingLayer 池化层
+PoolingLayer 池化层(maxpooling,meanpooling)
+
+AVGPooingLayer 全局平均池化层
 
 #### 激活函数层
 
@@ -54,6 +62,10 @@ Momentum
 
 Adam
 
+Adamw
+
+Sgd (sgd with momentum)
+
 #### 训练器
 
 BGDOptimizer (批量梯度下降法)
@@ -67,6 +79,8 @@ SGDOptimizer（随机梯度下降算法）
 SquareLoss (平方差损失函数)
 
 CrossEntropyLoss (交叉熵损失函数)
+
+CrossEntropyLossWithSoftmax (交叉熵损失 + softmax)
 
 #### 学习率更新器（LearnRateUpdate）
 
@@ -105,6 +119,10 @@ iris（鸢尾花数据集）
 mnist（手写数字数据集）
 
 cifar_10 （cifar_10数据集）
+
+### 附加数据集
+[banana-detection](https://pan.baidu.com/s/1mUr12FJm9OGbsObqfjZ81Q?pwd=jish)
+
 
 ### 数据集成绩
 
@@ -292,107 +310,162 @@ public void cnnNetwork_mnist() {
 		
 	}
 ````
-#### cnn cifar10 demo
+#### resnet cifar10 demo
 
 ```java
-public void cnnNetwork_cifar10() {
+	public void resnet18_cifar10() {
 		// TODO Auto-generated method stub
-		
+
 		try {
 
-	    	String[] labelSet = new String[] {"airplane","automobile","bird","cat","deer","dog","frog","horse","ship","truck"};
+			String[] labelSet = new String[] {"airplane","automobile","bird","cat","deer","dog","frog","horse","ship","truck"};
 	    	
 			String[] train_data_filenames = new String[] {
-					"/dataset/cifar-10/data_batch_1.bin",
-					"/dataset/cifar-10/data_batch_2.bin",
-					"/dataset/cifar-10/data_batch_3.bin",
-					"/dataset/cifar-10/data_batch_4.bin",
-					"/dataset/cifar-10/data_batch_5.bin"
+					"H:/dataset/cifar-10/data_batch_1.bin",
+					"H:/dataset/cifar-10/data_batch_2.bin",
+					"H:/dataset/cifar-10/data_batch_3.bin",
+					"H:/dataset/cifar-10/data_batch_4.bin",
+					"H:/dataset/cifar-10/data_batch_5.bin"
 			};
 			
-			String test_data_filename = "/dataset/cifar-10/test_batch.bin";
+			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
 			
-			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, true, labelSet);
-	    	
-			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, true, labelSet);
+			float[] mean = new float[] {0.491f, 0.482f, 0.446f};
+			float[] std = new float[] {0.247f, 0.243f, 0.261f};
+			
+			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true);
+
+			DataSet testData = DataLoader.getImagesToDataSetByBin(test_data_filename, 10000, 3, 32, 32, 10, labelSet, true, mean, std);
 			
 			System.out.println("data is ready.");
-			
+
 			int channel = 3;
 			
 			int height = 32;
 			
 			int width = 32;
 			
-			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
+			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw);
 			
-			netWork.learnRate = 0.001d;
+			netWork.CUDNN = true;
+			
+			netWork.learnRate = 0.1f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
-			netWork.addLayer(inputLayer);
 			
-			ConvolutionLayer conv1 = new ConvolutionLayer(channel, 16, width, height, 3, 3, 1, 1,false);
-			netWork.addLayer(conv1);
+			ConvolutionLayer conv1 = new ConvolutionLayer(channel, 64, width, height, 3, 3, 1, 1, false);
 			
 			BNLayer bn1 = new BNLayer();
-			netWork.addLayer(bn1);
 			
 			ReluLayer active1 = new ReluLayer();
-			netWork.addLayer(active1);
+			
+			/**
+			 * block1  64 * 32 * 32
+			 */
+			BasicBlockLayer bl1 = new BasicBlockLayer(conv1.oChannel, 64, conv1.oHeight, conv1.oWidth, 1, netWork);
+			ReluLayer active2 = new ReluLayer();
 
-			PoolingLayer pool1 = new PoolingLayer(conv1.oChannel, conv1.oWidth, conv1.oHeight, 2, 2, 2, PoolingType.MAX_POOLING);
-			netWork.addLayer(pool1);
-			
-			
-			ConvolutionLayer conv3 = new ConvolutionLayer(pool1.oChannel, 32, pool1.oWidth, pool1.oHeight, 3, 3, 1, 1,false);
-			netWork.addLayer(conv3);
-			
-			BNLayer bn3 = new BNLayer();
-			netWork.addLayer(bn3);
-			
+			/**
+			 * block2  64 * 32 * 32
+			 */
+			BasicBlockLayer bl2 = new BasicBlockLayer(bl1.oChannel, 64, bl1.oHeight, bl1.oWidth, 1, netWork);
 			ReluLayer active3 = new ReluLayer();
+			
+			/**
+			 * block3  128 * 16 * 16
+			 * downSample 32 / 2 = 16
+			 */
+			BasicBlockLayer bl3 = new BasicBlockLayer(bl2.oChannel, 128, bl2.oHeight, bl2.oWidth, 2, netWork);
+			ReluLayer active4 = new ReluLayer();
+
+			/**
+			 * block4  128 * 16 * 16
+			 */
+			BasicBlockLayer bl4 = new BasicBlockLayer(bl3.oChannel, 128, bl3.oHeight, bl3.oWidth, 1, netWork);
+			ReluLayer active5 = new ReluLayer();
+
+			/**
+			 * block5  256 * 8 * 8
+			 * downSample 16 / 2 = 8
+			 */
+			BasicBlockLayer bl5 = new BasicBlockLayer(bl4.oChannel, 256, bl4.oHeight, bl4.oWidth, 2, netWork);
+			ReluLayer active6 = new ReluLayer();
+			
+			/**
+			 * block6  256 * 8 * 8
+			 */
+			BasicBlockLayer bl6 = new BasicBlockLayer(bl5.oChannel, 256, bl5.oHeight, bl5.oWidth, 1, netWork);
+			ReluLayer active7 = new ReluLayer();
+
+			/**
+			 * block7  512 * 4 * 4
+			 * downSample 8 / 2 = 4
+			 */
+			BasicBlockLayer bl7 = new BasicBlockLayer(bl6.oChannel, 512, bl6.oHeight, bl6.oWidth, 2, netWork);
+			ReluLayer active8 = new ReluLayer();
+			
+			
+			/**
+			 * block8  512 * 4 * 4
+			 */
+			BasicBlockLayer bl8 = new BasicBlockLayer(bl7.oChannel, 512, bl7.oHeight, bl7.oWidth, 1, netWork);
+			ReluLayer active9 = new ReluLayer();
+			
+			AVGPoolingLayer pool2 = new AVGPoolingLayer(bl8.oChannel, bl8.oWidth, bl8.oHeight);
+			
+			/**
+			 * fully  512 * 1 * 1
+			 */
+			int fInputCount = pool2.oChannel * pool2.oWidth * pool2.oHeight;
+			
+			FullyLayer full1 = new FullyLayer(fInputCount, 10);
+
+			netWork.addLayer(inputLayer);
+			netWork.addLayer(conv1);
+			netWork.addLayer(bn1);
+			netWork.addLayer(active1);
+			
+			/**
+			 * block1  64
+			 */
+			netWork.addLayer(bl1);
+			netWork.addLayer(active2);
+			netWork.addLayer(bl2);
 			netWork.addLayer(active3);
 			
-			PoolingLayer pool2 = new PoolingLayer(conv3.oChannel, conv3.oWidth, conv3.oHeight, 2, 2, 2, PoolingType.MAX_POOLING);
-			netWork.addLayer(pool2);
-
-			
-			ConvolutionLayer conv4 = new ConvolutionLayer(pool2.oChannel, 64, pool2.oWidth, pool2.oHeight, 3, 3, 1, 1,false);
-			netWork.addLayer(conv4);
-			
-			BNLayer bn4 = new BNLayer();
-			netWork.addLayer(bn4);
-			
-			ReluLayer active4 = new ReluLayer();
+			/**
+			 * block2  128
+			 */
+			netWork.addLayer(bl3);
 			netWork.addLayer(active4);
+			netWork.addLayer(bl4);
+			netWork.addLayer(active5);
 			
-			PoolingLayer pool3 = new PoolingLayer(conv4.oChannel, conv4.oWidth, conv4.oHeight, 2, 2, 2, PoolingType.MAX_POOLING);
-			netWork.addLayer(pool3);
-
-
-			int fInputCount = pool3.oChannel * pool3.oWidth * pool3.oHeight;
+			/**
+			 * block3  256
+			 */
+			netWork.addLayer(bl5);
+			netWork.addLayer(active6);
+			netWork.addLayer(bl6);
+			netWork.addLayer(active7);
 			
-			FullyLayer full1 = new FullyLayer(fInputCount, 256, true);
-			netWork.addLayer(full1);
-			
-			ReluLayer active9 = new ReluLayer();
+			/**
+			 * block4  512
+			 */
+			netWork.addLayer(bl7);
+			netWork.addLayer(active8);
+			netWork.addLayer(bl8);
 			netWork.addLayer(active9);
-
-			DropoutLayer drop1 = new DropoutLayer(0.5d);
-			netWork.addLayer(drop1);
-
-			FullyLayer full2 = new FullyLayer(full1.oWidth, 10, true);
-			netWork.addLayer(full2);
 			
-			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
-			netWork.addLayer(softmax);
-			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 30, 0.001d, 64, LearnRateUpdate.NONE);
+			netWork.addLayer(pool2);
+			netWork.addLayer(full1);
+
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 250, 0.001f, 128, LearnRateUpdate.GD_GECAY, false);
 
 			long start = System.currentTimeMillis();
 			
-			optimizer.train(trainData);
-			
+			optimizer.train(trainData, testData, mean, std);
+
 			optimizer.test(testData);
 			
 			System.out.println(((System.currentTimeMillis() - start) / 1000) + "s.");
@@ -400,18 +473,96 @@ public void cnnNetwork_cifar10() {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 		}
 		
 	}
 ````
+#### yolo banana-detection demo
+``` java
+public void yolov1_tiny() {
+		
+		try {
+			
+			String cfg_path = "H:/voc/train/yolov1-tiny.cfg";
+			
+			String trainPath = "H:\\voc\\banana-detection\\bananas_train\\images";
+			String trainLabelPath = "H:\\voc\\banana-detection\\bananas_train\\label.csv";
+			
+			String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
+			String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
+			
+			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, true);
+			
+			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, true);
+			
+			DataSet trainSet = formatToYolo(trainData.getDataSet());
+			
+			DataSet vailSet = formatToYolo(vailData.getDataSet());
+			
+			System.out.println("load data finish.");
+			
+			CNN netWork = new CNN(LossType.yolo3, UpdaterType.adamw);
+			
+			netWork.CUDNN = true;
+			
+			netWork.learnRate = 0.001f;
+
+			ModelLoader.loadConfigToModel(netWork, cfg_path);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, 64, LearnRateUpdate.CONSTANT, false);
+
+			long start = System.currentTimeMillis();
+			
+			optimizer.trainObjectRecognition(trainSet, vailSet);
+			
+
+			/**
+			 * 处理测试预测结果
+			 */
+			float[][][] draw_bbox = optimizer.showObjectRecognition(vailSet, 64);
+			
+			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, false);
+			
+			String outputPath = "H:\\voc\\banana-detection\\test\\";
+			
+			showImg(outputPath, testData.getDataSet(), 1, draw_bbox, false);
+			
+			System.out.println(((System.currentTimeMillis() - start) / 1000) + "s.");
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+	}
+```
+
+
+
 ## 未来可期
 
-实现rcnn、rnn、resnet、yolo等算法
+实现rcnn、rnn、ssd、transform等算法
 
 ### 训练情况可视化
 
 支持动态调参，可视化训练
-![在这里插入图片描述](https://img-blog.csdnimg.cn/8bd006e4fc1442cfbc2d5e3682a2c5f1.png#pic_center)
+![输入图片说明](omega-engine-v4-gpu/8bd006e4fc1442cfbc2d5e3682a2c5f1.png)
 
 ### 彩蛋
 
@@ -434,12 +585,12 @@ http://119.3.123.193:8011/AICar
 
 ### omega-engine-v3-gpu
 #### 2022-07-02
-1.开启omega-engine-v3-gpu版本开发，该版本将实现对omega-engine的gpu全面支持.
+1.开启omega-engine-v3-gpu版本开发，该版本将实现对omega-engine的gpu全面支持
 
 2.全面优化卷积层计算，包括前向传播与反向传播.
 
 #### 2022-08-17
-1.初步完成卷积层的gpu改造，使得卷积神经网络计算速度整体提升，增加im2col与col2im两个经典的核函数（Im2colKernel.cu，Col2imKernel.cu）.
+1.初步完成卷积层的gpu改造，使得卷积神经网络计算速度整体提升，增加im2col与col2im两个经典的核函数（Im2colKernel.cu，Col2imKernel.cu）
 
 2.添加cuda内存管理器，用于管理整体显存的生命周期，减少频繁申请显存的操作，减少主机与显卡之间的数据传输.
 
@@ -452,17 +603,29 @@ http://119.3.123.193:8011/AICar
 
 4.后续版本将进一步优化gpu版本，预计将整个计算过程搬迁入gpu计算，从而减少主机与设备(显卡)之间传输，希望进一步获得更快的计算速度
 
+### omega-engine-v4-gpu
+
 #### 2023-01-10
-1.开启omega-engine-v4-gpu版本开发，该版本将实现对omega-engine的CUDNN全面支持.
+1.开启omega-engine-v4-gpu版本开发，该版本将实现对omega-engine的CUDNN全面支持
 
 2.新增全局平均池化层实现
 
-3.将softmax与cross_entropy结合成softmax_with_cross_entropy作为损失函数使用(注意:使用softmax_with_cross_entropy损失函数,将不需要额外添加SoftmaxLayer).
+3.将softmax与cross_entropy结合成softmax_with_cross_entropy作为损失函数使用(注意:使用softmax_with_cross_entropy损失函数,将不需要额外添加SoftmaxLayer)
 
-4.新增BN层对CUDNN支持，实现源码请移步BNCudnnKernel.java
+4.新增BN层对CUDNN支持，实现源码请移步(实现源码请移步BNCudnnKernel.java)
 
 5.后续版本将逐渐实现引擎对CUDNN支持
 
+#### 2023-04-13
+1.omega-engine-v4-gpu版本添加cudnn支持，整体推理与训练效率提升4倍
+
+2.优化bn层，激活函数层内存使用，整体内存显存占用减少30%~40%
+
+3.新增yolo目标识别实现，当前实现的yolo版本为yolov1版本(实现源码请移步YoloV1Test.java)
+
+4.新增图片绘制工具，帮助绘制预测框与回显图片
+
+5.后续版本将逐渐实现引擎对yolov3,yolov5等模型
 
 ## 欢迎打扰
 
