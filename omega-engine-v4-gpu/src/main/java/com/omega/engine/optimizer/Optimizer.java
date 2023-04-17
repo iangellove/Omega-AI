@@ -508,7 +508,7 @@ public abstract class Optimizer {
 		
 		vailLoss = vailLoss / itc / batchSize;
 		
-		System.out.println("training["+this.trainIndex+"] vail loss:{"+vailLoss+"} [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
+		System.out.println("test["+this.trainIndex+"] vail loss:{"+vailLoss+"} [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
 		
 		return vailLoss;
 	}
@@ -573,8 +573,13 @@ public abstract class Optimizer {
 			float[][][] draw_bbox = YoloDecode.getDetection(output, testData.width, testData.height);
 			
 			if((pageIndex + 1) * batchSize > testData.number) {
-
-				System.arraycopy(draw_bbox, 0, bbox, pageIndex * batchSize, (pageIndex + 1) * batchSize - testData.number);
+				
+				/**
+				 * 处理不能整除数据
+				 * 由于批量预测的时候是向上补充最后一页的数据
+				 * 所以在获取bbox的时候需要获取的下标应该是 pageIndex * batchSize - (batchSize - testData.number % batchSize)
+				 */
+				System.arraycopy(draw_bbox, batchSize - testData.number % batchSize, bbox, pageIndex * batchSize, testData.number % batchSize);
 				
 			}else {
 

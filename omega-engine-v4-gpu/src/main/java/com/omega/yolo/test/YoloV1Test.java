@@ -25,6 +25,7 @@ import com.omega.engine.pooling.PoolingType;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.yolo.utils.LabelType;
 import com.omega.yolo.utils.YoloDataLoader;
+import com.omega.yolo.utils.YoloLabelUtils;
 
 /**
  * 
@@ -83,7 +84,6 @@ public class YoloV1Test {
 		
 
 		ImageUtils utils = new ImageUtils();
-		
 		
 		for(int b = 0;b<dataSet.number;b++) {
 			
@@ -149,11 +149,11 @@ public class YoloV1Test {
 			
 			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, true);
 			
-			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, true);
+			YoloDataLoader vailData= new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, true);
 			
-			DataSet trainSet = formatToYolo(trainData.getDataSet());
+			DataSet trainSet = YoloLabelUtils.formatToYolo(trainData.getDataSet(), im_w, im_h);
 			
-			DataSet testSet = formatToYolo(testData.getDataSet());
+			DataSet vailSet = YoloLabelUtils.formatToYolo(vailData.getDataSet(), im_w, im_h);
 			
 			System.out.println("load data finish.");
 			
@@ -300,15 +300,24 @@ public class YoloV1Test {
 			netWork.addLayer(active13);
 			
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, 32, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, 32, LearnRateUpdate.SMART_HALF, false);
 
 			long start = System.currentTimeMillis();
 			
-			optimizer.trainObjectRecognition(trainSet, testSet);
+			optimizer.trainObjectRecognition(trainSet, vailSet);
 			
+			/**
+			 * 处理测试预测结果
+			 */
+			float[][][] draw_bbox = optimizer.showObjectRecognition(trainSet, 32);
 			
-//			System.out.println(JsonUtils.toJson(trainSet.label.data));
+			YoloDataLoader testData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, false);
 			
+			String outputPath = "H:\\voc\\banana-detection\\test_resnet\\";
+			
+			showImg(outputPath, testData.getDataSet(), 1, draw_bbox, false);
+			
+			System.out.println(((System.currentTimeMillis() - start) / 1000) + "s.");
 			
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -336,13 +345,11 @@ public class YoloV1Test {
 			String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
 			String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
 			
-			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, true);
+			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, false);
 			
 			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, true);
 			
-			DataSet trainSet = formatToYolo(trainData.getDataSet());
-			
-			DataSet vailSet = formatToYolo(vailData.getDataSet());
+			DataSet vailSet = YoloLabelUtils.formatToYolo(vailData.getDataSet(), im_w, im_h);
 			
 			System.out.println("load data finish.");
 			
@@ -354,19 +361,18 @@ public class YoloV1Test {
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, 64, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, 64, LearnRateUpdate.SMART_HALF, false);
 
 			long start = System.currentTimeMillis();
 			
-			optimizer.trainObjectRecognition(trainSet, vailSet);
-			
+			optimizer.trainObjectRecognition(trainData.getDataSet(), vailSet, true);
 
 			/**
 			 * 处理测试预测结果
 			 */
 			float[][][] draw_bbox = optimizer.showObjectRecognition(vailSet, 64);
 			
-			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, false);
+			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, false);
 			
 			String outputPath = "H:\\voc\\banana-detection\\test\\";
 			
@@ -387,136 +393,41 @@ public class YoloV1Test {
 		}
 		
 	}
-
-	public static DataSet formatToYolo(DataSet dataSet) {
-		dataSet.label.data = labelToYolo(dataSet.label.data, dataSet.label.number, 7, im_w, im_h);
-		dataSet.label.width = 7 * 7 * 6;
-		dataSet.labelSize = 7 * 7 * 6;
-		return dataSet;
-	}
 	
-	/**
-	 * labelToLocation
-	 * @param cx
-	 * @param cy
-	 * @param w
-	 * @param h
-	 * @param cla = 20
-	 * @param stride = 7
-	 * @param wimg = 448
-	 * @param himg = 448
-	 * @return 7 * 7 * (2 + 8 + 20) = 1470
-	 * target = [px1,py1,w1,h1,c1,px2,py2,w2,h2,c2,clazz1.....,clazz20]
-	 * gridx = int(cx / stride)
-	 * gridy = int(cy / stride)
-	 * px = (cx - (gridx * cellSize)) / cellSize
-	 * py = (cy - (gridy * cellSize)) / cellSize
-	 */
-	public static float[] labelToYolo(float[] bbox,int number,int stride,int im_w,int im_h) {
+	public void testTransforms() {
 		
-		float[] target = new float[number * stride * stride * 6];
+		String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
+		String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
 		
-		int oneSize = stride * stride * 6;
-
-		for(int i = 0;i<number;i++) {
-			
-			float x1 = bbox[i * 5 + 1];
-			float y1 = bbox[i * 5 + 2];
-			float x2 = bbox[i * 5 + 3];
-			float y2 = bbox[i * 5 + 4];
-			
-			float cx = (x1 + x2) / (2 * im_w);
-			float cy = (y1 + y2) / (2 * im_h);
-			
-			float w = (x2 - x1) / im_w;
-			float h = (y2 - y1) / im_h;
-
-			int gridx = (int)(cx * stride);
-			int gridy = (int)(cy * stride);
-			
-			float px = cx * stride - gridx;
-			float py = cy * stride - gridy;
-			
-			/**
-			 * c1
-			 */
-			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 0] = 1.0f;
-			
-			/**
-			 * class
-			 */
-			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 1] = 1.0f;
-			
-			/**
-			 * x1,y1,w1,h1
-			 */
-			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 2] = px;
-			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 3] = py;
-			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 4] = w;
-			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 5] = h;
-			
-		}
+		YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, false);
 		
-		return target;
-	}
-	
-	public static float[] yoloTolabel(float[] target,int number,int stride,int im_w,int im_h) {
+		YoloLabelUtils u = new YoloLabelUtils(1, 4);
 		
-		float[] bbox = new float[number * stride * stride * 5];
+		u.transforms(vailData.getImgSet(), vailData.getLabelSet());
 		
-		int oneSize = 5;
+		String outputPath = "H:\\voc\\banana-detection\\transforms\\";
 		
-		int oneTargetSize = stride * stride * 6;
+		ImageUtils utils = new ImageUtils();
 		
-		for(int i = 0;i<number;i++) {
+		vailData.setImgSet(vailData.getImgSet());
+		
+		for(int b = 0;b<vailData.number;b++) {
 			
-			for(int l = 0;l<stride * stride;l++) {
-
-				float c = target[i * oneTargetSize + l * 6];
-				
-				if(c <= 0.0f) {
-					continue;
-				}
-
-				float px = target[i * oneTargetSize + l * 6 + 2];
-				float py = target[i * oneTargetSize + l * 6 + 3];
-				float w = target[i * oneTargetSize + l * 6 + 4];
-				float h = target[i * oneTargetSize + l * 6 + 5];
-
-				int row = l / stride;
-		        int col = l % stride;
-				
-				float cx = (px + col) / stride;
-	            float cy = (py + row) / stride;
-	            
-				bbox[i * oneSize + 0] = 1.0f;
-				bbox[i * oneSize + 1] = (cx - w/2) * im_w;
-				bbox[i * oneSize + 2] = (cy - h/2) * im_h;
-				bbox[i * oneSize + 3] = (cx + w/2) * im_w;
-				bbox[i * oneSize + 4] = (cy + h/2) * im_h;
-
-			}
+			float[] once = vailData.getImgSet().getByNumber(b);
 			
-		}
-		
-		return bbox;
-	}
-	
-	public static void showLabel(float[] bbox,int number,int stride,int im_w,int im_h) {
-		
-		float[] target = labelToYolo(bbox, number, stride, im_w, im_h);
-		
-		float[] label = yoloTolabel(target, number, stride, im_w, im_h);
-		
-		for(int i = 0;i<number;i++) {
+			float[] label = vailData.getLabelSet().getByNumber(b);
 			
-			System.out.println("-------"+i+"--------");
+			int[][] bbox = new int[][] {
+					{	
+						0,
+						(int) label[1],
+						(int) label[2],
+						(int) label[3],
+						(int) label[4]
+					}
+			};
 			
-			System.out.println(bbox[i * 5 + 0]+":"+label[i * 5 + 0]);
-			System.out.println(bbox[i * 5 + 1]+":"+label[i * 5 + 1]);
-			System.out.println(bbox[i * 5 + 2]+":"+label[i * 5 + 2]);
-			System.out.println(bbox[i * 5 + 3]+":"+label[i * 5 + 3]);
-			System.out.println(bbox[i * 5 + 4]+":"+label[i * 5 + 4]);
+			utils.createRGBImage(outputPath + b + ".png", "png", ImageUtils.color2rgb2(once, im_w, im_h), im_w, im_h, bbox);
 			
 		}
 		
@@ -529,7 +440,7 @@ public class YoloV1Test {
 		
 		YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, true);
 		
-		showLabel(vailData.getLabelSet().data, 100, 7, im_w, im_h);
+		YoloLabelUtils.showLabel(vailData.getLabelSet().data, 100, 7, im_w, im_h);
 		
 	}
 	
@@ -539,9 +450,11 @@ public class YoloV1Test {
 		
 		YoloV1Test t = new YoloV1Test();
 
-		t.yolov1();
+//		t.yolov1();
 		
 //		t.yolov1_tiny();
+		
+		t.testTransforms();
 		
 //		t.testYoloBBox();
 		

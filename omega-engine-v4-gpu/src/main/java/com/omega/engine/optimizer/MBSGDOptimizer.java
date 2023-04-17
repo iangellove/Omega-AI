@@ -1,10 +1,7 @@
 package com.omega.engine.optimizer;
 
-import java.math.BigDecimal;
-
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
-import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.controller.TrainTask;
@@ -14,6 +11,7 @@ import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.yolo.utils.BaseDataLoader;
+import com.omega.yolo.utils.YoloLabelUtils;
 
 import jcuda.driver.JCudaDriver;
 
@@ -25,6 +23,15 @@ import jcuda.driver.JCudaDriver;
  *
  */
 public class MBSGDOptimizer extends Optimizer {
+	
+	private YoloLabelUtils u;
+	
+	public YoloLabelUtils dataEnhanceInstance() {
+		if(u == null) {
+			u = new YoloLabelUtils(1, 4);
+		}
+		return u;
+	}
 	
 	public MBSGDOptimizer(Network network, int trainTime, float error,int batchSize,boolean warmUp) throws Exception {
 		super(network, batchSize, trainTime, error, warmUp);
@@ -395,11 +402,6 @@ public class MBSGDOptimizer extends Optimizer {
 
 			this.dataSize = trainingData.number;
 			
-//			/**
-//			 * normalize vailSet
-//			 */
-//			DataTransforms.normalize(validata.input, mean, std);
-
 			if(isWarmUp()) {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
@@ -898,7 +900,7 @@ public class MBSGDOptimizer extends Optimizer {
 				 */
 				this.updateLR();
 				
-				if(this.trainIndex % 200 == 0) {
+				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
 					
 					this.network.learnRate = this.network.learnRate * 0.5f;
 					
@@ -927,58 +929,138 @@ public class MBSGDOptimizer extends Optimizer {
 
 	}
 	
-//	public void showObjectRecognition(BaseData validata) {
-//		
-//		try {
-//			
-//			Tensor vail_input = new Tensor(batchSize, validata.channel, validata.height, validata.width, true);
-//			
-//			Tensor vail_label = new Tensor(batchSize, 1, 1, validata.labelSize, true);
-//			
-//			this.network.RUN_MODEL = RunModel.TEST;
-//			
-//			int itc = new BigDecimal(validata.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_DOWN).intValue();
-//			
-//			for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
-//
-//				validata.getBatchData(pageIndex, batchSize, vail_input, vail_label);
-//				
-//				vail_input.hostToDevice();
-//				
-//				Tensor output = this.network.predict(vail_input);
-//				
-//				for(int b = 0;b<output.number;b++) {
+	public void trainObjectRecognition(BaseData trainingData,BaseData validata,boolean dataEnhance) {
+		// TODO Auto-generated method stub
+
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			
+			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
+			
+			Tensor vail_input = new Tensor(batchSize, validata.channel, validata.height, validata.width, true);
+			
+			Tensor vail_label = new Tensor(batchSize, 1, 1, validata.labelSize, true);
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+
+				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					long start = System.nanoTime();
+
+					this.loss.clear();
+					
+					this.lossDiff.clear();
+					
+					trainingData.getRandomData(indexs[it], input, label); 
+					
+					/**
+					 * 数据增强
+					 */
+					if(dataEnhance) {
+						dataEnhanceInstance().transforms(input, label);
+						YoloLabelUtils.formatToYolo(label, input.height, input.width);
+					}
+
+					input.hostToDevice();
+					
+					label.hostToDevice();
+					
+					/**
+					 * forward
+					 */
+					Tensor output = this.network.forward(input);
+
+					/**
+					 * loss
+					 */
+					this.loss = this.network.loss(output, label);
+					
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = this.network.lossDiff(output, label);
+					
+					/**
+					 * back
+					 */
+					this.network.back(this.lossDiff);
+					
+					/**
+					 * update
+					 */
+					this.network.update();
+					
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / this.batchSize;
+					}
 //					
-//					float[] once = imgSet.getByNumber(b);
-//					
-//					float[] label = labelSet.getByNumber(b);
-//					
-//					int[][] bbox = new int[][] {
-//							{	
-//								0,
-//								(int) label[1],
-//								(int) label[2],
-//								(int) label[3],
-//								(int) label[4]
-//							}
-//					};
-//					
-////					System.out.println(JsonUtils.toJson(bbox));
-//					
-////					int[][] rgb = tensorToRGB(once);
-//					
-//					utils.createRGBImage(outputPath + b + ".png", "png", ImageUtils.color2rgb2(once, im_w, im_h), im_w, im_h, bbox);
-//					
-//				}
-//				
-//			}
-//			
-//		} catch (Exception e) {
-//			// TODO: handle exception
-//			e.printStackTrace();
-//		}
-//		
-//	}
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:"+this.currentError+" [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+				}
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR();
+				
+				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
+					
+					this.network.learnRate = this.network.learnRate * 0.5f;
+					
+				}
+				
+				if(this.trainIndex % 100 == 0) {
+					
+					System.out.println("----------------testing start----------------");
+					
+					this.testObjectRecognition(validata, vail_input, vail_label, this.batchSize);
+					
+					System.out.println("----------------testing finish---------------");
+					
+				}
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
 	
 	public void transforms(Tensor trainData,Tensor transData, float[] mean,float[] std){
 		
@@ -1000,7 +1082,7 @@ public class MBSGDOptimizer extends Optimizer {
 		/**
 		 * cutcout
 		 */
-		DataTransforms.cutout(transData, transData, 16);
+		DataTransforms.cutout(transData, transData, 16, 1);
 		
 		System.out.println("data transform finish.");
 		
