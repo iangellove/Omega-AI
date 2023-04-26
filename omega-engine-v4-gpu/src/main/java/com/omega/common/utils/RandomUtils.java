@@ -1,8 +1,11 @@
 package com.omega.common.utils;
 
-import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
+import com.omega.common.data.Tensor;
 import com.omega.engine.active.ActiveType;
 
 /**
@@ -462,6 +465,32 @@ public class RandomUtils {
 		return temp;
 	}
 	
+	/**
+	 * 范围随机
+	 * @param org
+	 * @param k
+	 * @return
+	 */
+	public static Tensor random(Tensor org,int k) {
+		
+		List<Integer> list = new ArrayList<Integer>(); 
+		
+		for(int i = 0;i<org.number;i++) {
+			list.add(i);
+		}
+		
+		Collections.shuffle(list);
+		
+		float[] data = new float[k * org.getOnceSize()];
+		
+		for(int kn = 0;kn<k;kn++) {
+			
+			System.arraycopy(org.getByNumber(list.get(kn)), 0, data, kn * org.getOnceSize(), org.getOnceSize());
+			
+		}
+		
+		return new Tensor(k, org.channel, org.height, org.width, data);
+	}
 	
 	public static void main(String[] args) {
 		

@@ -6,7 +6,6 @@ import com.omega.common.data.Tensor;
 import com.omega.common.task.TaskEngine;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.LabelUtils;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.network.Network;

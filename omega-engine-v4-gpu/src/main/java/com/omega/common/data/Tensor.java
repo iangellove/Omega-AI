@@ -35,6 +35,8 @@ public class Tensor implements Serializable{
 	
 	public float[] once;
 	
+	public int onceSize;
+	
 	private boolean hasGPU = false;
 	
 	public Tensor(int number,int channel,int height,int width) {
@@ -141,11 +143,15 @@ public class Tensor implements Serializable{
 	public int getDataLength() {
 		return number * channel * height * width;
 	}
-
+	
 	public void setDataLength(int dataLength) {
 		this.dataLength = dataLength;
 	}
-
+	
+	public int getOnceSize() {
+		return channel * height * width;
+	}
+	
 	public float[] getData() {
 		return data;
 	}
@@ -169,6 +175,17 @@ public class Tensor implements Serializable{
 		return once;
 	}
 	
+	public void setByNumber(int n,float[] x) {
+		System.arraycopy(x, 0, data, n * channel * height * width, channel * height * width);
+	}
+	
+	public void getByNumber(int n,float[] once) {
+		if(once == null || once.length != channel * height * width) {
+			once = new float[channel * height * width];
+		}
+		System.arraycopy(data, n * channel * height * width, once, 0, channel * height * width);
+	}
+	
 	public float[] getByNumberAndChannel(int n,int c) {
 		if(once == null || once.length != height * width) {
 			once = new float[height * width];
@@ -176,6 +193,14 @@ public class Tensor implements Serializable{
 		int start = n * channel * height * width + c * height * width;
 		System.arraycopy(data, start, once, 0, height * width);
 		return once;
+	}
+	
+	public void getByNumberAndChannel(int n,int c,float[] once) {
+		if(once == null || once.length != height * width) {
+			once = new float[height * width];
+		}
+		int start = n * channel * height * width + c * height * width;
+		System.arraycopy(data, start, once, 0, height * width);
 	}
 	
 	public void clear() {

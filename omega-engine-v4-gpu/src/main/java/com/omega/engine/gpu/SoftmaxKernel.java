@@ -4,7 +4,6 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
 
 import jcuda.Pointer;

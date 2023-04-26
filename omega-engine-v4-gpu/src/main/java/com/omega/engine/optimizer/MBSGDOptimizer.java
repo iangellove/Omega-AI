@@ -3,7 +3,6 @@ package com.omega.engine.optimizer;
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
 import com.omega.common.utils.MathUtils;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.controller.TrainTask;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;

@@ -5,7 +5,6 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.PrintUtils;
 import com.omega.common.utils.RandomUtils;

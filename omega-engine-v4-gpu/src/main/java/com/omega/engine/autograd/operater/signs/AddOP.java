@@ -1,6 +1,5 @@
 package com.omega.engine.autograd.operater.signs;
 
-import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.autograd.data.Tensor;
 import com.omega.engine.autograd.exceptions.AutogradException;
 import com.omega.engine.autograd.operater.SignOP;
