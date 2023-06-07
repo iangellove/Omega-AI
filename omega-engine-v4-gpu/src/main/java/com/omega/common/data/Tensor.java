@@ -4,6 +4,8 @@ import java.io.Serializable;
 
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.engine.ad.Graph;
+import com.omega.engine.ad.op.OPType;
 import com.omega.engine.gpu.CUDAMemoryManager;
 
 import jcuda.Pointer;
@@ -38,6 +40,10 @@ public class Tensor implements Serializable{
 	public int onceSize;
 	
 	private boolean hasGPU = false;
+	
+	private boolean requiresGrad = false;
+	
+	private float[] grad;
 	
 	public Tensor(int number,int channel,int height,int width) {
 		this.number = number;
@@ -106,6 +112,10 @@ public class Tensor implements Serializable{
 		}else {
 			throw new RuntimeException("获取数据失败[下标超出长度].");
 		}
+	}
+	
+	public int[] shape() {
+		return new int[] {this.number,this.channel,this.height,this.width};
 	}
 	
 	public int getNumber() {
@@ -232,11 +242,13 @@ public class Tensor implements Serializable{
 	}
 	
 	public void hostToDevice() {
-		if(gpuData == null) {
-			gpuData = CUDAMemoryManager.getPointer(dataLength);
+		if(hasGPU) {
+			if(gpuData == null) {
+				gpuData = CUDAMemoryManager.getPointer(dataLength);
+			}
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaDeviceSynchronize();
 		}
-		JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
-		JCuda.cudaDeviceSynchronize();
 	}
 	
 	public void freeGPU() {
@@ -249,6 +261,16 @@ public class Tensor implements Serializable{
 	public void showDM() {
 		syncHost();
 	    System.out.println(JsonUtils.toJson(data));
+	}
+	
+	public void showDMByNumber(int number) {
+		syncHost();
+	    System.out.println(JsonUtils.toJson(this.getByNumber(number)));
+	}
+	
+	public void showDM(int index) {
+		syncHost();
+	    System.out.println(data[index]);
 	}
 	
 	public boolean checkDM() {
@@ -273,13 +295,59 @@ public class Tensor implements Serializable{
 			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
 		}
 	}
-
+	
 	public boolean isHasGPU() {
 		return hasGPU;
 	}
 
 	public void setHasGPU(boolean hasGPU) {
 		this.hasGPU = hasGPU;
+	}
+
+	public boolean isRequiresGrad() {
+		return requiresGrad;
+	}
+
+	public void setRequiresGrad(boolean requiresGrad) {
+		this.requiresGrad = requiresGrad;
+	}
+
+	public float[] getGrad() {
+		return grad;
+	}
+
+	public void setGrad(float[] grad) {
+		this.grad = grad;
+	}
+	
+	public void zeroGrad() {
+		if(this.grad!=null) {
+			this.grad = new float[this.grad.length];
+		}
+	}
+
+	/**
+	 * tensor基础操作
+	 * @return
+	 */
+	public Tensor add(Tensor y) {
+		return Graph.OP(OPType.add, this, y);
+	}
+	
+	public Tensor sub(Tensor y) {
+		return Graph.OP(OPType.subtraction, this, y);
+	}
+	
+	public Tensor mul(Tensor y) {
+		return Graph.OP(OPType.multiplication, this, y);
+	}
+	
+	public Tensor log() {
+		return Graph.OP(OPType.log, this);
+	}
+	
+	public Tensor sin() {
+		return Graph.OP(OPType.sin, this);
 	}
 	
 }

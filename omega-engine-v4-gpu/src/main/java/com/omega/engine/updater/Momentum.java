@@ -1,5 +1,6 @@
 package com.omega.engine.updater;
 
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;

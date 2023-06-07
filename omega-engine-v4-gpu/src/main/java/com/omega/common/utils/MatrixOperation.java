@@ -58,6 +58,22 @@ public class MatrixOperation {
 		return temp;
 	}
 	
+	public static float[] sin(float[] x) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = (float)Math.sin(x[i]);
+		}
+		return temp;
+	}
+	
+	public static float[] cos(float[] x) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = (float)Math.cos(x[i]);
+		}
+		return temp;
+	}
+	
 	/**
 	 * 
 	 * @Title: exp
@@ -1282,6 +1298,27 @@ public class MatrixOperation {
 		float[] temp = MatrixUtils.zero(x.length);
 		for(int i = 0;i<x.length;i++) {
 			temp[i] = x[i] / b;
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: division
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static float[] division(float b,float[] x) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = b / x[i];
 		}
 		return temp;
 	}

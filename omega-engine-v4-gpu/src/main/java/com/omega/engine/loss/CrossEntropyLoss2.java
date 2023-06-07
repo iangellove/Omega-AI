@@ -2,6 +2,7 @@ package com.omega.engine.loss;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.PrintUtils;
 import com.omega.engine.loss.gpu.CrossEntropyKernel;
 
@@ -126,6 +127,18 @@ public class CrossEntropyLoss2 extends LossFunction {
 //		
 //		System.out.println(d_yhat_k_x * d_l_yhat_k);
 		
+	}
+
+	@Override
+	public Tensor[] loss(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Tensor[] diff(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

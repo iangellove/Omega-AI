@@ -199,7 +199,6 @@ public class BNLayer extends NormalizationLayer {
 	@Override
 	public void back() {
 		// TODO Auto-generated method stub
-//		System.out.println(bnType);
 		this.initBack();
 		/**
 		 * 设置梯度

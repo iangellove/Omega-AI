@@ -7,6 +7,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
 import com.omega.common.utils.JsonUtils;
 import com.omega.engine.nn.layer.AVGPoolingLayer;
 import com.omega.engine.nn.layer.ConvolutionLayer;
@@ -14,6 +15,9 @@ import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.PoolingLayer;
+import com.omega.engine.nn.layer.RouteLayer;
+import com.omega.engine.nn.layer.UPSampleLayer;
+import com.omega.engine.nn.layer.YoloLayer;
 import com.omega.engine.nn.layer.active.LeakyReluLayer;
 import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.active.SigmodLayer;
@@ -50,7 +54,9 @@ public class ModelLoader {
 	@SuppressWarnings("unused")
 	public static void addLayer(List<Map<String,Object>> layerCfgs,Network nn) {
 		
-		for(Map<String,Object> cfg:layerCfgs) {
+		for(int i = 0;i<layerCfgs.size();i++) {
+			
+			Map<String,Object> cfg = layerCfgs.get(i);
 			
 			String layerType = cfg.get("layerType").toString();
 			
@@ -75,6 +81,15 @@ public class ModelLoader {
 			case "input":
 				addInputLayer(cfg, nn);
 				break;
+			case "route":
+				addRouteLayer(cfg, nn, layerCfgs, i);
+				break;
+			case "upsample":
+				addUpsampleLayer(cfg, nn);
+				break;
+			case "yolo":
+				addYoloLayer(cfg, nn);
+				break;
 			default:
 				break;
 			}
@@ -87,6 +102,10 @@ public class ModelLoader {
 		return new Double(val).intValue();
 	}
 	
+	public static float getFloat(String val) {
+		return new Float(val);
+	}
+	
 	public static void addInputLayer(Map<String,Object> cfg,Network nn) {
 
 		int channel = getInt(cfg.get("channel").toString());
@@ -96,6 +115,7 @@ public class ModelLoader {
 		InputLayer inputLayer = new InputLayer(channel, height, width);
 
 		nn.addLayer(inputLayer);
+		cfg.put("lastIndex", inputLayer.index);
 	}
 	
 	public static void addMaxPoolingLayer(Map<String,Object> cfg,Network nn) {
@@ -112,6 +132,8 @@ public class ModelLoader {
 		PoolingLayer pool1 = new PoolingLayer(pre.oChannel, pre.oWidth, pre.oHeight, size, size, stride, PoolingType.MAX_POOLING);
 		
 		nn.addLayer(pool1);
+		
+		cfg.put("lastIndex", pool1.index);
 	}
 	
 	public static void addMeanPoolingLayer(Map<String,Object> cfg,Network nn) {
@@ -128,6 +150,8 @@ public class ModelLoader {
 		PoolingLayer pool1 = new PoolingLayer(pre.oChannel, pre.oWidth, pre.oHeight, size, size, stride, PoolingType.MEAN_POOLING);
 		
 		nn.addLayer(pool1);
+		
+		cfg.put("lastIndex", pool1.index);
 	}
 	
 	public static void addAvgPoolingLayer(Map<String,Object> cfg,Network nn) {
@@ -141,6 +165,8 @@ public class ModelLoader {
 		AVGPoolingLayer pool1 = new AVGPoolingLayer(pre.oChannel, pre.oWidth, pre.oHeight);
 		
 		nn.addLayer(pool1);
+		
+		cfg.put("lastIndex", pool1.index);
 	}
 	
 	public static void addConvLayers(Map<String,Object> cfg,Network nn) {
@@ -173,16 +199,19 @@ public class ModelLoader {
 		ConvolutionLayer conv = new ConvolutionLayer(pre.oChannel, kernel, pre.oWidth, pre.oHeight, size, size, pad, stride, hasBias);
 		System.out.println(conv.oWidth);
 		nn.addLayer(conv);
+		cfg.put("lastIndex", conv.index);
 		
 		if(bn == 1) {
 			BNLayer bn1 = new BNLayer(conv);
 			nn.addLayer(bn1);
+			cfg.put("lastIndex", bn1.index);
 		}
 		
 		Layer activeLayer = makeActivation(activation, conv);
 		
 		if(activeLayer != null) {
 			nn.addLayer(activeLayer);
+			cfg.put("lastIndex", activeLayer.index);
 		}
 		
 	}
@@ -215,18 +244,87 @@ public class ModelLoader {
 		FullyLayer fully = new FullyLayer(inputSize, outputSize, hasBias);
 		
 		nn.addLayer(fully);
+		cfg.put("lastIndex", fully.index);
 		
 		if(bn == 1) {
 			BNLayer bn1 = new BNLayer();
 			nn.addLayer(bn1);
+			cfg.put("lastIndex", bn1.index);
 		}
 		
 		Layer activeLayer = makeActivation(activation, fully);
 		
 		if(activeLayer != null) {
 			nn.addLayer(activeLayer);
+			cfg.put("lastIndex", activeLayer.index);
 		}
 		
+	}
+	
+	public static void addRouteLayer(Map<String,Object> cfg,Network nn,List<Map<String,Object>> layerCfgs,int current) {
+		
+		List<Double> layerIndexList = (List<Double>) cfg.get("layers");
+		int[] layerIndexs = new int[layerIndexList.size()];
+		for(int i = 0;i<layerIndexList.size();i++) {
+			layerIndexs[i] = layerIndexList.get(i).intValue();
+		}
+		
+		Layer[] layers = new Layer[layerIndexs.length];
+		
+		for(int i = 0;i<layerIndexs.length;i++) {
+			int ridx = layerIndexs[i];
+			int index = 0;
+			if(ridx < 0) {
+				index = (int) layerCfgs.get(current + ridx).get("lastIndex");
+			}else {
+				index = (int) layerCfgs.get(ridx).get("lastIndex");
+			}
+			layers[i] = nn.layerList.get(index);
+		}
+
+		RouteLayer routeLayer = new RouteLayer(layers);
+		System.out.println(routeLayer.oWidth);
+		nn.addLayer(routeLayer);
+		cfg.put("lastIndex", routeLayer.index);
+	}
+	
+	public static void addUpsampleLayer(Map<String,Object> cfg,Network nn) {
+
+		Layer pre = nn.getLastLayer();
+		
+		if(pre == null) {
+			throw new RuntimeException("the upsample layer cant be the fisrt layer.");
+		}
+		
+		int stride = getInt(cfg.get("stride").toString());
+		
+		UPSampleLayer upsampleLayer = new UPSampleLayer(pre.oChannel, pre.oHeight, pre.oWidth, stride);
+		System.out.println(upsampleLayer.oWidth);
+		nn.addLayer(upsampleLayer);
+		cfg.put("lastIndex", upsampleLayer.index);
+	}
+	
+	public static void addYoloLayer(Map<String,Object> cfg,Network nn) {
+
+		int class_number = getInt(cfg.get("classes").toString());
+		int total = getInt(cfg.get("num").toString());
+		int maxBox = getInt(cfg.get("maxBox").toString());
+		float ignoreThresh = getFloat(cfg.get("ignore_thresh").toString());
+		float truthThresh = getFloat(cfg.get("truth_thresh").toString());
+		List<Double> maskList = (List<Double>) cfg.get("mask");
+		int[] mask = new int[maskList.size()];
+		for(int i = 0;i<maskList.size();i++) {
+			mask[i] = maskList.get(i).intValue();
+		}
+		List<Double> anchorsList = (List<Double>) cfg.get("anchors");
+		float[] anchors = new float[anchorsList.size()];
+		for(int i = 0;i<anchorsList.size();i++) {
+			anchors[i] = anchorsList.get(i).floatValue();
+		}
+
+		YoloLayer yoloLayer = new YoloLayer(class_number, mask.length, mask, anchors, maxBox, total, ignoreThresh, truthThresh);
+		nn.addLayer(yoloLayer);
+		cfg.put("lastIndex", yoloLayer.index);
 	}
 	
 	public static Layer makeActivation(String activation,Layer preLayer) {

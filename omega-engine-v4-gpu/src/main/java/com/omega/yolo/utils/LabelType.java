@@ -2,6 +2,6 @@ package com.omega.yolo.utils;
 
 public enum LabelType {
 	
-	text,csv,bin
+	text,text_v3,csv,bin,csv_v3
 	
 }

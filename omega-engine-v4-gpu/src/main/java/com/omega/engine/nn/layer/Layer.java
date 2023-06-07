@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.gpu.BaseGPUOP;
 import com.omega.engine.gpu.data.CacheDataSet;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
@@ -52,6 +53,8 @@ public abstract class Layer {
 	
 	public Tensor diffB;
 	
+	public Tensor cache_delta;
+	
 	public boolean hasBias = true;
 	
 	public float lambda = 0.01f;
@@ -70,6 +73,8 @@ public abstract class Layer {
 	private CacheDataSet tampDataSet;
 	
 	public boolean hasParams = false;
+	
+	public boolean isOutput = false;
 	
 	public abstract void init();
 	
@@ -152,10 +157,18 @@ public abstract class Layer {
 			 */
 			if(this.index < this.network.layerList.size() - 1) {
 				this.delta = this.network.getNextLayer(this.index).diff;
-			}else {
-				this.delta = this.network.lossDiff;
 			}
-
+		}
+		
+		/**
+		 * 合并路由层误差
+		 */
+		if(this.cache_delta != null) {
+			if(this.delta == null || this.delta.number != this.cache_delta.number) {
+				this.delta = this.cache_delta;
+			}else {
+				BaseGPUOP.getKernel().axpy_gpu(this.cache_delta, this.delta, this.delta.getDataLength(), 1, 1, 1);
+			}
 		}
 		
 	}

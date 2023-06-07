@@ -3,6 +3,7 @@ package com.omega.common.utils;
 import java.awt.AWTException;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.Robot;
@@ -570,13 +571,15 @@ public class ImageUtils {
     public static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight,int[][] bbox) throws IOException {
         Image resultingImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_AREA_AVERAGING);
         BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
-        outputImage.getGraphics().drawImage(resultingImage, 0, 0, null);
-        outputImage.getGraphics().setColor(Color.BLUE);
+        Graphics g = outputImage.getGraphics();
+        g.drawImage(resultingImage, 0, 0, null);
+        g.setColor(Color.RED);
         for(int[] box:bbox) {
         	int w = (box[3] - box[1]);
         	int h = (box[4] - box[2]);
-        	outputImage.getGraphics().drawRect(box[1], box[2], w, h);
+        	g.drawRect(box[1], box[2], w, h);
         }
+
         return outputImage;
     }
     

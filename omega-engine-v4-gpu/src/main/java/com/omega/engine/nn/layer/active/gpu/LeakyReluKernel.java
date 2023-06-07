@@ -66,7 +66,7 @@ public class LeakyReluKernel extends BaseKernel{
 	public void forward(Tensor input,Tensor output) {
 		
 		try {
-			
+
 			if(forwardKernelParameters == null || this.N != output.number) {
 
 		        /**

@@ -143,6 +143,7 @@ public class AdamKernel {
 	                Pointer.to(new float[]{beta2}),
 	                Pointer.to(new float[]{lr}),
 	                Pointer.to(new int[]{diffW.dataLength}),
+	                Pointer.to(new int[]{net.number}),
 	                Pointer.to(new int[]{net.train_time})
 	            );
 
@@ -219,6 +220,7 @@ public class AdamKernel {
 	                Pointer.to(new float[]{beta2}),
 	                Pointer.to(new float[]{lr}),
 	                Pointer.to(new int[]{diffB.dataLength}),
+	                Pointer.to(new int[]{net.number}),
 	                Pointer.to(new int[]{net.train_time})
 	            );
 	        

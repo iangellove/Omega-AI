@@ -12,6 +12,15 @@ import com.omega.common.utils.RandomUtils;
  */
 public class DataTransforms {
 	
+	private int class_num = 1;
+	
+	private int bbox_size = 4;
+	
+	public DataTransforms(int class_num,int bbox_size) {
+		this.class_num = class_num;
+		this.bbox_size = bbox_size;
+	}
+	
 	public static void randomCrop(Tensor input,Tensor output,int ch,int cw,int padding) {
 		
 		int maxHeight = input.height + padding * 2 - ch;
@@ -47,23 +56,144 @@ public class DataTransforms {
 		
 	}
 	
+	public void randomCropWithLabel(Tensor input,Tensor label,int ch,int cw,int padding) {
+		
+		int maxHeight = input.height + padding * 2 - ch;
+		
+		int maxWidth = input.width + padding * 2 - cw;
+		
+		int channel = input.channel;
+		int height = input.height;
+		int width = input.width;
+		
+		int labelOnceLength = class_num + bbox_size;
+		
+		float[] org = new float[channel * height * width];
+		
+		for(int n = 0;n<input.number;n++) {
+			
+			int rh = (int) (Math.random() * (maxHeight + 1));
+			
+			int rw = (int) (Math.random() * (maxWidth + 1));
+			
+			input.getByNumber(n, org);
+			
+			for(int c = 0;c<channel;c++) {
+
+				for(int h = 0;h<ch;h++) {
+					for(int w = 0;w<cw;w++) {
+						int oh = h + rh;
+						int ow = w + rw;
+						int toh = oh - padding;
+						int tow = ow - padding;
+
+						if(oh < padding || ow < padding || toh >= height || tow >= width) {
+							input.data[n * channel * ch * cw + c * ch * cw + h * cw + w] = 0.0f;
+						}else {
+							input.data[n * channel * ch * cw + c * ch * cw + h * cw + w] = org[c * height * width + toh * width + tow];
+						}
+					}
+				}
+
+			}
+			
+			for(int c = 0;c<label.channel;c++) {
+				float x1 = label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 0];
+				float y1 = label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 1];
+				float x2 = label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 2];
+				float y2 = label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 3];
+				label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 0] = x1 + padding - rh;
+				label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 1] = y1 + padding - rw;
+				label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 2] = x2 + padding - rh;
+				label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 3] = y2 + padding - rw;
+			}
+			
+		}
+		
+	}
+	
+	public void randomCropWithLabel(Tensor input,Tensor label,int ch,int cw,float jitter) {
+		
+		int ph = (int)(input.height * jitter);
+		int pw = (int)(input.width * jitter);
+		
+		int maxHeight = input.height + ph * 2 - ch;
+		
+		int maxWidth = input.width + pw * 2 - cw;
+		
+		int channel = input.channel;
+		int height = input.height;
+		int width = input.width;
+		
+		int labelOnceLength = class_num + bbox_size;
+		
+		float[] org = new float[channel * height * width];
+		
+		for(int n = 0;n<input.number;n++) {
+			
+			int rh = (int) (Math.random() * (maxHeight + 1));
+			
+			int rw = (int) (Math.random() * (maxWidth + 1));
+			
+			input.getByNumber(n, org);
+			
+			for(int c = 0;c<channel;c++) {
+
+				for(int h = 0;h<ch;h++) {
+					for(int w = 0;w<cw;w++) {
+						int oh = h + rh;
+						int ow = w + rw;
+						int toh = oh - ph;
+						int tow = ow - pw;
+
+						if(oh < ph || ow < pw || toh >= height || tow >= width) {
+							input.data[n * channel * ch * cw + c * ch * cw + h * cw + w] = 0.0f;
+						}else {
+							input.data[n * channel * ch * cw + c * ch * cw + h * cw + w] = org[c * height * width + toh * width + tow];
+						}
+					}
+				}
+
+			}
+			
+			for(int c = 0;c<label.channel;c++) {
+				float x1 = label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 0];
+				float y1 = label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 1];
+				float x2 = label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 2];
+				float y2 = label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 3];
+				label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 0] = x1 + ph - rh;
+				label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 1] = y1 + pw - rw;
+				label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 2] = x2 + ph - rh;
+				label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 3] = y2 + pw - rw;
+			}
+			
+		}
+		
+	}
+	
 	public static void randomHorizontalFilp(Tensor input,Tensor output) {
 		int channel = input.channel;
 		int height = input.height;
 		int width = input.width;
+		
+		float[] org = new float[channel * height * width];
+		
 		for(int n = 0;n<input.number;n++) {
 			
 			if(Math.random() >= 0.5d) {
+
+				input.getByNumber(n, org);
+				
 				for(int c = 0;c<input.channel;c++) {
 					for(int h = 0;h<input.height;h++) {
 						for(int w = 0;w<input.width / 2;w++) {
 							int ow = input.width - 1 - w;
-							output.data[n * channel * height * width + c * height * width + h * width + w] = input.data[n * channel * height * width + c * height * width + h * width + ow];
-							output.data[n * channel * height * width + c * height * width + h * width + ow] = input.data[n * channel * height * width + c * height * width + h * width + w];
+							output.data[n * channel * height * width + c * height * width + h * width + w] = org[c * height * width + h * width + ow];
+							output.data[n * channel * height * width + c * height * width + h * width + ow] = org[c * height * width + h * width + w];
 						}
 						if(input.width % 2 == 1) {
 							int w = width / 2;
-							output.data[n * channel * height * width + c * height * width + h * width + w] = input.data[n * channel * height * width + c * height * width + h * width + w];
+							output.data[n * channel * height * width + c * height * width + h * width + w] = org[c * height * width + h * width + w];
 						}
 					}
 				}
@@ -81,31 +211,90 @@ public class DataTransforms {
 
 	}
 	
-	public static void cutout(Tensor input,Tensor output,int len) {
+	public void randomHorizontalFilpWithLabel(Tensor input,Tensor output,Tensor label) {
+		int channel = input.channel;
+		int height = input.height;
+		int width = input.width;
+		
+		int labelOnceLength = class_num + bbox_size;
+		
+		float[] org = new float[channel * height * width];
+		
+		for(int n = 0;n<input.number;n++) {
+			
+			if(Math.random() >= 0.5d) {
+
+				input.getByNumber(n, org);
+				
+				for(int c = 0;c<input.channel;c++) {
+					for(int h = 0;h<input.height;h++) {
+						for(int w = 0;w<input.width / 2;w++) {
+							int ow = input.width - 1 - w;
+							output.data[n * channel * height * width + c * height * width + h * width + w] = org[c * height * width + h * width + ow];
+							output.data[n * channel * height * width + c * height * width + h * width + ow] = org[c * height * width + h * width + w];
+						}
+						if(input.width % 2 == 1) {
+							int w = width / 2;
+							output.data[n * channel * height * width + c * height * width + h * width + w] = org[c * height * width + h * width + w];
+						}
+					}
+				}
+
+				for(int c = 0;c<label.channel;c++) {
+					float y1 = label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 1];
+					float y2 = label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 3];
+					float hl = y2 - y1;
+					y1 = (height - y1) - hl;
+					y2 = (height - y2) + hl;
+					label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 1] = y1;
+					label.data[n * label.channel * labelOnceLength + c * labelOnceLength + class_num + 3] = y2;
+				}
+
+			}else {
+				for(int c = 0;c<input.channel;c++) {
+					for(int h = 0;h<input.height;h++) {
+						for(int w = 0;w<input.width;w++) {
+							output.data[n * channel * height * width + c * height * width + h * width + w] = input.data[n * channel * height * width + c * height * width + h * width + w];
+						}
+					}
+				}
+			}
+
+		}
+		
+	}
+	
+	public static void cutout(Tensor input,Tensor output,int len,int count) {
 
 		int channel = input.channel;
 		int height = input.height;
 		int width = input.width;
 		for(int n = 0;n<input.number;n++) {
 			
-			int y = RandomUtils.getInstance().nextInt(height);
-			int x = RandomUtils.getInstance().nextInt(width);
-			
-			int y1 = (int) (y - Math.floor(len / 2));
-			int y2 = (int) (y + Math.floor(len / 2));
-			int x1 = (int) (x - Math.floor(len / 2));
-			int x2 = (int) (x + Math.floor(len / 2));
-
-			for(int c = 0;c<input.channel;c++) {
-				for(int h = 0;h<input.height;h++) {
-					for(int w = 0;w<input.width;w++) {
-						if(h >= y1 && h <= y2 && w >= x1 && w <= x2) {
-							output.data[n * channel * height * width + c * height * width + h * width + w] = 0.0f;
-						}else {
-							output.data[n * channel * height * width + c * height * width + h * width + w] = input.data[n * channel * height * width + c * height * width + h * width + w];
+			for(int num = 0;num<count;num++) {
+				
+//				if(Math.random() >= 0.5d) {
+				
+					int y = RandomUtils.getInstance().nextInt(height);
+					int x = RandomUtils.getInstance().nextInt(width);
+					
+					int y1 = (int) (y - Math.floor(len / 2));
+					int y2 = (int) (y + Math.floor(len / 2));
+					int x1 = (int) (x - Math.floor(len / 2));
+					int x2 = (int) (x + Math.floor(len / 2));
+	
+					for(int c = 0;c<input.channel;c++) {
+						for(int h = 0;h<input.height;h++) {
+							for(int w = 0;w<input.width;w++) {
+								if(h >= y1 && h <= y2 && w >= x1 && w <= x2) {
+									output.data[n * channel * height * width + c * height * width + h * width + w] = 0.0f;
+								}else {
+									output.data[n * channel * height * width + c * height * width + h * width + w] = input.data[n * channel * height * width + c * height * width + h * width + w];
+								}
+							}
 						}
 					}
-				}
+//				}
 			}
 			
 		}
@@ -119,6 +308,26 @@ public class DataTransforms {
 		for(int i = 0;i<input.dataLength;i++) {
 			int c = (i/height/width)%channel;
 			output.data[i] = (input.data[i] - mean[c]) / std[c];
+		}
+	}
+	
+	public static void normalize(Tensor input,Tensor output,int color,float[] mean,float[] std) {
+		int channel = input.channel;
+		int height = input.height;
+		int width = input.width;
+		for(int i = 0;i<input.dataLength;i++) {
+			int c = (i/height/width)%channel;
+			output.data[i] = (input.data[i] / color - mean[c]) / std[c];
+		}
+	}
+	
+	public static void normalize(Tensor input,Tensor output,int color) {
+		int channel = input.channel;
+		int height = input.height;
+		int width = input.width;
+		for(int i = 0;i<input.dataLength;i++) {
+			int c = (i/height/width)%channel;
+			output.data[i] = input.data[i] / color;
 		}
 	}
 	
@@ -275,17 +484,17 @@ public class DataTransforms {
 //		
 //		PrintUtils.printImage(out1);
 		
-//		DataTransforms.randomCrop(input, 9, 9, 2);
+		DataTransforms.randomCrop(input, 9, 9, 2);
 		
-//		float[][] out2 = MatrixUtils.transform(input.data, 9, 9);
-//		
-//		PrintUtils.printImage(out2);
+		float[][] out2 = MatrixUtils.transform(input.data, 9, 9);
 		
-		DataTransforms.cutout(input, output, 4);
+		PrintUtils.printImage(out2);
 		
-		float[][] out3 = MatrixUtils.transform(output.data, 9, 9);
+//		DataTransforms.cutout(input, output, 4);
 		
-		PrintUtils.printImage(out3);
+//		float[][] out3 = MatrixUtils.transform(output.data, 9, 9);
+		
+//		PrintUtils.printImage(out3);
 		
 		
 	}

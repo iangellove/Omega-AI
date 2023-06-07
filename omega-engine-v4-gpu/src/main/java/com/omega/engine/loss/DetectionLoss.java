@@ -33,4 +33,16 @@ public class DetectionLoss extends LossFunction {
 		return LossType.detection;
 	}
 
+	@Override
+	public Tensor[] loss(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Tensor[] diff(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

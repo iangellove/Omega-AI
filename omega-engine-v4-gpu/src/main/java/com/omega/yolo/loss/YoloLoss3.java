@@ -1,6 +1,8 @@
 package com.omega.yolo.loss;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
 import com.omega.yolo.utils.YoloUtils;
@@ -9,43 +11,74 @@ import com.omega.yolo.utils.YoloUtils;
  * YoloLoss
  * 
  * @author Administrator
- *
+ * 
+ * label format:
+ *   [n][maxBox = 90][box = 4][class = 1]
+ *   
+ *   output: channel * height * width
+ *   channel: tx + ty + tw + th + obj + class[class_num]
+ *   tx,ty:anchor offset(锚框偏移:锚框的锚点[左上角点的偏移值]),结合锚框的锚点可以定位出预测框的中心点
+ *   tw,th:anchor sacle(锚框的比值)
+ *   bx = sigmoid(tx)+  cx
+ *   by = sigmoid(ty) + cy
+ *   cx,cy:预测所属grid_idx
+ *   bw = pw * exp(tw)
+ *   bh = ph * exp(th)
+ *   pw,ph:锚框的宽高
  */
 public class YoloLoss3 extends LossFunction {
 	
 	public final LossType lossType = LossType.yolo;
 	
-	private static YoloLoss3 instance;
-	
-	private int grid_number = 7;
-	
 	private int class_number = 1;
 	
-	private int bbox_num = 2;
+	private int bbox_num = 3;
+	
+	private int total = 6;
+	
+	private int outputs = 0;
+	
+	private int truths = 0;
 	
 	private Tensor loss;
 	
 	private Tensor diff;
 	
-	private float noobject_scale = 0.5f;
+	private int[] mask;
 	
-	private float coord_scale = 5.0f;
+	private float[] anchors;
 	
-	private float class_scale = 1.0f;
+	private int orgW;
 	
-	private float object_scale = 1.0f;
+	private int orgH;
 	
-	public static YoloLoss3 operation() {
-		if(instance == null) {
-			instance = new YoloLoss3();
-		}
-		return instance;
+	private int maxBox = 90;
+	
+	private float ignoreThresh = 0.5f;
+	
+	private float truthThresh = 1.0f;
+	
+	public YoloLoss3(int class_number,int bbox_num,int[] mask,float[] anchors,int orgH,int orgW,int maxBox,int total,float ignoreThresh,float truthThresh) {
+		this.class_number = class_number;
+		this.bbox_num = bbox_num;
+		this.mask = mask;
+		this.anchors = anchors;
+		this.orgH = orgH;
+		this.orgW = orgW;
+		this.maxBox = maxBox;
+		this.total = total;
+		this.ignoreThresh = ignoreThresh;
+		this.truthThresh = truthThresh;
 	}
 	
 	public void init(Tensor input) {
-		if(loss == null) {
+		if(loss == null || input.number != this.diff.number) {
 			this.loss = new Tensor(1, 1, 1, 1);
 			this.diff = new Tensor(input.number, input.channel, input.height, input.width, true);
+			this.outputs = input.height*input.width*bbox_num*(class_number + 4 + 1);
+			this.truths = maxBox * (4 + 1);
+		}else {
+			MatrixUtils.zero(this.diff.data);
 		}
 	}
 	
@@ -56,158 +89,231 @@ public class YoloLoss3 extends LossFunction {
 	public Tensor loss(Tensor x, Tensor label) {
 		// TODO Auto-generated method stub
 		
+//		System.out.println(x.dataLength);
+		
 		init(x);
 		
 		if(x.isHasGPU()) {
 			x.syncHost();
 		}
 		
-		int location = grid_number * grid_number;
-
-		int input_num_each = location * (class_number + bbox_num * (1 + 4));
-		
-		int truth_num_each = location * (1 + class_number + 4);
-		
-		int count = 0;
+//		if(x.width == 8) {
+//
+//			x.showDMByNumber(0);
+//			
+//		}
 		
 	    float avg_iou = 0;
+	    float recall = 0;
+	    float recall75 = 0;
 	    float avg_cat = 0;
-	    float avg_allcat = 0;
 	    float avg_obj = 0;
 	    float avg_anyobj = 0;
+	    int count = 0;
+	    int class_count = 0;
+	    
+	    int testCount = 0;
 		
-		float cost = 0.0f;
-		
-		this.diff.data = new float[this.diff.data.length];
+		int stride = x.width * x.height;
 		
 		for(int b = 0;b<x.number;b++) {
-			
-			int input_index = b * input_num_each;
-			
-			for(int l = 0;l<location;l++) {
-				
-				for(int n = 0;n<bbox_num;n++) {
-					
-					int confidence_index = input_index + location * class_number + l * bbox_num + n;
+			for(int h = 0;h<x.height;h++) {
+				for(int w = 0;w<x.width;w++) {
+					for(int n = 0;n<this.bbox_num;n++) {
+						int n_index = n*x.width*x.height + h*x.width + w;
+						int box_index = entryIndex(b, x.width, x.height, n_index, 0);
+						float[] pred = getYoloBox(x, anchors, mask[n], box_index, w, h, x.width, x.height, orgW, orgH, stride);
+//						System.out.println(JsonUtils.toJson(pred));
+						float bestIOU = 0;
+//						int bestIndex = 0;
+						for(int t = 0;t<maxBox;t++) {
+							float[] truth = floatToBox(label, b, t, 1);
+							if(truth[0] == 0) {
+								break;
+							}
+							float iou = YoloUtils.box_iou(pred, truth);
+							if(iou > bestIOU) {
+								bestIOU = iou;
+//								bestIndex = t;
+							}
+						}
 
-					this.diff.data[confidence_index] = noobject_scale * (x.data[confidence_index]);
-					
-					cost += noobject_scale * Math.pow(x.data[confidence_index], 2.0f);
-					
-					avg_anyobj += x.data[confidence_index];
+						int obj_index = entryIndex(b, x.width, x.height, n_index, 4);
+						avg_anyobj += x.data[obj_index];
+//						this.diff.data[obj_index] = 0 - x.data[obj_index];
+						this.diff.data[obj_index] = x.data[obj_index];
+						if (bestIOU > ignoreThresh) {
+	                        this.diff.data[obj_index] = 0;
+	                    }
+						if(bestIOU > 1.0f) {
+							System.out.println(bestIOU);
+						}
+					}
 					
 				}
-
-				int truth_index = (class_number+4+1)*l + b * truth_num_each;
+			}
+			
+			for(int t = 0; t < maxBox;t++){
 				
-				if(label.data[truth_index] != 1.0f) {
-					continue;
+				float[] truth = floatToBox(label, b, t, 1);
+
+				if(truth[0] == 0) {
+					break;
 				}
-				
-//				System.out.println(truth_index+":"+label.data[truth_index]);
-				
-				//计算loss函数中的第5项，每个预测类型的概率误差
-	            int class_index = input_index + l * class_number;
-
-	            for (int j=0; j < class_number; ++j){
-	                cost += class_scale * Math.pow(x.data[class_index+j] - label.data[truth_index+1+j],2);
-	                this.diff.data[class_index + j] = class_scale * (x.data[class_index+j] - label.data[truth_index+1+j]);
-	                if(label.data[truth_index+1+j] == 1.0f) {
-	                	avg_cat += x.data[class_index+j];
+//				System.out.println(JsonUtils.toJson(truth));
+				float bestIOU = 0;
+		        int bestIndex = 0;
+		        
+		        int i = (int) (truth[0] * x.width);
+	            int j = (int) (truth[1] * x.height);
+	           
+	            float[] truthShift = new float[] {0,0,truth[2],truth[3]};
+	            for(int n = 0;n<this.total;n++) {
+	            	float[] pred = new float[] {0,0,anchors[2 * n] / orgW,anchors[2 * n + 1] / orgH};
+	            	float iou = YoloUtils.box_iou(pred, truthShift);
+	            	if (iou > bestIOU) { 
+	                    bestIOU = iou;// 记录最大的IOU
+	                    bestIndex = n;// 以及记录该bbox的编号n
 	                }
-	                avg_allcat += x.data[class_index +j];
 	            }
-				
-	            //获取gt bbox
-	            float[] truthCoords = new float[4];
-	            truthCoords[0] = label.data[truth_index + 1 + class_number + 0] / grid_number;
-	            truthCoords[1] = label.data[truth_index + 1 + class_number + 1] / grid_number;
-	            truthCoords[2] = label.data[truth_index + 1 + class_number + 2];
-	            truthCoords[3] = label.data[truth_index + 1 + class_number + 3];
 	            
-	            int n_best = -1;   //存储两个候选框最好的，只使用此候选框进行回归计算
-	            float best_iou = 0;
-	            float best_square = 20;
+	            int mask_n = intIndex(mask, bestIndex, bbox_num);
 	            
-	            for(int n = 0;n<bbox_num;n++) {
+	            if(mask_n >= 0) {
+	            	int mask_n_index = mask_n*x.width*x.height + j*x.width + i;
+	            	int box_index = entryIndex(b, x.width, x.height, mask_n_index, 0);
+	            	float iou = deltaYoloBox(truth, x, anchors, bestIndex, box_index, i, j, x.width, x.height, (2.0f-truth[2]*truth[3]), stride);
+	            	int obj_index = entryIndex(b, x.width, x.height, mask_n_index, 4);
+	            	
+	            	if(x.data[obj_index] >= 0.8f) {
+	            		testCount++;
+	            	}
+	            	
+	            	avg_obj += x.data[obj_index];
 					
-	            	int inputCoordsIndex = input_index + (class_number + bbox_num)*location+(l*bbox_num + n) * 4;
+	            	this.diff.data[obj_index] = x.data[obj_index] - 1.0f;
 	            	
-	            	float[] bbox = new float[4];
-	            	bbox[0] = x.data[inputCoordsIndex + 0] / grid_number;  //x
-	            	bbox[1] = x.data[inputCoordsIndex + 1] / grid_number;  //y
-	            	bbox[2] = x.data[inputCoordsIndex + 2] * x.data[inputCoordsIndex + 2];  //w = w*w
-	            	bbox[3] = x.data[inputCoordsIndex + 3] * x.data[inputCoordsIndex + 3];  //h = h*h
+	            	int clazz = (int) label.data[t*(4+1)+b*truths+4];
 	            	
-	            	float iou = YoloUtils.box_iou(bbox, truthCoords);
+	            	int class_index = entryIndex(b, x.width, x.height, mask_n_index, 4 + 1);
 	            	
-	            	float rmse = YoloUtils.box_rmse(bbox, truthCoords);
+	            	avg_cat = deltaYoloClass(x, class_index, clazz, class_number, stride, avg_cat);
 	            	
-	            	//找到最接近truth标注的框
-	                if (iou > 0 || best_iou > 0){
-	                    if (iou > best_iou) {
-	                        n_best = n; 
-	                        best_iou = iou;
-	                    }
-	                }
-	                else{
-	                    if (rmse < best_square){
-	                        n_best = n;
-	                        best_square = rmse;
-	                    }
-	                }
-	            	
-				}
-	            
-	            //计算x,y,w,h的损失，挑选最优的框
-	            int best_coords = input_index + (class_number + bbox_num)*location+(l*bbox_num + n_best) * 4;
-	            int t_bbox_index = truth_index+1+class_number;
-	            
-	            avg_iou += best_iou;
-	            
-	            cost += coord_scale*Math.pow(x.data[best_coords+0] - label.data[t_bbox_index+0],2);
-	            cost += coord_scale*Math.pow(x.data[best_coords+1] - label.data[t_bbox_index+1],2);
-	            cost += coord_scale*Math.pow(x.data[best_coords+2] - Math.sqrt(label.data[t_bbox_index+2]),2);
-	            cost += coord_scale*Math.pow(x.data[best_coords+3] - Math.sqrt(label.data[t_bbox_index+3]),2);
-	            
-//	            cost += Math.pow(1.0f - best_iou, 2.0f);
-	            
-	            this.diff.data[best_coords+0] = coord_scale*(x.data[best_coords+0] - label.data[t_bbox_index+0]);
-	            this.diff.data[best_coords+1] = coord_scale*(x.data[best_coords+1] - label.data[t_bbox_index+1]);
-	            this.diff.data[best_coords+2] = (float) (coord_scale*(x.data[best_coords+2] - Math.sqrt(label.data[t_bbox_index+2])));
-	            this.diff.data[best_coords+3] = (float) (coord_scale*(x.data[best_coords+3] - Math.sqrt(label.data[t_bbox_index+3])));
-	            
-	            //计算loss函数第3项
-	            //先减去计算第4项lost时多加上的有物体的网格的置信度
-	            int confidence_index = input_index + location*class_number + l*bbox_num + n_best;
-	            cost -= noobject_scale*Math.pow(0.0f - x.data[confidence_index], 2);
-	            cost += object_scale*Math.pow(x.data[confidence_index] - 1.0f, 2);
-	            this.diff.data[confidence_index] = object_scale*(x.data[confidence_index] - 1.0f);
-//	            this.diff.data[confidence_index] = object_scale*(best_iou - x.data[confidence_index]);
-//	            System.out.println("true:"+x.data[confidence_index]);
-	            avg_obj += x.data[confidence_index];
-	            count++;
+	            	count++;
+	                class_count++;
+	                if(iou > .5) recall += 1;
+	                if(iou > .75) recall75 += 1;
+	                avg_iou += iou;
+	            }
 	            
 			}
 			
 		}
 		
-		System.out.println("Detection Avg IOU:"+avg_iou/count+",Pos Cat:"+avg_cat/count+",All Cat:"+avg_allcat/(class_number * count)+",Pos Obj:"+avg_obj/count+",Any Obj:"+avg_anyobj/(location * x.number * bbox_num)+",count:"+count);
+		System.out.println("Avg IOU: "+avg_iou/count+", Class: "+avg_cat/class_count+", Obj: "+avg_obj/count+","
+				+ " No Obj: "+avg_anyobj/(x.width*x.height*bbox_num*x.number)+", .5R: "+recall/count+", .75R: "+recall75/count+",  count: "+count+", testCount:"+testCount);
 		
-		this.loss.data[0] = cost;
-
-//		System.out.println(JsonUtils.toJson(x.data));
-//		System.out.println(JsonUtils.toJson(this.diff.data));
 		return loss;
 	}
+	
+	private float deltaYoloClass(Tensor x, int index, int clazz, int classes, int stride, float avg_cat) {
+		if(this.diff.data[index] == 1.0f) {
+			this.diff.data[index + stride * clazz] = 1.0f - x.data[index + stride * clazz];
+//			this.diff.data[index + stride * clazz] = x.data[index + stride * clazz] - 1.0f;
+			avg_cat += x.data[index + stride * clazz];
+			return avg_cat;
+		}
 
+		for(int n = 0;n<classes;n++) {
+//			this.diff.data[index + stride * n] = ((n == clazz)?1 : 0) - x.data[index + stride * n];
+			this.diff.data[index + stride * n] = x.data[index + stride * n] - ((n == clazz)?1 : 0);
+			if(n == clazz) {
+				avg_cat += x.data[index + stride*n];
+			}
+		}
+		
+		return avg_cat;
+	}
+	
+	private float deltaYoloBox(float[] truth,Tensor x,float[] anchors,int n,int index,int i,int j,int lw,int lh,float scale,int stride) {
+		
+		float[] pred = getYoloBox(x, anchors, n, index, i, j, lw, lh, orgW, orgH, stride);
+		
+		float iou = YoloUtils.box_iou(pred, truth);
+		
+		float tx = (truth[0]*lw - i);
+	    float ty = (truth[1]*lh - j);
+	    float tw = (float) Math.log(truth[2] * orgW / anchors[2*n]);
+	    float th = (float) Math.log(truth[3] * orgH / anchors[2*n + 1]);
+//	    this.diff.data[index + 0 * stride] = scale * (tx - x.data[index + 0 * stride]);
+//	    this.diff.data[index + 1 * stride] = scale * (ty - x.data[index + 1 * stride]);
+//	    this.diff.data[index + 2 * stride] = scale * (tw - x.data[index + 2 * stride]);
+//	    this.diff.data[index + 3 * stride] = scale * (th - x.data[index + 3 * stride]);
+	    this.diff.data[index + 0 * stride] = scale * (x.data[index + 0 * stride] - tx);
+	    this.diff.data[index + 1 * stride] = scale * (x.data[index + 1 * stride] - ty);
+	    this.diff.data[index + 2 * stride] = scale * (x.data[index + 2 * stride] - tw);
+	    this.diff.data[index + 3 * stride] = scale * (x.data[index + 3 * stride] - th);
+	    return iou;
+	}
+	
+	private int intIndex(int[] mask, int bestIndex, int bbox_num) {
+	    for(int i = 0; i < bbox_num; ++i){
+	        if(mask[i] == bestIndex) return i;
+	    }
+	    return -1;
+		
+	}
+	
+	private float[] floatToBox(Tensor label,int b,int t,int stride) {
+		float[] box = new float[4];
+		box[0] = label.data[b * truths + t * 5 + 0 * stride];
+		box[1] = label.data[b * truths + t * 5 + 1 * stride];
+		box[2] = label.data[b * truths + t * 5 + 2 * stride];
+		box[3] = label.data[b * truths + t * 5 + 3 * stride];
+		return box;
+	}
+	
+	/**
+	 * 真实框w,h
+	 * bh = ph * exp(th)
+	 * bw = pw * exp(tw)
+	 * ph,pw:锚框(anchor)
+	 * th,tw:网络输出(锚框的比值)
+	 * @param x
+	 * @param anchors
+	 * @param n
+	 * @param index
+	 * @param i
+	 * @param j
+	 * @param lw
+	 * @param lh
+	 * @param w
+	 * @param h
+	 * @param stride
+	 * @return
+	 */
+	public static float[] getYoloBox(Tensor x,float[] anchors,int n,int index,int i,int j,int lw,int lh,int w,int h,int stride) {
+		float[] box = new float[4];
+		box[0] = (i + x.data[index + 0 * stride]) / lw;
+		box[1] = (j + x.data[index + 1 * stride]) / lh;
+		box[2] = (float) (Math.exp(x.data[index + 2 * stride]) * anchors[2 * n] / w);
+		box[3] = (float) (Math.exp(x.data[index + 3 * stride]) * anchors[2 * n + 1] / h);
+		return box;
+	}
+	
+	private int entryIndex(int batch,int w,int h,int location,int entry){
+	    int n =   location / (w*h);
+	    int loc = location % (w*h);
+	    return batch*this.outputs + n*w*h*(4+this.class_number+1) + entry*w*h + loc;
+	}
+	
 	@Override
 	public Tensor diff(Tensor x, Tensor label) {
 		// TODO Auto-generated method stub
 		if(diff.isHasGPU()) {
 			diff.hostToDevice();
 		}
-//		System.out.println(diff);
+//		diff.showDM();
 		return diff;
 	}
 
@@ -215,6 +321,36 @@ public class YoloLoss3 extends LossFunction {
 	public LossType getLossType() {
 		// TODO Auto-generated method stub
 		return LossType.yolo;
+	}
+	
+	@Override
+	public Tensor[] loss(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Tensor[] diff(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	public void test(Tensor output,int bbox_num,int b,int index){
+
+		for (int i = 0;i<output.height * output.width;i++){
+	        int row = i / output.width;
+	        int col = i % output.width;
+	        for(int n = 0;n<bbox_num;n++){
+	        	int n_index = n*output.width*output.height + row*output.width + col;
+//	        	System.out.println(n_index);
+	            int obj_index = entryIndex(b, output.width, output.height, n_index, 4);
+	            float objectness = output.data[obj_index];
+	            if(obj_index == index) {
+	            	 System.out.println("test:"+objectness+"="+output.data[index]);
+	            }
+	        }
+	    }
+		
 	}
 	
 }

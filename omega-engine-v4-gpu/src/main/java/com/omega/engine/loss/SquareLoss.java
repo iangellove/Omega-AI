@@ -62,4 +62,16 @@ public class SquareLoss extends LossFunction {
 		System.out.println("error:"+error);
 	}
 
+	@Override
+	public Tensor[] loss(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Tensor[] diff(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

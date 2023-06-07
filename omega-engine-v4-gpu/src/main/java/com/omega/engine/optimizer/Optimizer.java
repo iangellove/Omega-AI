@@ -1,20 +1,30 @@
 package com.omega.engine.optimizer;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.task.TaskEngine;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.LabelUtils;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.data.BaseData;
+import com.omega.engine.nn.layer.YoloLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
+import com.omega.engine.nn.network.Yolo;
 import com.omega.engine.optimizer.lr.GDDecay;
 import com.omega.engine.optimizer.lr.HalfDecay;
 import com.omega.engine.optimizer.lr.LRDecay;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
+import com.omega.yolo.model.YoloBox;
+import com.omega.yolo.model.YoloDetection;
+import com.omega.yolo.utils.BaseDataLoader;
 import com.omega.yolo.utils.YoloDecode;
+import com.omega.yolo.utils.YoloUtils;
 
 /**
  * 
@@ -512,6 +522,127 @@ public abstract class Optimizer {
 		return vailLoss;
 	}
 	
+	public float testObjectRecognitionOutputs(BaseData testData,Tensor input,Tensor label,int batchSize) {
+		// TODO Auto-generated method stub
+		
+		long startTime = System.nanoTime();
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		Yolo network = (Yolo) this.network;
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.getBatchData(pageIndex, batchSize, input, label);
+
+			input.hostToDevice();
+			
+			label.hostToDevice();
+			
+			Tensor[] output = network.predicts(input);
+			
+			/**
+			 * current time error
+			 */
+			network.loss(output, label);
+			
+		}
+		
+		System.out.println("test["+this.trainIndex+"] [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
+		
+		return 0.0f;
+	}
+	
+	public float testObjectRecognitionOutputs(BaseDataLoader testData,Tensor input,Tensor label,int batchSize) {
+		// TODO Auto-generated method stub
+		
+		long startTime = System.nanoTime();
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		Yolo network = (Yolo) this.network;
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.loadData(pageIndex, batchSize, input, label);
+
+			input.hostToDevice();
+			
+			label.hostToDevice();
+			
+			Tensor[] output = network.predicts(input);
+			
+			/**
+			 * current time error
+			 */
+			network.loss(output, label);
+			
+		}
+		
+		System.out.println("test["+this.trainIndex+"] [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
+		
+		return 0.0f;
+	}
+	
+	public float testObjectRecognitionOutputs(BaseData testData,int batchSize) {
+		// TODO Auto-generated method stub
+		
+		long startTime = System.nanoTime();
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		Tensor input = new Tensor(batchSize, testData.channel, testData.height, testData.width, true);
+		
+		Yolo net = (Yolo) this.network;
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.getBatchData(pageIndex, batchSize, input);
+
+			input.hostToDevice();
+			
+			Tensor[] output = net.predicts(input);
+
+			for(int l = 0;l<net.outputLayers.size();l++){
+				
+				YoloLayer layer = (YoloLayer) net.outputLayers.get(l);
+				for(int b = 0;b<output[l].number;b++) {
+					
+					for (int i = 0;i<output[l].height * output[l].width;i++){
+				        int row = i / output[l].width;
+				        int col = i % output[l].width;
+				        for(int n = 0;n<layer.bbox_num;n++){
+				        	int n_index = n*output[l].width*output[l].height + row*output[l].width + col;
+
+				            int obj_index = entryIndex(b, output[l].width, output[l].height, n_index, 4, layer.outputs, layer.class_number);
+				            float objectness = output[l].data[obj_index];
+				            if(objectness > 0.1f) {
+				            	 System.out.println(objectness);
+				            }
+				        }
+					}
+				}	
+			}
+			
+		}
+		
+		System.out.println("test["+this.trainIndex+"] [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
+		
+		return 0.0f;
+	}
+	
+	public static int entryIndex(int batch,int w,int h,int location,int entry,int outputs,int class_number){
+	    int n =   location / (w*h);
+	    int loc = location % (w*h);
+	    return batch*outputs + n*w*h*(4+class_number+1) + entry*w*h + loc;
+	}
+	
 	public float[][][] showObjectRecognition(BaseData testData,Tensor input,int batchSize) {
 		// TODO Auto-generated method stub
 		
@@ -546,6 +677,53 @@ public abstract class Optimizer {
 		}
 		
 		return bbox;
+	}
+	
+	public List<YoloBox> showObjectRecognitionYoloV3(BaseData testData,int batchSize) {
+		// TODO Auto-generated method stub
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		List<YoloBox> list = new ArrayList<YoloBox>();
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		Tensor input = new Tensor(batchSize, testData.channel, testData.height, testData.width, true);
+		
+		Yolo net = (Yolo) this.network;
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.getBatchData(pageIndex, batchSize, input);
+			
+			input.hostToDevice();
+			
+			Tensor[] output = net.predicts(input);
+			
+			YoloBox[] boxs = new YoloBox[input.number];
+			
+			for(int i = 0;i<net.outputLayers.size();i++){
+				
+				YoloLayer layer = (YoloLayer) net.outputLayers.get(i);
+				
+				YoloDetection[][] dets = YoloUtils.getYoloDetections(output[i], layer.anchors, layer.mask, layer.bbox_num, layer.outputs, layer.class_number, testData.width, testData.height, 0.5f);
+
+				for(int j = 0;j<dets.length;j++) {
+					if(boxs[j] != null) {
+						boxs[j].getDets().addAll(new ArrayList<>(Arrays.asList(dets[j])));
+					}else{
+						YoloBox box = new YoloBox(dets[j]);
+						boxs[j] = box;
+					}
+				}
+				
+			}
+			
+			list.addAll(new ArrayList<>(Arrays.asList(boxs)));
+			
+		}
+		
+		return list;
 	}
 	
 	public float[][][] showObjectRecognition(BaseData testData,int batchSize) {

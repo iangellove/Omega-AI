@@ -65,10 +65,6 @@ public class ReluLayer extends ActiveFunctionLayer {
 	public void diff() {
 		// TODO Auto-generated method stub
 		kernel.backward(input, delta, diff);
-//		System.out.print("relu"+index+"-delta  :");
-//		delta.showDM();
-//		System.out.print("relu"+index+"-diff   :");
-//		diff.showDM();
 	}
 
 	@Override

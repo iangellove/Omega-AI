@@ -9,6 +9,7 @@ import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
+import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
 
 public class SigmodKernel extends BaseKernel{
@@ -61,6 +62,34 @@ public class SigmodKernel extends BaseKernel{
 	
 	public int CAFFE_GET_BLOCKS(int N) {
 	    return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
+	}
+	
+	public void forward(Tensor input,Tensor output,int index,int length) {
+		
+		try {
+			
+			/**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			forwardKernelParameters = Pointer.to(
+	        		Pointer.to(input.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(output.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{length})
+	            );
+			
+			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(length),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            forwardKernelParameters, null // Kernel- and extra parameters
+		        );
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public void forward(Tensor input,Tensor output) {
@@ -125,10 +154,34 @@ public class SigmodKernel extends BaseKernel{
 		            backwardKernelParameters, null // Kernel- and extra parameters
 		        );
 
-//			delta.showDM();
-			
-//			JCudaDriver.cuCtxSynchronize();
-			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backward(Tensor output,Tensor delta,Tensor diff,int index,int length) {
+		
+		try {
+			/**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			backwardKernelParameters = Pointer.to(
+					Pointer.to(output.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	        		Pointer.to(delta.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(diff.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{length})
+	            );
+
+			cuLaunchKernel(function_back,
+		            this.CAFFE_GET_BLOCKS(length),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            backwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

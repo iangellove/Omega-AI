@@ -10,7 +10,8 @@ public enum NetworkType {
 	BP("BP"),
 	CNN("CNN"),
 	ANN("ANN"),
-	RNN("RNN");
+	RNN("RNN"),
+	YOLO("YOLO");
 	
 	NetworkType(String key){
 		this.key = key;

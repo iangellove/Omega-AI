@@ -21,7 +21,7 @@ public class AnchorBoxUtils {
 		int[] last_clu = new int[N];
 		
 		Tensor clu = RandomUtils.random(boxs, num_clusters);
-
+		
 		while (true) {
 			
 			for(int n = 0;n<bboxs.number;n++) {
@@ -164,6 +164,16 @@ public class AnchorBoxUtils {
 		for(int i = 0;i < k;i++) {
 			System.out.println(JsonUtils.toJson(anchors.getByNumber(i)));
 		}
+		
+		float[] data2 = new float[] {10,14,23,27,37,58,81,82,135,169,344,319};
+		
+		int[] data3 = new int[data2.length];
+		
+		for(int i = 0;i<data2.length;i++) {
+			data3[i] = (int) (data2[i] / 416 * 256);
+		}
+		
+		System.out.println(JsonUtils.toJson(data3));
 		
 	}
 	

@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
@@ -37,10 +38,7 @@ public class YoloV1Test {
 	public static int im_w = 256;
 	
 	public static int im_h = 256;
-	
-	public float[] mean = new float[] {0.491f, 0.482f, 0.446f};
-	public float[] std = new float[] {0.247f, 0.243f, 0.261f};
-	
+
 	public void showImg() {
 		
 		String trainPath = "H:\\voc\\banana-detection\\bananas_train\\images";
@@ -147,21 +145,21 @@ public class YoloV1Test {
 			String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
 			String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
 			
-			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, true);
+			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, false);
 			
 			YoloDataLoader vailData= new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, true);
 			
-			DataSet trainSet = YoloLabelUtils.formatToYolo(trainData.getDataSet(), im_w, im_h);
+//			DataSet trainSet = YoloLabelUtils.formatToYolo(trainData.getDataSet(), im_w, im_h);
 			
 			DataSet vailSet = YoloLabelUtils.formatToYolo(vailData.getDataSet(), im_w, im_h);
 			
 			System.out.println("load data finish.");
 			
-			CNN netWork = new CNN(LossType.yolo3, UpdaterType.adamw);
+			CNN netWork = new CNN(LossType.yolo, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.01f;
 			
 			int channel = 3;
 			
@@ -230,7 +228,7 @@ public class YoloV1Test {
 			BasicBlockLayer bl8 = new BasicBlockLayer(bl7.oChannel, 512, bl7.oHeight, bl7.oWidth, 1, netWork);
 			LeakyReluLayer active9 = new LeakyReluLayer();
 			
-			PoolingLayer pool2 = new PoolingLayer(bl8.oChannel, bl8.oWidth, bl8.oHeight, 3, 3, 2, PoolingType.MEAN_POOLING);
+			PoolingLayer pool2 = new PoolingLayer(bl8.oChannel, bl8.oWidth, bl8.oHeight, 3, 3, 2, PoolingType.MAX_POOLING);
 			
 			ConvolutionLayer conv2 = new ConvolutionLayer(pool2.oChannel, 1024, pool2.oWidth, pool2.oHeight, 3, 3, 1, 1, false);
 			BNLayer bn2 = new BNLayer();
@@ -245,7 +243,7 @@ public class YoloV1Test {
 			 */
 			int fInputCount = conv3.oChannel * conv3.oWidth * conv3.oHeight;
 			
-			FullyLayer full1 = new FullyLayer(fInputCount, 539);
+			FullyLayer full1 = new FullyLayer(fInputCount, 539, true);
 			SigmodLayer active13 = new SigmodLayer();
 			
 			netWork.addLayer(inputLayer);
@@ -300,18 +298,18 @@ public class YoloV1Test {
 			netWork.addLayer(active13);
 			
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, 32, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, 32, LearnRateUpdate.GD_GECAY, false);
 
 			long start = System.currentTimeMillis();
 			
-			optimizer.trainObjectRecognition(trainSet, vailSet);
+			optimizer.trainObjectRecognition(trainData.getDataSet(), vailSet, true);
 			
 			/**
 			 * 处理测试预测结果
 			 */
-			float[][][] draw_bbox = optimizer.showObjectRecognition(trainSet, 32);
+			float[][][] draw_bbox = optimizer.showObjectRecognition(vailSet, 32);
 			
-			YoloDataLoader testData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, false);
+			YoloDataLoader testData = new YoloDataLoader(trainPath, trainLabelPath, 100, 3, 256, 256, 5, LabelType.csv, false);
 			
 			String outputPath = "H:\\voc\\banana-detection\\test_resnet\\";
 			
@@ -345,19 +343,21 @@ public class YoloV1Test {
 			String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
 			String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
 			
-			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, false);
+			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, true);
 			
 			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, true);
+			
+			DataSet trainSet = YoloLabelUtils.formatToYolo(trainData.getDataSet(), im_w, im_h);
 			
 			DataSet vailSet = YoloLabelUtils.formatToYolo(vailData.getDataSet(), im_w, im_h);
 			
 			System.out.println("load data finish.");
 			
-			CNN netWork = new CNN(LossType.yolo3, UpdaterType.adamw);
+			CNN netWork = new CNN(LossType.yolo, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.01f;
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
@@ -365,7 +365,7 @@ public class YoloV1Test {
 
 			long start = System.currentTimeMillis();
 			
-			optimizer.trainObjectRecognition(trainData.getDataSet(), vailSet, true);
+			optimizer.trainObjectRecognition(trainSet, vailSet, false);
 
 			/**
 			 * 处理测试预测结果
@@ -417,6 +417,8 @@ public class YoloV1Test {
 			
 			float[] label = vailData.getLabelSet().getByNumber(b);
 			
+			once = MatrixOperation.multiplication(once, 255.0f);
+			
 			int[][] bbox = new int[][] {
 					{	
 						0,
@@ -446,20 +448,30 @@ public class YoloV1Test {
 	
 	public static void main(String[] args) {
 		
-		CUDAModules.initContext();
-		
-		YoloV1Test t = new YoloV1Test();
+		try {
 
-//		t.yolov1();
-		
-//		t.yolov1_tiny();
-		
-		t.testTransforms();
-		
-//		t.testYoloBBox();
-		
-//		t.showImg();
+			CUDAModules.initContext();
+			
+			YoloV1Test t = new YoloV1Test();
 
+//			t.yolov1();
+			
+			t.yolov1_tiny();
+			
+//			t.testTransforms();
+			
+//			t.testYoloBBox();
+			
+//			t.showImg();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		} finally {
+			// TODO: handle finally clause
+			CUDAMemoryManager.free();
+		}
+		
 	}
 	
 }

@@ -44,7 +44,7 @@ public class SigmodLayer extends ActiveFunctionLayer {
 
 	public void init() {
 		super.init();
-		if(kernel == null || number != output.number) {
+		if(kernel == null) {
 			kernel = new SigmodKernel();
 		}
 	}

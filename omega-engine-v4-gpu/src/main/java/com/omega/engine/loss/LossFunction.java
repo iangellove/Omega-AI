@@ -2,6 +2,7 @@ package com.omega.engine.loss;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixOperation;
 
 public abstract class LossFunction {
 	
@@ -11,7 +12,11 @@ public abstract class LossFunction {
 	
 	public abstract Tensor loss(Tensor x, Tensor label);
 	
+	public abstract Tensor[] loss(Tensor[] x, Tensor label);
+	
 	public abstract Tensor diff(Tensor x, Tensor label);
+	
+	public abstract Tensor[] diff(Tensor[] x, Tensor label);
 	
 	public abstract LossType getLossType();
 	

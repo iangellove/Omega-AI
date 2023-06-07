@@ -9,7 +9,7 @@ public abstract class ActiveFunctionLayer extends Layer {
 	
 	@Override
 	public void init() {
-		
+
 		this.number = this.network.number;
 		
 		if(this.preLayer == null) {
@@ -21,15 +21,11 @@ public abstract class ActiveFunctionLayer extends Layer {
 			this.oHeight = this.height;
 			this.oWidth = this.width;
 		}
-		
+
 		if(output == null || number != output.number) {
 			output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		}
-		
-//		if(diff == null || number != output.number) {
-//			diff = new Tensor(number, channel, height, width, true);
-//		}
-		
+
 	}
 	
 	@Override

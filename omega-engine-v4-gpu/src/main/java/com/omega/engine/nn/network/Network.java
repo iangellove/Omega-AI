@@ -104,7 +104,7 @@ public abstract class Network {
 		this.lossDiff = lossDiff;
 		this.getLastLayer().setDelta(this.lossDiff);
 	}
-
+	
 	public Tensor getOuput() {
 		// TODO Auto-generated method stub
 		return this.getLastLayer().getOutput();
@@ -129,7 +129,6 @@ public abstract class Network {
 	}
 	
 	public Layer getNextLayer(int index) {
-		
 		if(index > 0 && index < this.layerCount - 1) {
 			return this.layerList.get(index + 1);
 		}

@@ -7,6 +7,7 @@ import com.omega.common.utils.Im2colForWeight;
 import com.omega.common.utils.Im2colToVector;
 import com.omega.common.utils.Im2colUtils;
 import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.PrintUtils;
 import com.omega.common.utils.RandomUtils;

@@ -224,5 +224,17 @@ public class YoloLoss2 extends LossFunction {
 				Math.pow(a[2]-b[2], 2) + 
 				Math.pow(a[3]-b[3], 2));
 	}
+
+	@Override
+	public Tensor[] loss(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Tensor[] diff(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 	
 }

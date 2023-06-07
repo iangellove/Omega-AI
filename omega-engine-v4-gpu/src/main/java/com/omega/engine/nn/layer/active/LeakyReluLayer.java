@@ -36,7 +36,6 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 	
 	public LeakyReluLayer(Network network) {
 		this.network = network;
-		this.number = this.network.number;
 	}
 	
 	public LeakyReluLayer(float leak) {
@@ -45,7 +44,7 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 	
 	public void init() {
 		super.init();
-		if(kernel == null || number != output.number) {
+		if(kernel == null) {
 			kernel = new LeakyReluKernel();
 		}
 	}

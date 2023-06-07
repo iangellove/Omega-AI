@@ -14,6 +14,33 @@ import com.omega.common.data.Tensor;
  */
 public class LabelUtils {
 	
+	public static void loadBoxCSV(String labelPath,Tensor box) {
+		
+		try (FileInputStream fin = new FileInputStream(labelPath);
+			InputStreamReader reader = new InputStreamReader(fin);	
+		    BufferedReader buffReader = new BufferedReader(reader);){
+			
+			String strTmp = "";
+			int idx = 0;
+			int onceSize = box.channel * box.height * box.width;
+	        while((strTmp = buffReader.readLine())!=null){
+//	        	System.out.println(strTmp);
+	        	if(idx > 0) {
+		        	String[] list = strTmp.split(",");
+		        	for(int i = 2;i<list.length;i++) {
+		        		box.data[(idx-1) * onceSize + i-2] = Float.parseFloat(list[i]);
+		        	}
+	        	}
+	        	idx++;
+	        }
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public static void loadLabelCSV(String labelPath,Tensor label,String[] idxs) {
 		
 		try (FileInputStream fin = new FileInputStream(labelPath);
@@ -261,6 +288,35 @@ public class LabelUtils {
 			target[gridx * stride * 25 + gridy * 25 + 21 + 2] = w;
 			target[gridx * stride * 25 + gridy * 25 + 21 + 3] = h;
 			
+		}
+		
+		return target;
+	}
+	
+	public static float[] labelToYoloV3(int[][] bbox,int im_w) {
+		
+		float[] target = new float[5 * bbox.length];
+
+		for(int i = 0;i<bbox.length;i++) {
+			
+			float clazz = new Float(bbox[i][0]).intValue();
+			
+			float cx = bbox[i][1];
+			float cy = bbox[i][2];
+			float w = bbox[i][3];
+			float h = bbox[i][4];
+			
+//			cx = cx / im_w;
+//			cy = cy / im_w;
+//			w = w / im_w;
+//			h = h / im_w;
+			
+			target[i * 5 + 0] = clazz;
+			target[i * 5 + 1] = cx;
+			target[i * 5 + 2] = cy;
+			target[i * 5 + 3] = w;
+			target[i * 5 + 4] = h;
+
 		}
 		
 		return target;

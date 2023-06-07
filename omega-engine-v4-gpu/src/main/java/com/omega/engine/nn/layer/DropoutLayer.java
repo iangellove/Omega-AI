@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.network.RunModel;
 

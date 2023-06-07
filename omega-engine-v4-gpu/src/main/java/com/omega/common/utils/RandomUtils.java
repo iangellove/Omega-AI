@@ -28,6 +28,22 @@ public class RandomUtils {
 		return instance;
 	}
 	
+	public static int randomInt(int min,int max) {
+		return min + (int)(Math.random() * (max-min));
+	}
+	
+	public static float randomFloat(float min,float max) {
+		return min + (float)(Math.random() * (max-min));
+	}
+	
+	public static float randomScale(float s) {
+		float scale = randomFloat(1, s);
+		if(Math.random() >= 0.5d) {
+			return scale;
+		}
+		return 1.0f/scale;
+	}
+	
 	/**
 	 * 根据激活函数获取增益值
 	 * @return

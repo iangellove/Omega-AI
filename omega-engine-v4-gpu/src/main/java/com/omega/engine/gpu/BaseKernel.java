@@ -20,12 +20,92 @@ public class BaseKernel {
 	
 	private CUfunction copy_gpu_function;
 	
+	private CUfunction axpy_gpu_function;
+	
+	private CUfunction fill_gpu_function;
+	
 	public BaseKernel() {
 		
 		copy_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "copy_kernel");
 		
+		axpy_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "axpy_kernel");
+		
+		fill_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "fill_kernel");
+		
 	}
 	
+	public void fill_gpu(Tensor a,float val) {
+		
+		try {
+
+			if(fill_gpu_function == null) {
+				fill_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "fill_kernel");
+			}
+			
+			/**
+			 * int N, float ALPHA, float *X, int INCX
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{a.getDataLength()}),
+	                Pointer.to(new float[]{val}),
+	        		Pointer.to(a.getGpuData()),
+	                Pointer.to(new int[]{1})
+	            );
+			
+			checkCUDA(cuLaunchKernel(fill_gpu_function,
+	        		CAFFE_GET_BLOCKS(a.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void axpy_gpu(Tensor a,Tensor b,int N, float ALPHA,int INCX, int INCY) {
+		axpy_gpu(a, b, INCY, ALPHA, 0, INCX, 0, INCY);
+	}
+	
+	public void axpy_gpu(Tensor a,Tensor b,int N, float ALPHA, int OFFX, int INCX, int OFFY, int INCY) {
+		
+		try {
+			
+			if(axpy_gpu_function == null) {
+				axpy_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "axpy_kernel");
+			}
+			
+			/**
+			 * int N, float ALPHA, float *X, int OFFX, int INCX,  float *Y, int OFFY, int INCY
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{N}),
+	                Pointer.to(new float[]{ALPHA}),
+	        		Pointer.to(a.getGpuData()),
+	                Pointer.to(new int[]{OFFX}),
+	                Pointer.to(new int[]{INCX}),
+	                Pointer.to(b.getGpuData()),
+	                Pointer.to(new int[]{OFFY}),
+	                Pointer.to(new int[] {INCY})
+	            );
+			
+			checkCUDA(cuLaunchKernel(axpy_gpu_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+
 	public void copy_gpu(Pointer a,Pointer b,int N,int incx,int incy) {
 		
 		try {
@@ -50,8 +130,6 @@ public class BaseKernel {
 		            0, null,               // Shared memory size and stream
 		            kernelParameter, null // Kernel- and extra parameters
 		        ));
-	        
-//	        JCudaDriver.cuCtxSynchronize();
 	        
 		} catch (Exception e) {
 			// TODO: handle exception

@@ -93,6 +93,7 @@ __global__ void loss_back2(float *input, float *currentLabel, float *diff, int b
         diff[id * n + i] = e;
     }
 	for(int i = 0;i<n;i++){
-        diff[id * n + i] = ((diff[id * n + i] / sum) - currentLabel[id * n + i]) / batch;
+        //diff[id * n + i] = ((diff[id * n + i] / sum) - currentLabel[id * n + i]) / batch;
+        diff[id * n + i] = (diff[id * n + i] / sum) - currentLabel[id * n + i];
     } 
 }

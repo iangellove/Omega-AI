@@ -1,7 +1,10 @@
 package com.omega.engine.loss;
 
+import java.util.List;
+
+import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.layer.YoloLayer;
 import com.omega.yolo.loss.YoloLoss;
-import com.omega.yolo.loss.YoloLoss2;
 import com.omega.yolo.loss.YoloLoss3;
 
 /**
@@ -30,14 +33,37 @@ public class LossFactory {
 			return new CrossEntropyLoss2();
 		case yolo:
 			return new YoloLoss();
-		case yolo2:
-			return new YoloLoss2();
 		case yolo3:
-			return new YoloLoss3();
+
 		default:
 			return null;
 		}
 		
+	}
+	
+	public static LossFunction[] create(LossType type,List<Layer> outputs) {
+		LossFunction[] losses = new LossFunction[outputs.size()];
+		
+		for(int i = 0;i<outputs.size();i++) {
+
+			switch (type) {
+			case square_loss:
+				losses[i] = new SquareLoss();
+			case cross_entropy:
+				losses[i] =  new CrossEntropyLoss();
+			case softmax_with_cross_entropy:
+				losses[i] =  new CrossEntropyLoss2();
+			case yolo:
+				losses[i] =  new YoloLoss();
+			case yolo3:
+				YoloLayer yolo = (YoloLayer) outputs.get(i);
+				losses[i] =  new YoloLoss3(yolo.class_number, yolo.bbox_num, yolo.mask, yolo.anchors, yolo.network.height, yolo.network.width, yolo.maxBox, yolo.total, yolo.ignoreThresh, yolo.truthThresh);
+			default:
+
+			}
+		}
+		
+		return losses;
 	}
 	
 }

@@ -152,7 +152,7 @@ public class AVGPoolingLayer extends Layer {
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return null;
+		return LayerType.avgpooling;
 	}
 
 	@Override

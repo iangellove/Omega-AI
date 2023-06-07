@@ -20,6 +20,10 @@ public enum LayerType {
 	bn("bn"),
 	block("block"),
 	shortcut("shortcut"),
+	avgpooling("avgpooling"),
+	upsample("upsample"),
+	route("route"),
+	yolo("yolo"),
 	dropout("dropout");
 	
 	private String key;
