@@ -126,18 +126,18 @@ public class YoloLayer extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-//		this.diff = this.delta;
-		baseKernel.copy_gpu(this.delta, this.diff, this.delta.dataLength, 1, 1);
-		for(int b = 0;b<this.delta.number;b++) {
-			for(int n = 0;n<bbox_num;n++) {
-				int index = entryIndex(b, n * width * height, 0);
-//				int index = b * this.outputs + n * input.width * input.height * (4+1+class_number);
-				kernel.forward(input, output, index, 2 * input.width * input.height);
-//				index = b * this.outputs + n * input.width * input.height * (4+1+class_number) + 4 * input.width * input.height;
-				int index2 = entryIndex(b, n * width * height, 4);
-				kernel.forward(input, output, index2, (1+class_number) * input.width * input.height);
-			}
-		}
+		this.diff = this.delta;
+//		baseKernel.copy_gpu(this.delta, this.diff, this.delta.dataLength, 1, 1);
+//		for(int b = 0;b<this.delta.number;b++) {
+//			for(int n = 0;n<bbox_num;n++) {
+//				int index = entryIndex(b, n * width * height, 0);
+////				int index = b * this.outputs + n * input.width * input.height * (4+1+class_number);
+//				kernel.forward(input, output, index, 2 * input.width * input.height);
+////				index = b * this.outputs + n * input.width * input.height * (4+1+class_number) + 4 * input.width * input.height;
+//				int index2 = entryIndex(b, n * width * height, 4);
+//				kernel.forward(input, output, index2, (1+class_number) * input.width * input.height);
+//			}
+//		}
 	}
 
 	@Override

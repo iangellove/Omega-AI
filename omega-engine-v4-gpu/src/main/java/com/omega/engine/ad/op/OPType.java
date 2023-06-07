@@ -8,5 +8,6 @@ public enum OPType {
 	log,
 	sin,
 	cos,
-	exp
+	exp,
+	dot
 }

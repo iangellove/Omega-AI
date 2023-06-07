@@ -1,7 +1,6 @@
 package com.omega.yolo.loss;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
@@ -167,9 +166,9 @@ public class YoloLoss3 extends LossFunction {
 		        int i = (int) (truth[0] * x.width);
 	            int j = (int) (truth[1] * x.height);
 	           
-	            float[] truthShift = new float[] {0,0,truth[2],truth[3]};
+	            float[] truthShift = new float[] {0, 0, truth[2], truth[3]};
 	            for(int n = 0;n<this.total;n++) {
-	            	float[] pred = new float[] {0,0,anchors[2 * n] / orgW,anchors[2 * n + 1] / orgH};
+	            	float[] pred = new float[] {0, 0, anchors[2 * n] / orgW, anchors[2 * n + 1] / orgH};
 	            	float iou = YoloUtils.box_iou(pred, truthShift);
 	            	if (iou > bestIOU) { 
 	                    bestIOU = iou;// 记录最大的IOU
@@ -209,7 +208,7 @@ public class YoloLoss3 extends LossFunction {
 			}
 			
 		}
-		
+
 		System.out.println("Avg IOU: "+avg_iou/count+", Class: "+avg_cat/class_count+", Obj: "+avg_obj/count+","
 				+ " No Obj: "+avg_anyobj/(x.width*x.height*bbox_num*x.number)+", .5R: "+recall/count+", .75R: "+recall75/count+",  count: "+count+", testCount:"+testCount);
 		
@@ -313,7 +312,6 @@ public class YoloLoss3 extends LossFunction {
 		if(diff.isHasGPU()) {
 			diff.hostToDevice();
 		}
-//		diff.showDM();
 		return diff;
 	}
 

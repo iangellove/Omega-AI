@@ -1604,6 +1604,26 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
+	public static float dot(float[] x,float[] y) {
+		float temp = 0.0f;
+		for(int i = 0;i<x.length;i++) {
+			temp += x[i] * y[i];
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: count
+	 *
+	 * @param x
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static float sum(float[] x) {
 		float temp = 0.0f;
 		for(float o:x) {

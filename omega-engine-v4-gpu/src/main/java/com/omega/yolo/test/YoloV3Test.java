@@ -117,16 +117,16 @@ public class YoloV3Test {
 
 			optimizer.trainObjectRecognitionOutputs(trainSet, vailSet, false);
 			
-			/**
-			 * 处理测试预测结果
-			 */
-			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData.getDataSet(), batchSize);
-			
-			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, 101, 3, im_w, im_h, 5, LabelType.csv_v3, false);
-			
-			String outputPath = "H:\\voc\\banana-detection\\test_yolov3\\";
-			
-			showImg(outputPath, testData.getDataSet(), 1, draw_bbox, batchSize, false, im_w, im_h);
+//			/**
+//			 * 处理测试预测结果
+//			 */
+//			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData.getDataSet(), batchSize);
+//			
+//			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, 101, 3, im_w, im_h, 5, LabelType.csv_v3, false);
+//			
+//			String outputPath = "H:\\voc\\banana-detection\\test_yolov3\\";
+//			
+//			showImg(outputPath, testData.getDataSet(), 1, draw_bbox, batchSize, false, im_w, im_h);
 		
 		} catch (Exception e) {
 			// TODO: handle exception

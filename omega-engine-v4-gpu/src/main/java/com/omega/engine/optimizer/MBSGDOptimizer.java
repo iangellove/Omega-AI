@@ -1083,8 +1083,6 @@ public class MBSGDOptimizer extends Optimizer {
 			
 			Tensor vail_input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
 			
-//			Tensor vail_label = new Tensor(batchSize, 1, 1, valiData.labelSize, true);
-			
 			for(int i = 0;i<this.trainTime;i++) {
 				
 				if(this.trainIndex >= this.minTrainTime) {
