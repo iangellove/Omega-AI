@@ -69,6 +69,61 @@ public class YoloDecode {
 		return dets;
 	}
 	
+	public static float[][][] getDetection(Tensor x,int w,int h,int class_number){
+		
+		int location = grid_size * grid_size;
+
+		int input_num_each = location * (class_number + bbox_num * (1 + 4));
+		
+		float[][][] dets = new float[x.number][location][1 + class_number + 4];
+		
+		for(int b = 0;b<x.number;b++) {
+
+			int input_index = b * input_num_each;
+			
+			float[][] score_bbox = new float[location * 2][class_number + 4 + 1];
+			
+			for (int l = 0; l < location; ++l){
+				
+				int row = l / grid_size;
+		        int col = l % grid_size;
+		        
+		        for(int n = 0; n < bbox_num; ++n){
+
+		            int confidence_index = input_index + location * class_number + l * bbox_num + n;
+		            
+		            int class_index = input_index + l * class_number;
+	
+		            float scale = x.data[confidence_index];
+		            int box_index = input_index + location*(class_number + bbox_num) + (l*bbox_num + n) * 4;
+		            float[] bbox = new float[class_number + 1 + 4];
+		            bbox[class_number + 1] = (x.data[box_index + 0] + col) / grid_size * w;
+		            bbox[class_number + 2] = (x.data[box_index + 1] + row) / grid_size * h;
+		            bbox[class_number + 3] = (float) (Math.pow(x.data[box_index + 2], 2.0f) * w);
+		            bbox[class_number + 4] = (float) (Math.pow(x.data[box_index + 3], 2.0f) * h);
+		            
+		            for(int j = 0; j < class_number; ++j){
+		                float prob = scale * x.data[class_index+j];
+		                bbox[j] = (prob > thresh) ? prob : 0;
+		            }
+		            
+		            score_bbox[l * bbox_num + n] = bbox;
+		            
+		        }
+		    }
+			
+			/**
+			 * 使用nms(非极大值抑制)过滤重复和置信度低的bbox
+			 */
+//			nms(score_bbox);
+			
+			dets[b] = score_bbox;
+			
+		}
+		
+		return dets;
+	}
+	
 	public static void quickSort(float[][] arr, int clazz,int start, int end) {
 		 
 	    if(start < end) {

@@ -2,9 +2,7 @@ package com.omega.yolo.utils;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
-import com.omega.common.utils.JsonUtils;
 import com.omega.engine.nn.data.DataSet;
-import com.omega.engine.nn.data.HsvUtils;
 
 public class YoloLabelUtils {
 	
@@ -34,7 +32,7 @@ public class YoloLabelUtils {
 		/**
 		 * 随机裁剪
 		 */
-		getTransformsUtils(classNum, bboxSize).randomCropWithLabel(input, label, input.width, input.height, 0.3f);
+		getTransformsUtils(classNum, bboxSize).randomCropWithLabel(input, label, input.width, input.height, 0.2f);
 		
 		/**
 		 * 随机翻转
@@ -49,12 +47,12 @@ public class YoloLabelUtils {
 		/**
 		 * hsv
 		 */
-		HsvUtils.hsv(input, 0.1f, 1.5f, 1.5f);
+//		HsvUtils.hsv(input, 0.1f, 1.5f, 1.5f);
 		
 		/**
 		 * cutout
 		 */
-//		DataTransforms.cutout(input, input, 16, 4);
+		DataTransforms.cutout(input, input, 16, 4);
 		
 		System.out.println("data transform finish.");
 		
@@ -86,10 +84,103 @@ public class YoloLabelUtils {
 		return label;
 	}
 	
+	public static Tensor formatToYolo(Tensor label,int im_w,int im_h,int classNum) {
+		label.data = labelToYolo(label.data, label.number, classNum, 7, im_w, im_h);
+		label.width = 7 * 7 * (5 + classNum);
+		return label;
+	}
+	
+	public static DataSet formatToYoloSetClass(DataSet dataSet,int classNum,int im_w,int im_h,boolean format) {
+		if(format) {
+			dataSet.label.data = labelToYolo(dataSet.label.data, dataSet.label.number, classNum, 7, im_w, im_h);
+		}else {
+			dataSet.label.data = labelToYoloNotFormat(dataSet.label.data, dataSet.label.number, classNum, 7, im_w, im_h);
+		}
+		dataSet.label.width = 7 * 7 * (5 + classNum);
+		return dataSet;
+	}
+	
+	public static void formatToYoloSetClass(YoloDataLoader dataLoader,int classNum,int im_w,int im_h,boolean format) {
+		if(format) {
+			dataLoader.getLabelSet().data = labelToYolo(dataLoader.getLabelSet(), dataLoader.getLabelSet().number, classNum, 7, im_w, im_h);
+		}else {
+			dataLoader.getLabelSet().data = labelToYoloNotFormat(dataLoader.getLabelSet(), dataLoader.getLabelSet().number, classNum, 7, im_w, im_h);
+		}
+		
+		dataLoader.getLabelSet().width = 7 * 7 * (5 + classNum);
+		dataLoader.labelSize = 7 * 7 * (5 + classNum);
+		
+	}
+	
 	public static Tensor formatToYoloV3(Tensor label,int im_w,int im_h) {
 		label.data = labelToYoloV3(label, label.number, im_w, im_h);
 //		System.out.println(JsonUtils.toJson(label.getByNumber(0)));
 		return label;
+	}
+	
+	/**
+	 * labelToLocation
+	 * @param cx
+	 * @param cy
+	 * @param w
+	 * @param h
+	 * @param cla = 20
+	 * @param stride = 7
+	 * @param wimg = 448
+	 * @param himg = 448
+	 * @return 7 * 7 * (2 + 8 + 20) = 1470
+	 * target = [px1,py1,w1,h1,c1,px2,py2,w2,h2,c2,clazz1.....,clazz20]
+	 * gridx = int(cx / stride)
+	 * gridy = int(cy / stride)
+	 * px = (cx - (gridx * cellSize)) / cellSize
+	 * py = (cy - (gridy * cellSize)) / cellSize
+	 */
+	public static float[] labelToYolo(Tensor label,int number,int stride,int im_w,int im_h) {
+		
+		float[] target = new float[number * stride * stride * 6];
+		
+		int oneSize = stride * stride * 6;
+
+		for(int i = 0;i<number;i++) {
+			
+			float x1 = label.data[i * 5 + 1];
+			float y1 = label.data[i * 5 + 2];
+			float x2 = label.data[i * 5 + 3];
+			float y2 = label.data[i * 5 + 4];
+			
+			float cx = (x1 + x2) / (2 * im_w);
+			float cy = (y1 + y2) / (2 * im_h);
+			
+			float w = (x2 - x1) / im_w;
+			float h = (y2 - y1) / im_h;
+
+			int gridx = (int)(cx * stride);
+			int gridy = (int)(cy * stride);
+			
+			float px = cx * stride - gridx;
+			float py = cy * stride - gridy;
+
+			/**
+			 * c1
+			 */
+			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 0] = 1.0f;
+			
+			/**
+			 * class
+			 */
+			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 1] = 1.0f;
+			
+			/**
+			 * x1,y1,w1,h1
+			 */
+			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 2] = px;
+			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 3] = py;
+			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 4] = w;
+			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 5] = h;
+			
+		}
+		
+		return target;
 	}
 	
 	/**
@@ -152,6 +243,225 @@ public class YoloLabelUtils {
 			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 4] = w;
 			target[i * oneSize + gridy * stride * 6 + gridx * 6 + 5] = h;
 			
+		}
+		
+		return target;
+	}
+	
+	public static float[] labelToYolo(float[] bbox,int number,int classNum,int stride,int im_w,int im_h) {
+
+		int once = (5+classNum);
+		
+		float[] target = new float[number * stride * stride * once];
+		
+		int oneSize = stride * stride * once;
+		
+		for(int i = 0;i<number;i++) {
+			
+			int clazz = (int) bbox[i * 5 + 0] + 1;
+			
+			float x1 = bbox[i * 5 + 1];
+			float y1 = bbox[i * 5 + 2];
+			float x2 = bbox[i * 5 + 3];
+			float y2 = bbox[i * 5 + 4];
+			
+			float cx = (x1 + x2) / (2 * im_w);
+			float cy = (y1 + y2) / (2 * im_h);
+			
+			float w = (x2 - x1) / im_w;
+			float h = (y2 - y1) / im_h;
+
+			int gridx = (int)(cx * stride);
+			int gridy = (int)(cy * stride);
+			
+			float px = cx * stride - gridx;
+			float py = cy * stride - gridy;
+
+			/**
+			 * c1
+			 */
+			target[i * oneSize + gridy * stride * once + gridx * once + 0] = 1.0f;
+			
+			/**
+			 * class
+			 */
+			target[i * oneSize + gridy * stride * once + gridx * once + clazz] = 1.0f;
+			
+			/**
+			 * x1,y1,w1,h1
+			 */
+			target[i * oneSize + gridy * stride * once + gridx * once + 2] = px;
+			target[i * oneSize + gridy * stride * once + gridx * once + 3] = py;
+			target[i * oneSize + gridy * stride * once + gridx * once + 4] = w;
+			target[i * oneSize + gridy * stride * once + gridx * once + 5] = h;
+			
+		}
+		
+		return target;
+	}
+	
+	public static float[] labelToYolo(Tensor bbox,int number,int classNum,int stride,int im_w,int im_h) {
+		
+		int width = bbox.getWidth();  //450
+		
+		int boxNum = width / 5; //90
+		
+		int once = (5+classNum);
+		
+		float[] target = new float[number * stride * stride * once];
+		
+		int oneSize = stride * stride * once;
+		
+		for(int b = 0;b<number;b++) {
+			
+			for(int n = 0;n<boxNum;n++) {
+			
+				int clazz = (int) bbox.data[b * width + n * 5 + 0] + 1;
+				
+				float x1 = bbox.data[b * width + n * 5 + 1];
+				float y1 = bbox.data[b * width + n * 5 + 2];
+				float x2 = bbox.data[b * width + n * 5 + 3];
+				float y2 = bbox.data[b * width + n * 5 + 4];
+				
+				float cx = (x1 + x2) / (2 * im_w);
+				float cy = (y1 + y2) / (2 * im_h);
+				
+				float w = (x2 - x1) / im_w;
+				float h = (y2 - y1) / im_h;
+				
+				if(w == 0 || h == 0) {
+					break;
+				}
+				
+				int gridx = (int)(cx * stride);
+				int gridy = (int)(cy * stride);
+				
+				float px = cx * stride - gridx;
+				float py = cy * stride - gridy;
+	
+				/**
+				 * c1
+				 */
+				target[b * oneSize + gridy * stride * once + gridx * once + 0] = 1.0f;
+				
+				/**
+				 * class
+				 */
+				target[b * oneSize + gridy * stride * once + gridx * once + clazz] = 1.0f;
+				
+				/**
+				 * x1,y1,w1,h1
+				 */
+				target[b * oneSize + gridy * stride * once + gridx * once + 2] = px;
+				target[b * oneSize + gridy * stride * once + gridx * once + 3] = py;
+				target[b * oneSize + gridy * stride * once + gridx * once + 4] = w;
+				target[b * oneSize + gridy * stride * once + gridx * once + 5] = h;
+			
+			}
+		}
+		
+		return target;
+	}
+	
+	public static float[] labelToYoloNotFormat(float[] bbox,int number,int classNum,int stride,int im_w,int im_h) {
+
+		int once = (5+classNum);
+		
+		float[] target = new float[number * stride * stride * once];
+		
+		int oneSize = stride * stride * once;
+
+		for(int i = 0;i<number;i++) {
+			
+			int clazz = (int) bbox[i * 5 + 0] + 1;
+			
+			float cx = bbox[i * 5 + 1] / im_w;
+			float cy = bbox[i * 5 + 2] / im_h;
+			float w = bbox[i * 5 + 3] / im_w;
+			float h = bbox[i * 5 + 4] / im_h;
+			
+			int gridx = (int)(cx * stride);
+			int gridy = (int)(cy * stride);
+			
+			float px = cx * stride - gridx;
+			float py = cy * stride - gridy;
+
+			/**
+			 * c1
+			 */
+			target[i * oneSize + gridy * stride * once + gridx * once + 0] = 1.0f;
+			
+			/**
+			 * class
+			 */
+			target[i * oneSize + gridy * stride * once + gridx * once + clazz] = 1.0f;
+			
+			/**
+			 * x1,y1,w1,h1
+			 */
+			target[i * oneSize + gridy * stride * once + gridx * once + classNum + 1] = px;
+			target[i * oneSize + gridy * stride * once + gridx * once + classNum + 2] = py;
+			target[i * oneSize + gridy * stride * once + gridx * once + classNum + 3] = w;
+			target[i * oneSize + gridy * stride * once + gridx * once + classNum + 4] = h;
+			
+		}
+		
+		return target;
+	}
+	
+	public static float[] labelToYoloNotFormat(Tensor bbox,int number,int classNum,int stride,int im_w,int im_h) {
+		
+		int width = bbox.getWidth();  //450
+		
+		int boxNum = width / 5; //90
+		
+		int once = (5+classNum);
+		
+		float[] target = new float[number * stride * stride * once];
+
+		int oneSize = stride * stride * once;
+
+		for(int b = 0;b<number;b++) {
+			
+			for(int n = 0;n<boxNum;n++) {
+				
+				int clazz = (int) bbox.data[b * width + n * 5 + 0] + 1;
+				
+				float cx = bbox.data[b * width + n * 5 + 1] / im_w;
+				float cy = bbox.data[b * width + n * 5 + 2] / im_h;
+				float w = bbox.data[b * width + n * 5 + 3] / im_w;
+				float h = bbox.data[b * width + n * 5 + 4] / im_h;
+
+				if(w == 0 || h == 0) {
+					break;
+				}
+				
+				int gridx = (int)(cx * stride);
+				int gridy = (int)(cy * stride);
+				
+				float px = cx * stride - gridx;
+				float py = cy * stride - gridy;
+
+				/**
+				 * c1
+				 */
+				target[b * oneSize + gridy * stride * once + gridx * once + 0] = 1.0f;
+				
+				/**
+				 * class
+				 */
+				target[b * oneSize + gridy * stride * once + gridx * once + clazz] = 1.0f;
+				
+				/**
+				 * x1,y1,w1,h1
+				 */
+				target[b * oneSize + gridy * stride * once + gridx * once + classNum + 1] = px;
+				target[b * oneSize + gridy * stride * once + gridx * once + classNum + 2] = py;
+				target[b * oneSize + gridy * stride * once + gridx * once + classNum + 3] = w;
+				target[b * oneSize + gridy * stride * once + gridx * once + classNum + 4] = h;
+
+			}
+
 		}
 		
 		return target;

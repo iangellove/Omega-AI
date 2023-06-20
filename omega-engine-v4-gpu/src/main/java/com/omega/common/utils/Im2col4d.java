@@ -24,7 +24,6 @@ public class Im2col4d extends RecursiveAction {
 	private int kw;
 	private int stride;
 	
-	
 	public Im2col4d(float[][][][] data,float[][] col,int kh,int kw,int stride,int start,int end) {
 		this.x = data;
 		this.y = col;

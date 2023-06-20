@@ -23,6 +23,8 @@ import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.yolo.model.YoloBox;
 import com.omega.yolo.model.YoloDetection;
 import com.omega.yolo.utils.BaseDataLoader;
+import com.omega.yolo.utils.DetectionDataLoader;
+import com.omega.yolo.utils.YoloDataLoader;
 import com.omega.yolo.utils.YoloDecode;
 import com.omega.yolo.utils.YoloUtils;
 
@@ -522,6 +524,88 @@ public abstract class Optimizer {
 		return vailLoss;
 	}
 	
+	public float testObjectRecognition(BaseDataLoader testData,Tensor input,Tensor label,int batchSize) {
+		// TODO Auto-generated method stub
+		
+		float vailLoss = 0.0f;
+		
+		long startTime = System.nanoTime();
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.loadData(pageIndex, batchSize, input, label);
+			
+			input.hostToDevice();
+			
+			label.hostToDevice();
+			
+			Tensor output = this.network.predict(input);
+
+			/**
+			 * current time error
+			 */
+			Tensor loss = this.network.loss(output, label);
+			
+			if(loss.isHasGPU()) {
+				vailLoss += MatrixOperation.sum(loss.syncHost());
+			}else {
+				vailLoss += MatrixOperation.sum(loss.data);
+			}
+			
+		}
+		
+		vailLoss = vailLoss / itc / batchSize;
+		
+		System.out.println("test["+this.trainIndex+"] vail loss:{"+vailLoss+"} [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
+		
+		return vailLoss;
+	}
+	
+	public float testObjectRecognition(DetectionDataLoader testData,Tensor input,Tensor label,int batchSize) {
+		// TODO Auto-generated method stub
+		
+		float vailLoss = 0.0f;
+		
+		long startTime = System.nanoTime();
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.loadData(pageIndex, batchSize, input, label);
+			
+			input.hostToDevice();
+			
+			label.hostToDevice();
+			
+			Tensor output = this.network.predict(input);
+
+			/**
+			 * current time error
+			 */
+			Tensor loss = this.network.loss(output, label);
+			
+			if(loss.isHasGPU()) {
+				vailLoss += MatrixOperation.sum(loss.syncHost());
+			}else {
+				vailLoss += MatrixOperation.sum(loss.data);
+			}
+			
+		}
+		
+		vailLoss = vailLoss / itc / batchSize;
+		
+		System.out.println("test["+this.trainIndex+"] vail loss:{"+vailLoss+"} [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
+		
+		return vailLoss;
+	}
+	
 	public float testObjectRecognitionOutputs(BaseData testData,Tensor input,Tensor label,int batchSize) {
 		// TODO Auto-generated method stub
 		
@@ -574,12 +658,20 @@ public abstract class Optimizer {
 			
 			label.hostToDevice();
 			
-			Tensor[] output = network.predicts(input);
-			
-			/**
-			 * current time error
-			 */
-			network.loss(output, label);
+			if(network.outputNum > 1) {
+				Tensor[] output = network.predicts(input);
+				
+				/**
+				 * current time error
+				 */
+				network.loss(output, label);
+			}else{
+				Tensor output = network.predict(input);
+				/**
+				 * current time error
+				 */
+				network.loss(output, label);
+			}
 			
 		}
 		
@@ -765,6 +857,55 @@ public abstract class Optimizer {
 			}
 			
 		}
+		
+		return bbox;
+	}
+	
+	public float[][][] showObjectRecognition(YoloDataLoader testData,int batchSize,int classNum) {
+		// TODO Auto-generated method stub
+		
+		System.out.println("start object recognition.");
+		
+		long start = System.currentTimeMillis();
+
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		float[][][] bbox = new float[testData.number][YoloDecode.grid_size * YoloDecode.grid_size * YoloDecode.bbox_num][YoloDecode.class_number + 1 + 4];
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+			
+			testData.loadData(pageIndex, batchSize, input);
+			
+			input.hostToDevice();
+			
+			Tensor output = this.network.predict(input);
+			
+			output.syncHost();
+			
+			float[][][] draw_bbox = YoloDecode.getDetection(output, testData.getDataSet().width, testData.getDataSet().height, classNum);
+//			System.out.println(JsonUtils.toJson(draw_bbox));
+			if((pageIndex + 1) * batchSize > testData.number) {
+				
+				/**
+				 * 处理不能整除数据
+				 * 由于批量预测的时候是向上补充最后一页的数据
+				 * 所以在获取bbox的时候需要获取的下标应该是 pageIndex * batchSize - (batchSize - testData.number % batchSize)
+				 */
+				System.arraycopy(draw_bbox, batchSize - testData.number % batchSize, bbox, pageIndex * batchSize, testData.number % batchSize);
+				
+			}else {
+
+				System.arraycopy(draw_bbox, 0, bbox, pageIndex * batchSize, batchSize);
+				
+			}
+			
+		}
+		
+		System.out.println("finish object recognition["+((System.currentTimeMillis() - start) / 1000) + "s].");
 		
 		return bbox;
 	}

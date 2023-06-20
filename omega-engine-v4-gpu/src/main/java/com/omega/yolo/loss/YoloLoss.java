@@ -1,6 +1,7 @@
 package com.omega.yolo.loss;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
@@ -36,9 +37,13 @@ public class YoloLoss extends LossFunction {
 	
 	private float object_scale = 1.0f;
 	
-	public static YoloLoss operation() {
+	public YoloLoss(int class_number) {
+		this.class_number = class_number;
+	}
+	
+	public static YoloLoss operation(int class_number) {
 		if(instance == null) {
-			instance = new YoloLoss();
+			instance = new YoloLoss(class_number);
 		}
 		return instance;
 	}
@@ -84,6 +89,8 @@ public class YoloLoss extends LossFunction {
 		
 		for(int b = 0;b<x.number;b++) {
 			
+//			System.out.println(JsonUtils.toJson(x.getByNumber(b)));
+			
 			int input_index = b * input_num_each;
 			
 			for(int l = 0;l<location;l++) {
@@ -111,7 +118,7 @@ public class YoloLoss extends LossFunction {
 				//计算loss函数中的第5项，每个预测类型的概率误差
 	            int class_index = input_index + l * class_number;
 
-	            for (int j=0; j < class_number; ++j){
+	            for (int j = 0; j < class_number; ++j){
 	                cost += class_scale * Math.pow(x.data[class_index+j] - label.data[truth_index+1+j],2);
 	                this.diff.data[class_index + j] = class_scale * (x.data[class_index+j] - label.data[truth_index+1+j]);
 	                if(label.data[truth_index+1+j] == 1.0f) {
@@ -127,6 +134,8 @@ public class YoloLoss extends LossFunction {
 	            truthCoords[2] = label.data[truth_index + 1 + class_number + 2];
 	            truthCoords[3] = label.data[truth_index + 1 + class_number + 3];
 	            
+//	            System.out.println(JsonUtils.toJson(truthCoords));
+	            
 	            int n_best = -1;   //存储两个候选框最好的，只使用此候选框进行回归计算
 	            float best_iou = 0;
 	            float best_square = 20;
@@ -141,10 +150,12 @@ public class YoloLoss extends LossFunction {
 	            	bbox[2] = x.data[inputCoordsIndex + 2] * x.data[inputCoordsIndex + 2];  //w = w*w
 	            	bbox[3] = x.data[inputCoordsIndex + 3] * x.data[inputCoordsIndex + 3];  //h = h*h
 	            	
+//	            	System.out.println(JsonUtils.toJson(bbox));
+	            	
 	            	float iou = YoloUtils.box_iou(bbox, truthCoords);
-	            	
+	
 	            	float rmse = YoloUtils.box_rmse(bbox, truthCoords);
-	            	
+
 	            	//找到最接近truth标注的框
 	                if (iou > 0 || best_iou > 0){
 	                    if (iou > best_iou) {
@@ -164,7 +175,7 @@ public class YoloLoss extends LossFunction {
 	            //计算x,y,w,h的损失，挑选最优的框
 	            int best_coords = input_index + (class_number + bbox_num)*location+(l*bbox_num + n_best) * 4;
 	            int t_bbox_index = truth_index+1+class_number;
-	            
+
 	            avg_iou += best_iou;
 	            
 	            cost += coord_scale*Math.pow(x.data[best_coords+0] - label.data[t_bbox_index+0],2);
@@ -184,9 +195,11 @@ public class YoloLoss extends LossFunction {
 	            int confidence_index = input_index + location*class_number + l*bbox_num + n_best;
 	            cost -= noobject_scale*Math.pow(0.0f - x.data[confidence_index], 2);
 	            cost += object_scale*Math.pow(x.data[confidence_index] - 1.0f, 2);
-	            this.diff.data[confidence_index] = object_scale*(x.data[confidence_index] - 1.0f);
-//	            this.diff.data[confidence_index] = object_scale*(best_iou - x.data[confidence_index]);
-//	            System.out.println("true:"+x.data[confidence_index]);
+	            
+//	            this.diff.data[confidence_index] = object_scale*(x.data[confidence_index] - 1.0f);
+	            
+	            this.diff.data[confidence_index] = object_scale*(x.data[confidence_index] - best_iou);
+	            
 	            avg_obj += x.data[confidence_index];
 	            count++;
 	            

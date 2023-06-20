@@ -23,7 +23,7 @@ import com.omega.yolo.utils.LabelUtils;
 import com.omega.yolo.utils.YoloDataLoader;
 import com.omega.yolo.utils.YoloLabelUtils;
 
-public class YoloV3Test {
+public class YoloV2Test {
 	
 	public void yolov3() {
 		
@@ -80,7 +80,7 @@ public class YoloV3Test {
 		
 	}
 	
-	public void yolov3_tiny() {
+	public void yolov2_tiny() {
 		
 		int im_w = 256;
 		int im_h = 256;
@@ -89,7 +89,7 @@ public class YoloV3Test {
 		
 		try {
 			
-			String cfg_path = "H:\\voc\\banana-detection\\yolov3-tiny-banana.cfg";
+			String cfg_path = "H:\\voc\\banana-detection\\yolov2-tiny-banana.cfg";
 			
 			String trainPath = "H:\\voc\\banana-detection\\bananas_train\\images";
 			String trainLabelPath = "H:\\voc\\banana-detection\\bananas_train\\label.csv";
@@ -99,17 +99,17 @@ public class YoloV3Test {
 			
 			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, im_w, im_h, 5, LabelType.csv_v3, true);
 			
-			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 100, 3, im_w, im_h, 5, LabelType.csv_v3, true);
+			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 110, 3, im_w, im_h, 5, LabelType.csv_v3, true);
 			
 			DataSet trainSet = YoloLabelUtils.formatToYoloV3(trainData.getDataSet(), class_num, im_w, im_h);
 			
 			DataSet vailSet = YoloLabelUtils.formatToYoloV3(vailData.getDataSet(), class_num, im_w, im_h);
 			
-			Yolo netWork = new Yolo(LossType.yolo3, UpdaterType.adamw);
+			Yolo netWork = new Yolo(LossType.yolo2, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.01f;
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
@@ -135,7 +135,7 @@ public class YoloV3Test {
 			
 	}
 	
-	public void yolov3_tiny_voc() {
+	public void yolov2_tiny_voc() {
 		
 		int im_w = 416;
 		int im_h = 416;
@@ -143,7 +143,7 @@ public class YoloV3Test {
 		
 		try {
 			
-			String cfg_path = "H:/voc/train/yolov3-tiny-voc.cfg";
+			String cfg_path = "H:/voc/train/yolov2-tiny-voc.cfg";
 			
 			String trainPath = "H:\\voc\\train\\imgs";
 			String trainLabelPath = "H:\\voc\\train\\labels\\yolov3.txt";
@@ -159,7 +159,7 @@ public class YoloV3Test {
 			
 			YoloLabelUtils.formatToYoloV3(vailData, im_w, im_h, false);
 			
-			Yolo netWork = new Yolo(LossType.yolo3, UpdaterType.adamw);
+			Yolo netWork = new Yolo(LossType.yolo2, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
@@ -205,9 +205,9 @@ public class YoloV3Test {
 			
 			CUDAModules.initContext();
 			
-			YoloV3Test y = new YoloV3Test();
-//			y.yolov3_tiny_voc();
-			y.yolov3_tiny();
+			YoloV2Test y = new YoloV2Test();
+			y.yolov2_tiny_voc();
+//			y.yolov2_tiny();
 //			y.getAnchors();
 			
 		} catch (Exception e) {

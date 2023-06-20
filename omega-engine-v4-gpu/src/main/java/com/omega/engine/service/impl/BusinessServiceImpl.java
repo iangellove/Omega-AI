@@ -2671,8 +2671,8 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			String test_data_filename = "H:/dataset/cifar-10/test_batch.bin";
 			
-			float[] mean = new float[] {0.491f, 0.482f, 0.446f};
-			float[] std = new float[] {0.247f, 0.243f, 0.261f};
+			float[] mean = new float[] {0.4914f, 0.4822f, 0.4465f};
+			float[] std = new float[] {0.2023f, 0.1994f, 0.2010f};
 			
 			DataSet trainData = DataLoader.getImagesToDataSetByBin(train_data_filenames, 10000, 3, 32, 32, 10, labelSet, true);
 
@@ -2685,6 +2685,8 @@ public class BusinessServiceImpl implements BusinessService {
 			int height = 32;
 			
 			int width = 32;
+			
+			int batchSize = 256;
 			
 			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw);
 			
@@ -2801,7 +2803,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(pool2);
 			netWork.addLayer(full1);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 250, 0.001f, 128, LearnRateUpdate.GD_GECAY, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 500, 0.001f, batchSize, LearnRateUpdate.GD_GECAY, false);
 
 			long start = System.currentTimeMillis();
 			

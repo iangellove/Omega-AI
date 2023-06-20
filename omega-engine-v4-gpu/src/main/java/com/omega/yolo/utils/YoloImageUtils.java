@@ -28,7 +28,7 @@ public class YoloImageUtils {
 	public float[] mean = new float[] {0.491f, 0.482f, 0.446f};
 	public float[] std = new float[] {0.247f, 0.243f, 0.261f};
 	
-	public static final int YOLO_IMG_SIZE = 416;
+	public static final int YOLO_IMG_SIZE = 448;
 	
 	public static final int GRID_SIZE = 7;
 	
@@ -541,16 +541,12 @@ public class YoloImageUtils {
 			
 			Map<String, Object> bboxList = new LinkedHashMap<String, Object>(); 
 			
-			if(file.exists() && file.isDirectory()) {
-				
+			if(file.exists() && file.isDirectory()) {	
 				for(File img:file.listFiles()) {
-					
 					YoloImage yi = formatData(img, labelDir, outDir, version);
 					System.out.println(yi.getName());
 					bboxList.put(yi.getName(), yi.getYoloLabel());
-					
 				}
-				
 			}
 			
 			File txt = new File(bboxPath);
@@ -674,6 +670,48 @@ public class YoloImageUtils {
 			e.printStackTrace();
 		}
 		
+	}
+	
+	public static void loadImgDataToOrgTensor(String filePath,Tensor out,int idx) {
+		
+		try {
+			
+			File file = new File(filePath);
+			
+			if(file.exists()) {
+
+				float[] data =  IU().getImageData(file, false, false);
+				
+				System.arraycopy(data, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
+
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	
+	public static float[] loadImgDataToArray(String filePath) {
+		
+		try {
+			
+			File file = new File(filePath);
+			
+			if(file.exists()) {
+				
+				float[] data =  IU().getImageData(file, false, false);
+				
+				return data;
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	public static void main(String[] args) {

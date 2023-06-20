@@ -45,7 +45,6 @@ public class YoloDataLoader extends BaseDataLoader{
 		default:
 			break;
 		}
-		
 	}
 	
 	public DataSet getDataSet() {
@@ -114,7 +113,7 @@ public class YoloDataLoader extends BaseDataLoader{
 				}
 				
 				orderByName();
-				
+
 				this.labelSize = this.labelSize * maxBox;
 				
 				setLabelSet(new Tensor(files.length, 1, 1, labelSize));
@@ -228,9 +227,7 @@ public class YoloDataLoader extends BaseDataLoader{
 		for(int i = 0;i<indexs.length;i++) {
 			int index = indexs[i];
 			String filePath = imgDirPath + "/" + idxSet[index];
-			
 			YoloImageUtils.loadImgDataToTensor(filePath, input, i);
-			
 			System.arraycopy(this.getLabelSet().data, index * label.width, label.data, i * label.width, label.width);
 		}
 		
@@ -265,6 +262,26 @@ public class YoloDataLoader extends BaseDataLoader{
 			YoloImageUtils.loadImgDataToTensor(filePath, input, i);
 			System.arraycopy(this.getLabelSet().data, index * label.width, label.data, i * label.width, label.width);
 		}
+	}
+	
+	public void loadData(int pageIndex, int batchSize, Tensor input) {
+		// TODO Auto-generated method stub
+		for(int i = 0;i<batchSize;i++) {
+			int index = pageIndex * batchSize + i;
+			if((pageIndex + 1) * batchSize > this.getLabelSet().number) {
+				int offset = batchSize - (this.getLabelSet().number % batchSize);
+				index = pageIndex * batchSize - offset + i;
+			}
+			String filePath = imgDirPath + "/" + idxSet[index];
+			YoloImageUtils.loadImgDataToTensor(filePath, input, i);
+		}
+	}
+
+	@Override
+	public float[] loadData(int index) {
+		// TODO Auto-generated method stub
+		String filePath = imgDirPath + "/" + idxSet[index];
+		return YoloImageUtils.loadImgDataToArray(filePath);
 	}
 	
 }

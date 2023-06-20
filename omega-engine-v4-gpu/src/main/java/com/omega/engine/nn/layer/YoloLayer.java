@@ -105,6 +105,7 @@ public class YoloLayer extends Layer {
 	public void output() {
 		// TODO Auto-generated method stub
 		baseKernel.copy_gpu(input, output, input.dataLength, 1, 1);
+//		System.out.println("bbox_num:"+bbox_num);
 		for(int b = 0;b<this.input.number;b++) {
 			for(int n = 0;n<bbox_num;n++) {
 				int index = entryIndex(b, n * width * height, 0);

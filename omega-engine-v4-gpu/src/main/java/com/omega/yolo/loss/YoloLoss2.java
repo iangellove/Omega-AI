@@ -26,7 +26,7 @@ import com.omega.yolo.utils.YoloUtils;
  *   bh = ph * exp(th)
  *   pw,ph:锚框的宽高
  */
-public class YoloLoss3 extends LossFunction {
+public class YoloLoss2 extends LossFunction {
 	
 	public final LossType lossType = LossType.yolo;
 	
@@ -43,9 +43,7 @@ public class YoloLoss3 extends LossFunction {
 	private Tensor loss;
 	
 	private Tensor diff;
-	
-	private int[] mask;
-	
+
 	private float[] anchors;
 	
 	private int orgW;
@@ -58,10 +56,17 @@ public class YoloLoss3 extends LossFunction {
 	
 	private float truthThresh = 1.0f;
 	
-	public YoloLoss3(int class_number,int bbox_num,int[] mask,float[] anchors,int orgH,int orgW,int maxBox,int total,float ignoreThresh,float truthThresh) {
+	private float noobject_scale = 1.0f;
+	
+	private float coord_scale = 5.0f;
+	
+	private float class_scale = 1.0f;
+	
+	private float object_scale = 5.0f;
+	
+	public YoloLoss2(int class_number,int bbox_num,float[] anchors,int orgH,int orgW,int maxBox,int total,float ignoreThresh,float truthThresh) {
 		this.class_number = class_number;
 		this.bbox_num = bbox_num;
-		this.mask = mask;
 		this.anchors = anchors;
 		this.orgH = orgH;
 		this.orgW = orgW;
@@ -105,15 +110,12 @@ public class YoloLoss3 extends LossFunction {
 		
 	    float avg_iou = 0;
 	    float recall = 0;
-	    float recall75 = 0;
 	    float avg_cat = 0;
 	    float avg_obj = 0;
 	    float avg_anyobj = 0;
 	    int count = 0;
 	    int class_count = 0;
 	    
-	    int testCount = 0;
-		
 		int stride = x.width * x.height;
 		
 		for(int b = 0;b<x.number;b++) {
@@ -122,9 +124,8 @@ public class YoloLoss3 extends LossFunction {
 					for(int n = 0;n<this.bbox_num;n++) {
 						int n_index = n*x.width*x.height + h*x.width + w;
 						int box_index = entryIndex(b, x.width, x.height, n_index, 0);
-						float[] pred = getYoloBox(x, anchors, mask[n], box_index, w, h, x.width, x.height, orgW, orgH, stride);
+						float[] pred = getYoloBox(x, anchors, n, box_index, w, h, x.width, x.height, orgW, orgH, stride);
 						float bestIOU = 0;
-//						int bestIndex = 0;
 						for(int t = 0;t<maxBox;t++) {
 							float[] truth = floatToBox(label, b, t, 1);
 							if(truth[0] == 0) {
@@ -133,20 +134,15 @@ public class YoloLoss3 extends LossFunction {
 							float iou = YoloUtils.box_giou(pred, truth);
 							if(iou > bestIOU) {
 								bestIOU = iou;
-//								bestIndex = t;
 							}
 						}
 
 						int obj_index = entryIndex(b, x.width, x.height, n_index, 4);
 						avg_anyobj += x.data[obj_index];
-//						this.diff.data[obj_index] = 0 - x.data[obj_index];
-						this.diff.data[obj_index] = x.data[obj_index];
+						this.diff.data[obj_index] = this.noobject_scale * x.data[obj_index];
 						if (bestIOU > ignoreThresh) {
 	                        this.diff.data[obj_index] = 0;
 	                    }
-						if(bestIOU > 1.0f) {
-							System.out.println(bestIOU);
-						}
 					}
 					
 				}
@@ -155,7 +151,7 @@ public class YoloLoss3 extends LossFunction {
 			for(int t = 0; t < maxBox;t++){
 				
 				float[] truth = floatToBox(label, b, t, 1);
-
+//				System.out.println(JsonUtils.toJson(truth));
 				if(truth[0] == 0) {
 					break;
 				}
@@ -167,6 +163,7 @@ public class YoloLoss3 extends LossFunction {
 	            int j = (int) (truth[1] * x.height);
 	           
 	            float[] truthShift = new float[] {0, 0, truth[2], truth[3]};
+
 	            for(int n = 0;n<this.total;n++) {
 	            	float[] pred = new float[] {0, 0, anchors[2 * n] / orgW, anchors[2 * n + 1] / orgH};
 	            	float iou = YoloUtils.box_giou(pred, truthShift);
@@ -176,43 +173,29 @@ public class YoloLoss3 extends LossFunction {
 	                }
 	            }
 	            
-	            int mask_n = intIndex(mask, bestIndex, bbox_num);
-	            
-	            if(mask_n >= 0) {
-	            	int mask_n_index = mask_n*x.width*x.height + j*x.width + i;
-	            	int box_index = entryIndex(b, x.width, x.height, mask_n_index, 0);
-	            	float iou = deltaYoloBox(truth, x, anchors, bestIndex, box_index, i, j, x.width, x.height, (2.0f-truth[2]*truth[3]), stride);
-	            	int obj_index = entryIndex(b, x.width, x.height, mask_n_index, 4);
-	            	
-	            	if(x.data[obj_index] >= 0.8f) {
-	            		testCount++;
-	            	}
-	            	
-	            	avg_obj += x.data[obj_index];
-					
-	            	this.diff.data[obj_index] = x.data[obj_index] - 1.0f;
-	            	
-	            	int clazz = (int) label.data[t*(4+1)+b*truths+4];
-	            	
-	            	int class_index = entryIndex(b, x.width, x.height, mask_n_index, 4 + 1);
-	            	
-	            	avg_cat = deltaYoloClass(x, class_index, clazz, class_number, stride, avg_cat);
-	            	
-	            	count++;
-	                class_count++;
-	                if(iou > .5) recall += 1;
-	                if(iou > .75) recall75 += 1;
-	                avg_iou += iou;
-	            }
-	            
+            	int box_index = entryIndex(b, x.width, x.height, bestIndex*x.width*x.height + j*x.width + i, 0);
+            	float iou = deltaYoloBox(truth, x, anchors, bestIndex, box_index, i, j, x.width, x.height, coord_scale * (2.0f - truth[2]*truth[3]), stride);
+            	if(iou > .5) recall += 1;
+                avg_iou += iou;
+                int obj_index = entryIndex(b, x.width, x.height, bestIndex*x.width*x.height + j*x.width + i, 4);
+                avg_obj += x.data[obj_index];
+                this.diff.data[obj_index] = object_scale * (x.data[obj_index] - 1.0f);
+//                this.diff.data[obj_index] = object_scale * (x.data[obj_index] - iou);
+               
+                
+                int clazz = (int) label.data[t*(4+1)+b*truths+4];
+            	
+            	int class_index = entryIndex(b, x.width, x.height, bestIndex*x.width*x.height + j*x.width + i, 4 + 1);
+            	
+            	avg_cat = deltaYoloClass(x, class_index, clazz, class_number, stride, avg_cat);
+                ++count;
+                ++class_count;
 			}
 			
 		}
 		
-		System.out.println("loss:"+Math.pow(mag_array(this.diff.data), 2.0)/x.number);
-		
-		System.out.println("Avg IOU: "+avg_iou/count+", Class: "+avg_cat/class_count+", Obj: "+avg_obj/count+","
-				+ " No Obj: "+avg_anyobj/(x.width*x.height*bbox_num*x.number)+", .5R: "+recall/count+", .75R: "+recall75/count+",  count: "+count+", testCount:"+testCount);
+		System.out.println("loss:"+Math.pow(mag_array(this.diff.data), 2.0)/x.number + ", Avg IOU: "+avg_iou/count+", Class: "+avg_cat/class_count+", Obj: "+avg_obj/count+","
+				+ " No Obj: "+avg_anyobj/(x.width*x.height*bbox_num*x.number)+", Avg Recall: "+recall/count + ", count: "+count);
 		
 		return loss;
 	}
@@ -230,13 +213,11 @@ public class YoloLoss3 extends LossFunction {
 	private float deltaYoloClass(Tensor x, int index, int clazz, int classes, int stride, float avg_cat) {
 		if(this.diff.data[index] == 1.0f) {
 			this.diff.data[index + stride * clazz] = 1.0f - x.data[index + stride * clazz];
-//			this.diff.data[index + stride * clazz] = x.data[index + stride * clazz] - 1.0f;
 			avg_cat += x.data[index + stride * clazz];
 			return avg_cat;
 		}
 
 		for(int n = 0;n<classes;n++) {
-//			this.diff.data[index + stride * n] = ((n == clazz)?1 : 0) - x.data[index + stride * n];
 			this.diff.data[index + stride * n] = x.data[index + stride * n] - ((n == clazz)?1 : 0);
 			if(n == clazz) {
 				avg_cat += x.data[index + stride*n];
@@ -256,15 +237,20 @@ public class YoloLoss3 extends LossFunction {
 	    float ty = (truth[1]*lh - j);
 	    float tw = (float) Math.log(truth[2] * orgW / anchors[2*n]);
 	    float th = (float) Math.log(truth[3] * orgH / anchors[2*n + 1]);
-//	    this.diff.data[index + 0 * stride] = scale * (tx - x.data[index + 0 * stride]);
-//	    this.diff.data[index + 1 * stride] = scale * (ty - x.data[index + 1 * stride]);
-//	    this.diff.data[index + 2 * stride] = scale * (tw - x.data[index + 2 * stride]);
-//	    this.diff.data[index + 3 * stride] = scale * (th - x.data[index + 3 * stride]);
 	    this.diff.data[index + 0 * stride] = scale * (x.data[index + 0 * stride] - tx);
 	    this.diff.data[index + 1 * stride] = scale * (x.data[index + 1 * stride] - ty);
 	    this.diff.data[index + 2 * stride] = scale * (x.data[index + 2 * stride] - tw);
 	    this.diff.data[index + 3 * stride] = scale * (x.data[index + 3 * stride] - th);
 	    return iou;
+	}
+	
+	
+	private void deltaYoloMask(float[] truth,Tensor x,int n,int index,int stride,int scale) {
+		
+		for(int i = 0;i<n;i++) {
+			this.diff.data[index + i * stride] = scale * (truth[i] - x.data[index + i * stride]);
+		}
+		
 	}
 	
 	private int intIndex(int[] mask, int bestIndex, int bbox_num) {

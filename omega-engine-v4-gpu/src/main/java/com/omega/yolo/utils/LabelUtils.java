@@ -78,6 +78,7 @@ public class LabelUtils {
 			String strTmp = "";
 			int idx = 0;
 			int onceSize = label.channel * label.height * label.width;
+			
 	        while((strTmp = buffReader.readLine())!=null){
 	        	String[] list = strTmp.split(" ");
 	        	for(int i = 1;i<list.length;i++) {

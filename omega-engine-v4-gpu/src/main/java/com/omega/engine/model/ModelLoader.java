@@ -311,17 +311,24 @@ public class ModelLoader {
 		int maxBox = getInt(cfg.get("maxBox").toString());
 		float ignoreThresh = getFloat(cfg.get("ignore_thresh").toString());
 		float truthThresh = getFloat(cfg.get("truth_thresh").toString());
-		List<Double> maskList = (List<Double>) cfg.get("mask");
-		int[] mask = new int[maskList.size()];
-		for(int i = 0;i<maskList.size();i++) {
-			mask[i] = maskList.get(i).intValue();
-		}
+		
 		List<Double> anchorsList = (List<Double>) cfg.get("anchors");
 		float[] anchors = new float[anchorsList.size()];
 		for(int i = 0;i<anchorsList.size();i++) {
 			anchors[i] = anchorsList.get(i).floatValue();
 		}
-
+		
+		List<Double> maskList = (List<Double>) cfg.get("mask");
+		int[] mask = null;
+		if(maskList != null) {
+			mask = new int[maskList.size()];
+			for(int i = 0;i<maskList.size();i++) {
+				mask[i] = maskList.get(i).intValue();
+			}
+		}else {
+			mask = new int[total];
+		}
+		
 		YoloLayer yoloLayer = new YoloLayer(class_number, mask.length, mask, anchors, maxBox, total, ignoreThresh, truthThresh);
 		nn.addLayer(yoloLayer);
 		cfg.put("lastIndex", yoloLayer.index);

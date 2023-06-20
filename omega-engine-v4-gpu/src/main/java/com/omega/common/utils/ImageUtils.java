@@ -553,6 +553,23 @@ public class ImageUtils {
 		return true;
 	}
 	
+	public boolean createRGBImage(String path,String extName,int[][] rgb,int weight,int height,int[][] bbox,String[] classLabel) {
+		
+		BufferedImage bufferedImage = this.convertRGBImage(rgb);
+//		System.out.println(extName);
+		File outputfile = new File(path);
+		try {
+			BufferedImage output = resizeImage(bufferedImage, weight, height, bbox, classLabel);
+			ImageIO.write(output, extName, outputfile);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
+	}
+	
 	/**
      * 通过BufferedImage图片流调整图片大小
      * 指定压缩后长宽
@@ -580,6 +597,27 @@ public class ImageUtils {
         	g.drawRect(box[1], box[2], w, h);
         }
 
+        return outputImage;
+    }
+    
+	/**
+     * 通过BufferedImage图片流调整图片大小
+     * 指定压缩后长宽
+     */
+    public static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight,int[][] bbox,String[] classLabel) throws IOException {
+        Image resultingImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_AREA_AVERAGING);
+        BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics g = outputImage.getGraphics();
+        g.drawImage(resultingImage, 0, 0, null);
+        g.setColor(Color.RED);
+        for(int[] box:bbox) {
+        	int w = (box[3] - box[1]);
+        	int h = (box[4] - box[2]);
+        	g.drawRect(box[1], box[2], w, h);
+        	int index = box[0];
+            g.drawString(classLabel[index-1], box[1], box[2]);
+        }
+       
         return outputImage;
     }
     

@@ -18,4 +18,6 @@ public abstract class BaseDataLoader {
 	
 	public abstract void loadData(int pageIndex,int batchSize,Tensor input,Tensor label);
 	
+	public abstract float[] loadData(int index);
+	
 }

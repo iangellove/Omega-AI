@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
@@ -20,10 +21,14 @@ import com.omega.engine.nn.layer.active.LeakyReluLayer;
 import com.omega.engine.nn.layer.active.SigmodLayer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.network.CNN;
+import com.omega.engine.nn.network.Yolo;
 import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.pooling.PoolingType;
 import com.omega.engine.updater.UpdaterType;
+import com.omega.yolo.data.DataType;
+import com.omega.yolo.utils.DetectionDataLoader;
+import com.omega.yolo.utils.LabelFileType;
 import com.omega.yolo.utils.LabelType;
 import com.omega.yolo.utils.YoloDataLoader;
 import com.omega.yolo.utils.YoloLabelUtils;
@@ -38,6 +43,10 @@ public class YoloV1Test {
 	public static int im_w = 256;
 	
 	public static int im_h = 256;
+	
+	public static final String[] GL_CLASSES = new String[] {"person", "bird", "cat", "cow", "dog", "horse", "sheep",
+            "aeroplane", "bicycle", "boat", "bus", "car", "motorbike", "train",
+            "bottle", "chair", "diningtable", "pottedplant", "sofa", "tvmonitor"};
 
 	public void showImg() {
 		
@@ -121,6 +130,107 @@ public class YoloV1Test {
 			
 		}
 		
+	}
+	
+	public static void showImg(String outputPath,YoloDataLoader dataLoader,int class_num,float[][][] score_bbox,boolean format) {
+		
+
+		ImageUtils utils = new ImageUtils();
+		
+		for(int b = 0;b<dataLoader.number;b++) {
+			
+			float[] once = dataLoader.loadData(b);
+			
+			float[][] label = score_bbox[b];
+			
+			List<Integer> indexs = new ArrayList<Integer>();
+			
+			for(int l = 0;l<label.length;l++) {
+				
+				for(int c = 0;c<class_num;c++) {
+					
+					if(label[l][c] == 0.0f) {
+						continue;
+					}
+					indexs.add(l);
+				}
+				
+			}
+			
+			int[][] bbox = new int[indexs.size()][5];
+			
+			for(int i = 0;i<indexs.size();i++) {
+				
+				Integer index = indexs.get(i);
+				
+				bbox[i][0] = getClass(label[index]);
+				bbox[i][1] = (int) (label[index][class_num + 1] - label[index][class_num + 3] / 2);
+				bbox[i][2] = (int) (label[index][class_num + 2] - label[index][class_num + 4] / 2);
+				bbox[i][3] = (int) (label[index][class_num + 1] + label[index][class_num + 3] / 2);
+				bbox[i][4] = (int) (label[index][class_num + 2] + label[index][class_num + 4] / 2);
+				
+			}
+			
+			utils.createRGBImage(outputPath + b + ".png", "png", ImageUtils.color2rgb2(once, im_w, im_h, format), im_w, im_h, bbox);
+			
+		}
+		
+	}
+	
+	public static void showImg(String outputPath,YoloDataLoader dataLoader,int class_num,float[][][] score_bbox,int im_w,int im_h,boolean format) {
+		
+
+		ImageUtils utils = new ImageUtils();
+		
+		for(int b = 0;b<dataLoader.number;b++) {
+			
+			float[] once = dataLoader.loadData(b);
+			
+			float[][] label = score_bbox[b];
+			
+			List<Integer> indexs = new ArrayList<Integer>();
+			
+			for(int l = 0;l<label.length;l++) {
+				
+				for(int c = 0;c<class_num;c++) {
+					
+					if(label[l][c] == 0.0f) {
+						continue;
+					}
+					indexs.add(l);
+				}
+				
+			}
+			
+			int[][] bbox = new int[indexs.size()][5];
+			
+			for(int i = 0;i<indexs.size();i++) {
+				
+				Integer index = indexs.get(i);
+				
+				bbox[i][0] = getClass(label[index]);
+				bbox[i][1] = (int) (label[index][class_num + 1] - label[index][class_num + 3] / 2);
+				bbox[i][2] = (int) (label[index][class_num + 2] - label[index][class_num + 4] / 2);
+				bbox[i][3] = (int) (label[index][class_num + 1] + label[index][class_num + 3] / 2);
+				bbox[i][4] = (int) (label[index][class_num + 2] + label[index][class_num + 4] / 2);
+				
+			}
+			
+			utils.createRGBImage(outputPath + b + ".png", "png", ImageUtils.color2rgb2(once, im_w, im_h, format), im_w, im_h, bbox, GL_CLASSES);
+			
+		}
+		
+	}
+	
+	public static int getClass(float[] bbox) {
+		int class_index = 0;
+		int class_pro = 0;
+		for(int i = 0;i<bbox.length-4;i++) {
+			if(class_pro >= bbox[i]) {
+				class_index = i;
+			}
+		}
+		return class_index;
 	}
 	
 	public int[][] tensorToRGB(Tensor t){
@@ -335,6 +445,8 @@ public class YoloV1Test {
 		
 		try {
 			
+			int batchSize = 64;
+			
 			String cfg_path = "H:/voc/train/yolov1-tiny.cfg";
 			
 			String trainPath = "H:\\voc\\banana-detection\\bananas_train\\images";
@@ -353,15 +465,15 @@ public class YoloV1Test {
 			
 			System.out.println("load data finish.");
 			
-			CNN netWork = new CNN(LossType.yolo, UpdaterType.adamw);
+			Yolo netWork = new Yolo(LossType.yolo, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.01f;
+			netWork.learnRate = 0.001f;
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, 64, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
 			long start = System.currentTimeMillis();
 			
@@ -370,7 +482,7 @@ public class YoloV1Test {
 			/**
 			 * 处理测试预测结果
 			 */
-			float[][][] draw_bbox = optimizer.showObjectRecognition(vailSet, 64);
+			float[][][] draw_bbox = optimizer.showObjectRecognition(vailSet, batchSize);
 			
 			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, false);
 			
@@ -392,6 +504,60 @@ public class YoloV1Test {
 			}
 		}
 		
+	}
+	
+	public void yolov1_tiny_voc() {
+		
+		int im_w = 448;
+		int im_h = 448;
+		int batchSize = 16;
+		int classNum = 20;
+		
+		try {
+			
+			String cfg_path = "H:/voc/train/yolov1-tiny-voc.cfg";
+			
+			String trainPath = "H:\\voc\\train\\imgs";
+			String trainLabelPath = "H:\\voc\\train\\labels\\yolov3.txt";
+			
+			String testPath = "H:\\voc\\test\\imgs";
+			String testLabelPath = "H:\\voc\\test\\labels\\yolov3.txt";
+			
+
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, classNum, batchSize, DataType.yolov1);
+			
+			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, classNum, batchSize, DataType.yolov1);
+			
+			Yolo netWork = new Yolo(LossType.yolo, UpdaterType.adamw);
+			
+			netWork.setClass_num(classNum);
+			
+			netWork.CUDNN = true;
+			
+			netWork.learnRate = 0.001f;
+
+			ModelLoader.loadConfigToModel(netWork, cfg_path);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 500, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+
+			optimizer.trainObjectRecognition(trainData, vailData);
+			
+//			/**
+//			 * 处理测试预测结果
+//			 */
+//			float[][][] draw_bbox = optimizer.showObjectRecognition(vailData, batchSize, classNum);
+//			
+//			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, batchSize, 3, im_w, im_h, 5, LabelType.text_v3, false);
+//			
+//			String outputPath = "H:\\voc\\test\\vail\\";
+//			
+//			showImg(outputPath, testData, classNum, draw_bbox, im_w, im_h, false);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+			
 	}
 	
 	public void testTransforms() {
@@ -456,7 +622,9 @@ public class YoloV1Test {
 
 //			t.yolov1();
 			
-			t.yolov1_tiny();
+//			t.yolov1_tiny();
+			
+			t.yolov1_tiny_voc();
 			
 //			t.testTransforms();
 			

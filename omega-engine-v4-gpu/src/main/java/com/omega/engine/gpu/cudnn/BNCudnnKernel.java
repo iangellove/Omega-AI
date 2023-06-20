@@ -1,22 +1,19 @@
 package com.omega.engine.gpu.cudnn;
 
+import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import static jcuda.jcudnn.cudnnDataType.CUDNN_DATA_FLOAT;
 import static jcuda.jcudnn.cudnnTensorFormat.CUDNN_TENSOR_NCHW;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.CheckArrayUtils;
-import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.nn.layer.gpu.BNBaseKernel;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.network.RunModel;
 
 import jcuda.Pointer;
-import jcuda.Sizeof;
+import jcuda.driver.CUfunction;
 import jcuda.jcudnn.JCudnn;
 import jcuda.jcudnn.cudnnBatchNormMode;
 import jcuda.jcudnn.cudnnTensorDescriptor;
-import jcuda.runtime.JCuda;
-import jcuda.runtime.cudaMemcpyKind;
 
 /**
  * BNCudnnKernel
@@ -34,7 +31,7 @@ public class BNCudnnKernel extends BNBaseKernel{
 	private int W;
 	
 	private double eps = 1e-5;
-	private double momentum = 0.1f;
+	private double momentum = 0.01f;
     
 	private Pointer alpha_P = Pointer.to(new float[] { 1 });
 	private Pointer beta_P = Pointer.to(new float[] { 0 });
@@ -48,7 +45,13 @@ public class BNCudnnKernel extends BNBaseKernel{
 	private cudnnTensorDescriptor normTensorDesc;
 	private cudnnTensorDescriptor dstTensorDesc;
 	
-	private Pointer diff;
+//	private Pointer diff;
+	
+	private CUfunction normalize_test_function;
+	
+	private Pointer normalize_test_Parameters;
+	
+	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
 	
 	public BNCudnnKernel(BNType bnType,int C,int H,int W) {
@@ -60,6 +63,10 @@ public class BNCudnnKernel extends BNBaseKernel{
 	}
 	
 	public void init() {
+		
+//		if(normalize_test_function == null) {
+//			normalize_test_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "normalize_test_kernel");
+//		}
 		
 		if(bnType == BNType.fully_bn) {
 			
@@ -122,13 +129,50 @@ public class BNCudnnKernel extends BNBaseKernel{
 			    		normTensorDesc, gamma.getGpuData(), beta.getGpuData(), momentum, runingMean.getGpuData(), runingVar.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
 
 		}else {
-
+			
 			CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationForwardInference(CudnnHandleManager.getHandle(), mode,
 		    		alpha_P, beta_P, dstTensorDesc, input.getGpuData(), dstTensorDesc, output.getGpuData(), normTensorDesc, gamma.getGpuData(), beta.getGpuData(),
 		    		runingMean.getGpuData(), runingVar.getGpuData(), eps));
 			
+//			normalize_test(input, gamma, beta, output);
+			
 		}
 
+	}
+	
+	public void normalize_test(Tensor input,Tensor gama, Tensor beta, Tensor output) {
+		
+		try {
+			
+			/**
+			 * int N, float *x, float *z, float *out, float *mean, float *variance, float *gama, float *beta,int batch, int filters, int spatial
+			 */
+			normalize_test_Parameters = Pointer.to(
+					Pointer.to(new int[] {N * C * H * W}),
+	                Pointer.to(input.getGpuData()),
+	                Pointer.to(output.getGpuData()),
+	                Pointer.to(runingMean.getGpuData()),
+	                Pointer.to(runingVar.getGpuData()),
+	                Pointer.to(gama.getGpuData()),
+	                Pointer.to(beta.getGpuData()),
+	                Pointer.to(new int[] {N}),
+	                Pointer.to(new int[] {C}),
+	                Pointer.to(new int[] {H * W}),
+	                Pointer.to(new float[] {(float) eps})
+	            );
+			
+	        cuLaunchKernel(normalize_test_function,
+		            this.CAFFE_GET_BLOCKS(N * C * H * W),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            normalize_test_Parameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public void backward(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {

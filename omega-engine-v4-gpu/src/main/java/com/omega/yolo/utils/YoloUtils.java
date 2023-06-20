@@ -25,9 +25,27 @@ public class YoloUtils {
 	    return (right - left);
 	}
 	
+	public static float overlapMin(float x1,float w1,float x2,float w2) {
+		float l1 = x1 - w1/2;   //边框1的左边坐标
+		float l2 = x2 - w2/2;
+		float left = l1 < l2 ? l1 : l2;    //重合部分左边（上边）的坐标
+		float r1 = x1 + w1/2;
+		float r2 = x2 + w2/2;
+		float right = r1 < r2 ? r2 : r1;    //重合部分右边（下边）的坐标
+	    return (right - left);
+	}
+	
 	public static float box_intersection(float[] a, float[] b){
 	    float w = overlap(a[0], a[2], b[0], b[2]);
 	    float h = overlap(a[1], a[3], b[1], b[3]);
+	    if(w < 0 || h < 0) return 0;
+	    float area = w*h;
+	    return area;
+	}
+	
+	public static float box_encolsed(float[] a, float[] b){
+	    float w = overlapMin(a[0], a[2], b[0], b[2]);
+	    float h = overlapMin(a[1], a[3], b[1], b[3]);
 	    if(w < 0 || h < 0) return 0;
 	    float area = w*h;
 	    return area;
@@ -41,6 +59,17 @@ public class YoloUtils {
 	
 	public static float box_iou(float[] a,float[] b) {
 	    return box_intersection(a, b) / box_union(a, b);  //IOU=交集/并集
+	}
+	
+	public static float box_giou(float[] a,float[] b) {
+		//intersection area
+		float interArea = box_intersection(a, b);
+		float unionArea = box_union(a, b);
+		float iou = interArea / unionArea;
+		//enclosed area
+		float encolseArea = box_encolsed(a, b);
+		//compute giou
+		return iou - 1.0f * (encolseArea - unionArea) / encolseArea;
 	}
 	
 	public static int entryIndex(int batch,int w,int h,int location,int entry,int outputs,int class_number){

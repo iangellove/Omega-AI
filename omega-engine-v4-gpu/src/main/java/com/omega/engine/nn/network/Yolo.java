@@ -23,6 +23,8 @@ public class Yolo extends OutputsNetwork{
 	
 	private Tensor[] lossDiff;
 	
+	private int class_num = 1;
+	
 	public Yolo(LossFunction lossFunction) {
 		this.lossFunction = lossFunction;
 	}
@@ -57,14 +59,29 @@ public class Yolo extends OutputsNetwork{
 		this.height = inputLayer.height;
 		this.width = inputLayer.width;
 		
-		this.losses = LossFactory.create(lossType, outputLayers);
-		
-		if(this.loss == null) {
-			this.loss = new Tensor[this.outputNum];
-		}
-		
-		if(this.lossDiff == null){
-			this.lossDiff = new Tensor[this.outputNum];
+		if(this.outputNum > 1) {
+
+			if(class_num != 1 && class_num != 0) {
+				this.losses = LossFactory.create(lossType, outputLayers, class_num);
+			}else {
+				this.losses = LossFactory.create(lossType, outputLayers);
+			}
+
+			if(this.loss == null) {
+				this.loss = new Tensor[this.outputNum];
+			}
+			
+			if(this.lossDiff == null){
+				this.lossDiff = new Tensor[this.outputNum];
+			}
+			
+		}else {
+			
+			if(class_num != 1 && class_num != 0) {
+				this.lossFunction = LossFactory.create(lossType, class_num);
+			}else {
+				this.lossFunction = LossFactory.create(lossType);
+			}
 		}
 		
 		System.out.println("the network is ready.");
@@ -73,7 +90,9 @@ public class Yolo extends OutputsNetwork{
 	@Override
 	public Tensor predict(Tensor input) {
 		// TODO Auto-generated method stub
-		return null;
+		this.RUN_MODEL = RunModel.TEST;
+		this.forward(input);
+		return this.getOuput();
 	}
 
 	@Override
@@ -101,7 +120,23 @@ public class Yolo extends OutputsNetwork{
 	@Override
 	public void back(Tensor lossDiff) {
 		// TODO Auto-generated method stub
-		
+
+		/**
+		 * 设置误差
+		 * 将误差值输入到最后一层
+		 */
+		this.setLossDiff(lossDiff);
+
+		for(int i = layerCount - 1;i>=0;i--) {
+			
+			Layer layer = layerList.get(i);
+			
+			layer.learnRate = this.learnRate;
+
+			layer.back();
+
+		}
+
 	}
 	
 	@Override
@@ -128,7 +163,7 @@ public class Yolo extends OutputsNetwork{
 	@Override
 	public Tensor loss(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub
-		return null;
+		return this.lossFunction.loss(output, label);
 	}
 	
 	@Override
@@ -151,7 +186,7 @@ public class Yolo extends OutputsNetwork{
 	@Override
 	public Tensor lossDiff(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub
-		return null;
+		return this.lossFunction.diff(output, label);
 	}
 	
 	@Override
@@ -189,6 +224,14 @@ public class Yolo extends OutputsNetwork{
 		}
 
 		return getOutputs();
+	}
+
+	public int getClass_num() {
+		return class_num;
+	}
+
+	public void setClass_num(int class_num) {
+		this.class_num = class_num;
 	}
 
 }
