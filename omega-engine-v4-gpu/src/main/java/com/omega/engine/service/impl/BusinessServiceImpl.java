@@ -27,6 +27,7 @@ import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.DropoutLayer;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.InputLayer;
+import com.omega.engine.nn.layer.ParamsInit;
 import com.omega.engine.nn.layer.PoolingLayer;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
 import com.omega.engine.nn.layer.active.LeakyReluLayer;
@@ -2686,20 +2687,20 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 32;
 			
-			int batchSize = 256;
+			int batchSize = 128;
 			
 			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.1f;
+			netWork.learnRate = 0.01f;
 			
 			InputLayer inputLayer = new InputLayer(channel, height, width);
 			
 			ConvolutionLayer conv1 = new ConvolutionLayer(channel, 64, width, height, 3, 3, 1, 1, false);
+			conv1.paramsInit = ParamsInit.relu;
 			
 			BNLayer bn1 = new BNLayer();
-			
 			ReluLayer active1 = new ReluLayer();
 			
 			/**
@@ -2803,7 +2804,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(pool2);
 			netWork.addLayer(full1);
 
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 500, 0.001f, batchSize, LearnRateUpdate.GD_GECAY, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 500, 0.0001f, batchSize, LearnRateUpdate.GD_GECAY, false);
 
 			long start = System.currentTimeMillis();
 			

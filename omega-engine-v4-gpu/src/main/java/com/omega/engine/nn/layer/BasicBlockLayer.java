@@ -79,6 +79,7 @@ public class BasicBlockLayer extends Layer {
 		
 		conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, fisrtLayerStride, false, this.network);
 		conv1.setUpdater(UpdaterFactory.create(this.network.updater));
+		conv1.paramsInit = ParamsInit.relu;
 		
 		bn1 = new BNLayer(this.network);
 		bn1.setUpdater(UpdaterFactory.create(this.network.updater));
@@ -89,6 +90,7 @@ public class BasicBlockLayer extends Layer {
 		
 		conv2 = new ConvolutionLayer(conv1.oChannel, oChannel, conv1.oWidth, conv1.oHeight, 3, 3, 1, 1, false, this.network);
 		conv2.setUpdater(UpdaterFactory.create(this.network.updater));
+		conv2.paramsInit = ParamsInit.relu;
 		
 		bn2 = new BNLayer(this.network);
 		bn2.setUpdater(UpdaterFactory.create(this.network.updater));
@@ -97,6 +99,7 @@ public class BasicBlockLayer extends Layer {
 		if(downsample) {
 			identityConv = new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, fisrtLayerStride, false, this.network); 
 			identityConv.setUpdater(UpdaterFactory.create(this.network.updater));
+			identityConv.paramsInit = ParamsInit.relu;
 			identityBN = new BNLayer(this.network);
 			identityBN.setUpdater(UpdaterFactory.create(this.network.updater));
 			identityBN.setPreLayer(identityConv);
@@ -166,9 +169,8 @@ public class BasicBlockLayer extends Layer {
 		baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
 		
 		bn2.back(delta);
-
 		conv2.back(bn2.diff);
-
+		
 		a1.back(conv2.diff);
 		bn1.back(a1.diff);
 		conv1.back(bn1.diff);
@@ -185,7 +187,7 @@ public class BasicBlockLayer extends Layer {
 		
 //		shortcut.back(delta, conv1.diff);
 //		this.diff = conv1.diff;
-
+		
 	}
 
 	@Override

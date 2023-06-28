@@ -29,6 +29,8 @@ public class AdamWKernel {
 	
 	private CUfunction function;
 	
+	private CUfunction r_function;
+	
 	private CUfunction bn_function;
 	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
@@ -71,6 +73,10 @@ public class AdamWKernel {
 
 				function = CUDAModules.getFunctionByModule("H://updater.cu", "adamw");
 				
+			}
+			
+			if(r_function == null) {
+				r_function = CUDAModules.getFunctionByModule("H://updater.cu", "adamwr");
 			}
 			
 			if(bn_function == null) {

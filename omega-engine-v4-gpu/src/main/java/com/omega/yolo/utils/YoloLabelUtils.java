@@ -66,7 +66,7 @@ public class YoloLabelUtils {
 		}
 	}
 	
-	public static DataSet formatToYoloV3(DataSet dataSet,int class_num,int im_w,int im_h) {
+	public static DataSet formatToYoloV3(DataSet dataSet,int im_w,int im_h) {
 		dataSet.label.data = labelToYoloV3(dataSet.label, dataSet.label.number, im_w, im_h);
 		return dataSet;
 	}

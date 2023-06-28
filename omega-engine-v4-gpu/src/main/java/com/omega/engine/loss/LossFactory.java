@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.YoloLayer;
+import com.omega.engine.nn.network.Network;
 import com.omega.yolo.loss.YoloLoss;
 import com.omega.yolo.loss.YoloLoss2;
 import com.omega.yolo.loss.YoloLoss3;
@@ -69,7 +70,7 @@ public class LossFactory {
 		
 	}
 	
-	public static LossFunction[] create(LossType type,List<Layer> outputs) {
+	public static LossFunction[] create(LossType type,List<Layer> outputs,Network net) {
 		LossFunction[] losses = new LossFunction[outputs.size()];
 		
 		for(int i = 0;i<outputs.size();i++) {
@@ -98,12 +99,15 @@ public class LossFactory {
 			default:
 				break;
 			}
+			if(losses[i] != null) {
+				losses[i].net = net;
+			}
 		}
 		
 		return losses;
 	}
 	
-	public static LossFunction[] create(LossType type,List<Layer> outputs,int classNum) {
+	public static LossFunction[] create(LossType type,List<Layer> outputs,int classNum,Network net) {
 		LossFunction[] losses = new LossFunction[outputs.size()];
 		
 		for(int i = 0;i<outputs.size();i++) {
@@ -131,6 +135,9 @@ public class LossFactory {
 				break;
 			default:
 				break;
+			}
+			if(losses[i] != null) {
+				losses[i].net = net;
 			}
 		}
 		

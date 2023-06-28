@@ -196,9 +196,9 @@ public class YoloLoss extends LossFunction {
 	            cost -= noobject_scale*Math.pow(0.0f - x.data[confidence_index], 2);
 	            cost += object_scale*Math.pow(x.data[confidence_index] - 1.0f, 2);
 	            
-//	            this.diff.data[confidence_index] = object_scale*(x.data[confidence_index] - 1.0f);
+	            this.diff.data[confidence_index] = object_scale*(x.data[confidence_index] - 1.0f);
 	            
-	            this.diff.data[confidence_index] = object_scale*(x.data[confidence_index] - best_iou);
+//	            this.diff.data[confidence_index] = object_scale*(x.data[confidence_index] - best_iou);
 	            
 	            avg_obj += x.data[confidence_index];
 	            count++;

@@ -5,6 +5,7 @@ import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
+import com.omega.engine.nn.network.RunModel;
 import com.omega.yolo.utils.YoloUtils;
 
 /**
@@ -130,7 +131,7 @@ public class YoloLoss3 extends LossFunction {
 							if(truth[0] == 0) {
 								break;
 							}
-							float iou = YoloUtils.box_giou(pred, truth);
+							float iou = YoloUtils.box_iou(pred, truth);
 							if(iou > bestIOU) {
 								bestIOU = iou;
 //								bestIndex = t;
@@ -144,7 +145,7 @@ public class YoloLoss3 extends LossFunction {
 						if (bestIOU > ignoreThresh) {
 	                        this.diff.data[obj_index] = 0;
 	                    }
-						if(bestIOU > 1.0f) {
+						if(bestIOU > truthThresh) {
 							System.out.println(bestIOU);
 						}
 					}
@@ -169,7 +170,7 @@ public class YoloLoss3 extends LossFunction {
 	            float[] truthShift = new float[] {0, 0, truth[2], truth[3]};
 	            for(int n = 0;n<this.total;n++) {
 	            	float[] pred = new float[] {0, 0, anchors[2 * n] / orgW, anchors[2 * n + 1] / orgH};
-	            	float iou = YoloUtils.box_giou(pred, truthShift);
+	            	float iou = YoloUtils.box_iou(pred, truthShift);
 	            	if (iou > bestIOU) { 
 	                    bestIOU = iou;// 记录最大的IOU
 	                    bestIndex = n;// 以及记录该bbox的编号n
@@ -177,8 +178,9 @@ public class YoloLoss3 extends LossFunction {
 	            }
 	            
 	            int mask_n = intIndex(mask, bestIndex, bbox_num);
-	            
+
 	            if(mask_n >= 0) {
+	            	
 	            	int mask_n_index = mask_n*x.width*x.height + j*x.width + i;
 	            	int box_index = entryIndex(b, x.width, x.height, mask_n_index, 0);
 	            	float iou = deltaYoloBox(truth, x, anchors, bestIndex, box_index, i, j, x.width, x.height, (2.0f-truth[2]*truth[3]), stride);
@@ -189,7 +191,13 @@ public class YoloLoss3 extends LossFunction {
 	            	}
 	            	
 	            	avg_obj += x.data[obj_index];
-					
+	            	
+//	            	if(x.width == 8) {
+//
+//		            	System.out.println(i+":"+j+"["+x.data[obj_index]+"]");
+//						
+//	            	}
+	            	
 	            	this.diff.data[obj_index] = x.data[obj_index] - 1.0f;
 	            	
 	            	int clazz = (int) label.data[t*(4+1)+b*truths+4];
@@ -208,6 +216,12 @@ public class YoloLoss3 extends LossFunction {
 			}
 			
 		}
+		
+
+//		if(net.RUN_MODEL == RunModel.TEST || (avg_obj/count) >= 0.8f){
+//			System.out.println(JsonUtils.toJson(x.getByNumberAndChannel(0, 4)));
+//		}
+		
 		
 		System.out.println("loss:"+Math.pow(mag_array(this.diff.data), 2.0)/x.number);
 		
@@ -250,10 +264,11 @@ public class YoloLoss3 extends LossFunction {
 		
 		float[] pred = getYoloBox(x, anchors, n, index, i, j, lw, lh, orgW, orgH, stride);
 		
-		float iou = YoloUtils.box_giou(pred, truth);
+		float iou = YoloUtils.box_iou(pred, truth);
 		
 		float tx = (truth[0]*lw - i);
 	    float ty = (truth[1]*lh - j);
+
 	    float tw = (float) Math.log(truth[2] * orgW / anchors[2*n]);
 	    float th = (float) Math.log(truth[3] * orgH / anchors[2*n + 1]);
 //	    this.diff.data[index + 0 * stride] = scale * (tx - x.data[index + 0 * stride]);

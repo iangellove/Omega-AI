@@ -473,11 +473,11 @@ public class YoloV1Test {
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
 			long start = System.currentTimeMillis();
 			
-			optimizer.trainObjectRecognition(trainSet, vailSet, false);
+			optimizer.trainObjectRecognition(trainSet, vailSet, true);
 
 			/**
 			 * 处理测试预测结果
@@ -534,7 +534,7 @@ public class YoloV1Test {
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.01f;
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
@@ -622,9 +622,9 @@ public class YoloV1Test {
 
 //			t.yolov1();
 			
-//			t.yolov1_tiny();
+			t.yolov1_tiny();
 			
-			t.yolov1_tiny_voc();
+//			t.yolov1_tiny_voc();
 			
 //			t.testTransforms();
 			

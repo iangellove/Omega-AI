@@ -37,7 +37,7 @@ public abstract class ActiveFunctionLayer extends Layer {
 	}
 	
 	public void setPreLayer(Layer pre) {
-		preLayer = pre;
+		this.preLayer = pre;
 		this.channel = preLayer.oChannel;
 		this.height = preLayer.oHeight;
 		this.width = preLayer.oWidth;

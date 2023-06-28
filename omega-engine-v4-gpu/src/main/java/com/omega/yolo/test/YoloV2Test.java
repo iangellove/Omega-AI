@@ -99,11 +99,11 @@ public class YoloV2Test {
 			
 			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, im_w, im_h, 5, LabelType.csv_v3, true);
 			
-			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 110, 3, im_w, im_h, 5, LabelType.csv_v3, true);
+			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 100, 3, im_w, im_h, 5, LabelType.csv_v3, true);
 			
-			DataSet trainSet = YoloLabelUtils.formatToYoloV3(trainData.getDataSet(), class_num, im_w, im_h);
+			DataSet trainSet = YoloLabelUtils.formatToYoloV3(trainData.getDataSet(), im_w, im_h);
 			
-			DataSet vailSet = YoloLabelUtils.formatToYoloV3(vailData.getDataSet(), class_num, im_w, im_h);
+			DataSet vailSet = YoloLabelUtils.formatToYoloV3(vailData.getDataSet(), im_w, im_h);
 			
 			Yolo netWork = new Yolo(LossType.yolo2, UpdaterType.adamw);
 			
@@ -206,8 +206,8 @@ public class YoloV2Test {
 			CUDAModules.initContext();
 			
 			YoloV2Test y = new YoloV2Test();
-			y.yolov2_tiny_voc();
-//			y.yolov2_tiny();
+//			y.yolov2_tiny_voc();
+			y.yolov2_tiny();
 //			y.getAnchors();
 			
 		} catch (Exception e) {

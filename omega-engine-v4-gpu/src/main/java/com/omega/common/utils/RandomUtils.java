@@ -7,6 +7,7 @@ import java.util.Random;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.active.ActiveType;
+import com.omega.engine.nn.layer.ParamsInit;
 
 /**
  * random utils
@@ -332,10 +333,81 @@ public class RandomUtils {
 	 */
 	public static float[] xavierReluRandom(int x,int fanIn,int fanOut){
 		float[] temp = new float[x];
-		float t = (float) (Math.sqrt(2.0f/(fanIn+fanOut)) * Math.sqrt(2.0));
+		float t = (float) (Math.sqrt(2.0f/(fanIn+fanOut)) * Math.sqrt(2.0f));
 		for(int i = 0;i<x;i++) {
 			temp[i] = (float) (getInstance().nextGaussian() * t);
 		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[] xavierLeakyReluRandom(int x,int fanIn,int fanOut){
+		float[] temp = new float[x];
+		float t = (float) (Math.sqrt(2.0f/(fanIn+fanOut)) * Math.sqrt(2.0f / (1 + 0.01f * 0.01f)));
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) (getInstance().nextGaussian() * t);
+		}
+		return temp;
+	}
+	
+	public static float gain(ParamsInit paramsInit) {
+		
+		float gain = 1.0f;
+		
+		switch (paramsInit) {
+		case sigmoid:
+			gain = 1.0f;
+			break;
+		case tanh:
+			gain = 5.0f / 3.0f; 
+			break;
+		case relu:
+			gain = (float) Math.sqrt(2.0f);
+			break;
+		case leaky_relu:
+			gain = (float) Math.sqrt(2.0f / (1.0f + 0.01f * 0.01f));
+			break;
+		default:
+			gain = 1.0f;
+			break;
+		}
+		
+		return gain;
+	}
+	
+	public static float[] kaiming_normal(int x,int fan,ParamsInit paramsInit) {
+		
+		float[] temp = new float[x];
+		
+		float gain = gain(paramsInit);
+		
+		float std = (float) (gain / Math.sqrt(fan));
+		
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) (getInstance().nextGaussian() * std);
+		}
+		
+		return temp;
+	}
+	
+	public static float[] kaiming_uniform(int x,int fan,ParamsInit paramsInit) {
+		
+		float[] temp = new float[x];
+		
+		float gain = gain(paramsInit);
+		
+		float std = (float) (gain / Math.sqrt(fan));
+		
+		float bound = (float) (Math.sqrt(3.0f) * std);
+		
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) Math.random() * (bound - (-bound)) + (-bound);
+		}
+		
 		return temp;
 	}
 	

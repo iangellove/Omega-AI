@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer;
 import com.omega.common.data.Tensor;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.gpu.SigmodKernel;
+import com.omega.engine.nn.network.Yolo;
 
 /**
  * yolo layer
@@ -128,6 +129,7 @@ public class YoloLayer extends Layer {
 	public void diff() {
 		// TODO Auto-generated method stub
 		this.diff = this.delta;
+//		System.out.println(this.delta);
 //		baseKernel.copy_gpu(this.delta, this.diff, this.delta.dataLength, 1, 1);
 //		for(int b = 0;b<this.delta.number;b++) {
 //			for(int n = 0;n<bbox_num;n++) {
@@ -165,7 +167,7 @@ public class YoloLayer extends Layer {
 		/**
 		 * 设置梯度
 		 */
-		this.setDelta();
+//		this.setDelta();
 		/**
 		 * 计算梯度
 		 */

@@ -3,8 +3,11 @@ package com.omega.engine.loss;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.engine.nn.network.Network;
 
 public abstract class LossFunction {
+	
+	public Network net;
 	
 	public LossType lossType;
 	

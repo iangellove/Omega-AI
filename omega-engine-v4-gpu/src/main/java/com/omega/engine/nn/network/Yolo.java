@@ -62,9 +62,9 @@ public class Yolo extends OutputsNetwork{
 		if(this.outputNum > 1) {
 
 			if(class_num != 1 && class_num != 0) {
-				this.losses = LossFactory.create(lossType, outputLayers, class_num);
+				this.losses = LossFactory.create(lossType, outputLayers, class_num, this);
 			}else {
-				this.losses = LossFactory.create(lossType, outputLayers);
+				this.losses = LossFactory.create(lossType, outputLayers, this);
 			}
 
 			if(this.loss == null) {

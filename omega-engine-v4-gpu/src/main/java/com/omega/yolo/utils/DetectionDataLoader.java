@@ -324,7 +324,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 				
 				float px = cx * stride - gridx;
 				float py = cy * stride - gridy;
-
+				
 				/**
 				 * c1
 				 */

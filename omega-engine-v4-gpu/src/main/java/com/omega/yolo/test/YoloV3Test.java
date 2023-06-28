@@ -97,25 +97,25 @@ public class YoloV3Test {
 			String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
 			String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
 			
-			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, im_w, im_h, 5, LabelType.csv_v3, true);
+			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, im_w, im_h, 5, LabelType.csv_v3, false);
 			
 			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 100, 3, im_w, im_h, 5, LabelType.csv_v3, true);
 			
-			DataSet trainSet = YoloLabelUtils.formatToYoloV3(trainData.getDataSet(), class_num, im_w, im_h);
+//			DataSet trainSet = YoloLabelUtils.formatToYoloV3(trainData.getDataSet(), im_w, im_h);
 			
-			DataSet vailSet = YoloLabelUtils.formatToYoloV3(vailData.getDataSet(), class_num, im_w, im_h);
+			DataSet vailSet = YoloLabelUtils.formatToYoloV3(vailData.getDataSet(), im_w, im_h);
 			
 			Yolo netWork = new Yolo(LossType.yolo3, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.01f;
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
-			optimizer.trainObjectRecognitionOutputs(trainSet, vailSet, false);
+			optimizer.trainObjectRecognitionOutputs(trainData.getDataSet(), vailSet, true);
 			
 //			/**
 //			 * 处理测试预测结果

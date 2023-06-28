@@ -14,6 +14,7 @@ import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.layer.ParamsInit;
 import com.omega.engine.nn.layer.PoolingLayer;
 import com.omega.engine.nn.layer.RouteLayer;
 import com.omega.engine.nn.layer.UPSampleLayer;
@@ -341,15 +342,19 @@ public class ModelLoader {
 		switch (activation) {
 		case "relu":
 			layer = new ReluLayer(preLayer);
+			preLayer.paramsInit = ParamsInit.relu;
 			break;
 		case "sigmod":
 			layer = new SigmodLayer(preLayer);
+			preLayer.paramsInit = ParamsInit.sigmoid;
 			break;
 		case "leaky":
 			layer = new LeakyReluLayer(preLayer);
+			preLayer.paramsInit = ParamsInit.leaky_relu;
 			break;
 		case "tanh":
 //			layer = new TanhLayer();
+			preLayer.paramsInit = ParamsInit.tanh;
 			break;
 		}
 		
