@@ -292,10 +292,10 @@ public class YoloLoss3 extends LossFunction {
 	
 	private float[] floatToBox(Tensor label,int b,int t,int stride) {
 		float[] box = new float[4];
-		box[0] = label.data[b * truths + t * 5 + 0 * stride];
-		box[1] = label.data[b * truths + t * 5 + 1 * stride];
-		box[2] = label.data[b * truths + t * 5 + 2 * stride];
-		box[3] = label.data[b * truths + t * 5 + 3 * stride];
+		box[0] = label.data[(b * truths + t * 5 + 0) * stride];
+		box[1] = label.data[(b * truths + t * 5 + 1) * stride];
+		box[2] = label.data[(b * truths + t * 5 + 2) * stride];
+		box[3] = label.data[(b * truths + t * 5 + 3) * stride];
 		return box;
 	}
 	

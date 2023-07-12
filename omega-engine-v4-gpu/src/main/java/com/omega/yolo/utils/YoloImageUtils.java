@@ -13,6 +13,7 @@ import org.w3c.dom.NodeList;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
+import com.omega.common.utils.JsonUtils;
 import com.omega.engine.nn.data.ImageData;
 import com.omega.yolo.model.YoloDataSet;
 import com.omega.yolo.model.YoloImage;
@@ -680,10 +681,8 @@ public class YoloImageUtils {
 			
 			if(file.exists()) {
 
-				float[] data =  IU().getImageData(file, false, false);
-				
+				float[] data =  IU().getImageData(file, true, false);
 				System.arraycopy(data, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
-
 			}
 			
 		} catch (Exception e) {

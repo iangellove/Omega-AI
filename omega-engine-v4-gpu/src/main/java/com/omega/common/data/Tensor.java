@@ -45,6 +45,13 @@ public class Tensor implements Serializable{
 	
 	private float[] grad;
 	
+	public Tensor copy() {
+		float[] dest = new float[dataLength];
+		System.arraycopy(data, 0, dest, 0, dataLength);
+		Tensor dis = new Tensor(number, channel, height, width, dest, hasGPU);
+		return dis;
+	}
+	
 	public Tensor(int number,int channel,int height,int width) {
 		this.number = number;
 		this.channel = channel;
@@ -203,6 +210,10 @@ public class Tensor implements Serializable{
 		int start = n * channel * height * width + c * height * width;
 		System.arraycopy(data, start, once, 0, height * width);
 		return once;
+	}
+	
+	public void setByNumberAndChannel(int n,int c,float[] x) {
+		System.arraycopy(x, 0, data, n * channel * height * width + c * height * width, height * width);
 	}
 	
 	public void getByNumberAndChannel(int n,int c,float[] once) {

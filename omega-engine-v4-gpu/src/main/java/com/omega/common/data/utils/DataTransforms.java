@@ -112,6 +112,74 @@ public class DataTransforms {
 		
 	}
 	
+	public static void randomCropWithLabel(int b,Tensor input,float[] img,float[] orglabel,float[] label,int labelSize,int ch,int cw,float jitter) {
+		
+		int ph = (int)(input.height * jitter);
+		int pw = (int)(input.width * jitter);
+		
+		int maxHeight = input.height + ph * 2 - ch;
+		
+		int maxWidth = input.width + pw * 2 - cw;
+		
+		int channel = input.channel;
+		int height = input.height;
+		int width = input.width;
+		
+		int rh = (int) (Math.random() * (maxHeight + 1));
+		
+		int rw = (int) (Math.random() * (maxWidth + 1));
+		
+		input.getByNumber(b, img);
+		
+		if(jitter > 0) {
+			for(int c = 0;c<channel;c++) {
+				for(int h = 0;h<ch;h++) {
+					for(int w = 0;w<cw;w++) {
+						int oh = h + rh;
+						int ow = w + rw;
+						int toh = oh - ph;
+						int tow = ow - pw;
+
+						if(oh < ph || ow < pw || toh >= height || tow >= width) {
+							input.data[b * channel * ch * cw + c * ch * cw + h * cw + w] = 0.0f;
+						}else {
+							input.data[b * channel * ch * cw + c * ch * cw + h * cw + w] = img[c * height * width + toh * width + tow];
+						}
+					}
+				}
+			}
+			
+
+			for(int c = 0;c<labelSize;c++) {
+				float x1 = orglabel[c * 5 + 1];
+				float y1 = orglabel[c * 5 + 2];
+				float x2 = orglabel[c * 5 + 3];
+				float y2 = orglabel[c * 5 + 4];
+				label[c * 5 + 1] = x1 + ph - rh;
+				label[c * 5 + 2] = y1 + pw - rw;
+				label[c * 5 + 3] = x2 + ph - rh;
+				label[c * 5 + 4] = y2 + pw - rw;
+				label[c * 5 + 1] = constrain(label[c * 5 + 1], 0, input.width - 1);
+				label[c * 5 + 2] = constrain(label[c * 5 + 2], 0, input.height - 1);
+				label[c * 5 + 3] = constrain(label[c * 5 + 3], 0, input.width - 1);
+				label[c * 5 + 4] = constrain(label[c * 5 + 4], 0, input.height - 1);
+			}
+
+		}else {
+			for(int c = 0;c<labelSize;c++) {
+				float x1 = orglabel[c * 5 + 1];
+				float y1 = orglabel[c * 5 + 2];
+				float x2 = orglabel[c * 5 + 3];
+				float y2 = orglabel[c * 5+ 4];
+				label[c * 5 + 1] = x1;
+				label[c * 5 + 2] = y1;
+				label[c * 5 + 3] = x2;
+				label[c * 5 + 4] = y2;
+			}
+		}
+		
+	}
+	
 	public void randomCropWithLabel(Tensor input,Tensor label,int ch,int cw,float jitter) {
 		
 		int ph = (int)(input.height * jitter);
@@ -207,6 +275,45 @@ public class DataTransforms {
 				}
 			}
 			
+		}
+
+	}
+	
+	public static void randomHorizontalFilpWithLabel(Tensor input,float[] img,int b,float[] orgLabel,float[] label,int labelSize) {
+		int channel = input.channel;
+		int height = input.height;
+		int width = input.width;
+		
+		if(Math.random() >= 0.5d) {
+			
+			input.getByNumber(b, img);
+			
+			for(int c = 0;c<input.channel;c++) {
+				for(int h = 0;h<input.height;h++) {
+					for(int w = 0;w<input.width / 2;w++) {
+						int ow = input.width - 1 - w;
+						input.data[b * channel * height * width + c * height * width + h * width + w] = img[c * height * width + h * width + ow];
+						input.data[b * channel * height * width + c * height * width + h * width + ow] = img[c * height * width + h * width + w];
+					}
+					if(input.width % 2 == 1) {
+						int w = width / 2;
+						input.data[b * channel * height * width + c * height * width + h * width + w] = img[c * height * width + h * width + w];
+					}
+				}
+			}
+
+			for(int c = 0;c<labelSize;c++) {
+				float y1 = orgLabel[c * 5 + 2];
+				float y2 = orgLabel[c * 5 + 4];
+				float hl = y2 - y1;
+				y1 = (height - y1) - hl;
+				y2 = (height - y2) + hl;
+				label[c * 5 + 2] = y1;
+				label[c * 5 + 4] = y2;
+				label[c * 5 + 2] = constrain(label[c * 5 + 2], 0, input.height - 1);
+				label[c * 5 + 4] = constrain(label[c * 5 + 4], 0, input.height - 1);
+			}
+
 		}
 
 	}
@@ -445,6 +552,12 @@ public class DataTransforms {
 			int c = (i/height/width)%channel;
 			input.data[i] = (input.data[i] - mean[c]) / std[c];
 		}
+	}
+	
+	public static float constrain(float a, float min, float max){
+	    if (a < min) return min;
+	    if (a > max) return max;
+	    return a;
 	}
 	
 	public static void main(String[] args) {

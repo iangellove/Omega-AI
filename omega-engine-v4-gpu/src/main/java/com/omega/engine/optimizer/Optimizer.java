@@ -580,10 +580,6 @@ public abstract class Optimizer {
 
 			testData.loadData(pageIndex, batchSize, input, label);
 			
-			input.hostToDevice();
-			
-			label.hostToDevice();
-			
 			Tensor output = this.network.predict(input);
 
 			/**

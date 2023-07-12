@@ -23,6 +23,21 @@ public class PrintUtils {
 	 * print matrix
 	 * @param data
 	 */
+	public static void printImage(float[] data,int w,int h) {
+		
+		for(int i = 0;i<h;i++) {
+			for(int j = 0;j<w;j++) {
+				System.out.print(data[i*w+j]+" ");
+			}
+			System.out.println("");
+		}
+		
+	}
+	
+	/**
+	 * print matrix
+	 * @param data
+	 */
 	public static void printImage(float[][] data) {
 		
 		for(int i = 0;i<data.length;i++) {

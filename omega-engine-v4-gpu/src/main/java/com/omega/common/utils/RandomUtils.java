@@ -29,7 +29,20 @@ public class RandomUtils {
 		return instance;
 	}
 	
+	public static int rand() {
+		return getInstance().nextInt();
+	}
+	
 	public static int randomInt(int min,int max) {
+		return min + (int)(Math.random() * (max-min));
+	}
+	
+	public static int uniformInt(int min,int max) {
+		if(max < min) {
+			int swap = min;
+	        min = max;
+	        max = swap;
+		}
 		return min + (int)(Math.random() * (max-min));
 	}
 	

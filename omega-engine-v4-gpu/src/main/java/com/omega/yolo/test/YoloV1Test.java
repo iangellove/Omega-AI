@@ -7,6 +7,7 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
@@ -27,6 +28,8 @@ import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.pooling.PoolingType;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.yolo.data.DataType;
+import com.omega.yolo.data.YoloDataTransform;
+import com.omega.yolo.data.YoloDataTransform2;
 import com.omega.yolo.utils.DetectionDataLoader;
 import com.omega.yolo.utils.LabelFileType;
 import com.omega.yolo.utils.LabelType;
@@ -441,10 +444,46 @@ public class YoloV1Test {
 		
 	}
 	
+	public void yolov1_show() {
+		
+		int im_w = 256;
+		int im_h = 256;
+		int classNum = 1;
+		int batchSize = 64;
+		
+		String trainPath = "H:\\voc\\banana-detection\\bananas_train\\images";
+		String trainLabelPath = "H:\\voc\\banana-detection\\bananas_train\\label.csv";
+		
+		String outputPath = "H:\\voc\\banana-detection\\show\\";
+		
+//		String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
+//		String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
+		
+		YoloDataTransform2 dt = new YoloDataTransform2(classNum, DataType.yolov1);
+		
+		DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.csv, im_w, im_h, classNum, batchSize, DataType.yolov1, dt);
+		
+		Tensor input = new Tensor(batchSize, 3, im_w, im_h);
+		
+		Tensor label = trainData.initLabelTensor();
+		
+		for(int i = 0;i<15;i++) {
+
+			int[] indexs = MatrixUtils.orderInt(batchSize, i);
+			
+			trainData.showImg(outputPath, indexs, input, label);
+			
+		}
+		
+	}
+	
 	public void yolov1_tiny() {
 		
 		try {
 			
+			int im_w = 256;
+			int im_h = 256;
+			int classNum = 1;
 			int batchSize = 64;
 			
 			String cfg_path = "H:/voc/train/yolov1-tiny.cfg";
@@ -455,13 +494,11 @@ public class YoloV1Test {
 			String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
 			String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
 			
-			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, 256, 256, 5, LabelType.csv, true);
+			YoloDataTransform2 dt = new YoloDataTransform2(classNum, DataType.yolov1);
 			
-			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, true);
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.csv, im_w, im_h, classNum, batchSize, DataType.yolov1, dt);
 			
-			DataSet trainSet = YoloLabelUtils.formatToYolo(trainData.getDataSet(), im_w, im_h);
-			
-			DataSet vailSet = YoloLabelUtils.formatToYolo(vailData.getDataSet(), im_w, im_h);
+			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.csv, im_w, im_h, classNum, batchSize, DataType.yolov1);
 			
 			System.out.println("load data finish.");
 			
@@ -477,18 +514,18 @@ public class YoloV1Test {
 
 			long start = System.currentTimeMillis();
 			
-			optimizer.trainObjectRecognition(trainSet, vailSet, true);
+			optimizer.trainObjectRecognition(trainData, vailData);
 
-			/**
-			 * 处理测试预测结果
-			 */
-			float[][][] draw_bbox = optimizer.showObjectRecognition(vailSet, batchSize);
-			
-			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, false);
-			
-			String outputPath = "H:\\voc\\banana-detection\\test\\";
-			
-			showImg(outputPath, testData.getDataSet(), 1, draw_bbox, false);
+//			/**
+//			 * 处理测试预测结果
+//			 */
+//			float[][][] draw_bbox = optimizer.showObjectRecognition(vailSet, batchSize);
+//			
+//			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, 100, 3, 256, 256, 5, LabelType.csv, false);
+//			
+//			String outputPath = "H:\\voc\\banana-detection\\test\\";
+//			
+//			showImg(outputPath, testData.getDataSet(), 1, draw_bbox, false);
 			
 			System.out.println(((System.currentTimeMillis() - start) / 1000) + "s.");
 			
@@ -630,7 +667,7 @@ public class YoloV1Test {
 			
 //			t.testYoloBBox();
 			
-//			t.showImg();
+//			t.yolov1_show();
 			
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -638,6 +675,7 @@ public class YoloV1Test {
 		} finally {
 			// TODO: handle finally clause
 			CUDAMemoryManager.free();
+			
 		}
 		
 	}

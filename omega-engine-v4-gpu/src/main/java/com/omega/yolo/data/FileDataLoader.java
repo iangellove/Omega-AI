@@ -5,6 +5,7 @@ import java.util.concurrent.RecursiveAction;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.task.ForkJobEngine;
+import com.omega.common.utils.JsonUtils;
 import com.omega.yolo.utils.YoloImageUtils;
 
 /**
@@ -92,7 +93,13 @@ public class FileDataLoader extends RecursiveAction {
 	private void load() {
 		
 		for (int i = getStart(); i <= getEnd(); i++) {
-			String filePath = getPath() + "/" + getNames()[getIndexs()[i]] + "." + extName;
+			
+			String filePath = getPath() + "/" + getNames()[getIndexs()[i]];
+			
+			if(!getNames()[getIndexs()[i]].contains(".")) {
+				filePath = getPath() + "/" + getNames()[getIndexs()[i]] + "." + extName;
+			}
+			
 			YoloImageUtils.loadImgDataToOrgTensor(filePath, input, i);
 //			System.out.println(filePath);
 		}

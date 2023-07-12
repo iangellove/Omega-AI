@@ -586,18 +586,34 @@ public class ImageUtils {
      * 指定压缩后长宽
      */
     public static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight,int[][] bbox) throws IOException {
-        Image resultingImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_AREA_AVERAGING);
-        BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
-        Graphics g = outputImage.getGraphics();
-        g.drawImage(resultingImage, 0, 0, null);
-        g.setColor(Color.RED);
-        for(int[] box:bbox) {
-        	int w = (box[3] - box[1]);
-        	int h = (box[4] - box[2]);
-        	g.drawRect(box[1], box[2], w, h);
-        }
+    	if(originalImage.getWidth() == targetWidth && originalImage.getHeight() == targetHeight) {
+    		Graphics g = originalImage.getGraphics();
+            g.drawImage(originalImage, 0, 0, null);
+            g.setColor(Color.RED);
+            if(bbox!=null) {
+            	for(int[] box:bbox) {
+                	int w = (box[3] - box[1]);
+                	int h = (box[4] - box[2]);
+                	g.drawRect(box[1], box[2], w, h);
+                }
+            }
+    		return originalImage;
+    	}else {
+    		Image resultingImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_AREA_AVERAGING);
+            BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+            Graphics g = outputImage.getGraphics();
+            g.drawImage(resultingImage, 0, 0, null);
+            g.setColor(Color.RED);
+            if(bbox!=null) {
+            	for(int[] box:bbox) {
+                	int w = (box[3] - box[1]);
+                	int h = (box[4] - box[2]);
+                	g.drawRect(box[1], box[2], w, h);
+                }
+            }
+            return outputImage;
+    	}
 
-        return outputImage;
     }
     
 	/**

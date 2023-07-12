@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +12,7 @@ import java.util.Map;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
+import com.omega.yolo.data.DataNormalization;
 import com.omega.yolo.data.DataTransform;
 import com.omega.yolo.data.DataType;
 import com.omega.yolo.data.FileDataLoader;
@@ -28,7 +28,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 	
 	private String labelPath;
 	
-	private Map<String,List<float[]>> orgLabelData;
+	private Map<String,float[]> orgLabelData;
 	
 	private boolean dataEnhance = false;
 	
@@ -52,6 +52,8 @@ public class DetectionDataLoader extends BaseDataLoader{
 	
 	private DataTransform dataTransform;
 	
+	private DataNormalization dataNormalization;
+	
 	public static float[] mean = new float[] {0.491f, 0.482f, 0.446f};
 	public static float[] std = new float[] {0.247f, 0.243f, 0.261f};
 	
@@ -64,8 +66,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 		this.dataType = dataType;
 		this.classNum = classNum;
 		this.batchSize = batchSize;
-		loadFileCount();
-		loadLabelData();
+		init();
 	}
 	
 	public DetectionDataLoader(String imgDirPath,String labelPath,LabelFileType labelFileType,int img_w,int img_h,int classNum,int batchSize,DataType dataType,int onceLabelSize) {
@@ -78,8 +79,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 		this.batchSize = batchSize;
 		this.dataType = dataType;
 		this.classNum = classNum;
-		loadFileCount();
-		loadLabelData();
+		init();
 	}
 	
 	public DetectionDataLoader(String imgDirPath,String labelPath,LabelFileType labelFileType,int img_w,int img_h,int classNum,int batchSize,DataType dataType,DataTransform dataTransform) {
@@ -95,8 +95,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 		this.dataType = dataType;
 		this.classNum = classNum;
 		this.batchSize = batchSize;
-		loadFileCount();
-		loadLabelData();
+		init();
 	}
 	
 	public DetectionDataLoader(String imgDirPath,String labelPath,LabelFileType labelFileType,int img_w,int img_h,int classNum,int batchSize,DataType dataType,int onceLabelSize,DataTransform dataTransform) {
@@ -113,8 +112,17 @@ public class DetectionDataLoader extends BaseDataLoader{
 		this.dataType = dataType;
 		this.classNum = classNum;
 		this.batchSize = batchSize;
+		init();
+	}
+	
+	public void init() {
 		loadFileCount();
 		loadLabelData();
+		initDataNormalization();
+	}
+	
+	public void initDataNormalization() {
+		this.dataNormalization = new DataNormalization(mean, std);
 	}
 	
 	public void loadFileCount() {
@@ -126,7 +134,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 			if(file.exists() && file.isDirectory()) {
 				String[] filenames = file.list();
 				this.number = filenames.length;
-				this.orgLabelData = new HashMap<String, List<float[]>>(number);
+				this.orgLabelData = new HashMap<String, float[]>(number);
 				this.idxSet = new String[number];
 				this.extName = filenames[0].split("\\.")[1];
 			}
@@ -153,6 +161,14 @@ public class DetectionDataLoader extends BaseDataLoader{
 		
 	}
 	
+	public void showImg(String outputPath,int[] indexs,Tensor input,Tensor label) {
+		
+		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, dataEnhance);
+		
+		dataTransform.showTransform(outputPath, input, label, idxSet, indexs, orgLabelData);
+		
+	}
+	
 	public void loadLabelDataForCSV() {
 		
 		try (FileInputStream fin = new FileInputStream(labelPath);
@@ -165,8 +181,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 	        	if(idx > 0) {
 		        	String[] list = strTmp.split(",");
 		        	List<float[]> once = new ArrayList<float[]>();
-		        	this.orgLabelData.put(list[0], once);
-		        	this.idxSet[idx] = list[0];
+		        	this.idxSet[idx-1] = list[0];
 		        	int page = (list.length - 1) / this.onceLabelSize;
 		        	for(int i = 0;i<page;i++) {
 		        		float[] bbox = new float[this.onceLabelSize];
@@ -175,6 +190,16 @@ public class DetectionDataLoader extends BaseDataLoader{
 		        		}
 		        		once.add(bbox);
 		        	}
+		        	/**
+		        	 * 组装bbox
+		        	 */
+		        	float[] r = new float[once.size() * 5];
+		        	for(int i = 0;i<once.size();i++) {
+		        		for(int j = 0;j<once.get(i).length;j++) {
+		        			r[i * 5 + j] = once.get(i)[j];
+		        		}
+		        	}
+		        	this.orgLabelData.put(list[0], r);
 	        	}
 	        	idx++;
 	        }
@@ -205,7 +230,16 @@ public class DetectionDataLoader extends BaseDataLoader{
 	        		}
 	        		once.add(bbox);
 	        	}
-	        	this.orgLabelData.put(list[0], once);
+	        	/**
+	        	 * 组装bbox
+	        	 */
+	        	float[] r = new float[once.size() * 5];
+	        	for(int i = 0;i<once.size();i++) {
+	        		for(int j = 0;j<once.get(i).length;j++) {
+	        			r[i * 5 + j] = once.get(i)[j];
+	        		}
+	        	}
+	        	this.orgLabelData.put(list[0], r);
 	        	this.idxSet[idx] = list[0];
 	        	idx++;
 	        }
@@ -233,11 +267,22 @@ public class DetectionDataLoader extends BaseDataLoader{
 		 * 根据数据类型加载标签数据
 		 */
 		loadLabelToDataType(indexs, label, dataType);
-		
 		/**
 		 * 加载input数据
 		 */
-		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, true);
+		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false);
+		
+		/**
+		 * 归一化input值
+		 * val = (org - mean) / std
+		 */
+//		normalization(input);
+		
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+		label.hostToDevice();
 		
 	}
 
@@ -257,20 +302,41 @@ public class DetectionDataLoader extends BaseDataLoader{
 		 * 加载input数据
 		 */
 		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, dataEnhance);
-		
 		/**
 		 * 数据增强
 		 */
-		if(dataEnhance) {
-			dataTransform.transform(input, input, mean, std);
+		if(dataTransform != null) {
+
+			dataTransform.transform(input, label, idxSet, indexs, orgLabelData);
+			
+		}else {
+			/**
+			 * 根据数据类型加载标签数据
+			 */
+			loadLabelToDataType(indexs, label, dataType);
 		}
-		
 		/**
-		 * 根据数据类型加载标签数据
+		 * 归一化input值
+		 * val = (org - mean) / std
 		 */
-		loadLabelToDataType(indexs, label, dataType);
+//		normalization(input);
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+		label.hostToDevice();
+//		dataNormalization.normalization(input);
 //		System.out.println((System.currentTimeMillis() - start));
 //		System.out.println(JsonUtils.toJson(input.data));
+	}
+	
+	public void normalization(Tensor input) {
+		
+		for(int i = 0;i<input.dataLength;i++) {
+			int f = (i / input.width / input.height)%input.channel;
+			input.data[i] = (input.data[i] - mean[f]) / std[f];
+		}
+		
 	}
 	
 	public void fileDataLoader(int[] indexs,Tensor input) {
@@ -306,18 +372,22 @@ public class DetectionDataLoader extends BaseDataLoader{
 			
 			String key = idxSet[indexs[b]];
 			
-			List<float[]> list = orgLabelData.get(key);
+			float[] box = orgLabelData.get(key);
+
+			for(int n = 0;n<box.length / 5;n++) {
 			
-			for(int n = 0;n<list.size();n++) {
-			
-				float[] box = list.get(n);
+				int clazz = (int) box[n * 5 + 0] + 1;
 				
-				int clazz = (int) box[0] + 1;
+				float x1 = box[n * 5 + 1] / img_w;
+				float y1 = box[n * 5 + 2] / img_h;
+				float x2 = box[n * 5 + 3] / img_w;
+				float y2 = box[n * 5 + 4] / img_h;
 				
-				float cx = box[1] / img_w;
-				float cy = box[2] / img_h;
-				float w = box[3] / img_w;
-				float h = box[4] / img_h;
+				float cx = (x1 + x2) / 2;
+				float cy = (y1 + y2) / 2;
+				
+				float w = (x2 - x1);
+				float h = (y2 - y1);
 				
 				int gridx = (int)(cx * stride);
 				int gridy = (int)(cy * stride);
@@ -356,24 +426,22 @@ public class DetectionDataLoader extends BaseDataLoader{
 
 			String key = idxSet[indexs[i]];
 			
-			List<float[]> list = orgLabelData.get(key);
+			float[] box = orgLabelData.get(key);
 			
-			for(int c = 0;c<list.size();c++) {
+			for(int c = 0;c<box.length/5;c++) {
 				
-				float[] box = list.get(c);
+				float clazz = box[c * 5 + 0];
 				
-				float clazz = box[0];
+				float x1 = box[c * 5 + 1] / img_w;
+				float y1 = box[c * 5 + 2] / img_h;
+				float x2 = box[c * 5 + 3] / img_w;
+				float y2 = box[c * 5 + 4] / img_h;
 				
-				float x1 = box[1];
-				float y1 = box[2];
-				float x2 = box[3];
-				float y2 = box[4];
+				float cx = (x1 + x2) / 2;
+				float cy = (y1 + y2) / 2;
 				
-				float cx = (x1 + x2) / (2 * img_w);
-				float cy = (y1 + y2) / (2 * img_h);
-				
-				float w = (x2 - x1) / img_w;
-				float h = (y2 - y1) / img_h;
+				float w = (x2 - x1);
+				float h = (y2 - y1);
 				
 				label.data[i * bbox_num * 5 + c * 5 + 0] = cx;
 				label.data[i * bbox_num * 5 + c * 5 + 1] = cy;
@@ -391,9 +459,9 @@ public class DetectionDataLoader extends BaseDataLoader{
 		
 		switch (dataType) {
 		case yolov1:
-			return new Tensor(batchSize, 1, 1, (5 + classNum) * stride * stride);
+			return new Tensor(batchSize, 1, 1, (5 + classNum) * stride * stride, true);
 		case yolov3:
-			return new Tensor(batchSize, 1, 1, 5 * 90);
+			return new Tensor(batchSize, 1, 1, 5 * 90, true);
 		}
 		
 		return null;

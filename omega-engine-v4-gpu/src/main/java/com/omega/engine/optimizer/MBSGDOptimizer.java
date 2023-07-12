@@ -948,7 +948,7 @@ public class MBSGDOptimizer extends Optimizer {
 			
 			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
 			
-			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize);
+			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
 			
 			Tensor vail_input = new Tensor(batchSize, validata.channel, validata.height, validata.width, true);
 			
@@ -1064,128 +1064,6 @@ public class MBSGDOptimizer extends Optimizer {
 
 	}
 	
-	public void trainObjectRecognition(BaseDataLoader trainingData,BaseDataLoader valiData,boolean dataEnhance) {
-		// TODO Auto-generated method stub
-
-		try {
-			
-			CUDAModules.initCUDAFunctions();
-			
-			this.dataSize = trainingData.number;
-			
-			Yolo network = (Yolo) this.network;
-
-			if(isWarmUp()) {
-				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
-			}
-			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
-			
-			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
-			
-			for(int i = 0;i<this.trainTime;i++) {
-				
-				if(this.trainIndex >= this.minTrainTime) {
-					break;
-				}
-
-				this.network.RUN_MODEL = RunModel.TRAIN;
-				
-				this.trainIndex = i + 1;
-				
-				int[][] indexs = trainingData.shuffle();
-				
-				/**
-				 * 遍历整个训练集
-				 */
-				for(int it = 0;it<indexs.length;it++) {
-					
-					long start = System.nanoTime();
-
-					this.loss.clear();
-
-					this.lossDiff.clear();
-					
-					trainingData.loadData(indexs[it], input, label);
-					
-					/**
-					 * 数据增强
-					 */
-					if(dataEnhance) {
-						dataEnhanceInstance().transforms(input, label);
-						YoloLabelUtils.formatToYolo(label, input.height, input.width, network.getClass_num());
-					}
-
-					input.hostToDevice();
-					
-					label.hostToDevice();
-					
-					/**
-					 * forward
-					 */
-					Tensor output = network.forward(input);
-					
-					/**
-					 * loss
-					 */
-					this.network.loss(output, label);
-					
-					/**
-					 * loss diff
-					 */
-					this.lossDiff = network.lossDiff(output, label);
-					
-					/**
-					 * back
-					 */
-					network.back(lossDiff);
-					
-					/**
-					 * update
-					 */
-					this.network.update();
-					
-					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
-					
-					System.out.println(msg);
-
-					this.batchIndex++;
-				}
-				
-				/**
-				 * update learning rate
-				 */
-				this.updateLR();
-				
-				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 100 == 0) {
-					
-					this.network.learnRate = this.network.learnRate * 0.5f;
-					
-				}
-				
-				if(this.trainIndex % 50 == 0) {
-					
-					System.out.println("----------------testing start----------------");
-					
-					this.testObjectRecognitionOutputs(valiData, input, label, this.batchSize);
-					
-					System.out.println("----------------testing finish---------------");
-					
-				}
-				
-			}
-			
-			/**
-			 * 停止训练
-			 */
-			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-
-	}
-	
 	public void trainObjectRecognition(DetectionDataLoader trainingData,DetectionDataLoader valiData) {
 		// TODO Auto-generated method stub
 
@@ -1228,11 +1106,10 @@ public class MBSGDOptimizer extends Optimizer {
 
 					this.lossDiff.clear();
 					
+					/**
+					 * 读取训练数据
+					 */
 					trainingData.loadData(indexs[it], input, label);
-
-					input.hostToDevice();
-					
-					label.hostToDevice();
 					
 					/**
 					 * forward
@@ -1271,13 +1148,13 @@ public class MBSGDOptimizer extends Optimizer {
 				 */
 				this.updateLR();
 				
-				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 100 == 0) {
+				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
 					
 					this.network.learnRate = this.network.learnRate * 0.5f;
 					
 				}
 				
-				if(this.trainIndex % 50 == 0) {
+				if(this.trainIndex % 100 == 0) {
 					
 					System.out.println("----------------testing start----------------");
 					

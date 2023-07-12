@@ -32,7 +32,7 @@ public class YoloLabelUtils {
 		/**
 		 * 随机裁剪
 		 */
-		getTransformsUtils(classNum, bboxSize).randomCropWithLabel(input, label, input.width, input.height, 0.2f);
+		getTransformsUtils(classNum, bboxSize).randomCropWithLabel(input, label, input.height, input.width, 0.2f);
 		
 		/**
 		 * 随机翻转

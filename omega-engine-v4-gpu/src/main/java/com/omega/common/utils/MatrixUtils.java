@@ -121,6 +121,26 @@ public class MatrixUtils {
 	 *
 	 * @throws
 	 */
+	public static int[] orderInt(int size,int tmp) {
+		int[] temp = new int[size];
+		for(int i = 0;i<size;i++) {
+			temp[i] = i + tmp;
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static float[] order(int size,int tmp,int b) {
 		float[] temp = new float[size];
 		for(int i = 0;i<size;i++) {
