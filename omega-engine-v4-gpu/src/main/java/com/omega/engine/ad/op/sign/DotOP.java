@@ -21,6 +21,7 @@ public class DotOP extends SignOP {
 	public static DotOP getInstance() {
 		if(op == null) {
 			op = new DotOP();
+			op.setOpType(opt);
 		}
 		return op;
 	}
@@ -32,7 +33,13 @@ public class DotOP extends SignOP {
 	}
 	
 	@Override
-	public void backward(float[] delta, List<Tensor> inputs) {
+	public Tensor forward(Tensor self, float scalar) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void backward(float[] delta, List<Tensor> inputs,float scalar) {
 		// TODO Auto-generated method stub
 
 	}

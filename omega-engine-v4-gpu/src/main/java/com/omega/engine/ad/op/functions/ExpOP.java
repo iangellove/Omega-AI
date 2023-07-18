@@ -1,4 +1,4 @@
-package com.omega.engine.ad.op.sign;
+package com.omega.engine.ad.op.functions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,31 +8,32 @@ import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.ad.Graph;
 import com.omega.engine.ad.Tape;
+import com.omega.engine.ad.op.FunctionOP;
 import com.omega.engine.ad.op.OPType;
-import com.omega.engine.ad.op.SignOP;
 
-public class SinOP extends SignOP{
+public class ExpOP extends FunctionOP {
 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -7252060328891832266L;
+	private static final long serialVersionUID = -3857343378511617891L;
+
+	public static ExpOP op = null;
 	
-	public static SinOP op = null;
+	public static final OPType opt = OPType.exp;
 	
-	public static final OPType opt = OPType.sin;
-	
-	public static SinOP getInstance() {
+	public static ExpOP getInstance() {
 		if(op == null) {
-			op = new SinOP();
+			op = new ExpOP();
+			op.setOpType(opt);
 		}
 		return op;
 	}
 	
 	@Override
-	public Tensor forward(Tensor self, Tensor other) {
+	public Tensor forward(Tensor self) {
 		// TODO Auto-generated method stub
-		Tensor y = new Tensor(self.number, self.channel, self.height, self.width, MatrixOperation.sin(self.data));
+		Tensor y = new Tensor(self.number, self.channel, self.height, self.width, MatrixOperation.exp(self.data));
 		if(self.isRequiresGrad()) {
 			y.setRequiresGrad(true);
 		}
@@ -46,17 +47,16 @@ public class SinOP extends SignOP{
 	}
 
 	@Override
-	public void backward(float[] delta, List<Tensor> inputs) {
+	public void backward(float[] delta, List<Tensor> inputs,float scalar) {
 		// TODO Auto-generated method stub
-		System.out.println("sin-delta:"+JsonUtils.toJson(delta));
 		if(inputs.get(0).isRequiresGrad()) {
-			float[] dy_dself = MatrixOperation.cos(inputs.get(0).data);
+			float[] dy_dself = MatrixOperation.exp(inputs.get(0).data);
 			if(inputs.get(0).getGrad() != null) {
 				inputs.get(0).setGrad(MatrixOperation.add(inputs.get(0).getGrad(), MatrixOperation.multiplication(delta, dy_dself)));
 			}else {
 				inputs.get(0).setGrad(MatrixOperation.multiplication(delta, dy_dself));
 			}
-			System.out.println("sin--d1:"+JsonUtils.toJson(inputs.get(0).getGrad()));
+			System.out.println("exp--d1:"+JsonUtils.toJson(inputs.get(0).getGrad()));
 		}
 	}
 

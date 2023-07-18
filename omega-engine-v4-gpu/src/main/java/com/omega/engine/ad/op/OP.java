@@ -14,7 +14,7 @@ public abstract class OP implements Serializable {
 	
 	private OPType opType;
 	
-	public abstract void backward(float[] delta,List<Tensor> inputs);
+	public abstract void backward(float[] delta,List<Tensor> inputs,float scalar);
 	
 	public OPType getOpType() {
 		return opType;

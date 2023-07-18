@@ -510,7 +510,7 @@ public class YoloV1Test {
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 3000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
 			long start = System.currentTimeMillis();
 			

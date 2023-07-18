@@ -5,9 +5,12 @@ public enum OPType {
 	subtraction,
 	multiplication,
 	division,
+	scalarDivision,
 	log,
 	sin,
 	cos,
 	exp,
-	dot
+	dot,
+	get,
+	pow
 }

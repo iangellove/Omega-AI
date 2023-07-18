@@ -11,4 +11,10 @@ public abstract class SignOP extends OP{
 	
 	public abstract Tensor forward(Tensor self, Tensor other);
 	
+//	public abstract Tensor forward(Tensor self, Tensor other,int[] position);
+	
+	public abstract Tensor forward(Tensor self, float scalar);
+	
+//	public abstract Tensor forward(Tensor self, float scalar,int[] position);
+	
 }

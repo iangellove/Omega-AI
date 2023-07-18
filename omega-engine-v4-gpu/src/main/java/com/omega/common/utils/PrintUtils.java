@@ -1,11 +1,55 @@
 package com.omega.common.utils;
 
+import com.omega.common.data.Tensor;
+
 /**
  * PrintUtils
  * @author Administrator
  *
  */
 public class PrintUtils {
+	
+	/**
+	 * print matrix
+	 * @param data
+	 */
+	public static void printImage(Tensor data) {
+		
+		for(int n = 0;n<data.number;n++) {
+			for(int c = 0;c<data.channel;c++) {
+				for(int i = 0;i<data.height;i++) {
+					for(int j = 0;j<data.width;j++) {
+						System.out.print(data.data[n * data.getOnceSize() + c * data.getHeight() * data.getWidth() + i * data.getWidth() + j]+" ");
+					}
+					System.out.println("");
+				}
+				System.out.println("----------------");
+			}
+			System.out.println("====================");
+		}
+		
+		
+		
+	}
+	
+	public static void printImage(float[] data,int number,int channel,int height,int width) {
+		int onceSize = channel * height * width;
+		for(int n = 0;n<number;n++) {
+			for(int c = 0;c<channel;c++) {
+				for(int i = 0;i<height;i++) {
+					for(int j = 0;j<width;j++) {
+						System.out.print(data[n * onceSize + c * height * width + i * width + j]+" ");
+					}
+					System.out.println("");
+				}
+				System.out.println("----------------");
+			}
+			System.out.println("====================");
+		}
+		
+		
+		
+	}
 	
 	/**
 	 * print matrix

@@ -302,13 +302,12 @@ public class DetectionDataLoader extends BaseDataLoader{
 		 * 加载input数据
 		 */
 		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, dataEnhance);
-		/**
-		 * 数据增强
-		 */
+		
 		if(dataTransform != null) {
-
+			/**
+			 * 数据增强
+			 */
 			dataTransform.transform(input, label, idxSet, indexs, orgLabelData);
-			
 		}else {
 			/**
 			 * 根据数据类型加载标签数据

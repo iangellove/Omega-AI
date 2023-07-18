@@ -11,6 +11,12 @@ import com.omega.engine.ad.Tape;
 import com.omega.engine.ad.op.OPType;
 import com.omega.engine.ad.op.SignOP;
 
+/**
+ * f(a,b) = a * b;
+ * da,db = g*b,a*g
+ * @author Administrator
+ *
+ */
 public class MulOP extends SignOP{
 
 	/**
@@ -25,6 +31,7 @@ public class MulOP extends SignOP{
 	public static MulOP getInstance() {
 		if(op == null) {
 			op = new MulOP();
+			op.setOpType(opt);
 		}
 		return op;
 	}
@@ -47,27 +54,50 @@ public class MulOP extends SignOP{
 	}
 
 	@Override
-	public void backward(float[] delta, List<Tensor> inputs) {
+	public Tensor forward(Tensor self, float scalar) {
+		// TODO Auto-generated method stub
+		Tensor y = new Tensor(self.number, self.channel, self.height, self.width, MatrixOperation.multiplication(self.data, scalar));
+		if(self.isRequiresGrad()) {
+			y.setRequiresGrad(true);
+		}
+		List<Tensor> inputs = new ArrayList<Tensor>(1);
+		inputs.add(self);
+		List<Tensor> outputs = new ArrayList<Tensor>(1);
+		outputs.add(y);
+		Tape tape = new Tape(inputs, outputs, this, scalar);
+		Graph.add(tape);
+		return y;
+	}
+	
+	@Override
+	public void backward(float[] delta, List<Tensor> inputs,float scalar) {
 		// TODO Auto-generated method stub
 		System.out.println("mul-delta:"+JsonUtils.toJson(delta));
 		if(inputs.get(0).isRequiresGrad()) {
-			float[] dy_dself = inputs.get(1).data;
-			if(inputs.get(0).getGrad() != null) {
-				inputs.get(0).setGrad(MatrixOperation.add(inputs.get(0).getGrad(), MatrixOperation.multiplication(delta, dy_dself)));
+			if(inputs.size() > 1) {
+				if(inputs.get(0).getGrad() != null) {
+					inputs.get(0).setGrad(MatrixOperation.add(inputs.get(0).getGrad(), MatrixOperation.multiplication(delta, inputs.get(1).data)));
+				}else {
+					inputs.get(0).setGrad(MatrixOperation.multiplication(delta, inputs.get(1).data));
+				}
 			}else {
-				inputs.get(0).setGrad(MatrixOperation.multiplication(delta, dy_dself));
+				if(inputs.get(0).getGrad() != null) {
+					inputs.get(0).setGrad(MatrixOperation.add(inputs.get(0).getGrad(), MatrixOperation.multiplication(delta, scalar)));
+				}else {
+					inputs.get(0).setGrad(MatrixOperation.multiplication(delta, scalar));
+				}
 			}
 		}
 		System.out.println("mul--d1:"+JsonUtils.toJson(inputs.get(0).getGrad()));
-		if(inputs.get(1).isRequiresGrad()) {
+		if(inputs.size() > 1 && inputs.get(1).isRequiresGrad()) {
 			float[] dy_dother = inputs.get(0).data;
 			if(inputs.get(1).getGrad() != null) {
 				inputs.get(1).setGrad(MatrixOperation.add(inputs.get(1).getGrad(), MatrixOperation.multiplication(delta, dy_dother)));
 			}else {
 				inputs.get(1).setGrad(MatrixOperation.multiplication(delta, dy_dother));
 			}
+			System.out.println("mul--d2:"+JsonUtils.toJson(inputs.get(1).getGrad()));
 		}
-		System.out.println("mul--d2:"+JsonUtils.toJson(inputs.get(1).getGrad()));
 	}
 
 }

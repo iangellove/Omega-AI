@@ -25,6 +25,7 @@ public class SubOP extends SignOP{
 	public static SubOP getInstance() {
 		if(op == null) {
 			op = new SubOP();
+			op.setOpType(opt);
 		}
 		return op;
 	}
@@ -47,7 +48,23 @@ public class SubOP extends SignOP{
 	}
 
 	@Override
-	public void backward(float[] delta, List<Tensor> inputs) {
+	public Tensor forward(Tensor self, float scalar) {
+		// TODO Auto-generated method stub
+		Tensor y = new Tensor(self.number, self.channel, self.height, self.width, MatrixOperation.subtraction(self.data, scalar));
+		if(self.isRequiresGrad()) {
+			y.setRequiresGrad(true);
+		}
+		List<Tensor> inputs = new ArrayList<Tensor>(1);
+		inputs.add(self);
+		List<Tensor> outputs = new ArrayList<Tensor>(1);
+		outputs.add(y);
+		Tape tape = new Tape(inputs, outputs, this, scalar);
+		Graph.add(tape);
+		return y;
+	}
+
+	@Override
+	public void backward(float[] delta, List<Tensor> inputs,float scalar) {
 		// TODO Auto-generated method stub
 		System.out.println("sub-delta:"+JsonUtils.toJson(delta));
 		if(inputs.get(0).getGrad() != null) {
@@ -56,12 +73,14 @@ public class SubOP extends SignOP{
 			inputs.get(0).setGrad(MatrixOperation.multiplication(delta, 1.0f));
 		}
 		System.out.println("sub--d1:"+JsonUtils.toJson(inputs.get(0).getGrad()));
-		if(inputs.get(1).getGrad() != null) {
-			inputs.get(1).setGrad(MatrixOperation.add(inputs.get(1).getGrad(), MatrixOperation.multiplication(delta, -1.0f)));
-		}else {
-			inputs.get(1).setGrad(MatrixOperation.multiplication(delta, -1.0f));
-		}
-		System.out.println("sub--d2:"+JsonUtils.toJson(inputs.get(1).getGrad()));
+		if(inputs.size() > 1 && inputs.get(1).isRequiresGrad()) {
+			if(inputs.get(1).getGrad() != null) {
+				inputs.get(1).setGrad(MatrixOperation.add(inputs.get(1).getGrad(), MatrixOperation.multiplication(delta, -1.0f)));
+			}else {
+				inputs.get(1).setGrad(MatrixOperation.multiplication(delta, -1.0f));
+			}
+			System.out.println("sub--d2:"+JsonUtils.toJson(inputs.get(1).getGrad()));
+		}	
 	}
 
 }

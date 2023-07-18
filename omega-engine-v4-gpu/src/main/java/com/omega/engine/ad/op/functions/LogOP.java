@@ -1,4 +1,4 @@
-package com.omega.engine.ad.op.sign;
+package com.omega.engine.ad.op.functions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,10 +8,10 @@ import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.ad.Graph;
 import com.omega.engine.ad.Tape;
+import com.omega.engine.ad.op.FunctionOP;
 import com.omega.engine.ad.op.OPType;
-import com.omega.engine.ad.op.SignOP;
 
-public class LogOP extends SignOP{
+public class LogOP extends FunctionOP{
 
 	/**
 	 * 
@@ -25,12 +25,13 @@ public class LogOP extends SignOP{
 	public static LogOP getInstance() {
 		if(op == null) {
 			op = new LogOP();
+			op.setOpType(opt);
 		}
 		return op;
 	}
 	
 	@Override
-	public Tensor forward(Tensor self, Tensor other) {
+	public Tensor forward(Tensor self) {
 		// TODO Auto-generated method stub
 		Tensor y = new Tensor(self.number, self.channel, self.height, self.width, MatrixOperation.log(self.data));
 		if(self.isRequiresGrad()) {
@@ -46,7 +47,7 @@ public class LogOP extends SignOP{
 	}
 
 	@Override
-	public void backward(float[] delta, List<Tensor> inputs) {
+	public void backward(float[] delta, List<Tensor> inputs,float scalar) {
 		// TODO Auto-generated method stub
 		System.out.println("log-delta:"+JsonUtils.toJson(delta));
 		if(inputs.get(0).isRequiresGrad()) {

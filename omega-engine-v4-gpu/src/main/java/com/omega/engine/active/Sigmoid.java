@@ -179,7 +179,7 @@ public class Sigmoid extends ActiveFunction {
 
 	public static void main(String[] args) {
 		Sigmoid function = new Sigmoid();
-		float[] x = new float[] {-0.033103351676417064f,1.0112810799899228f,0.0f,0.12f};
+		float[] x = new float[] {-0.033103351676417064f,1.0112810799899228f,0.0f,0.6f};
 		function.input = x;
 		float error = function.gradientCheck(x);
 		System.out.println("error:"+error);

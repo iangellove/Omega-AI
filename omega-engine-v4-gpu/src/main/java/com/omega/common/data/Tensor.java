@@ -331,6 +331,29 @@ public class Tensor implements Serializable{
 		this.grad = grad;
 	}
 	
+	public void setGrad(float[] grad,int[] position) {
+		
+		if(this.grad == null) {
+			this.grad = new float[this.dataLength];
+		}
+		
+		int dims = position[0];
+		int start = position[1];
+		int count = position[2];
+
+		switch (dims) {
+		case 0:
+			setGradByNumber(grad, start, count);
+			break;
+		case 1:
+			setGradByChannel(grad, start, count);
+			break;
+		default:
+			break;
+		}
+		
+	}
+	
 	public void zeroGrad() {
 		if(this.grad!=null) {
 			this.grad = new float[this.grad.length];
@@ -345,7 +368,15 @@ public class Tensor implements Serializable{
 		return Graph.OP(OPType.add, this, y);
 	}
 	
+	public Tensor add(float y) {
+		return Graph.OP(OPType.add, this, y);
+	}
+	
 	public Tensor sub(Tensor y) {
+		return Graph.OP(OPType.subtraction, this, y);
+	}
+	
+	public Tensor sub(float y) {
 		return Graph.OP(OPType.subtraction, this, y);
 	}
 	
@@ -353,12 +384,54 @@ public class Tensor implements Serializable{
 		return Graph.OP(OPType.multiplication, this, y);
 	}
 	
+	public Tensor mul(float scalar) {
+		return Graph.OP(OPType.multiplication, this, scalar);
+	}
+	
+	public Tensor div(Tensor y) {
+		return Graph.OP(OPType.division, this, y);
+	}
+	
+	public Tensor div(float scalar) {
+		return Graph.OP(OPType.division, this, scalar);
+	}
+	
+	public Tensor scalarDiv(float scalar) {
+		return Graph.OP(OPType.scalarDivision, this, scalar);
+	}
+	
 	public Tensor log() {
 		return Graph.OP(OPType.log, this);
 	}
 	
+	public Tensor pow() {
+		return Graph.OP(OPType.pow, this);
+	}
+	
 	public Tensor sin() {
 		return Graph.OP(OPType.sin, this);
+	}
+	
+	public Tensor exp() {
+		return Graph.OP(OPType.exp, this);
+	}
+	
+	public Tensor get(int[] position) {
+		return Graph.OP(OPType.get, this, position);
+	}
+	
+	public void setGradByNumber(float[] data,int start,int count) {
+		assert number >= (start + count - 1);
+		System.arraycopy(data, 0, this.grad, start * channel * height * width, data.length);
+	}
+	
+	public void setGradByChannel(float[] data,int start,int count) {
+		assert channel >= (start + count - 1);
+		int size = height * width;
+		for(int n = 0;n<number;n++) {
+			int startIndex = n * channel * size + start * size;
+			System.arraycopy(data, n * count * size, this.grad, startIndex, count * size);
+		}
 	}
 	
 }

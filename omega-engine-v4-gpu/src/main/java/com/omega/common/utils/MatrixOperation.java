@@ -137,6 +137,48 @@ public class MatrixOperation {
 		return temp;
 	}
 	
+	public static float[] addToY(float[] x,float b,int n,int c,int h,int w,int[] position) {
+		int dims = position[0];
+		int start= position[1];
+		int count = position[2];
+		switch (dims) {
+		case 0:
+			return addByNumberToY(x, b, n, c, h, w, start, count);
+		case 1:
+			return addByChannelToY(x, b, n, c, h, w, start, count);
+		}
+		return null;
+	}
+	
+	public static float[] addByNumberToY(float[] x,float b,int n,int c,int h,int w,int start,int count) {
+		int size = c * h * w;
+		float[] y = MatrixUtils.clone(x);
+		for(int i = 0;i<count;i++) {
+			int tn = i / size + start;
+			int tc = (i / h / w) % c;
+			int th = i / w;
+			int tw = i % h;
+			int index = tn * size + tc * h * w + th * w + tw;
+			y[index] = x[index] + b;
+		}
+		return y;
+	}
+	
+	public static float[] addByChannelToY(float[] x,float b,int n,int c,int h,int w,int start,int count) {
+		int size = c * h * w;
+		int bc = count / n / h / w;
+		float[] y = MatrixUtils.clone(x);
+		for(int i = 0;i<count;i++) {
+			int tn = i / size;
+			int tc = (i / h / w) % bc + start;
+			int th = i / w;
+			int tw = i % h;
+			int index = tn * size + tc * h * w + th * w + tw;
+			y[index] = x[index] + b;
+		}
+		return y;
+	}
+	
 	/**
 	 * 
 	 * @Title: add
@@ -243,6 +285,98 @@ public class MatrixOperation {
 			temp[i] = x[i] + b[i];
 		}
 		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: add
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static void add(float[] x,float[] b,int n,int c,int h,int w,int[] position) {
+		int dims = position[0];
+		int start= position[1];
+		switch (dims) {
+		case 0:
+			addByNumber(x, b, n, c, h, w, start);
+			break;
+		case 1:
+			addByChannel(x, b, n, c, h, w, start);
+			break;
+		}
+	}
+	
+	public static void addByNumber(float[] x,float[] b,int n,int c,int h,int w,int start) {
+		int size = c * h * w;
+		for(int i = 0;i<b.length;i++) {
+			int tn = i / size + start;
+			int tc = (i / h / w) % c;
+			int th = (i / w) % h;
+			int tw = i % h;
+			int index = tn * size + tc * h * w + th * w + tw;
+			x[index] = x[index] + b[i];
+		}
+	}
+	
+	public static void addByChannel(float[] x,float[] b,int n,int c,int h,int w,int start) {
+		int bc = b.length / n / h / w;
+		int size = bc * h * w;
+		for(int i = 0;i<b.length;i++) {
+			int tn = i / size;
+			int tc = (i / h / w) % bc + start;
+			int th = (i / w) % h;
+			int tw = i % h;
+			int index = tn * c * h * w + tc * h * w + th * w + tw;
+			x[index] = x[index] + b[i];
+		}
+	}
+	
+	public static float[] addToY(float[] x,float[] b,int n,int c,int h,int w,int[] position) {
+		int dims = position[0];
+		int start= position[1];
+		switch (dims) {
+		case 0:
+			return addByNumberToY(x, b, n, c, h, w, start);
+		case 1:
+			return addByChannelToY(x, b, n, c, h, w, start);
+		}
+		return null;
+	}
+	
+	public static float[] addByNumberToY(float[] x,float[] b,int n,int c,int h,int w,int start) {
+		int size = c * h * w;
+		float[] y = MatrixUtils.clone(x);
+		for(int i = 0;i<b.length;i++) {
+			int tn = i / size + start;
+			int tc = (i / h / w) % c;
+			int th = i / w;
+			int tw = i % h;
+			int index = tn * size + tc * h * w + th * w + tw;
+			y[index] = x[index] + b[i];
+		}
+		return y;
+	}
+	
+	public static float[] addByChannelToY(float[] x,float[] b,int n,int c,int h,int w,int start) {
+		int size = c * h * w;
+		int bc = b.length / n / h / w;
+		float[] y = MatrixUtils.clone(x);
+		for(int i = 0;i<b.length;i++) {
+			int tn = i / size;
+			int tc = (i / h / w) % bc + start;
+			int th = i / w;
+			int tw = i % h;
+			int index = tn * size + tc * h * w + th * w + tw;
+			y[index] = x[index] + b[i];
+		}
+		return y;
 	}
 	
 	/**
