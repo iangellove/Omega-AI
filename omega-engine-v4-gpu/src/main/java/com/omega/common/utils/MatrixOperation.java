@@ -300,6 +300,25 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
+	public static void plus(float[] x,float[] b) {
+		for(int i = 0;i<x.length;i++) {
+			x[i] = x[i] + b[i];
+		}
+	}
+	
+	/**
+	 * 
+	 * @Title: add
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static void add(float[] x,float[] b,int n,int c,int h,int w,int[] position) {
 		int dims = position[0];
 		int start= position[1];

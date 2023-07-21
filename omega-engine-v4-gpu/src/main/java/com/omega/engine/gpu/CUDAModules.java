@@ -61,6 +61,34 @@ public class CUDAModules {
 			put("fast_variance_delta_kernel", "H://BNKernel.cu");
 			put("dx_kernel", "H://BNKernel.cu");
 			put("dx_kernel_full", "H://BNKernel.cu");
+			
+			put("copy_kernel", "H://OPKernel.cu");
+			put("copy_number_kernel", "H://OPKernel.cu");
+			put("copy_channel_kernel", "H://OPKernel.cu");
+			put("add_kernel", "H://OPKernel.cu");
+			put("add_scalar_kernel", "H://OPKernel.cu");
+			put("add_number_kernel", "H://OPKernel.cu");
+			put("add_channel_kernel", "H://OPKernel.cu");
+			put("sub_kernel", "H://OPKernel.cu");
+			put("sub_scalar_kernel", "H://OPKernel.cu");
+			put("mul_kernel", "H://OPKernel.cu");
+			put("mul_scalar_kernel", "H://OPKernel.cu");
+			put("mul_plus_kernel", "H://OPKernel.cu");
+			put("mul_plus_scalar_kernel", "H://OPKernel.cu");
+			put("div_kernel", "H://OPKernel.cu");
+			put("div_scalar_kernel", "H://OPKernel.cu");
+			put("scalar_div_kernel", "H://OPKernel.cu");
+			put("div_plus_kernel", "H://OPKernel.cu");
+			put("div_plus_scalar_kernel", "H://OPKernel.cu");
+			put("scalar_plus_div_kernel", "H://OPKernel.cu");
+			put("div_bGrad_kernel", "H://OPKernel.cu");
+			put("div_scalar_bGrad_kernel", "H://OPKernel.cu");
+			put("pow_kernel", "H://OPKernel.cu");
+			put("log_kernel", "H://OPKernel.cu");
+			put("exp_kernel", "H://OPKernel.cu");
+			put("sin_kernel", "H://OPKernel.cu");
+			put("cos_kernel", "H://OPKernel.cu");
+			
 		}
 		};
 	

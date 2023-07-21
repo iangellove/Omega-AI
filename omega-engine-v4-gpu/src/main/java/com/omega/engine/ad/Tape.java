@@ -1,10 +1,8 @@
 package com.omega.engine.ad;
 
 import java.io.Serializable;
-import java.util.List;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.ad.op.OP;
 import com.omega.engine.ad.op.data.GetOP;
 
@@ -20,9 +18,11 @@ public class Tape implements Serializable{
 	 */
 	private static final long serialVersionUID = 9147342370353517536L;
 
-	private List<Tensor> inputs;
+	private Tensor x;
 	
-	private List<Tensor> outputs;
+	private Tensor y;
+	
+	private Tensor output;
 	
 	private int[] position;
 	
@@ -30,48 +30,30 @@ public class Tape implements Serializable{
 	
 	private float scalar;
 	
-	public Tape(List<Tensor> inputs,List<Tensor> outputs,OP op) {
-		this.setInputs(inputs);
-		this.setOutputs(outputs);
-		this.setOp(op);
-	}
+	private Tensor tmp;
 	
-	public Tape(List<Tensor> inputs,List<Tensor> outputs,OP op,float scalar) {
-		this.setInputs(inputs);
-		this.setOutputs(outputs);
+	private boolean sub = false;
+	
+	public Tape(OP op,Tensor self,Tensor other,float scalar,int[] position) {
+		this.setX(self);
+		this.setY(other);
+		if(position!=null) {
+			int dims = position[0];
+			int count = position[2];
+			switch (dims) {
+			case 0:
+				setOutput(new Tensor(count, self.channel, self.height, self.width, self.isHasGPU()));
+				break;
+			case 1:
+				setOutput(new Tensor(self.number, count, self.height, self.width, self.isHasGPU()));
+				break;
+			}
+		}else {
+			setOutput(new Tensor(self.number, self.channel, self.height, self.width, self.isHasGPU()));
+		}
 		this.setOp(op);
 		this.scalar = scalar;
-	}
-	
-	public Tape(List<Tensor> inputs,List<Tensor> outputs,OP op,int[] position) {
-		this.setInputs(inputs);
-		this.setOutputs(outputs);
-		this.setOp(op);
-		this.position = position;
-	}
-	
-	public Tape(List<Tensor> inputs,List<Tensor> outputs,OP op,float scalar,int[] position) {
-		this.setInputs(inputs);
-		this.setOutputs(outputs);
-		this.setOp(op);
-		this.scalar = scalar;
-		this.position = position;
-	}
-
-	public List<Tensor> getInputs() {
-		return inputs;
-	}
-
-	public void setInputs(List<Tensor> inputs) {
-		this.inputs = inputs;
-	}
-
-	public List<Tensor> getOutputs() {
-		return outputs;
-	}
-
-	public void setOutputs(List<Tensor> outputs) {
-		this.outputs = outputs;
+		this.setPosition(position);
 	}
 
 	public OP getOp() {
@@ -83,32 +65,32 @@ public class Tape implements Serializable{
 	}
 	
 	public void zeroGrad() {
-		for(Tensor input:inputs){
-			if(input.isRequiresGrad()) {
-				input.zeroGrad();
-			}
+		if(getX().isRequiresGrad()) {
+			getX().zeroGrad();
 		}
-		for(Tensor output:outputs){
-			if(output.isRequiresGrad()) {
-				output.zeroGrad();
-			}
+		if(getY() != null && getY().isRequiresGrad()) {
+			getY().zeroGrad();
+		}
+		if(getOutput().isRequiresGrad()) {
+			getOutput().zeroGrad();
 		}
 	}
 	
-	public void backward(float[] delta) {
-		if(this.position != null) {
+	public Tensor forward() {
+		return this.op.forward(this);
+	}
+	
+	public void backward(Tensor delta) {
+		if(this.getPosition() != null) {
 			GetOP getOp = (GetOP) op;
-			getOp.backward(delta, inputs, position);
+			getOp.backward(delta, this);
 		}else {
-			op.backward(delta, inputs, scalar);
+			op.backward(delta, this);
 		}
 	}
 	
 	public void backward() {
-		if(outputs.get(0).getGrad() == null) {
-			outputs.get(0).setGrad(MatrixUtils.one(outputs.get(0).dataLength));
-		}
-		this.backward(outputs.get(0).getGrad());
+		this.backward(getOutput().getGrad());
 	}
 
 	public float getScalar() {
@@ -117,6 +99,57 @@ public class Tape implements Serializable{
 
 	public void setScalar(float scalar) {
 		this.scalar = scalar;
+	}
+
+	public int[] getPosition() {
+		return position;
+	}
+
+	public Tensor getX() {
+		return x;
+	}
+
+	public void setX(Tensor x) {
+		this.x = x;
+	}
+
+	public Tensor getY() {
+		return y;
+	}
+
+	public void setY(Tensor y) {
+		this.y = y;
+	}
+
+	public Tensor getOutput() {
+		return output;
+	}
+
+	public void setOutput(Tensor output) {
+		this.output = output;
+	}
+
+	public void setPosition(int[] position) {
+		this.position = position;
+	}
+
+	public Tensor getTmp() {
+		if(tmp == null) {
+			this.tmp = new Tensor(this.x.number, this.x.channel, this.x.height, this.x.width, this.x.isHasGPU());
+		}
+		return tmp;
+	}
+
+	public void setTmp(Tensor tmp) {
+		this.tmp = tmp;
+	}
+
+	public boolean isSub() {
+		return sub;
+	}
+
+	public void setSub(boolean sub) {
+		this.sub = sub;
 	}
 	
 }

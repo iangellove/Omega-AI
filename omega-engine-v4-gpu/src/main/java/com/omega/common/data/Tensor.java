@@ -1,11 +1,14 @@
 package com.omega.common.data;
 
 import java.io.Serializable;
+import java.util.UUID;
 
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.ad.Graph;
+import com.omega.engine.ad.Tape;
 import com.omega.engine.ad.op.OPType;
+import com.omega.engine.ad.op.gpu.OPKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 
 import jcuda.Pointer;
@@ -20,7 +23,9 @@ public class Tensor implements Serializable{
 	 * 
 	 */
 	private static final long serialVersionUID = 5844762745177624845L;
-
+	
+	public String id;
+	
 	public int number = 0;
 	
 	public int channel = 0;
@@ -43,7 +48,16 @@ public class Tensor implements Serializable{
 	
 	private boolean requiresGrad = false;
 	
-	private float[] grad;
+	private Tensor grad;
+	
+	private Tape tape;
+	
+	public String getId() {
+		if(this.id == null) {
+			this.id = UUID.randomUUID().toString();
+		}
+		return this.id;
+	}
 	
 	public Tensor copy() {
 		float[] dest = new float[dataLength];
@@ -321,20 +335,42 @@ public class Tensor implements Serializable{
 
 	public void setRequiresGrad(boolean requiresGrad) {
 		this.requiresGrad = requiresGrad;
+		if(this.requiresGrad) {
+			this.getGrad();
+		}
 	}
 
-	public float[] getGrad() {
+	public Tensor getGrad() {
+		if(this.grad == null) {
+			this.grad = new Tensor(number, channel, height, width, this.hasGPU);
+		}
 		return grad;
 	}
-
-	public void setGrad(float[] grad) {
+	
+	public Tensor getGrad(float[] val) {
+		if(this.grad == null) {
+			this.grad = new Tensor(number, channel, height, width, val, this.hasGPU);
+		}
+		return grad;
+	}
+	
+	public void setGrad(Tensor grad) {
 		this.grad = grad;
 	}
 	
-	public void setGrad(float[] grad,int[] position) {
+	public void setGrad(float[] grad) {
+		if(this.grad == null) {
+			this.grad = new Tensor(number, channel, height, width, grad, this.hasGPU);
+		}else {
+			this.grad.data = grad;
+			this.grad.hostToDevice();
+		}
+	}
+	
+	public void setGrad(Tensor grad,int[] position) {
 		
 		if(this.grad == null) {
-			this.grad = new float[this.dataLength];
+			this.grad = new Tensor(number, channel, height, width, this.hasGPU);
 		}
 		
 		int dims = position[0];
@@ -343,10 +379,18 @@ public class Tensor implements Serializable{
 
 		switch (dims) {
 		case 0:
-			setGradByNumber(grad, start, count);
+			if(isHasGPU()){
+				OPKernel.getInstance().copy_number_gpu(this.grad, grad, start, 1);
+			}else {
+				setGradByNumber(grad.data, start, count);
+			}
 			break;
 		case 1:
-			setGradByChannel(grad, start, count);
+			if(isHasGPU()){
+				OPKernel.getInstance().copy_channel_gpu(this.grad, grad, start, 1);
+			}else {
+				setGradByChannel(grad.data, start, count);
+			}
 			break;
 		default:
 			break;
@@ -355,8 +399,8 @@ public class Tensor implements Serializable{
 	}
 	
 	public void zeroGrad() {
-		if(this.grad!=null) {
-			this.grad = new float[this.grad.length];
+		if(this.grad != null) {
+			this.grad.fill(0.0f);
 		}
 	}
 
@@ -405,7 +449,11 @@ public class Tensor implements Serializable{
 	}
 	
 	public Tensor pow() {
-		return Graph.OP(OPType.pow, this);
+		return Graph.OP(OPType.pow, this, 2.0f);
+	}
+	
+	public Tensor pow(float scalar) {
+		return Graph.OP(OPType.pow, this, scalar);
 	}
 	
 	public Tensor sin() {
@@ -416,13 +464,32 @@ public class Tensor implements Serializable{
 		return Graph.OP(OPType.exp, this);
 	}
 	
+	/**
+	 * 获取指定维度数据
+	 * @param position int[dims,start,count]
+	 * dims: tensor 维度 0:number,1:channel,2:height,3:width
+	 * start: 指定维度开始脚标
+	 * count: 获取长度
+	 * @return
+	 */
 	public Tensor get(int[] position) {
+		return Graph.OP(OPType.get, this, position);
+	}
+	
+	/**
+	 * 获取指定维度数据
+	 * @param dim tensor 维度 0:number,1:channel,2:height,3:width
+	 * @param start 指定维度开始脚标
+	 * @param count 获取长度
+	 */
+	public Tensor get(int dim,int start,int count) {
+		int[] position = new int[] {dim, start, count};
 		return Graph.OP(OPType.get, this, position);
 	}
 	
 	public void setGradByNumber(float[] data,int start,int count) {
 		assert number >= (start + count - 1);
-		System.arraycopy(data, 0, this.grad, start * channel * height * width, data.length);
+		System.arraycopy(data, 0, this.grad.data, start * channel * height * width, data.length);
 	}
 	
 	public void setGradByChannel(float[] data,int start,int count) {
@@ -430,8 +497,30 @@ public class Tensor implements Serializable{
 		int size = height * width;
 		for(int n = 0;n<number;n++) {
 			int startIndex = n * channel * size + start * size;
-			System.arraycopy(data, n * count * size, this.grad, startIndex, count * size);
+			System.arraycopy(data, n * count * size, this.grad.data, startIndex, count * size);
 		}
 	}
+	
+	public void fill(float val) {
+		this.data = MatrixUtils.one(this.dataLength);
+		if(this.isHasGPU()) {
+			OPKernel.getInstance().fill_gpu(this, val);
+		}
+	}
+
+	public Tape getTape() {
+		return tape;
+	}
+
+	public void setTape(Tape tape) {
+		this.tape = tape;
+	}
+	
+//	public void backward() {
+//		if(this.grad != null) {
+//			this.grad.fill(1.0f);
+//		}
+//		Graph.backward();
+//	}
 	
 }

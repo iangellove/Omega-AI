@@ -7,6 +7,7 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.PrintUtils;
+import com.omega.engine.ad.op.OP;
 import com.omega.engine.ad.op.OPType;
 import com.omega.engine.ad.op.data.GetOP;
 import com.omega.engine.ad.op.functions.ExpOP;
@@ -18,6 +19,8 @@ import com.omega.engine.ad.op.sign.DivOP;
 import com.omega.engine.ad.op.sign.MulOP;
 import com.omega.engine.ad.op.sign.ScalarDivOP;
 import com.omega.engine.ad.op.sign.SubOP;
+import com.omega.engine.gpu.CUDAMemoryManager;
+import com.omega.engine.gpu.CUDAModules;
 
 /**
  * 计算图
@@ -31,6 +34,10 @@ public class Graph{
 	 */
 	private static List<Tape> tapes = new ArrayList<Tape>();
 	
+	private static int tapeIndex = 0;
+	
+	private static boolean lock = false;
+	
 	public static void showGraph() {
 		for(int i = 0;i<tapes.size();i++) {
 			System.out.println(i+":["+tapes.get(i).getOp().getOpType()+"]");
@@ -42,108 +49,182 @@ public class Graph{
 	}
 	
 	public static void clearGrad() {
-		for(Tape tape:Graph.tapes) {
-			tape.zeroGrad();
+		for(int i = 0;i<tapes.size();i++) {
+			Graph.tapes.get(i).zeroGrad();;
 		}
-		reset();
+//		reset();
 	}
 	
 	public static void add(Tape tape) {
 		Graph.tapes.add(tape);
 	}
 	
-	public static Tensor OP(OPType op,Tensor self,Tensor other) {
-		
-		switch (op) {
+	public static Tape getTape(OP op,Tensor self,Tensor other,float scalar,int[] position) {
+		Tape tape = null;
+		if(!lock) {
+			tape = new Tape(op, self, other, scalar, position);
+			if(self.getTape() != null) {
+				self.getTape().setSub(true);
+			}
+			self.setTape(tape);
+			if(other != null) {
+				if(other.getTape() != null) {
+					other.getTape().setSub(true);
+				}
+				other.setTape(tape);
+			}
+			Graph.add(tape);
+		}else {
+			tape = tapes.get(tapeIndex);
+			tapeIndex++;
+		}
+		return tape;
+	}
+	
+	public static Tensor OP(OPType opType,Tensor self,Tensor other) {
+		OP op = null;
+		switch (opType) {
 		case add:
-			return AddOP.getInstance().forward(self, other);
+			op = AddOP.getInstance();
+			break;
 		case subtraction:
-			return SubOP.getInstance().forward(self, other);
+			op = SubOP.getInstance();
+			break;
 		case multiplication:
-			return MulOP.getInstance().forward(self, other);
+			op = MulOP.getInstance();
+			break;
 		case division:
-			return DivOP.getInstance().forward(self, other);
+			op = DivOP.getInstance();
+			break;
 		default:
 			break;	
 		}
 		
-		return null;
+		if(op == null) {
+			throw new RuntimeException("the op is not support.");
+		}
+		
+		Tape tape = getTape(op, self, other, 0, null);
+		Tensor output = tape.forward();
+		output.setTape(tape);
+		return output;
 	}
 	
-	public static Tensor OP(OPType op,Tensor self,float other) {
+	public static Tensor OP(OPType opType,Tensor self,float other) {
 		
-		switch (op) {
+		OP op = null;
+		
+		switch (opType) {
 		case add:
-			return AddOP.getInstance().forward(self, other);
+			op = AddOP.getInstance();
+			break;
 		case subtraction:
-			return SubOP.getInstance().forward(self, other);
+			op = SubOP.getInstance();
+			break;
 		case multiplication:
-			return MulOP.getInstance().forward(self, other);
+			op = MulOP.getInstance();
+			break;
 		case division:
-			return DivOP.getInstance().forward(self, other);
+			op = DivOP.getInstance();
+			break;
 		case scalarDivision:
-			return ScalarDivOP.getInstance().forward(self, other);
-		default:
-			break;	
-		}
-		
-		return null;
-	}
-	
-	public static Tensor OP(OPType op,Tensor self) {
-		
-		switch (op) {
-		case log:
-			return LogOP.getInstance().forward(self);
-		case sin:
-			return SinOP.getInstance().forward(self);
-		case exp:
-			return ExpOP.getInstance().forward(self);
+			op = ScalarDivOP.getInstance();
+			break;
 		case pow:
-			return PowOP.getInstance().forward(self);
+			op = PowOP.getInstance();
+			break;
 		default:
 			break;	
 		}
 		
-		return null;
+		if(op == null) {
+			throw new RuntimeException("the op is not support.");
+		}
+		
+		Tape tape = getTape(op, self, null, other, null);
+		Tensor output = tape.forward();
+		output.setTape(tape);
+		return output;
 	}
 	
-	public static Tensor OP(OPType op,Tensor self,int[] position) {
-		return GetOP.getInstance().forward(self, position);
+	public static Tensor OP(OPType opType,Tensor self) {
+		
+		OP op = null;
+		
+		switch (opType) {
+		case log:
+			op = LogOP.getInstance();
+			break;
+		case sin:
+			op = SinOP.getInstance();
+			break;
+		case exp:
+			op = ExpOP.getInstance();
+			break;
+		default:
+			break;	
+		}
+		
+		if(op == null) {
+			throw new RuntimeException("the op is not support.");
+		}
+		
+		Tape tape = getTape(op, self, null, 0, null);
+		Tensor output = tape.forward();
+		output.setTape(tape);
+		return output;
 	}
 	
-	public static void backward(float[] delta) {
+	public static Tensor OP(OPType opType,Tensor self,int[] position) {
+		OP op = null;
+		
+		switch (opType) {
+		case get:
+			op = GetOP.getInstance();
+			break;
+		default:
+			break;	
+		}
+		
+		if(op == null) {
+			throw new RuntimeException("the op is not support.");
+		}
+		
+		Tape tape = getTape(op, self, null, 0, position);
+		Tensor output = tape.forward();
+		output.setTape(tape);
+		return output;
+	}
+	
+	public static void backward(Tensor delta) {
 //		float[] preDelta = null;
+		Graph.lock = true;
 		for(int i = tapes.size() - 1;i >= 0;i--) {
 			Tape tape = tapes.get(i);
 			if(i == tapes.size() - 1) {
 				tape.backward(delta);
 			}else {
-				tapes.get(i).backward();
+				tape.backward();
 			}
 //			preDelta = tape.getInputs().get(0).getGrad();
 		}
+		Graph.tapeIndex = 0;
 	}
 	
 	public static void backward() {
+		Graph.lock = true;
 		for(int i = tapes.size() - 1;i >= 0;i--) {
-			tapes.get(i).backward();
+			Tape tape = tapes.get(i);
+			/**
+			 * 初始化最后一代的grad
+			 */
+//			System.out.println(tape.getOp().getOpType().toString()+":"+tape.isSub());
+			if(!tape.isSub()) {
+				tape.getOutput().getGrad().fill(1.0f);
+			}
+			tape.backward();
 		}
-	}
-	
-	public static void main(String[] args) {
-		
-		/**
-		 * f(x,y)=ln(x)+x*y−sin(y)
-		 */
-//		formula1();
-		
-		/**
-		 * sigmoid: 1 / 1 + exp(-x)
-		 */
-		sigmoid();
-		
-		
+		Graph.tapeIndex = 0;
 	}
 	
 	public static void formula1(){
@@ -196,13 +277,13 @@ public class Graph{
 		
 		x.setRequiresGrad(true);
 
-		Tensor v1 = x.get(new int[] {1,0,2}).mul(-1).exp().add(1).scalarDiv(1);
+		Tensor v1 = x.get(1, 0, 2).mul(-1).exp().add(1).scalarDiv(1);
 		
-		Tensor v2 = x.get(new int[] {1,2,2});
+		Tensor v2 = x.get(1, 2, 2);
 		
-		Tensor v3 = x.get(new int[] {1,4,1}).mul(-1).exp().add(1).scalarDiv(1);
+		Tensor v3 = x.get(1, 4, 1).mul(-1).exp().add(1).scalarDiv(1);
 		
-		Tensor v4 = y.get(new int[] {1,4,1}).sub(v3).pow();
+		Tensor v4 = y.get(1, 4, 1).sub(v3).pow(2);
 
 		Graph.showGraph();
 		
@@ -214,10 +295,247 @@ public class Graph{
 		System.out.println("z4:"+JsonUtils.toJson(v4.data));
 		System.out.println("dx:"+JsonUtils.toJson(x.getGrad()));
 		
-		PrintUtils.printImage(x.getGrad(), x.number, x.channel, x.height, x.width);
+		PrintUtils.printImage(x.getGrad());
 		
 		System.out.println(1 / (1 + Math.exp(-0.6f)));
 		
 	}
+	
+	public static void sigmoid_gpu(Tensor x,Tensor y) {
+		
+		x.setRequiresGrad(true);
+		
+		x.hostToDevice();
+		
+		y.hostToDevice();
+		
+		long start = System.nanoTime();
+		
+		Tensor v1 = x.get(1, 0, 2).mul(-1).exp().add(1).scalarDiv(1);
+		
+		Tensor v2 = x.get(1, 2, 2);
+		
+		Tensor v3 = y.get(1, 4, 2).sub(x.get(1, 4, 2).mul(-1).exp().add(1).scalarDiv(1)).pow(2);
+		
+		Tensor z = v1.add(v2).add(v3);
+		
+//		Graph.showGraph();
+		
+		Graph.backward();
+
+		z.syncHost();
+		
+//		System.out.println("z:"+JsonUtils.toJson(z.data));
+		x.getGrad().syncHost();
+//		System.out.println("dx:"+JsonUtils.toJson(x.getGrad()));
+		
+		System.out.println(((System.nanoTime() - start) / 1e6) + "ms.");
+		
+//		PrintUtils.printImage(x.getGrad());
+		
+	}
+	
+	public static void get_gpu() {
+		
+		int number = 64;
+		int channel  = 128;
+		int height = 32;
+		int width = 32;
+		int length = number * channel * height * width;
+		
+		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.order(length, 0, 1), true);
+		
+		long start = System.nanoTime();
+		
+		x.setRequiresGrad(true);
+		
+		x.hostToDevice();
+		
+//		x.showDM();
+		
+		Tensor v1 = x.get(1, 1, 10).pow(2.0f);
+		
+		Tensor v2 = x.get(1, 14, 10);
+		
+		Graph.showGraph();
+		
+		Graph.backward();
+		
+		v1.syncHost();
+		
+		v2.syncHost();
+		
+		x.getGrad().syncHost();
+		
+		System.out.println(((System.nanoTime() - start) / 1e6) + "ms.");
+		
+//		System.out.println("z1:"+JsonUtils.toJson(v1.data));
+		
+//		PrintUtils.printImage(v1);
+//		
+//		System.out.println("*********************************************");
+//		
+//		PrintUtils.printImage(v2);
+//
+//		System.out.println("++++++++++++++++++++++++++++++++++++++++++++");
+//		
+//		PrintUtils.printImage(x.getGrad());
+
+	}
+	
+	public static void pow_gpu() {
+		
+		int number = 2;
+		int channel  = 3;
+		int height = 5;
+		int width = 5;
+		int length = number * channel * height * width;
+		
+		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.order(length, 0, 1), true);
+		
+		long start = System.nanoTime();
+		
+		x.setRequiresGrad(true);
+		
+		x.hostToDevice();
+		
+		Tensor v1 = x.pow(3);
+		
+		Graph.showGraph();
+		
+		Graph.backward();
+		
+		v1.syncHost();
+		
+		System.out.println(((System.nanoTime() - start) / 1e6) + "ms.");
+
+	}
+	
+	public static void show() {
+		
+		int n = 10;
+		int c  = 5;
+		int h = 5;
+		int w = 5;
+		int length = n * c * h * w;
+		int count = 2;
+		int start = 1;
+		
+		Tensor x = new Tensor(n, c, h, w, MatrixUtils.order(length, 0, 1));
+		
+		Tensor y = new Tensor(x.number, count, x.height, x.width, x.isHasGPU());
+		
+		for(int i = 0;i<y.dataLength;i++) {
+			int bc = y.dataLength / n / h / w;
+			int size = bc * h * w;
+	    	int tn = i / size;
+			int tc = (i / h / w) % bc + start;
+			int th = (i / w) % h;
+			int tw = i % h;
+			int index = tn * c * h * w + tc * h * w + th * w + tw;
+	    	y.data[i] = x.data[index];
+		}
+		
+		PrintUtils.printImage(y);
+	}
+	
+	public static void yolov3_loss() {
+		
+		int number = 64;
+		int channel  = 125;
+		int height = 32;
+		int width = 32;
+		int length = number * channel * height * width;
+		
+		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.val(length, 0.6f), true);
+		
+		Tensor y = new Tensor(number, channel, height, width, MatrixUtils.val(length, 1f), true);
+		
+		x.setRequiresGrad(true);
+		
+		x.hostToDevice();
+		
+		y.hostToDevice();
+		
+		long start = System.nanoTime();
+		
+		Tensor v1 = x.get(1, 0, 2).mul(-1).exp().add(1).scalarDiv(1);
+		
+		Tensor v2 = x.get(1, 2, 2);
+		
+		Tensor v3 = y.get(1, 4, 2).sub(x.get(1, 4, 2).mul(-1).exp().add(1).scalarDiv(1)).pow(2);
+		
+		Tensor z = v1.add(v2).add(v3);
+		
+//		Graph.showGraph();
+		
+		Graph.backward();
+
+		z.syncHost();
+		
+//		System.out.println("z:"+JsonUtils.toJson(z.data));
+		x.getGrad().syncHost();
+//		System.out.println("dx:"+JsonUtils.toJson(x.getGrad()));
+		
+		System.out.println(((System.nanoTime() - start) / 1e6) + "ms.");
+		
+	}
+	
+
+	public static void main(String[] args) {
+		
+		try {
+
+			CUDAModules.initContext();
+
+			/**
+			 * f(x,y)=ln(x)+x*y−sin(y)
+			 */
+//			formula1();
+			
+			/**
+			 * sigmoid: 1 / 1 + exp(-x)
+			 */
+//			sigmoid();
+			
+//			get_gpu();
+			
+//			int number = 64;
+//			int channel  = 125;
+//			int height = 32;
+//			int width = 32;
+//			int length = number * channel * height * width;
+//			
+//			Tensor x = new Tensor(number, channel, height, width, MatrixUtils.val(length, 0.6f), true);
+//			
+//			Tensor y = new Tensor(number, channel, height, width, MatrixUtils.val(length, 1f), true);
+//			
+//			sigmoid_gpu(x, y);
+//			
+//			x.data = MatrixUtils.val(length, 0.35f);
+//			
+//			y.data = MatrixUtils.val(length, 2f);
+//			
+//			Graph.clearGrad();
+//			
+//			sigmoid_gpu(x, y);
+			
+//			show();
+			
+//			pow_gpu();
+			
+			yolov3_loss();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		} finally {
+			// TODO: handle finally clause
+			CUDAMemoryManager.free();
+			
+		}
+		
+	}
+	
 	
 }

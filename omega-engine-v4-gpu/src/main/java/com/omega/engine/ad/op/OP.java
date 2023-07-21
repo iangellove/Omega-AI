@@ -1,9 +1,9 @@
 package com.omega.engine.ad.op;
 
 import java.io.Serializable;
-import java.util.List;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.ad.Tape;
 
 public abstract class OP implements Serializable {
 
@@ -14,7 +14,9 @@ public abstract class OP implements Serializable {
 	
 	private OPType opType;
 	
-	public abstract void backward(float[] delta,List<Tensor> inputs,float scalar);
+	public abstract Tensor forward(Tape tape);
+	
+	public abstract void backward(Tensor delta,Tape tape);
 	
 	public OPType getOpType() {
 		return opType;

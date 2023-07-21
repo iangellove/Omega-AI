@@ -181,6 +181,24 @@ public class MatrixUtils {
 	 *
 	 * @throws
 	 */
+	public static void val(float[] x,float v) {
+		for(int i = 0;i<x.length;i++) {
+			x[i] = v;
+		}
+	}
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static float[][] createMatrix(int heigth,int width,float value) {
 		float[][] temp = new float[heigth][width];
 		for(int h = 0;h<heigth;h++) {

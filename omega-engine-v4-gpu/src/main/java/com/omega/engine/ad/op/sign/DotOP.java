@@ -1,8 +1,7 @@
 package com.omega.engine.ad.op.sign;
 
-import java.util.List;
-
 import com.omega.common.data.Tensor;
+import com.omega.engine.ad.Tape;
 import com.omega.engine.ad.op.OPType;
 import com.omega.engine.ad.op.SignOP;
 
@@ -27,19 +26,13 @@ public class DotOP extends SignOP {
 	}
 	
 	@Override
-	public Tensor forward(Tensor self, Tensor other) {
+	public Tensor forward(Tape tape) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 	
 	@Override
-	public Tensor forward(Tensor self, float scalar) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void backward(float[] delta, List<Tensor> inputs,float scalar) {
+	public void backward(Tensor delta, Tape tape) {
 		// TODO Auto-generated method stub
 
 	}
