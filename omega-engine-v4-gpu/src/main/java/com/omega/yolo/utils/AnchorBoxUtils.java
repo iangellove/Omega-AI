@@ -13,7 +13,6 @@ public class AnchorBoxUtils {
 	
 	
 	public static Tensor getAnchorBox(Tensor bboxs,int num_clusters) {
-		
 		Tensor boxs = translateBoxes(bboxs);
 		
 		int N = boxs.number;

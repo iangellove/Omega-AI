@@ -424,6 +424,10 @@ public class Tensor implements Serializable{
 		return Graph.OP(OPType.subtraction, this, y);
 	}
 	
+	public Tensor scalarSub(float scalar) {
+		return Graph.OP(OPType.scalarSubtraction, this, scalar);
+	}
+	
 	public Tensor mul(Tensor y) {
 		return Graph.OP(OPType.multiplication, this, y);
 	}

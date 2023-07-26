@@ -1066,7 +1066,6 @@ public class MBSGDOptimizer extends Optimizer {
 	
 	public void trainObjectRecognition(DetectionDataLoader trainingData,DetectionDataLoader valiData) {
 		// TODO Auto-generated method stub
-
 		try {
 			
 			CUDAModules.initCUDAFunctions();
@@ -1409,6 +1408,116 @@ public class MBSGDOptimizer extends Optimizer {
 					System.out.println("----------------testing start----------------");
 					
 					this.testObjectRecognitionOutputs(valiData, vail_input, vail_label, this.batchSize);
+					
+					System.out.println("----------------testing finish---------------");
+					
+				}
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void trainObjectRecognitionOutputs(DetectionDataLoader trainingData,DetectionDataLoader valiData) {
+		// TODO Auto-generated method stub
+
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+			
+			OutputsNetwork network = (OutputsNetwork) this.network;
+			
+			this.dataSize = trainingData.number;
+
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			
+			Tensor label = trainingData.initLabelTensor();
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+
+				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = trainingData.shuffle();
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					long start = System.nanoTime();
+
+					this.loss.clear();
+					
+					this.lossDiff.clear();
+					
+					trainingData.loadData(indexs[it], input, label);
+
+					/**
+					 * forward
+					 */
+					network.forward(input);
+					
+					/**
+					 * loss
+					 */
+					network.loss(label);
+//					System.out.println("in--------------->");
+					/**
+					 * loss diff
+					 */
+					Tensor[] lossDiffs = network.lossDiff(label);
+					
+					/**
+					 * back
+					 */
+					network.back(lossDiffs);
+					
+					/**
+					 * update
+					 */
+					this.network.update();
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+				}
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR();
+				
+				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
+					
+					this.network.learnRate = this.network.learnRate * 0.5f;
+					
+				}
+				
+				if(this.trainIndex % 100 == 0) {
+					
+					System.out.println("----------------testing start----------------");
+					
+					this.testObjectRecognitionOutputs(valiData, input, label, this.batchSize);
 					
 					System.out.println("----------------testing finish---------------");
 					

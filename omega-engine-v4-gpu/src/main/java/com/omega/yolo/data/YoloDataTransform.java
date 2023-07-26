@@ -340,14 +340,19 @@ public class YoloDataTransform extends DataTransform {
 	public static void loadLabelToYolov3(float[] box, int i, Tensor label,int imgw,int imgh,int bbox_num) {
 		
 		for(int c = 0;c<box.length / 5;c++) {
-			
-			float clazz = box[c * 5 + 0];
 
-			float cx = box[c * 5 + 1] / imgw;
-			float cy = box[c * 5 + 2] / imgh;
+			int clazz = (int) box[c * 5 + 0];
 			
-			float w = box[c * 5 + 3] / imgw;
-			float h = box[c * 5 + 4] / imgh;
+			float x1 = box[c * 5 + 1] / imgw;
+			float y1 = box[c * 5 + 2] / imgh;
+			float x2 = box[c * 5 + 3] / imgw;
+			float y2 = box[c * 5 + 4] / imgh;
+			
+			float cx = (x1 + x2) / 2;
+			float cy = (y1 + y2) / 2;
+			
+			float w = (x2 - x1);
+			float h = (y2 - y1);
 			
 			label.data[i * bbox_num * 5 + c * 5 + 0] = cx;
 			label.data[i * bbox_num * 5 + c * 5 + 1] = cy;

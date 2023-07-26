@@ -15,9 +15,13 @@ import com.omega.engine.nn.network.Yolo;
 import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
+import com.omega.yolo.data.DataType;
+import com.omega.yolo.data.YoloDataTransform2;
 import com.omega.yolo.model.YoloBox;
 import com.omega.yolo.model.YoloDetection;
 import com.omega.yolo.utils.AnchorBoxUtils;
+import com.omega.yolo.utils.DetectionDataLoader;
+import com.omega.yolo.utils.LabelFileType;
 import com.omega.yolo.utils.LabelType;
 import com.omega.yolo.utils.LabelUtils;
 import com.omega.yolo.utils.YoloDataLoader;
@@ -29,7 +33,7 @@ public class YoloV3Test {
 		
 	}
 	
-	public static void showImg(String outputPath,DataSet dataSet,int class_num,List<YoloBox> score_bbox,int batchSize,boolean format,int im_w,int im_h) {
+	public static void showImg(String outputPath,DetectionDataLoader dataSet,int class_num,List<YoloBox> score_bbox,int batchSize,boolean format,int im_w,int im_h) {
 		
 
 		ImageUtils utils = new ImageUtils();
@@ -38,7 +42,7 @@ public class YoloV3Test {
 		
 		for(int b = 0;b<dataSet.number;b++) {
 			
-			float[] once = dataSet.getOnceData(b).data;
+			float[] once = dataSet.loadData(b);
 			
 			int bbox_index = b;
 			
@@ -97,36 +101,32 @@ public class YoloV3Test {
 			String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
 			String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
 			
-			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, 1000, 3, im_w, im_h, 5, LabelType.csv_v3, false);
+			YoloDataTransform2 dt = new YoloDataTransform2(1, DataType.yolov3, 90);
 			
-			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, 100, 3, im_w, im_h, 5, LabelType.csv_v3, true);
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.csv, im_w, im_h, class_num, batchSize, DataType.yolov3, dt);
 			
-//			DataSet trainSet = YoloLabelUtils.formatToYoloV3(trainData.getDataSet(), im_w, im_h);
-			
-			DataSet vailSet = YoloLabelUtils.formatToYoloV3(vailData.getDataSet(), im_w, im_h);
-			
+			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.csv, im_w, im_h, class_num, batchSize, DataType.yolov3);
+
 			Yolo netWork = new Yolo(LossType.yolo3, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.01f;
+			netWork.learnRate = 0.001f;
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
-			optimizer.trainObjectRecognitionOutputs(trainData.getDataSet(), vailSet, true);
+			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
 			
-//			/**
-//			 * 处理测试预测结果
-//			 */
-//			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData.getDataSet(), batchSize);
-//			
-//			YoloDataLoader testData = new YoloDataLoader(testPath, testLabelPath, 101, 3, im_w, im_h, 5, LabelType.csv_v3, false);
-//			
-//			String outputPath = "H:\\voc\\banana-detection\\test_yolov3\\";
-//			
-//			showImg(outputPath, testData.getDataSet(), 1, draw_bbox, batchSize, false, im_w, im_h);
+			/**
+			 * 处理测试预测结果
+			 */
+			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
+			
+			String outputPath = "H:\\voc\\banana-detection\\test_yolov3\\";
+			
+			showImg(outputPath, vailData, 1, draw_bbox, batchSize, false, im_w, im_h);
 		
 		} catch (Exception e) {
 			// TODO: handle exception

@@ -285,7 +285,30 @@ public class DetectionDataLoader extends BaseDataLoader{
 		label.hostToDevice();
 		
 	}
+	
+	public void loadData(int pageIndex, int batchSize, Tensor input) {
+		// TODO Auto-generated method stub
+		
+		int[] indexs = getIndexsByAsc(pageIndex, batchSize);
 
+		/**
+		 * 加载input数据
+		 */
+		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false);
+		
+		/**
+		 * 归一化input值
+		 * val = (org - mean) / std
+		 */
+//		normalization(input);
+		
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+		
+	}
+	
 	@Override
 	public float[] loadData(int index) {
 		// TODO Auto-generated method stub
@@ -324,6 +347,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 		 */
 		input.hostToDevice();
 		label.hostToDevice();
+		
 //		dataNormalization.normalization(input);
 //		System.out.println((System.currentTimeMillis() - start));
 //		System.out.println(JsonUtils.toJson(input.data));

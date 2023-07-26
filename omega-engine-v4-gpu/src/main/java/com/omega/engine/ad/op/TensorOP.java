@@ -45,6 +45,16 @@ public class TensorOP {
 		}
 		
 	}
+	
+	public static void sub(float a,Tensor b,Tensor c) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().scalar_sub_gpu(a, b, c);
+		}else {
+			c.data = MatrixOperation.subtraction(a, b.data);
+		}
+		
+	}
 
 	public static void mul(Tensor a,Tensor b,Tensor c) {
 		

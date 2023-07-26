@@ -150,8 +150,6 @@ public class YoloLoss extends LossFunction {
 	            	bbox[2] = x.data[inputCoordsIndex + 2] * x.data[inputCoordsIndex + 2];  //w = w*w
 	            	bbox[3] = x.data[inputCoordsIndex + 3] * x.data[inputCoordsIndex + 3];  //h = h*h
 	            	
-//	            	System.out.println(JsonUtils.toJson(bbox));
-	            	
 	            	float iou = YoloUtils.box_iou(bbox, truthCoords);
 	
 	            	float rmse = YoloUtils.box_rmse(bbox, truthCoords);

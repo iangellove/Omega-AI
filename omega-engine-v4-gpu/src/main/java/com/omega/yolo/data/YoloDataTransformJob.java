@@ -19,7 +19,7 @@ public class YoloDataTransformJob extends RecursiveAction {
 	
 	private int end = 0;
 	
-	private float jitter = 0.0f;
+	private float jitter = 0.1f;
 	
 	private float hue = 0.1f;
 	
@@ -45,9 +45,9 @@ public class YoloDataTransformJob extends RecursiveAction {
 	
 	private static YoloDataTransformJob job;
 	
-	public static YoloDataTransformJob getInstance(Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,DataType dataType,int start,int end) {
+	public static YoloDataTransformJob getInstance(Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,DataType dataType,int numBoxes,int start,int end) {
 		if(job == null) {
-			job = new YoloDataTransformJob(input, label, idxSet, indexs, orgLabelData, dataType, start, end);
+			job = new YoloDataTransformJob(input, label, idxSet, indexs, orgLabelData, dataType, numBoxes, start, end);
 		}else {
 			job.setIndexs(indexs);
 			job.setInput(input);
@@ -59,7 +59,7 @@ public class YoloDataTransformJob extends RecursiveAction {
 		return job;
 	}
 	
-	public YoloDataTransformJob(Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,DataType dataType,int start,int end) {
+	public YoloDataTransformJob(Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,DataType dataType,int numBoxes,int start,int end) {
 		this.setInput(input);
 		this.setLabel(label);
 		this.idxSet = idxSet;
@@ -68,6 +68,7 @@ public class YoloDataTransformJob extends RecursiveAction {
 		this.dataType = dataType;
 		this.start = start;
 		this.end = end;
+		this.numBoxes = numBoxes;
 	}
 	
 	@Override
@@ -82,8 +83,8 @@ public class YoloDataTransformJob extends RecursiveAction {
 		} else {
 
 			int mid = (getStart() + getEnd() + 1) >>> 1;
-			YoloDataTransformJob left = new YoloDataTransformJob(getInput(), getLabel(), idxSet, getIndexs(), orgLabelData, dataType, getStart(), mid - 1);
-			YoloDataTransformJob right = new YoloDataTransformJob(getInput(), getLabel(), idxSet, getIndexs(), orgLabelData, dataType, mid, getEnd());
+			YoloDataTransformJob left = new YoloDataTransformJob(getInput(), getLabel(), idxSet, getIndexs(), orgLabelData, dataType, numBoxes, getStart(), mid - 1);
+			YoloDataTransformJob right = new YoloDataTransformJob(getInput(), getLabel(), idxSet, getIndexs(), orgLabelData, dataType, numBoxes, mid, getEnd());
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -129,10 +130,10 @@ public class YoloDataTransformJob extends RecursiveAction {
 			 */
 			switch (dataType) {
 			case yolov1:
-				YoloDataTransform.loadLabelToYolov1(rLabel, i, getLabel(), input.height, input.width, classnum, numBoxes);
+				YoloDataTransform.loadLabelToYolov1(rLabel, i, getLabel(), input.height, input.width, classnum, this.numBoxes);
 				break;
 			case yolov3:
-				YoloDataTransform.loadLabelToYolov3(rLabel, i, getLabel(), input.height, input.width, numBoxes);
+				YoloDataTransform.loadLabelToYolov3(rLabel, i, getLabel(), input.height, input.width, this.numBoxes);
 				break;
 			}
 
@@ -140,8 +141,8 @@ public class YoloDataTransformJob extends RecursiveAction {
 		
 	}
 	
-	public static void transform(Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,DataType dataType) {
-		YoloDataTransformJob job = YoloDataTransformJob.getInstance(input, label, idxSet, indexs, orgLabelData, dataType, 0, input.number - 1);
+	public static void transform(Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,DataType dataType,int numBoxes) {
+		YoloDataTransformJob job = YoloDataTransformJob.getInstance(input, label, idxSet, indexs, orgLabelData, dataType, numBoxes, 0, input.number - 1);
 		ForkJobEngine.run(job);
 	}
 
@@ -183,6 +184,14 @@ public class YoloDataTransformJob extends RecursiveAction {
 
 	public void setLabel(Tensor label) {
 		this.label = label;
+	}
+
+	public int getNumBoxes() {
+		return numBoxes;
+	}
+
+	public void setNumBoxes(int numBoxes) {
+		this.numBoxes = numBoxes;
 	}
 
 }

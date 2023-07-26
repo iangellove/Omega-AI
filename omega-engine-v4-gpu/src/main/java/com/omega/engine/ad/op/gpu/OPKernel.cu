@@ -115,6 +115,13 @@ __global__ void sub_scalar_kernel(int N, float *X, float ALPHA, float *R)
 }
 
 extern "C"
+__global__ void scalar_sub_kernel(int N, float ALPHA, float *X, float *R)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) R[i] = ALPHA - X[i];
+}
+
+extern "C"
 __global__ void mul_kernel(int N, float *X, float *Y, float *R)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;

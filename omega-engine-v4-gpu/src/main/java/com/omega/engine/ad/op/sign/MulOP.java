@@ -42,7 +42,7 @@ public class MulOP extends SignOP{
 		}else {
 			TensorOP.mul(self, tape.getScalar(), y);
 		}
-		if(self.isRequiresGrad() || other.isRequiresGrad()) {
+		if(self.isRequiresGrad() || (other != null && other.isRequiresGrad())) {
 			y.setRequiresGrad(true);
 		}
 		return y;

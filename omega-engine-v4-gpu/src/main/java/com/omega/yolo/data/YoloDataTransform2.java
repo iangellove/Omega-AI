@@ -4,7 +4,6 @@ import java.util.Map;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.yolo.utils.YoloDecode;
 
@@ -29,9 +28,10 @@ public class YoloDataTransform2 extends DataTransform {
 	
 	private DataType dataType;
 	
-	public YoloDataTransform2(int classnum,DataType dataType) {
+	public YoloDataTransform2(int classnum,DataType dataType,int numBoxes) {
 		this.classnum = classnum;
 		this.dataType = dataType;
+		this.numBoxes = numBoxes;
 	}
 	
 	@Override
@@ -40,7 +40,7 @@ public class YoloDataTransform2 extends DataTransform {
 		
 		label.data = new float[label.dataLength];
 		
-		YoloDataTransformJob.transform(input, label, idxSet, indexs, orgLabelData, dataType);
+		YoloDataTransformJob.transform(input, label, idxSet, indexs, orgLabelData, this.dataType, numBoxes);
 
 	}
 

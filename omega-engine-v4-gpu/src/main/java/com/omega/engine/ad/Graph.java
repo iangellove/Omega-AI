@@ -18,6 +18,7 @@ import com.omega.engine.ad.op.sign.AddOP;
 import com.omega.engine.ad.op.sign.DivOP;
 import com.omega.engine.ad.op.sign.MulOP;
 import com.omega.engine.ad.op.sign.ScalarDivOP;
+import com.omega.engine.ad.op.sign.ScalarSubOP;
 import com.omega.engine.ad.op.sign.SubOP;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
@@ -120,6 +121,9 @@ public class Graph{
 			break;
 		case subtraction:
 			op = SubOP.getInstance();
+			break;
+		case scalarSubtraction:
+			op = ScalarSubOP.getInstance();
 			break;
 		case multiplication:
 			op = MulOP.getInstance();
@@ -263,44 +267,6 @@ public class Graph{
 		}
 	}
 	
-	public static void sigmoid() {
-		
-		int number = 10;
-		int channel  = 5;
-		int height = 5;
-		int width = 5;
-		int length = number * channel * height * width;
-		
-		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.val(length, 0.6f));
-		
-		Tensor y = new Tensor(number, channel, height, width, MatrixUtils.val(length, 1f));
-		
-		x.setRequiresGrad(true);
-
-		Tensor v1 = x.get(1, 0, 2).mul(-1).exp().add(1).scalarDiv(1);
-		
-		Tensor v2 = x.get(1, 2, 2);
-		
-		Tensor v3 = x.get(1, 4, 1).mul(-1).exp().add(1).scalarDiv(1);
-		
-		Tensor v4 = y.get(1, 4, 1).sub(v3).pow(2);
-
-		Graph.showGraph();
-		
-		Graph.backward();
-		
-		System.out.println("z1:"+JsonUtils.toJson(v1.data));
-		System.out.println("z2:"+JsonUtils.toJson(v2.data));
-		System.out.println("z3:"+JsonUtils.toJson(v3.data));
-		System.out.println("z4:"+JsonUtils.toJson(v4.data));
-		System.out.println("dx:"+JsonUtils.toJson(x.getGrad()));
-		
-		PrintUtils.printImage(x.getGrad());
-		
-		System.out.println(1 / (1 + Math.exp(-0.6f)));
-		
-	}
-	
 	public static void sigmoid_gpu(Tensor x,Tensor y) {
 		
 		x.setRequiresGrad(true);
@@ -441,11 +407,15 @@ public class Graph{
 	
 	public static void yolov3_loss() {
 		
-		int number = 64;
-		int channel  = 125;
-		int height = 32;
-		int width = 32;
+		int number = 3;
+		int channel  = 18;
+		int height = 5;
+		int width = 5;
 		int length = number * channel * height * width;
+		
+		int classNum = 1;
+		
+		int bboxNum = 3;
 		
 		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.val(length, 0.6f), true);
 		
@@ -459,13 +429,19 @@ public class Graph{
 		
 		long start = System.nanoTime();
 		
-		Tensor v1 = x.get(1, 0, 2).mul(-1).exp().add(1).scalarDiv(1);
+		Tensor xy1 = BCELoss(sigmoid(x.get(1, 0, 2)), y.get(1, 0, 2));
 		
-		Tensor v2 = x.get(1, 2, 2);
+		Tensor wh1 = MSELoss(x.get(1, 2, 2), y.get(1, 2, 2));
 		
-		Tensor v3 = y.get(1, 4, 2).sub(x.get(1, 4, 2).mul(-1).exp().add(1).scalarDiv(1)).pow(2);
+		Tensor cc1 = BCELoss(sigmoid(x.get(1, 4, 2)), y.get(1, 4, 2));
 		
-		Tensor z = v1.add(v2).add(v3);
+		Tensor xy2 = BCELoss(sigmoid(x.get(1, 6, 2)), y.get(1, 6, 2));
+		
+		Tensor wh2 = MSELoss(x.get(1, 8, 2), y.get(1, 8, 2));
+		 
+		Tensor cc2 = BCELoss(sigmoid(x.get(1, 10, 2)), y.get(1, 10, 2));
+		
+		Tensor z = xy1.add(wh1).add(cc1).add(xy2).add(wh2).add(cc2);
 		
 //		Graph.showGraph();
 		
@@ -473,15 +449,32 @@ public class Graph{
 
 		z.syncHost();
 		
-//		System.out.println("z:"+JsonUtils.toJson(z.data));
+		System.out.println("z:"+JsonUtils.toJson(z.data));
 		x.getGrad().syncHost();
-//		System.out.println("dx:"+JsonUtils.toJson(x.getGrad()));
+		System.out.println("dx:"+JsonUtils.toJson(x.getGrad()));
 		
 		System.out.println(((System.nanoTime() - start) / 1e6) + "ms.");
+	
+		PrintUtils.printImage(z);
+		
+		PrintUtils.printImage(x.getGrad());
 		
 	}
 	
-
+	public static Tensor sigmoid(Tensor x) {
+		return x.mul(-1).exp().add(1).scalarDiv(1);
+	}
+	
+	public static Tensor MSELoss(Tensor pred,Tensor target) {
+		// y = (pred - sub)^2
+		return pred.sub(target).pow(2);
+	}
+	
+	public static Tensor BCELoss(Tensor pred,Tensor target) {
+		// y = - target * torch.log(pred) - (1.0 - target) * torch.log(1.0 - pred)
+		return target.mul(-1).mul(pred.log()).sub(target.scalarSub(1.0f).mul(pred.scalarSub(1.0f).log()));
+	}
+	
 	public static void main(String[] args) {
 		
 		try {

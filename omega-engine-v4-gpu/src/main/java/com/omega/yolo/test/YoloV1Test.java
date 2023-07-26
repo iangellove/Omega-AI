@@ -459,7 +459,7 @@ public class YoloV1Test {
 //		String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
 //		String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
 		
-		YoloDataTransform2 dt = new YoloDataTransform2(classNum, DataType.yolov1);
+		YoloDataTransform2 dt = new YoloDataTransform2(classNum, DataType.yolov1, 7);
 		
 		DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.csv, im_w, im_h, classNum, batchSize, DataType.yolov1, dt);
 		
@@ -494,7 +494,7 @@ public class YoloV1Test {
 			String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
 			String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
 			
-			YoloDataTransform2 dt = new YoloDataTransform2(classNum, DataType.yolov1);
+			YoloDataTransform2 dt = new YoloDataTransform2(classNum, DataType.yolov1, 7);
 			
 			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.csv, im_w, im_h, classNum, batchSize, DataType.yolov1, dt);
 			

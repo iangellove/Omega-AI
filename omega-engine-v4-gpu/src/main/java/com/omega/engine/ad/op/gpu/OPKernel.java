@@ -44,6 +44,8 @@ public class OPKernel implements Serializable{
 	
 	private CUfunction sub_scalar_gpu_function;
 	
+	private CUfunction scalar_sub_gpu_function;
+	
 	private CUfunction mul_gpu_function;
 	
 	private CUfunction mul_scalar_gpu_function;
@@ -99,6 +101,8 @@ public class OPKernel implements Serializable{
 		sub_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "sub_kernel");
 		
 		sub_scalar_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "sub_scalar_kernel");
+		
+		scalar_sub_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "scalar_sub_kernel"); 
 		
 		mul_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "mul_kernel");
 		
@@ -428,6 +432,34 @@ public class OPKernel implements Serializable{
 	            );
 			
 			checkCUDA(cuLaunchKernel(sub_scalar_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void scalar_sub_gpu(float a,Tensor b,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float ALPHA, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	        		Pointer.to(new float[] {a}),
+	                Pointer.to(b.getGpuData()),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(scalar_sub_gpu_function,
 	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
