@@ -88,7 +88,7 @@ public class YoloUtils {
 //		System.out.println(JsonUtils.toJson(output.getByNumber(0)));
 		
 		int count = 0;
-		
+
 		for(int b = 0;b<output.number;b++) {
 			
 			for (int i = 0;i<output.height * output.width;i++){
@@ -96,11 +96,12 @@ public class YoloUtils {
 		        int col = i % output.width;
 		        int nCount = 0;
 		        for(int n = 0;n<bbox_num;n++){
+		        	
 		        	int n_index = n*output.width*output.height + row*output.width + col;
 
 		            int obj_index = entryIndex(b, output.width, output.height, n_index, 4, outputs, class_number);
 		            float objectness = output.data[obj_index];
-		            
+		            System.out.println(objectness);
 		            if(objectness > thresh) {
 		            	nCount++;
 	//		            System.out.println(objectness);

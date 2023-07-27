@@ -115,7 +115,7 @@ public class YoloV3Test {
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 200, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
 			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
 			
@@ -126,7 +126,7 @@ public class YoloV3Test {
 			
 			String outputPath = "H:\\voc\\banana-detection\\test_yolov3\\";
 			
-			showImg(outputPath, vailData, 1, draw_bbox, batchSize, false, im_w, im_h);
+			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h);
 		
 		} catch (Exception e) {
 			// TODO: handle exception
