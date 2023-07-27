@@ -95,13 +95,14 @@ public class YoloUtils {
 		        int row = i / output.width;
 		        int col = i % output.width;
 		        int nCount = 0;
+		        
 		        for(int n = 0;n<bbox_num;n++){
 		        	
 		        	int n_index = n*output.width*output.height + row*output.width + col;
 
 		            int obj_index = entryIndex(b, output.width, output.height, n_index, 4, outputs, class_number);
 		            float objectness = output.data[obj_index];
-		            System.out.println(objectness);
+		            
 		            if(objectness > thresh) {
 		            	nCount++;
 	//		            System.out.println(objectness);

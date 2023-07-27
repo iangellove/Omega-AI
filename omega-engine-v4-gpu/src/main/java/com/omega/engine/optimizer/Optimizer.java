@@ -696,6 +696,7 @@ public abstract class Optimizer {
 				 * current time error
 				 */
 				network.loss(output, label);
+				
 			}else{
 				Tensor output = network.predict(input);
 				/**

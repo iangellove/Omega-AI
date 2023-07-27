@@ -1445,6 +1445,8 @@ public class MBSGDOptimizer extends Optimizer {
 			
 			Tensor label = trainingData.initLabelTensor();
 			
+			Tensor vail_input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			
 			for(int i = 0;i<this.trainTime;i++) {
 				
 				if(this.trainIndex >= this.minTrainTime) {
@@ -1517,7 +1519,7 @@ public class MBSGDOptimizer extends Optimizer {
 					
 					System.out.println("----------------testing start----------------");
 					
-					this.testObjectRecognitionOutputs(valiData, input, label, this.batchSize);
+					this.testObjectRecognitionOutputs(valiData, vail_input, label, this.batchSize);
 					
 					System.out.println("----------------testing finish---------------");
 					

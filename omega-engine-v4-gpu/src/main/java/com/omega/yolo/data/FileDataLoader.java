@@ -44,6 +44,9 @@ public class FileDataLoader extends RecursiveAction {
 		if(job == null) {
 			job = new FileDataLoader(path, extName, names, indexs, batchSize, input, normalization, start, end);
 		}else {
+			if(input != job.getInput()){
+				job.setInput(input);
+			}
 			job.setPath(path);
 			job.setNames(names);
 			job.setStart(0);
@@ -62,7 +65,7 @@ public class FileDataLoader extends RecursiveAction {
 		this.extName = extName;
 		this.setNames(names);
 		this.setIndexs(indexs);
-		this.input = input;
+		this.setInput(input);
 		this.normalization = normalization;
 	}
 	
@@ -78,8 +81,8 @@ public class FileDataLoader extends RecursiveAction {
 		} else {
 
 			int mid = (getStart() + getEnd() + 1) >>> 1;
-			FileDataLoader left = new FileDataLoader(getPath(), extName, getNames(), getIndexs(), batchSize, input, normalization, getStart(), mid - 1);
-			FileDataLoader right = new FileDataLoader(getPath(), extName, getNames(), getIndexs(), batchSize, input, normalization, mid, getEnd());
+			FileDataLoader left = new FileDataLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), normalization, getStart(), mid - 1);
+			FileDataLoader right = new FileDataLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), normalization, mid, getEnd());
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -100,7 +103,7 @@ public class FileDataLoader extends RecursiveAction {
 				filePath = getPath() + "/" + getNames()[getIndexs()[i]] + "." + extName;
 			}
 			
-			YoloImageUtils.loadImgDataToOrgTensor(filePath, input, i);
+			YoloImageUtils.loadImgDataToOrgTensor(filePath, getInput(), i);
 //			System.out.println(filePath);
 		}
 		
@@ -152,6 +155,14 @@ public class FileDataLoader extends RecursiveAction {
 
 	public void setNames(String[] names) {
 		this.names = names;
+	}
+
+	public Tensor getInput() {
+		return input;
+	}
+
+	public void setInput(Tensor input) {
+		this.input = input;
 	}
 	
 }
