@@ -123,6 +123,7 @@ cifar_10 （cifar_10数据集）
 ### 附加数据集
 [banana-detection](https://pan.baidu.com/s/1mUr12FJm9OGbsObqfjZ81Q?pwd=jish)
 
+[vailCode](https://pan.baidu.com/s/11wZY9gQQ9OuoViw11IW6BQ?pwd=2rdt)
 
 ### 数据集成绩
 
