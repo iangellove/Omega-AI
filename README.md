@@ -630,6 +630,19 @@ http://119.3.123.193:8011/AICar
 
 5.后续版本将逐渐实现引擎对yolov3,yolov5等模型
 
+#### 2023-08-02 
+1.新增自动求导功能(包含cpu，gpu版本). 
+
+2.新增multiLabel_soft_margin loss损失函数，yolo loss（Yolov3Loss）.
+
+3.新增yolov3目标识别实现，当前实现的yolo版本为yolov3版本(实现源码请移步YoloV3Test.java) . 
+
+4.新增目标识别数据增强功能(随机裁剪边缘，随机上下反转，hsv变换等).
+
+5.使用自动求导功能实现MSN损失函数，代替原有的MSN loss. 
+
+7.后续版本将逐渐实现引擎对yolov5,GAN,transformer等模型支持.
+
 ## 欢迎打扰
 
 ### QQ：465973119
