@@ -76,11 +76,13 @@ SGDOptimizer（随机梯度下降算法）
 
 #### 损失函数(loss function)
 
-SquareLoss (平方差损失函数)
+MSELoss (平方差损失函数)
 
 CrossEntropyLoss (交叉熵损失函数)
 
 CrossEntropyLossWithSoftmax (交叉熵损失 + softmax)
+
+MultiLabelSoftMargin (多标签损失函数)
 
 #### 学习率更新器（LearnRateUpdate）
 
