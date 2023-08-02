@@ -641,7 +641,7 @@ http://119.3.123.193:8011/AICar
 
 5.使用自动求导功能实现MSN损失函数，代替原有的MSN loss. 
 
-7.后续版本将逐渐实现引擎对yolov5,GAN,transformer等模型支持.
+6.后续版本将逐渐实现引擎对yolov5,GAN,transformer等模型支持.
 
 ## 欢迎打扰
 
