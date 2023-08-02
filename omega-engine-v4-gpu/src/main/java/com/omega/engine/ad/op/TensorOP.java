@@ -156,6 +156,16 @@ public class TensorOP {
 		
 	}
 	
+	public static void sum(Tensor a,Tensor b,int axis) {
+		
+		if(b.isHasGPU()) {
+			OPKernel.getInstance().sum_gpu(a, b, axis);
+		}else {
+			b.data = MatrixOperation.sum(a.data, a.number, a.channel, a.height, a.width, axis);
+		}
+		
+	}
+	
 	public static void log(Tensor a,Tensor b) {
 		
 		if(b.isHasGPU()) {
@@ -194,6 +204,14 @@ public class TensorOP {
 			c.data = MatrixOperation.cos(a.data);
 		}
 		
+	}
+	
+	public static void broadcast(Tensor a,Tensor c,int axis) {
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().broadcast_gpu(a, c, axis);
+		}else {
+			MatrixOperation.broadcast(a.data, c.data, c.number, c.channel, c.height, c.width, axis);
+		}
 	}
 	
 }

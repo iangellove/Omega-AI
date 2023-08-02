@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.OP;
+import com.omega.engine.ad.op.OPType;
 import com.omega.engine.ad.op.data.GetOP;
 
 /**
@@ -39,15 +40,27 @@ public class Tape implements Serializable{
 		this.setY(other);
 		if(position!=null) {
 			int dims = position[0];
-			int count = position[2];
-			switch (dims) {
-			case 0:
-				setOutput(new Tensor(count, self.channel, self.height, self.width, self.isHasGPU()));
-				break;
-			case 1:
-				setOutput(new Tensor(self.number, count, self.height, self.width, self.isHasGPU()));
-				break;
+			if(!op.getOpType().equals(OPType.sum)) {
+				int count = position[2];
+				switch (dims) {
+				case 0:
+					setOutput(new Tensor(count, self.channel, self.height, self.width, self.isHasGPU()));
+					break;
+				case 1:
+					setOutput(new Tensor(self.number, count, self.height, self.width, self.isHasGPU()));
+					break;
+				}
+			}else{
+				switch (dims) {
+				case 0:
+					setOutput(new Tensor(1, 1, 1, 1, self.isHasGPU()));
+					break;
+				case 1:
+					setOutput(new Tensor(self.number, 1, 1, 1, self.isHasGPU()));
+					break;
+				}
 			}
+			
 		}else {
 			setOutput(new Tensor(self.number, self.channel, self.height, self.width, self.isHasGPU()));
 		}
@@ -81,12 +94,13 @@ public class Tape implements Serializable{
 	}
 	
 	public void backward(Tensor delta) {
-		if(this.getPosition() != null) {
-			GetOP getOp = (GetOP) op;
-			getOp.backward(delta, this);
-		}else {
-			op.backward(delta, this);
-		}
+		op.backward(delta, this);
+//		if(this.getPosition() != null) {
+//			GetOP getOp = (GetOP) op;
+//			getOp.backward(delta, this);
+//		}else {
+//			op.backward(delta, this);
+//		}
 	}
 	
 	public void backward() {

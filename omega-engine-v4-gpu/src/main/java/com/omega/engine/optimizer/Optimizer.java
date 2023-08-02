@@ -11,6 +11,7 @@ import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.LabelUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.check.BaseCheck;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.layer.YoloLayer;
 import com.omega.engine.nn.network.Network;
@@ -68,6 +69,8 @@ public abstract class Optimizer {
 	private BaseData trainingData;
 	
 	private BaseData testData;
+	
+	public BaseCheck check;
 	
 	private boolean warmUp = false;
 	
@@ -479,6 +482,53 @@ public abstract class Optimizer {
 		vailLoss = vailLoss / itc / batchSize;
 		
 		System.out.println("training["+this.trainIndex+"] vail accuracy:{"+ error * 100 +"%} vail loss:{"+vailLoss+"} "+" [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
+		
+		return vailLoss;
+	}
+	
+	public float testAndLoss(BaseDataLoader testData,Tensor input,Tensor label,int batchSize,BaseCheck check) {
+		// TODO Auto-generated method stub
+		
+		float vailLoss = 0.0f;
+		
+		long startTime = System.nanoTime();
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		float accuracy = 0.0f;
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.loadData(pageIndex, batchSize, input, label);
+			
+			input.hostToDevice();
+			
+			label.hostToDevice();
+			
+			Tensor output = this.network.predict(input);
+
+			/**
+			 * current time error
+			 */
+			Tensor loss = this.network.loss(output, label);
+			
+			if(loss.isHasGPU()) {
+				vailLoss += MatrixOperation.sum(loss.syncHost());
+			}else {
+				vailLoss += MatrixOperation.sum(loss.data);
+			}
+			
+			output.syncHost();
+			
+			accuracy += check.check(output, label, testData.labelSet, true);
+			
+		}
+		
+		vailLoss = vailLoss / itc;
+		
+		System.out.println("test["+this.trainIndex+"] vail loss:{"+vailLoss+"} (accuracy:"+accuracy/testData.number*100+"%) [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
 		
 		return vailLoss;
 	}

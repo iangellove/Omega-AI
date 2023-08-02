@@ -7,6 +7,7 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.PrintUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.OP;
 import com.omega.engine.ad.op.OPType;
 import com.omega.engine.ad.op.data.GetOP;
@@ -14,6 +15,7 @@ import com.omega.engine.ad.op.functions.ExpOP;
 import com.omega.engine.ad.op.functions.LogOP;
 import com.omega.engine.ad.op.functions.PowOP;
 import com.omega.engine.ad.op.functions.SinOP;
+import com.omega.engine.ad.op.functions.SumOP;
 import com.omega.engine.ad.op.sign.AddOP;
 import com.omega.engine.ad.op.sign.DivOP;
 import com.omega.engine.ad.op.sign.MulOP;
@@ -35,9 +37,21 @@ public class Graph{
 	 */
 	private static List<Tape> tapes = new ArrayList<Tape>();
 	
-	private static int tapeIndex = 0;
+	public static int tapeIndex = 0;
 	
 	private static boolean lock = false;
+	
+	public static void start() {
+		tapeIndex = 0;
+	}
+	
+	public static void lock() {
+		lock = true;
+	}
+	
+	public static void unlock() {
+		lock = false;
+	}
 	
 	public static void showGraph() {
 		for(int i = 0;i<tapes.size();i++) {
@@ -51,7 +65,7 @@ public class Graph{
 	
 	public static void clearGrad() {
 		for(int i = 0;i<tapes.size();i++) {
-			Graph.tapes.get(i).zeroGrad();;
+			Graph.tapes.get(i).zeroGrad();
 		}
 //		reset();
 	}
@@ -77,6 +91,9 @@ public class Graph{
 			Graph.add(tape);
 		}else {
 			tape = tapes.get(tapeIndex);
+			if(tape.getOp().getOpType().equals(OPType.sum)) {
+				tape.getOutput().fill(0.0f);
+			}
 			tapeIndex++;
 		}
 		return tape;
@@ -185,6 +202,9 @@ public class Graph{
 		switch (opType) {
 		case get:
 			op = GetOP.getInstance();
+			break;
+		case sum:
+			op = SumOP.getInstance();
 			break;
 		default:
 			break;	
@@ -475,6 +495,205 @@ public class Graph{
 		return target.mul(-1).mul(pred.log()).sub(target.scalarSub(1.0f).mul(pred.scalarSub(1.0f).log()));
 	}
 	
+	public static void multiLabelSoftMarginLoss() {
+	
+		int number = 2;
+		int channel  = 1;
+		int height = 1;
+		int width = 4;
+		int length = number * channel * height * width;
+		int C = channel * height * width;
+
+		float[] xa = new float[] {0.2f,0.5f,0,0,0.1f,0.5f,0,0.8f};
+		
+		float[] ya = new float[] {1,1,0,0,0,1,0,1};
+		
+		Tensor x = new Tensor(number, channel, height, width, xa, true);
+		
+		Tensor y = new Tensor(number, channel, height, width, ya, true);
+		
+		x.setRequiresGrad(true);
+		
+		x.hostToDevice();
+		
+		y.hostToDevice();
+		
+		/**
+		 * -(target * logsigmoid(input) + (1 - target) * logsigmoid(-input))
+		 */
+		for(int i = 0;i<20;i++) {
+
+			long start = System.nanoTime();
+			
+			Tensor x0 = sigmoid(x).log();
+			
+			Tensor x1 = sigmoid(x.mul(-1.0f)).log().mul(y.scalarSub(1.0f));
+			
+			Tensor loss = y.mul(x0).add(x1).mul(-1.0f);
+			
+			loss = loss.sum(1).div(C).sum(0).div(x.number);
+			
+			Graph.clearGrad();
+			
+			Graph.backward();
+			
+			loss.syncHost();
+			
+			System.out.println("loss:"+JsonUtils.toJson(loss.data));
+			
+			x.getGrad().syncHost();
+			System.out.println("dx:"+JsonUtils.toJson(x.getGrad()));
+			
+			System.out.println(((System.nanoTime() - start) / 1e6) + "ms.");
+		
+			PrintUtils.printImage(x.getGrad());
+			
+		}
+		
+	}
+	
+	public static void multiLabelSoftMarginLoss2() {
+		
+		int number = 64;
+		int channel  = 128;
+		int height = 32;
+		int width = 32;
+		int length = number * channel * height * width;
+		int C = channel * height * width;
+
+		float[] xa = RandomUtils.gaussianRandom(length, 0.1f);
+		
+		float[] ya = RandomUtils.gaussianRandom(length, 0.1f);
+		
+		Tensor x = new Tensor(number, channel, height, width, xa, true);
+		
+		Tensor y = new Tensor(number, channel, height, width, ya, true);
+		
+		x.setRequiresGrad(true);
+		
+		x.hostToDevice();
+		
+		y.hostToDevice();
+		
+		/**
+		 * -(target * logsigmoid(input) + (1 - target) * logsigmoid(-input))
+		 */
+		for(int i = 0;i<200;i++) {
+
+			long start = System.nanoTime();
+			
+			Graph.tapeIndex = 0;
+			
+			Tensor x0 = sigmoid(x).log();
+			
+			Tensor x1 = sigmoid(x.mul(-1.0f)).log().mul(y.scalarSub(1.0f));
+			
+			Tensor loss = y.mul(x0).add(x1).mul(-1.0f);
+			
+			loss = loss.sum(1).div(C).sum(0).div(x.number);
+			
+			Graph.lock = true;
+			
+			Graph.clearGrad();
+			
+			Graph.backward();
+			
+			loss.syncHost();
+			
+//			System.out.println("loss:"+JsonUtils.toJson(loss.data));
+			
+//			x.getGrad().syncHost();
+//			System.out.println("dx:"+JsonUtils.toJson(x.getGrad()));
+			
+			System.out.println(((System.nanoTime() - start) / 1e6) + "ms.");
+		
+//			PrintUtils.printImage(x.getGrad());
+			
+		}
+		
+	}
+	
+	public static void sq() {
+		
+		int number = 3;
+		int channel  = 18;
+		int height = 5;
+		int width = 5;
+		int length = number * channel * height * width;
+		int C = channel * height * width;
+		
+		float[] cpx = RandomUtils.gaussianRandom(length, 0.1f);
+		
+		float[] cpy = RandomUtils.gaussianRandom(length, 0.1f);
+		
+		Tensor x = new Tensor(number, channel, height, width, cpx, true);
+		
+		Tensor y = new Tensor(number, channel, height, width, cpy, true);
+		
+		for(int i = 0;i<20;i++) {
+
+			x.data = RandomUtils.gaussianRandom(length, 0.1f);
+			
+			y.data = RandomUtils.gaussianRandom(length, 0.1f);
+			
+			sq_back_cpu(x, y);
+			
+			x.setRequiresGrad(true);
+			
+			x.hostToDevice();
+			y.hostToDevice();
+			
+			Tensor loss1 = y.sub(x).pow(2.0f).div(2.0f);
+
+			Graph.clearGrad();
+			
+			Graph.backward();
+			
+			x.getGrad().syncHost();
+			System.out.println("dx_gpu:"+JsonUtils.toJson(x.getGrad().data));
+		}
+
+	}
+	
+	public static void sq_back_cpu(Tensor x,Tensor y) {
+		
+		Tensor temp = new Tensor(x.number, x.channel, x.height, x.width, true);
+		
+		for(int i = 0;i<x.getDataLength();i++) {
+			temp.data[i] = x.data[i] - y.data[i];
+		}
+		System.out.println("dx_cpu:"+JsonUtils.toJson(temp.data));
+	}
+	
+	public static void sum() {
+		
+		int number = 3;
+		int channel  = 18;
+		int height = 5;
+		int width = 5;
+		int length = number * channel * height * width;
+
+		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.val(length, 0.6f), true);
+		
+		x.setRequiresGrad(true);
+		
+		x.hostToDevice();
+		
+		Tensor z = x.sum(1);
+		
+		Graph.backward();
+		
+		z.syncHost();
+		
+		System.out.println("z:"+JsonUtils.toJson(z.data));
+		
+		x.getGrad().syncHost();
+		System.out.println("dx:"+JsonUtils.toJson(x.getGrad()));
+		
+		PrintUtils.printImage(x.getGrad());
+		
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -517,7 +736,11 @@ public class Graph{
 			
 //			pow_gpu();
 			
-			yolov3_loss();
+			multiLabelSoftMarginLoss2();
+			
+//			sq();
+			
+//			sum();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

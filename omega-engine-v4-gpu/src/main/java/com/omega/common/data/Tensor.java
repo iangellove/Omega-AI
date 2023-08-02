@@ -199,11 +199,8 @@ public class Tensor implements Serializable{
 	}
 	
 	public float[] getByNumber(int n) {
-		if(once == null || once.length != channel * height * width) {
-			once = new float[channel * height * width];
-		}
-		System.arraycopy(data, n * channel * height * width, once, 0, channel * height * width);
-		return once;
+		System.arraycopy(data, n * channel * height * width, getOnce(), 0, channel * height * width);
+		return this.once;
 	}
 	
 	public void setByNumber(int n,float[] x) {
@@ -218,12 +215,9 @@ public class Tensor implements Serializable{
 	}
 	
 	public float[] getByNumberAndChannel(int n,int c) {
-		if(once == null || once.length != height * width) {
-			once = new float[height * width];
-		}
 		int start = n * channel * height * width + c * height * width;
-		System.arraycopy(data, start, once, 0, height * width);
-		return once;
+		System.arraycopy(data, start, getOnce(), 0, height * width);
+		return this.once;
 	}
 	
 	public void setByNumberAndChannel(int n,int c,float[] x) {
@@ -468,6 +462,10 @@ public class Tensor implements Serializable{
 		return Graph.OP(OPType.exp, this);
 	}
 	
+	public Tensor sum(int axis) {
+		return Graph.OP(OPType.sum, this, new int[] {axis});
+	}
+	
 	/**
 	 * 获取指定维度数据
 	 * @param position int[dims,start,count]
@@ -506,9 +504,10 @@ public class Tensor implements Serializable{
 	}
 	
 	public void fill(float val) {
-		this.data = MatrixUtils.one(this.dataLength);
 		if(this.isHasGPU()) {
 			OPKernel.getInstance().fill_gpu(this, val);
+		}else {
+			MatrixUtils.val(this.data, val);
 		}
 	}
 
@@ -518,6 +517,13 @@ public class Tensor implements Serializable{
 
 	public void setTape(Tape tape) {
 		this.tape = tape;
+	}
+
+	public float[] getOnce() {
+		if(this.once == null || this.once.length != channel * height * width) {
+			this.once = new float[channel * height * width];
+		}
+		return once;
 	}
 	
 //	public void backward() {

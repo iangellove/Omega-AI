@@ -106,10 +106,8 @@ public class YoloLabelUtils {
 		}else {
 			dataLoader.getLabelSet().data = labelToYoloNotFormat(dataLoader.getLabelSet(), dataLoader.getLabelSet().number, classNum, 7, im_w, im_h);
 		}
-		
 		dataLoader.getLabelSet().width = 7 * 7 * (5 + classNum);
 		dataLoader.labelSize = 7 * 7 * (5 + classNum);
-		
 	}
 	
 	public static Tensor formatToYoloV3(Tensor label,int im_w,int im_h) {

@@ -283,5 +283,11 @@ public class YoloDataLoader extends BaseDataLoader{
 		String filePath = imgDirPath + "/" + idxSet[index];
 		return YoloImageUtils.loadImgDataToArray(filePath);
 	}
+
+	@Override
+	public Tensor initLabelTensor() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 	
 }

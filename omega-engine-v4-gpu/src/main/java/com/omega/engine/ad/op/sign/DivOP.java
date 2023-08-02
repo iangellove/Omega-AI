@@ -43,7 +43,7 @@ public class DivOP extends SignOP{
 		}else {
 			TensorOP.div(self, tape.getScalar(), y);
 		}
-		if(self.isRequiresGrad() || other.isRequiresGrad()) {
+		if(self.isRequiresGrad() || (other != null && other.isRequiresGrad())) {
 			y.setRequiresGrad(true);
 		}
 		return y;

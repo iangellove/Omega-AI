@@ -1797,6 +1797,50 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
+	public static float[] sum(float[] x,int n,int c,int h,int w,int axis) {
+		
+		int count = 1;
+
+		switch (axis) {
+		case 0:
+			count = 1;
+			break;
+		case 1:
+			count = n;
+			break;
+		}
+		
+		float[] temp = new float[count];
+		
+		switch (axis) {
+		case 0:
+			for(float o:x) {
+				temp[0] += o;
+			}
+			break;
+		case 1:
+			for(int i = 0;i<x.length;i++) {
+				int b = i / c / h / w;
+				temp[b] += x[i];
+			}
+			break;
+		}
+
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: count
+	 *
+	 * @param x
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static float sum(float[][] x) {
 		float temp = 0.0f;
 		for(int i = 0;i<x.length;i++) {
@@ -1911,6 +1955,29 @@ public class MatrixOperation {
 		return temp;
 	}
 	
+	/**
+	 * broadcast
+	 * @param a
+	 * @param b
+	 * @param axis
+	 */
+	public static void broadcast(float[] a,float[] b,int N,int C,int H,int W,int axis) {
+		
+		switch (axis) {
+		case 0:
+			for(int i = 0;i<b.length;i++) {
+				b[i] = a[0];
+			}
+			break;
+		case 1:
+			for(int i = 0;i<b.length;i++) {
+				int n = i / C / H / W;
+				b[i] = a[n];
+			}
+			break;
+		}
+		
+	}
 	
 	/**
 	 * isZero

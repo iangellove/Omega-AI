@@ -13,5 +13,6 @@ public enum OPType {
 	exp,
 	dot,
 	get,
-	pow
+	pow,
+	sum
 }

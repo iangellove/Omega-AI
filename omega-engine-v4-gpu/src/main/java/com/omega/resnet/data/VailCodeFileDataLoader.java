@@ -1,5 +1,6 @@
-package com.omega.yolo.data;
+package com.omega.resnet.data;
 
+import java.util.List;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 
@@ -12,7 +13,7 @@ import com.omega.yolo.utils.YoloImageUtils;
  * @author Administrator
  *
  */
-public class FileDataLoader extends RecursiveAction {
+public class VailCodeFileDataLoader extends RecursiveAction {
 
 	/**
 	 * 
@@ -27,44 +28,41 @@ public class FileDataLoader extends RecursiveAction {
 	
 	private String path;
 	
-	private String[] names;
-	
 	private int[] indexs;
 	
 	private Tensor input;
 	
-	private String extName;
+	private List<String> keyList;
 	
-	private static FileDataLoader job;
+	private static VailCodeFileDataLoader job;
 	
 	private boolean normalization = false;
 	
-	public static FileDataLoader getInstance(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,boolean normalization,int start,int end) {
+	public static VailCodeFileDataLoader getInstance(String path,List<String> keyList,int[] indexs,int batchSize,Tensor input,boolean normalization,int start,int end) {
 		if(job == null) {
-			job = new FileDataLoader(path, extName, names, indexs, batchSize, input, normalization, start, end);
+			job = new VailCodeFileDataLoader(path, keyList, indexs, batchSize, input, normalization, start, end);
 		}else {
 			if(input != job.getInput()){
 				job.setInput(input);
 			}
 			job.setPath(path);
-			job.setNames(names);
 			job.setStart(0);
 			job.setEnd(end);
+			job.setKeyList(keyList);
 			job.setIndexs(indexs);
 			job.reinitialize();
 		}
 		return job;
 	}
 	
-	public FileDataLoader(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,boolean normalization,int start,int end) {
+	public VailCodeFileDataLoader(String path,List<String> keyList,int[] indexs,int batchSize,Tensor input,boolean normalization,int start,int end) {
 		this.setStart(start);
 		this.setEnd(end);
 		this.batchSize = batchSize;
 		this.setPath(path);
-		this.extName = extName;
-		this.setNames(names);
 		this.setIndexs(indexs);
 		this.setInput(input);
+		this.keyList = keyList;
 		this.normalization = normalization;
 	}
 	
@@ -80,8 +78,8 @@ public class FileDataLoader extends RecursiveAction {
 		} else {
 
 			int mid = (getStart() + getEnd() + 1) >>> 1;
-			FileDataLoader left = new FileDataLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), normalization, getStart(), mid - 1);
-			FileDataLoader right = new FileDataLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), normalization, mid, getEnd());
+			VailCodeFileDataLoader left = new VailCodeFileDataLoader(getPath(), keyList, getIndexs(), batchSize, input, normalization, getStart(), mid - 1);
+			VailCodeFileDataLoader right = new VailCodeFileDataLoader(getPath(), keyList, getIndexs(), batchSize, input, normalization, mid, getEnd());
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -96,22 +94,18 @@ public class FileDataLoader extends RecursiveAction {
 		
 		for (int i = getStart(); i <= getEnd(); i++) {
 			
-			String filePath = getPath() + "/" + getNames()[getIndexs()[i]];
+			String filename = keyList.get(indexs[i]);
+
+			String filePath = getPath() + "/" + filename;
 			
-			if(!getNames()[getIndexs()[i]].contains(".")) {
-				filePath = getPath() + "/" + getNames()[getIndexs()[i]] + "." + extName;
-			}
-			
-			YoloImageUtils.loadImgDataToOrgTensor(filePath, getInput(), i);
-//			System.out.println(filePath);
+			YoloImageUtils.loadImgDataToGrayTensor(filePath, input, i);
+
 		}
 		
 	}
 	
-	public static void load(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,boolean normalization) {
-		
-//		FileDataLoader job = new FileDataLoader(path, extName, names, indexs, batchSize, input, 0, batchSize - 1);
-		FileDataLoader job = getInstance(path, extName, names, indexs, batchSize, input, normalization, 0, batchSize - 1);
+	public static void load(String path,List<String> keyList,int[] indexs,int batchSize,Tensor input,boolean normalization) {
+		VailCodeFileDataLoader job = getInstance(path, keyList, indexs, batchSize, input, normalization, 0, batchSize - 1);
 		ForkJobEngine.run(job);
 		
 	}
@@ -148,20 +142,20 @@ public class FileDataLoader extends RecursiveAction {
 		this.path = path;
 	}
 
-	public String[] getNames() {
-		return names;
-	}
-
-	public void setNames(String[] names) {
-		this.names = names;
-	}
-
 	public Tensor getInput() {
 		return input;
 	}
 
 	public void setInput(Tensor input) {
 		this.input = input;
+	}
+
+	public List<String> getKeyList() {
+		return keyList;
+	}
+
+	public void setKeyList(List<String> keyList) {
+		this.keyList = keyList;
 	}
 	
 }

@@ -390,9 +390,10 @@ public class ImageUtils {
 		int minx = bi.getMinX();
 		int miny = bi.getMinY();
 
-		int[][] r = new int[width][height];
-		int[][] g = new int[width][height];
-		int[][] b = new int[width][height];
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		int pixel = 0;
 		int size = height * width * 3;
 		float[] color = new float[size];
 		
@@ -404,13 +405,13 @@ public class ImageUtils {
 		
 		for (int j = miny; j < height; j++) {
 			for (int i = minx; i < width; i++) {
-				int pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
-				r[i][j] = (pixel & 0xff0000) >> 16;
-				g[i][j] = (pixel & 0xff00) >> 8;
-				b[i][j] = (pixel & 0xff);
-				color[0 * width * height + i * height + j] = r[i][j] * 1.0f / n;
-				color[1 * width * height + i * height + j] = g[i][j] * 1.0f / n;
-				color[2 * width * height + i * height + j] = b[i][j] * 1.0f / n;
+				pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+				r = (pixel & 0xff0000) >> 16;
+				g = (pixel & 0xff00) >> 8;
+				b = (pixel & 0xff);
+				color[0 * width * height + i * height + j] = r * 1.0f / n;
+				color[1 * width * height + i * height + j] = g * 1.0f / n;
+				color[2 * width * height + i * height + j] = b * 1.0f / n;
 			}
 		}
 		
@@ -430,10 +431,61 @@ public class ImageUtils {
 		int minx = bi.getMinX();
 		int miny = bi.getMinY();
 
-		int[][] r = new int[width][height];
-		int[][] g = new int[width][height];
-		int[][] b = new int[width][height];
 		int size = height * width * 3;
+		float[] color = new float[size];
+		
+		float n = 1.0f;
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		int pixel = 0;
+		
+		
+		if(normalization) {
+			n = 255.0f;
+		}
+		
+		for (int j = miny; j < height; j++) {
+			for (int i = minx; i < width; i++) {
+				pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+				r = (pixel & 0xff0000) >> 16;
+				g = (pixel & 0xff00) >> 8;
+				b = (pixel & 0xff);
+				
+				if(meanStd) {
+					color[0 * width * height + i * height + j] = (float) ((r * 1.0f / n) - mean[0]) / std[0];
+					color[1 * width * height + i * height + j] = (float) ((g * 1.0f / n) - mean[1]) / std[1];
+					color[2 * width * height + i * height + j] = (float) ((b * 1.0f / n) - mean[2]) / std[2];
+				}else {
+					color[0 * width * height + i * height + j] = r * 1.0f / n;
+					color[1 * width * height + i * height + j] = g * 1.0f / n;
+					color[2 * width * height + i * height + j] = b * 1.0f / n;
+				}
+				
+			}
+		}
+		
+		return color;
+	}
+	
+	public float[] getImageDataToGray(File file,boolean normalization,boolean meanStd) throws Exception {
+
+		BufferedImage bi = null;
+		try {
+			bi = ImageIO.read(file);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		int width = bi.getWidth();
+		int height = bi.getHeight();
+		int minx = bi.getMinX();
+		int miny = bi.getMinY();
+
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		int pixel = 0;
+		int size = height * width;
 		float[] color = new float[size];
 		
 		float n = 1.0f;
@@ -444,25 +496,71 @@ public class ImageUtils {
 		
 		for (int j = miny; j < height; j++) {
 			for (int i = minx; i < width; i++) {
-				int pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
-				r[i][j] = (pixel & 0xff0000) >> 16;
-				g[i][j] = (pixel & 0xff00) >> 8;
-				b[i][j] = (pixel & 0xff);
+				pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+				r = (pixel & 0xff0000) >> 16;
+				g = (pixel & 0xff00) >> 8;
+				b = (pixel & 0xff);
+				
+				int grayInt = (int) (r * 0.3 + g * 0.59 + b * 0.11);
 				
 				if(meanStd) {
-					color[0 * width * height + i * height + j] = (float) ((r[i][j] * 1.0f / n) - mean[0]) / std[0];
-					color[1 * width * height + i * height + j] = (float) ((r[i][j] * 1.0f / n) - mean[1]) / std[1];
-					color[2 * width * height + i * height + j] = (float) ((r[i][j] * 1.0f / n) - mean[2]) / std[2];
+					color[i * height + j] = (float) ((grayInt * 1.0f / n) - mean[0]) / std[0];
 				}else {
-					color[0 * width * height + i * height + j] = r[i][j] * 1.0f / n;
-					color[1 * width * height + i * height + j] = g[i][j] * 1.0f / n;
-					color[2 * width * height + i * height + j] = b[i][j] * 1.0f / n;
+					color[i * height + j] = grayInt * 1.0f / n;
 				}
 				
 			}
 		}
 		
 		return color;
+	}
+	
+	public void loadImageDataToGrayFast(File file,float[] color,boolean normalization,boolean meanStd) throws Exception {
+
+		BufferedImage bi = null;
+		try {
+			bi = ImageIO.read(file);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		int width = bi.getWidth();
+		int height = bi.getHeight();
+		int minx = bi.getMinX();
+		int miny = bi.getMinY();
+		int pixel = 0; // 下面三行代码将一个数字转换为RGB数字
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		float n = 1.0f;
+		
+		int size = height * width;
+
+		if(color.length != size) {
+			throw new RuntimeException("color.length is not equals image size.");
+		}
+		
+		if(normalization) {
+			n = 255.0f;
+		}
+		
+		for (int j = miny; j < height; j++) {
+			for (int i = minx; i < width; i++) {
+				pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+				r = (pixel & 0xff0000) >> 16;
+				g = (pixel & 0xff00) >> 8;
+				b = (pixel & 0xff);
+				
+				int grayInt = (int) (r * 0.3 + g * 0.59 + b * 0.11);
+				
+				if(meanStd) {
+					color[i * height + j] = (float) ((grayInt * 1.0f / n) - mean[0]) / std[0];
+				}else {
+					color[i * height + j] = grayInt * 1.0f / n;
+				}
+				
+			}
+		}
+
 	}
 	
 	public BufferedImage convertRGBImage(int[][] rgbValue){
@@ -520,9 +618,9 @@ public class ImageUtils {
 	public boolean createRGBImage(String path,String extName,int[][] rgb,int weight,int height) {
 		
 		BufferedImage bufferedImage = this.convertRGBImage(rgb);
-//		System.out.println(extName);
 		File outputfile = new File(path);
 		try {
+//			System.out.println(outputfile.exists());
 			if(!outputfile.exists()) {
 				BufferedImage output = resizeImage(bufferedImage, weight, height);
 				ImageIO.write(output, extName, outputfile);

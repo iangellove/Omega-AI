@@ -12,6 +12,8 @@ public abstract class BaseDataLoader {
 	
 	public int labelChannel;
 	
+	public String[] labelSet;
+	
 	public abstract int[][] shuffle();
 	
 	public abstract void loadData(int[] indexs,Tensor input,Tensor label);
@@ -19,5 +21,7 @@ public abstract class BaseDataLoader {
 	public abstract void loadData(int pageIndex,int batchSize,Tensor input,Tensor label);
 	
 	public abstract float[] loadData(int index);
+	
+	public abstract Tensor initLabelTensor();
 	
 }

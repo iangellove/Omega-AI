@@ -680,7 +680,6 @@ public class YoloImageUtils {
 			File file = new File(filePath);
 			
 			if(file.exists()) {
-
 				float[] data =  IU().getImageData(file, true, false);
 				System.arraycopy(data, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
 			}
@@ -692,6 +691,23 @@ public class YoloImageUtils {
 		
 	}
 	
+	public static void loadImgDataToGrayTensor(String filePath,Tensor out,int idx) {
+		
+		try {
+			
+			File file = new File(filePath);
+			
+			if(file.exists()) {
+				float[] once = IU().getImageDataToGray(file, true, false);
+				System.arraycopy(once, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
 	
 	public static float[] loadImgDataToArray(String filePath) {
 		

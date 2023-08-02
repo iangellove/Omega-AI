@@ -56,10 +56,49 @@ __global__ void copy_channel_kernel(int N,  float *X, float *Y, int n,int c,int 
 }
 
 extern "C"
+__global__ void broadcast_kernel(int N, float *X, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) Y[i] = X[0];
+}
+
+extern "C"
+__global__ void broadcast_number_kernel(int N, float *X, float *Y,int C,int H,int W)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+    	int n = i / C / H / W;
+    	Y[i] = X[n];
+    }
+}
+
+extern "C"
 __global__ void add_kernel(int N, float *X, float *Y, float *R)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < N) R[i] = X[i] + Y[i];
+}
+
+extern "C"
+__global__ void sum_kernel(int N, float *X, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < 1) {
+	    for(int index = 0;index<N;index++){
+	    	Y[0] += X[index];
+	    }
+    }
+}
+
+extern "C"
+__global__ void sum_channel_kernel(int N, float *X, float *Y,int C,int H,int W)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+    	for(int index = 0;index<C * H * W;index++){
+    		Y[i] += X[i * C * H * W + index];
+    	}
+    }
 }
 
 extern "C"

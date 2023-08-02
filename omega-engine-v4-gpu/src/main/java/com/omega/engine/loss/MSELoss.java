@@ -2,6 +2,8 @@ package com.omega.engine.loss;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.data.Tensors;
+import com.omega.common.utils.MatrixOperation;
+import com.omega.engine.ad.Graph;
 
 /**
  * Square loss
@@ -9,15 +11,15 @@ import com.omega.common.data.Tensors;
  * @loss: ∑ (y - f(x))^2
  * @diff: 2 * (y - f(x))
  */
-public class SquareLoss extends LossFunction {
+public class MSELoss extends LossFunction {
 	
-	public final LossType lossType = LossType.square_loss;
+	public final LossType lossType = LossType.MSE;
 	
-	private static SquareLoss instance;
+	private static MSELoss instance;
 	
-	public static SquareLoss operation() {
+	public static MSELoss operation() {
 		if(instance == null) {
-			instance = new SquareLoss();
+			instance = new MSELoss();
 		}
 		return instance;
 	}
@@ -25,32 +27,24 @@ public class SquareLoss extends LossFunction {
 	@Override
 	public LossType getLossType() {
 		// TODO Auto-generated method stub
-		return LossType.square_loss;
+		return LossType.MSE;
 	}
 	
 	@Override
 	public Tensor loss(Tensor x, Tensor label) {
 		// TODO Auto-generated method stub
-		Tensor temp = Tensors.tensor(x.number,x.channel,x.height,x.width);
-		
-		for(int i = 0;i<x.getDataLength();i++) {
-			temp.data[i] = (x.data[i] - label.data[i]) * (x.data[i] - label.data[i]) / 2;;
-		}
-		
-		return temp;
+		x.setRequiresGrad(true);
+		Graph.start();
+		Tensor loss = label.sub(x).pow(2.0f).div(2.0f).sum(0).div(x.number);
+		return loss;
 	}
 
 	@Override
 	public Tensor diff(Tensor x, Tensor label) {
 		// TODO Auto-generated method stub
-		Tensor temp = Tensors.tensor(x.number,x.channel,x.height,x.width);
-		
-		for(int i = 0;i<x.getDataLength();i++) {
-			temp.data[i] = x.data[i] - label.data[i];
-		}
-		
-		
-		return temp;
+		Graph.clearGrad();
+		Graph.backward();
+		return x.getGrad();
 	}
 	
 	public static void main(String[] args) {
@@ -58,7 +52,7 @@ public class SquareLoss extends LossFunction {
 		Tensor xt = Tensors.tensor(4, 1, 1, 3, x);
 		float[] label = new float[] {0,1,0,1,0,0,1,0,0,0,0,1};
 		Tensor labelt = Tensors.tensor(4, 1, 1, 3, label);
-		float error = SquareLoss.operation().gradientCheck(xt,labelt);
+		float error = MSELoss.operation().gradientCheck(xt,labelt);
 		System.out.println("error:"+error);
 	}
 

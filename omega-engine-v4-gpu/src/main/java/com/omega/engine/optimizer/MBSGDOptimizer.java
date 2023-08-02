@@ -5,6 +5,7 @@ import com.omega.common.data.utils.DataTransforms;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.engine.check.BaseCheck;
 import com.omega.engine.controller.TrainTask;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
@@ -61,6 +62,16 @@ public class MBSGDOptimizer extends Optimizer {
 		this.loss = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
 		this.lossDiff = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
 		this.learnRateUpdate = learnRateUpdate;
+	}
+	
+	public MBSGDOptimizer(Network network, int trainTime, float error,int batchSize,LearnRateUpdate learnRateUpdate,boolean warmUp,BaseCheck check) throws Exception {
+		super(network, batchSize, trainTime, error, warmUp);
+		// TODO Auto-generated constructor stub
+		this.batchSize = batchSize;
+		this.loss = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
+		this.lossDiff = new Tensor(batchSize, this.network.oChannel, this.network.oHeight, this.network.oWidth);
+		this.learnRateUpdate = learnRateUpdate;
+		this.check = check;
 	}
 	
 	public MBSGDOptimizer(String sid,Network network, int trainTime, float error,int batchSize,LearnRateUpdate learnRateUpdate,boolean warmUp) throws Exception {
@@ -656,6 +667,122 @@ public class MBSGDOptimizer extends Optimizer {
 				 * update learning rate
 				 */
 				this.updateLR();
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void train(BaseDataLoader trainingData,BaseDataLoader valiData,BaseCheck check) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+			
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+
+			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			
+			Tensor label = trainingData.initLabelTensor();
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+
+				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = trainingData.shuffle();
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					long start = System.nanoTime();
+
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadData(indexs[it], input, label);
+					
+					/**
+					 * forward
+					 */
+					Tensor output = network.forward(input);
+					
+					/**
+					 * loss
+					 */
+					Tensor loss = this.network.loss(output, label);
+					
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label);
+					
+					/**
+					 * back
+					 */
+					network.back(lossDiff);
+					
+					/**
+					 * update
+					 */
+					this.network.update();
+					
+					if(loss.isHasGPU()) {
+						loss.syncHost();
+					}
+					
+					float accuracy = check.check(output, label, trainingData.labelSet, false);
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") (loss:"+loss.getByIndex(0, 0, 0, 0)+") (accuracy:"+accuracy/batchSize*100+"%) [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+				}
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR();
+				
+				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
+					
+					this.network.learnRate = this.network.learnRate * 0.5f;
+					
+				}
+				
+				if(this.trainIndex % 10 == 0) {
+					
+					System.out.println("----------------testing start----------------");
+					
+					this.testAndLoss(valiData, input, label, this.batchSize, check);
+					
+					System.out.println("----------------testing finish---------------");
+					
+				}
 				
 			}
 			

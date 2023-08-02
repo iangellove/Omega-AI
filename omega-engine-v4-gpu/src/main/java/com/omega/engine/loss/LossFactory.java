@@ -27,8 +27,8 @@ public class LossFactory {
 	public static LossFunction create(LossType type) {
 		//square_loss,cross_entropy,softmax_with_cross_entropy
 		switch (type) {
-		case square_loss:
-			return new SquareLoss();
+		case MSE:
+			return new MSELoss();
 		case cross_entropy:
 			return new CrossEntropyLoss();
 		case softmax_with_cross_entropy:
@@ -36,7 +36,9 @@ public class LossFactory {
 		case yolo:
 			return new YoloLoss(1);
 		case yolo3:
-
+			return null;
+		case multiLabel_soft_margin:
+			return new MultiLabelSoftMargin();
 		default:
 			return null;
 		}
@@ -54,8 +56,8 @@ public class LossFactory {
 	public static LossFunction create(LossType type,int classNum) {
 		//square_loss,cross_entropy,softmax_with_cross_entropy
 		switch (type) {
-		case square_loss:
-			return new SquareLoss();
+		case MSE:
+			return new MSELoss();
 		case cross_entropy:
 			return new CrossEntropyLoss();
 		case softmax_with_cross_entropy:
@@ -63,7 +65,9 @@ public class LossFactory {
 		case yolo:
 			return new YoloLoss(classNum);
 		case yolo3:
-
+			return null;
+		case multiLabel_soft_margin:
+			return new MultiLabelSoftMargin();
 		default:
 			return null;
 		}
@@ -76,25 +80,28 @@ public class LossFactory {
 		for(int i = 0;i<outputs.size();i++) {
 
 			switch (type) {
-			case square_loss:
-				losses[i] = new SquareLoss();
+			case MSE:
+				losses[i] = new MSELoss();
 				break;
 			case cross_entropy:
-				losses[i] =  new CrossEntropyLoss();
+				losses[i] = new CrossEntropyLoss();
 				break;
 			case softmax_with_cross_entropy:
-				losses[i] =  new CrossEntropyLoss2();
+				losses[i] = new CrossEntropyLoss2();
 				break;
 			case yolo:
-				losses[i] =  new YoloLoss(1);
+				losses[i] = new YoloLoss(1);
 				break;
 			case yolo2:
 				YoloLayer yolo2 = (YoloLayer) outputs.get(i);
-				losses[i] =  new YoloLoss2(yolo2.class_number, yolo2.bbox_num, yolo2.anchors, yolo2.network.height, yolo2.network.width, yolo2.maxBox, yolo2.total, yolo2.ignoreThresh, yolo2.truthThresh);
+				losses[i] = new YoloLoss2(yolo2.class_number, yolo2.bbox_num, yolo2.anchors, yolo2.network.height, yolo2.network.width, yolo2.maxBox, yolo2.total, yolo2.ignoreThresh, yolo2.truthThresh);
 				break;
 			case yolo3:
 				YoloLayer yolo = (YoloLayer) outputs.get(i);
-				losses[i] =  new YoloLoss3(yolo.class_number, yolo.bbox_num, yolo.mask, yolo.anchors, yolo.network.height, yolo.network.width, yolo.maxBox, yolo.total, yolo.ignoreThresh, yolo.truthThresh);
+				losses[i] = new YoloLoss3(yolo.class_number, yolo.bbox_num, yolo.mask, yolo.anchors, yolo.network.height, yolo.network.width, yolo.maxBox, yolo.total, yolo.ignoreThresh, yolo.truthThresh);
+				break;
+			case multiLabel_soft_margin:
+				losses[i] = new MultiLabelSoftMargin();
 				break;
 			default:
 				break;
@@ -113,25 +120,28 @@ public class LossFactory {
 		for(int i = 0;i<outputs.size();i++) {
 
 			switch (type) {
-			case square_loss:
-				losses[i] = new SquareLoss();
+			case MSE:
+				losses[i] = new MSELoss();
 				break;
 			case cross_entropy:
-				losses[i] =  new CrossEntropyLoss();
+				losses[i] = new CrossEntropyLoss();
 				break;
 			case softmax_with_cross_entropy:
-				losses[i] =  new CrossEntropyLoss2();
+				losses[i] = new CrossEntropyLoss2();
 				break;
 			case yolo:
-				losses[i] =  new YoloLoss(classNum);
+				losses[i] = new YoloLoss(classNum);
 				break;
 			case yolo2:
 				YoloLayer yolo2 = (YoloLayer) outputs.get(i);
-				losses[i] =  new YoloLoss2(yolo2.class_number, yolo2.bbox_num, yolo2.anchors, yolo2.network.height, yolo2.network.width, yolo2.maxBox, yolo2.total, yolo2.ignoreThresh, yolo2.truthThresh);
+				losses[i] = new YoloLoss2(yolo2.class_number, yolo2.bbox_num, yolo2.anchors, yolo2.network.height, yolo2.network.width, yolo2.maxBox, yolo2.total, yolo2.ignoreThresh, yolo2.truthThresh);
 				break;
 			case yolo3:
 				YoloLayer yolo = (YoloLayer) outputs.get(i);
-				losses[i] =  new YoloLoss3(yolo.class_number, yolo.bbox_num, yolo.mask, yolo.anchors, yolo.network.height, yolo.network.width, yolo.maxBox, yolo.total, yolo.ignoreThresh, yolo.truthThresh);
+				losses[i] = new YoloLoss3(yolo.class_number, yolo.bbox_num, yolo.mask, yolo.anchors, yolo.network.height, yolo.network.width, yolo.maxBox, yolo.total, yolo.ignoreThresh, yolo.truthThresh);
+				break;
+			case multiLabel_soft_margin:
+				losses[i] = new MultiLabelSoftMargin();
 				break;
 			default:
 				break;
