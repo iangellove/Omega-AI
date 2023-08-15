@@ -8,8 +8,6 @@ import java.util.List;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.Layer;
-import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.YoloLayer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.network.Network;
 
@@ -22,7 +20,7 @@ import jcuda.Sizeof;
  */
 public class DarknetLoader {
 	
-	public static void loadWeight(Network net,String path,int layerCount) {
+	public static void loadWeight(Network net,String path,int layerCount,boolean freeze) {
 		
 		System.out.println("start load weight.");
 		
@@ -57,12 +55,11 @@ public class DarknetLoader {
 
 			    	switch (layer.getLayerType()) {
 					case conv:
-
-						loadConvWeights(file, l, layer, net.layerList);
+						loadConvWeights(file, l, layer, net.layerList, freeze);
 						index++;
 						break;
 					case full:
-						loadFullyWeights(file, l, layer, net.layerList);
+						loadFullyWeights(file, l, layer, net.layerList, freeze);
 						index++;
 						break;
 					case pooling:
@@ -75,7 +72,7 @@ public class DarknetLoader {
 		    	}
 		    	
 		    }
-
+		    
 		    System.out.println("load weight finish.");
 		    
 		}catch (Exception e) {
@@ -115,17 +112,17 @@ public class DarknetLoader {
 		    	
 		    	switch (layer.getLayerType()) {
 				case conv:
-					loadConvWeights(file, l, layer, net.layerList);
+					loadConvWeights(file, l, layer, net.layerList, false);
 					break;
 				case full:
-					loadFullyWeights(file, l, layer, net.layerList);
+					loadFullyWeights(file, l, layer, net.layerList, false);
 					break;
 				default:
 					break;
 				}
 		    	
 		    }
-
+		    
 		    System.out.println("load weight finish.");
 		    
 		}catch (Exception e) {
@@ -134,51 +131,33 @@ public class DarknetLoader {
 		
 	}
 	
-	public static void loadConvWeights(RandomAccessFile inputStream,int index,Layer layer,List<Layer> layerList) throws IOException {
+	public static void loadConvWeights(RandomAccessFile inputStream,int index,Layer layer,List<Layer> layerList,boolean freeze) throws IOException {
 		
-		if(layerList.get(index+1) instanceof YoloLayer) {
-			
-			int biasLength = 255;
-			
-			int weightLength = layer.weight.channel * 255 * layer.weight.height * layer.weight.width;
-
-			/**
-			 * load biases
-			 */
-			skipFloat(inputStream, biasLength);
-			
-			/**
-			 * load conv weight
-			 */
-			skipFloat(inputStream, weightLength);
-			
-		}else {
-
-			/**
-			 * load biases
-			 */
-			readFloat(inputStream, layer.bias);
-			/**
-			 * load bn params
-			 */
-			if(!layer.hasBias && index < layerList.size() - 1 && layerList.get(index+1) instanceof BNLayer) {
-				BNLayer bnl = (BNLayer) layerList.get(index+1);
-				bnl.init();
-				readFloat(inputStream, bnl.gamma);
-				bnl.beta = layer.bias.copyGPU();
-				readFloat(inputStream, bnl.runingMean);
-				readFloat(inputStream, bnl.runingVar);
-			}
-			/**
-			 * load conv weight
-			 */
-			readFloat(inputStream, layer.weight);
-			
+		/**
+		 * load biases
+		 */
+		readFloat(inputStream, layer.bias);
+		/**
+		 * load bn params
+		 */
+		if(!layer.hasBias && index < layerList.size() - 1 && layerList.get(index+1) instanceof BNLayer) {
+			BNLayer bnl = (BNLayer) layerList.get(index+1);
+			bnl.init();
+			readFloat(inputStream, bnl.gamma);
+			bnl.beta = layer.bias.copyGPU();
+			bnl.beta.syncHost();
+			readFloat(inputStream, bnl.runingMean);
+			readFloat(inputStream, bnl.runingVar);
+			bnl.freeze = freeze;
 		}
-		
+		/**
+		 * load conv weight
+		 */
+		readFloat(inputStream, layer.weight);
+		layer.freeze = freeze;
 	}
 	
-	public static void loadFullyWeights(RandomAccessFile inputStream,int index,Layer layer,List<Layer> layerList) throws IOException {
+	public static void loadFullyWeights(RandomAccessFile inputStream,int index,Layer layer,List<Layer> layerList,boolean freeze) throws IOException {
 		
 		/**
 		 * load biases
@@ -197,8 +176,9 @@ public class DarknetLoader {
 			readFloat(inputStream, bnl.gamma);
 			readFloat(inputStream, bnl.runingMean);
 			readFloat(inputStream, bnl.runingVar);
+			bnl.freeze = freeze;
 		}
-		
+		layer.freeze = freeze;
 	}
 	
 	public static long readBigInt(RandomAccessFile inputStream) throws IOException {

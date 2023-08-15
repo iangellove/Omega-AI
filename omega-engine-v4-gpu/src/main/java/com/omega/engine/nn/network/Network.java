@@ -182,6 +182,12 @@ public abstract class Network {
 		
 	}
 	
+	public void unfreeze() {
+		for(int i = 0;i<layerCount;i++) {
+			layerList.get(i).freeze = false;
+		}	
+	}
+	
 	public void saveToJson(String path) {
 		
 	}

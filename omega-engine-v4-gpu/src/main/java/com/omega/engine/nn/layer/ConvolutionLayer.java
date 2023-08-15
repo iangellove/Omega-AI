@@ -275,6 +275,7 @@ public class ConvolutionLayer extends Layer {
 	public void update() {
 		// TODO Auto-generated method stub
 //		long start = System.nanoTime();
+//		System.out.println(this.index+":"+this.freeze);
 		if(!this.freeze) {
 			if(this.updater != null){
 				this.updater.update(this);

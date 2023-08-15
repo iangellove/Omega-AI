@@ -1542,6 +1542,10 @@ public class MBSGDOptimizer extends Optimizer {
 				if(this.trainIndex >= this.minTrainTime) {
 					break;
 				}
+				
+				if(this.trainIndex == 2) {
+					this.network.unfreeze();
+				}
 
 				this.network.RUN_MODEL = RunModel.TRAIN;
 				

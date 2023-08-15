@@ -192,18 +192,18 @@ public class FullyLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		
-		if(this.updater != null){
-			this.updater.update(this);
-		}else{
-			for(int i = 0;i<this.weight.getDataLength();i++) {
-				this.weight.data[i] -= this.learnRate * this.diffW.data[i];
-			}
-			for(int i = 0;i<this.bias.getDataLength();i++) {
-				this.bias.data[i] -= this.learnRate * this.diffB.data[i];
+		if(!this.freeze) {
+			if(this.updater != null){
+				this.updater.update(this);
+			}else{
+				for(int i = 0;i<this.weight.getDataLength();i++) {
+					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
+				}
+				for(int i = 0;i<this.bias.getDataLength();i++) {
+					this.bias.data[i] -= this.learnRate * this.diffB.data[i];
+				}
 			}
 		}
-		
 	}
 
 	@Override

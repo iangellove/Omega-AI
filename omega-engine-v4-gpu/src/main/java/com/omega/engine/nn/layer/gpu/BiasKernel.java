@@ -127,7 +127,7 @@ public class BiasKernel extends BaseKernel{
 		        
 			}
 			
-			cuLaunchKernel(back_conv_function,
+			cuLaunchKernel(function,
 		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream

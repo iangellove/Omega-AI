@@ -199,7 +199,7 @@ public class YoloV3Test {
 		
 		int im_w = 416;
 		int im_h = 416;
-		int batchSize = 16;
+		int batchSize = 24;
 		int class_num = 20;
 		
 		try {
@@ -212,7 +212,9 @@ public class YoloV3Test {
 			String testPath = "H:\\voc\\test\\imgs";
 			String testLabelPath = "H:\\voc\\test\\labels\\yolov3.txt";
 			
-			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.weights";
+			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
+			
+//			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.weights";
 			
 			YoloDataTransform2 dt = new YoloDataTransform2(class_num, DataType.yolov3, 90);
 			
@@ -228,13 +230,14 @@ public class YoloV3Test {
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
-			DarknetLoader.loadWeight(netWork, weightPath, 14);
+			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 3000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
 //			optimizer.lr_step = new int[] {200,500,1000,1500,2000};
 			
 			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
+			
 //			
 //			/**
 //			 * 处理测试预测结果
