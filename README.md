@@ -76,11 +76,13 @@ SGDOptimizer（随机梯度下降算法）
 
 #### 损失函数(loss function)
 
-SquareLoss (平方差损失函数)
+MSELoss (平方差损失函数)
 
 CrossEntropyLoss (交叉熵损失函数)
 
 CrossEntropyLossWithSoftmax (交叉熵损失 + softmax)
+
+MultiLabelSoftMargin (多标签损失函数)
 
 #### 学习率更新器（LearnRateUpdate）
 
@@ -123,6 +125,7 @@ cifar_10 （cifar_10数据集）
 ### 附加数据集
 [banana-detection](https://pan.baidu.com/s/1mUr12FJm9OGbsObqfjZ81Q?pwd=jish)
 
+[vailCode](https://pan.baidu.com/s/11wZY9gQQ9OuoViw11IW6BQ?pwd=2rdt)
 
 ### 数据集成绩
 
@@ -626,6 +629,19 @@ http://119.3.123.193:8011/AICar
 4.新增图片绘制工具，帮助绘制预测框与回显图片
 
 5.后续版本将逐渐实现引擎对yolov3,yolov5等模型
+
+#### 2023-08-02 
+1.新增自动求导功能(包含cpu，gpu版本). 
+
+2.新增multiLabel_soft_margin loss损失函数，yolo loss（Yolov3Loss）.
+
+3.新增yolov3目标识别实现，当前实现的yolo版本为yolov3版本(实现源码请移步YoloV3Test.java) . 
+
+4.新增目标识别数据增强功能(随机裁剪边缘，随机上下反转，hsv变换等).
+
+5.使用自动求导功能实现MSN损失函数，代替原有的MSN loss. 
+
+6.后续版本将逐渐实现引擎对yolov5,GAN,transformer等模型支持.
 
 ## 欢迎打扰
 
