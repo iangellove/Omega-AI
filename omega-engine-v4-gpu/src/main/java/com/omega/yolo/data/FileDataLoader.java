@@ -97,7 +97,7 @@ public class FileDataLoader extends RecursiveAction {
 		for (int i = getStart(); i <= getEnd(); i++) {
 			
 			String filePath = getPath() + "/" + getNames()[getIndexs()[i]];
-			
+//			System.out.println(names[getIndexs()[i]]);
 			if(!getNames()[getIndexs()[i]].contains(".")) {
 				filePath = getPath() + "/" + getNames()[getIndexs()[i]] + "." + extName;
 			}

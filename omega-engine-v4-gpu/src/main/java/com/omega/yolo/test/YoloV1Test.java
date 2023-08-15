@@ -1,5 +1,7 @@
 package com.omega.yolo.test;
 
+import java.io.File;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +15,7 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.model.ModelLoader;
 import com.omega.engine.nn.data.DataSet;
+import com.omega.engine.nn.data.ImageData;
 import com.omega.engine.nn.layer.BasicBlockLayer;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.FullyLayer;
@@ -34,6 +37,7 @@ import com.omega.yolo.utils.DetectionDataLoader;
 import com.omega.yolo.utils.LabelFileType;
 import com.omega.yolo.utils.LabelType;
 import com.omega.yolo.utils.YoloDataLoader;
+import com.omega.yolo.utils.YoloImageUtils;
 import com.omega.yolo.utils.YoloLabelUtils;
 
 /**
@@ -50,7 +54,73 @@ public class YoloV1Test {
 	public static final String[] GL_CLASSES = new String[] {"person", "bird", "cat", "cow", "dog", "horse", "sheep",
             "aeroplane", "bicycle", "boat", "bus", "car", "motorbike", "train",
             "bottle", "chair", "diningtable", "pottedplant", "sofa", "tvmonitor"};
+	
+	public void showImg2() {
+		
+		try {
 
+			int im_w = 1024;
+			int im_h = 483;
+			
+			int img_size = 416;
+			
+			String trainPath = "H:\\voc\\helmet_dataset\\JPEGImages\\02049.jpg";
+			
+			String outputPath = "H:\\voc\\helmet_dataset\\00000.jpg";
+			
+			String outputPath2 = "H:\\voc\\helmet_dataset\\02049a.jpg";
+			
+			File file =  new File(trainPath);
+			
+			ImageData data =  YoloImageUtils.IU().getImageData(file);
+			
+//			ImageUtils utils = new ImageUtils();
+
+			int[][] org_bbox = new int[][] {
+				{0,9,111,61,182},{0,95,138,143,197},{0,185,98,235,166},{0,262,125,311,192},{0,334,89,382,156},
+				{0,429,98,474,163},{0,503,100,552,166},{0,588,115,637,177},{0,694,92,743,164},{0,763,57,821,129},
+				{0,827,71,869,129},{0,860,89,915,155},{0,922,67,1001,155}
+			};
+
+			int padw = 0;
+			int padh = 0;
+			
+			if(im_h > im_w) {
+				padw = new BigDecimal(im_h).subtract(new BigDecimal(im_w)).divide(new BigDecimal(2),BigDecimal.ROUND_DOWN).intValue();
+			}else if(im_h < im_w){
+				padh = new BigDecimal(im_w).subtract(new BigDecimal(im_h)).divide(new BigDecimal(2),BigDecimal.ROUND_DOWN).intValue();
+			}
+
+			int[][] bbox = YoloImageUtils.formatLabel(org_bbox);
+			
+			bbox = YoloImageUtils.resizeBBox(padw, padh, im_w, im_h, bbox);
+			
+			System.out.println(JsonUtils.toJson(org_bbox));
+			
+			/**
+			 * cxcywh to xyxy
+			 */
+			for(int i = 0;i<bbox.length;i++) {
+				bbox[i][0] = bbox[i][0];
+				int cx = bbox[i][1];
+				int cy = bbox[i][2];
+				int w = bbox[i][3];
+				int h = bbox[i][4];
+				bbox[i][1] = cx - w / 2;
+				bbox[i][2] = cy - h / 2;
+				bbox[i][3] = cx + w / 2;
+				bbox[i][4] = cy + h / 2;
+			}
+			
+			YoloImageUtils.resize(data, outputPath2, img_size, img_size, padw, padh, im_w, im_h, bbox);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
 	public void showImg() {
 		
 		String trainPath = "H:\\voc\\banana-detection\\bananas_train\\images";
@@ -657,9 +727,9 @@ public class YoloV1Test {
 			
 			YoloV1Test t = new YoloV1Test();
 
-//			t.yolov1();
+			t.yolov1();
 			
-			t.yolov1_tiny();
+//			t.showImg2();
 			
 //			t.yolov1_tiny_voc();
 			

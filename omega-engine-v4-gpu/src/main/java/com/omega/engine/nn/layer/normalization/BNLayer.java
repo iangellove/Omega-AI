@@ -35,11 +35,15 @@ public class BNLayer extends NormalizationLayer {
 	
 	public Tensor beta;
 	
+	public Tensor runingMean;
+	
+	public Tensor runingVar;
+	
 	public Tensor diffGamma;
 	
 	public Tensor diffBeta;
 	
-	private BNBaseKernel kernel;
+	public BNBaseKernel kernel;
 	
 //	private BNCudnnKernel kernel;
 
@@ -72,15 +76,15 @@ public class BNLayer extends NormalizationLayer {
 		
 		if(preLayer == null) {
 			preLayer = this.network.getPreLayer(this.index);
+		}
+
+		if(this.bnType == null) {
 			this.channel = preLayer.oChannel;
 			this.height = preLayer.oHeight;
 			this.width = preLayer.oWidth;
 			this.oChannel = this.channel;
 			this.oHeight = this.height;
 			this.oWidth = this.width;
-		}
-
-		if(this.bnType == null) {
 			if(this.preLayer.getLayerType() == LayerType.conv) {
 				this.setBnType(BNType.conv_bn);
 				this.meanNum = this.channel;
@@ -95,6 +99,8 @@ public class BNLayer extends NormalizationLayer {
 			this.beta = new Tensor(1, 1, 1, meanNum, true);
 			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
 			this.diffBeta = new Tensor(1, 1, 1, meanNum, true);
+			this.runingMean = new Tensor(1, 1, 1, this.meanNum, true);
+			this.runingVar = new Tensor(1, 1, 1, this.meanNum, true);
 		}
 
 		if(this.output == null || this.number != this.output.number) {
@@ -105,15 +111,13 @@ public class BNLayer extends NormalizationLayer {
 		}
 		
 		if(kernel == null) {
-			
 			if(this.network.CUDNN) {
-				kernel = new BNCudnnKernel(this.getBnType(), channel, height, width);
+				kernel = new BNCudnnKernel(this.getBnType(), channel, height, width, this.runingMean, this.runingVar);
 			}else {
-//				kernel = new BNKernel(this.getBnType(), channel, height, width);
 				if(this.getBnType() == BNType.fully_bn) {
-					kernel = new BNKernel3(width, 1, 1);
+					kernel = new BNKernel3(width, 1, 1, this.runingMean, this.runingVar);
 				}else {
-					kernel = new BNKernel3(channel, height, width);
+					kernel = new BNKernel3(channel, height, width, this.runingMean, this.runingVar);
 				}
 			}
 		}
@@ -217,18 +221,18 @@ public class BNLayer extends NormalizationLayer {
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		
-		if(this.updater != null){
-			this.updater.updateForBN(this);
-		}else{
-			for(int i = 0;i<this.gamma.dataLength;i++) {
-				this.gamma.data[i] -= this.learnRate * this.diffGamma.data[i];
-			}
-			for(int i = 0;i<this.beta.dataLength;i++) {
-				this.beta.data[i] -= this.learnRate * this.diffBeta.data[i];
+		if(!this.freeze) {
+			if(this.updater != null){
+				this.updater.updateForBN(this);
+			}else{
+				for(int i = 0;i<this.gamma.dataLength;i++) {
+					this.gamma.data[i] -= this.learnRate * this.diffGamma.data[i];
+				}
+				for(int i = 0;i<this.beta.dataLength;i++) {
+					this.beta.data[i] -= this.learnRate * this.diffBeta.data[i];
+				}
 			}
 		}
-		
 	}
 
 	@Override

@@ -39,9 +39,6 @@ public class BNCudnnKernel extends BNBaseKernel{
 	private Tensor mean;
 	private Tensor var;
     
-	private Tensor runingMean;
-	private Tensor runingVar;
-	
 	private cudnnTensorDescriptor normTensorDesc;
 	private cudnnTensorDescriptor dstTensorDesc;
 	
@@ -54,11 +51,13 @@ public class BNCudnnKernel extends BNBaseKernel{
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
 	
-	public BNCudnnKernel(BNType bnType,int C,int H,int W) {
+	public BNCudnnKernel(BNType bnType,int C,int H,int W,Tensor runingMean,Tensor runingVar) {
 		this.bnType = bnType;
 		this.C = C;
 		this.H = H;
 		this.W = W;
+		this.runingMean = runingMean;
+		this.runingVar = runingVar;
 		init();
 	}
 	
@@ -74,18 +73,14 @@ public class BNCudnnKernel extends BNBaseKernel{
 			
 			mean = new Tensor(1, 1, 1, W, true);
 			var = new Tensor(1, 1, 1, W, true);
-		    
-		    runingMean = new Tensor(1, 1, 1, W, true);
-		    runingVar = new Tensor(1, 1, 1, W, true);
+
 		}else {
 			
 			mode = cudnnBatchNormMode.CUDNN_BATCHNORM_SPATIAL;
 			
 			mean = new Tensor(1, 1, 1, C, true);
 			var = new Tensor(1, 1, 1, C, true);
-		    
-		    runingMean = new Tensor(1, 1, 1, C, true);
-		    runingVar = new Tensor(1, 1, 1, C, true); 
+		 
 		}
 		
 		normTensorDesc = new cudnnTensorDescriptor();

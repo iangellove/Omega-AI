@@ -84,7 +84,7 @@ public class SGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
+				this.updateLR(this.lr_step);
 				
 				/**
 				 * back

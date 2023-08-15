@@ -2,7 +2,6 @@ package com.omega.engine.optimizer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.check.BaseCheck;
@@ -30,7 +29,7 @@ import jcuda.driver.JCudaDriver;
 public class MBSGDOptimizer extends Optimizer {
 	
 	private YoloLabelUtils u;
-	
+
 	public YoloLabelUtils dataEnhanceInstance() {
 		if(u == null) {
 			u = new YoloLabelUtils(1, 4);
@@ -221,7 +220,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
+				this.updateLR(this.lr_step);
 
 			}
 			
@@ -382,7 +381,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
+				this.updateLR(this.lr_step);
 				
 				/**
 				 * vail data test
@@ -666,7 +665,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
+				this.updateLR(this.lr_step);
 				
 			}
 			
@@ -766,13 +765,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
-				
-				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
-					
-					this.network.learnRate = this.network.learnRate * 0.5f;
-					
-				}
+				this.updateLR(this.lr_step);
 				
 				if(this.trainIndex % 10 == 0) {
 					
@@ -919,7 +912,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
+				this.updateLR(this.lr_step);
 				
 			}
 			
@@ -1029,13 +1022,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
-				
-				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
-					
-					this.network.learnRate = this.network.learnRate * 0.5f;
-					
-				}
+				this.updateLR(this.lr_step);
 				
 				if(this.trainIndex % 100 == 0) {
 					
@@ -1160,13 +1147,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
-				
-				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
-					
-					this.network.learnRate = this.network.learnRate * 0.5f;
-					
-				}
+				this.updateLR(this.lr_step);
 				
 				if(this.trainIndex % 100 == 0) {
 					
@@ -1272,13 +1253,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
-				
-				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
-					
-					this.network.learnRate = this.network.learnRate * 0.5f;
-					
-				}
+				this.updateLR(this.lr_step);
 				
 				if(this.trainIndex % 100 == 0) {
 					
@@ -1396,13 +1371,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
-				
-				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
-					
-					this.network.learnRate = this.network.learnRate * 0.5f;
-					
-				}
+				this.updateLR(this.lr_step);
 				
 				if(this.trainIndex % 100 == 0) {
 					
@@ -1522,13 +1491,7 @@ public class MBSGDOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
-				
-				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 100 == 0) {
-					
-					this.network.learnRate = this.network.learnRate * 0.5f;
-					
-				}
+				this.updateLR(this.lr_step);
 				
 				if(this.trainIndex % 100 == 0) {
 					
@@ -1598,7 +1561,7 @@ public class MBSGDOptimizer extends Optimizer {
 					this.lossDiff.clear();
 					
 					trainingData.loadData(indexs[it], input, label);
-
+					
 					/**
 					 * forward
 					 */
@@ -1608,12 +1571,12 @@ public class MBSGDOptimizer extends Optimizer {
 					 * loss
 					 */
 					network.loss(label);
-//					System.out.println("in--------------->");
+					
 					/**
 					 * loss diff
 					 */
 					Tensor[] lossDiffs = network.lossDiff(label);
-					
+
 					/**
 					 * back
 					 */
@@ -1623,24 +1586,19 @@ public class MBSGDOptimizer extends Optimizer {
 					 * update
 					 */
 					this.network.update();
-					
+
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
 					System.out.println(msg);
 
 					this.batchIndex++;
+					
 				}
 				
 				/**
 				 * update learning rate
 				 */
-				this.updateLR();
-				
-				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF && this.trainIndex % 200 == 0) {
-					
-					this.network.learnRate = this.network.learnRate * 0.5f;
-					
-				}
+				this.updateLR(this.lr_step);
 				
 				if(this.trainIndex % 100 == 0) {
 					

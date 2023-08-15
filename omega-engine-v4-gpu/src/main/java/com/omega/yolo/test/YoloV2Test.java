@@ -15,9 +15,13 @@ import com.omega.engine.nn.network.Yolo;
 import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
+import com.omega.yolo.data.DataType;
+import com.omega.yolo.data.YoloDataTransform2;
 import com.omega.yolo.model.YoloBox;
 import com.omega.yolo.model.YoloDetection;
 import com.omega.yolo.utils.AnchorBoxUtils;
+import com.omega.yolo.utils.DetectionDataLoader;
+import com.omega.yolo.utils.LabelFileType;
 import com.omega.yolo.utils.LabelType;
 import com.omega.yolo.utils.LabelUtils;
 import com.omega.yolo.utils.YoloDataLoader;
@@ -140,10 +144,11 @@ public class YoloV2Test {
 		int im_w = 416;
 		int im_h = 416;
 		int batchSize = 24;
+		int class_num = 20;
 		
 		try {
 			
-			String cfg_path = "H:/voc/train/yolov2-tiny-voc.cfg";
+			String cfg_path = "H:/voc/train/yolov3-tiny-voc.cfg";
 			
 			String trainPath = "H:\\voc\\train\\imgs";
 			String trainLabelPath = "H:\\voc\\train\\labels\\yolov3.txt";
@@ -151,25 +156,23 @@ public class YoloV2Test {
 			String testPath = "H:\\voc\\test\\imgs";
 			String testLabelPath = "H:\\voc\\test\\labels\\yolov3.txt";
 			
-			YoloDataLoader trainData = new YoloDataLoader(trainPath, trainLabelPath, batchSize, 3, im_w, im_h, 5, LabelType.text_v3, true);
+			YoloDataTransform2 dt = new YoloDataTransform2(class_num, DataType.yolov3, 90);
 			
-			YoloDataLoader vailData = new YoloDataLoader(testPath, testLabelPath, batchSize, 3, im_w, im_h, 5, LabelType.text_v3, true);
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3, dt);
 			
-			YoloLabelUtils.formatToYoloV3(trainData, im_w, im_h, false);
-			
-			YoloLabelUtils.formatToYoloV3(vailData, im_w, im_h, false);
-			
+			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+
 			Yolo netWork = new Yolo(LossType.yolo2, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.0001f;
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 3000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
-			optimizer.trainObjectRecognitionOutputs(trainData, vailData, false);
+			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
 
 		} catch (Exception e) {
 			// TODO: handle exception

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.yolo.data.DataNormalization;
 import com.omega.yolo.data.DataTransform;
@@ -27,13 +28,13 @@ public class DetectionDataLoader extends BaseDataLoader{
 	
 	private String labelPath;
 	
-	private Map<String,float[]> orgLabelData;
+	public Map<String,float[]> orgLabelData;
 	
 	private boolean dataEnhance = false;
 	
 	private LabelFileType labelFileType;
 	
-	private String[] idxSet;
+	public String[] idxSet;
 	
 	private int onceLabelSize = 5;
 	
@@ -164,7 +165,11 @@ public class DetectionDataLoader extends BaseDataLoader{
 		
 		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, dataEnhance);
 		
-		dataTransform.showTransform(outputPath, input, label, idxSet, indexs, orgLabelData);
+		if(dataTransform != null) {
+
+			dataTransform.showTransform(outputPath, input, label, idxSet, indexs, orgLabelData);
+			
+		}
 		
 	}
 	
@@ -318,13 +323,12 @@ public class DetectionDataLoader extends BaseDataLoader{
 	@Override
 	public void loadData(int[] indexs, Tensor input, Tensor label) {
 		// TODO Auto-generated method stub
-//		long start = System.currentTimeMillis();
 
 		/**
 		 * 加载input数据
 		 */
 		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, dataEnhance);
-		
+
 		if(dataTransform != null) {
 			/**
 			 * 数据增强
@@ -336,6 +340,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 			 */
 			loadLabelToDataType(indexs, label, dataType);
 		}
+		
 		/**
 		 * 归一化input值
 		 * val = (org - mean) / std
@@ -346,7 +351,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 		 */
 		input.hostToDevice();
 		label.hostToDevice();
-		
+
 //		dataNormalization.normalization(input);
 //		System.out.println((System.currentTimeMillis() - start));
 //		System.out.println(JsonUtils.toJson(input.data));
@@ -449,7 +454,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 			String key = idxSet[indexs[i]];
 			
 			float[] box = orgLabelData.get(key);
-			
+
 			for(int c = 0;c<box.length/5;c++) {
 				
 				float clazz = box[c * 5 + 0];

@@ -155,6 +155,7 @@ public class DataTransforms {
 				float y1 = orglabel[c * 5 + 2];
 				float x2 = orglabel[c * 5 + 3];
 				float y2 = orglabel[c * 5 + 4];
+				label[c * 5 + 0] = orglabel[c * 5 + 0];
 				label[c * 5 + 1] = x1 + ph - rh;
 				label[c * 5 + 2] = y1 + pw - rw;
 				label[c * 5 + 3] = x2 + ph - rh;
@@ -171,6 +172,7 @@ public class DataTransforms {
 				float y1 = orglabel[c * 5 + 2];
 				float x2 = orglabel[c * 5 + 3];
 				float y2 = orglabel[c * 5+ 4];
+				label[c * 5 + 0] = orglabel[c * 5 + 0];
 				label[c * 5 + 1] = x1;
 				label[c * 5 + 2] = y1;
 				label[c * 5 + 3] = x2;

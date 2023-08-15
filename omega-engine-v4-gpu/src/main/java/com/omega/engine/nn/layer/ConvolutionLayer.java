@@ -1,7 +1,6 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.cudnn.ConvCudnnKernel;
 import com.omega.engine.nn.layer.gpu.BiasKernel;
@@ -148,7 +147,6 @@ public class ConvolutionLayer extends Layer {
 			}else {
 				kernel = new ConvKernel(channel, height, width, kernelNum, kHeight, kWidth, stride, padding);
 			}
-			
 			if(this.hasBias) {
 				biasKernel = new BiasKernel();
 			} 
@@ -167,7 +165,7 @@ public class ConvolutionLayer extends Layer {
 	public void output() {
 		// TODO Auto-generated method stub
 //		long start = System.nanoTime();
-		
+//		weight.showDM(weight.dataLength-1);
 		kernel.conv(input, weight, output);
 
 		if(this.hasBias) {
@@ -277,19 +275,22 @@ public class ConvolutionLayer extends Layer {
 	public void update() {
 		// TODO Auto-generated method stub
 //		long start = System.nanoTime();
-		if(this.updater != null){
-			this.updater.update(this);
-		}else{
-			
-			for(int i = 0;i<this.weight.getDataLength();i++) {
-				this.weight.data[i] -= this.learnRate * this.diffW.data[i];
+		if(!this.freeze) {
+			if(this.updater != null){
+				this.updater.update(this);
+			}else{
+				
+				for(int i = 0;i<this.weight.getDataLength();i++) {
+					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
+				}
+				
+				for(int i = 0;i<this.bias.getDataLength();i++) {
+					this.bias.data[i] -= this.learnRate * this.diffB.data[i];
+				}
+				
 			}
-			
-			for(int i = 0;i<this.bias.getDataLength();i++) {
-				this.bias.data[i] -= this.learnRate * this.diffB.data[i];
-			}
-			
 		}
+		
 //		System.out.println((System.nanoTime() - start) / 1e6+"ms->all update========>");
 	}
 

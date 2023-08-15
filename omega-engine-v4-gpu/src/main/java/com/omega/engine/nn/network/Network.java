@@ -91,6 +91,8 @@ public abstract class Network {
 	
 	public abstract NetworkType getNetworkType();
 	
+	public abstract void clearGrad();
+	
 	public void setNumber(int number) {
 		this.number = number;
 	}

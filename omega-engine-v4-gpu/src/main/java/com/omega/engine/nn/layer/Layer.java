@@ -69,6 +69,8 @@ public abstract class Layer {
 	
 	public Updater updater;
 	
+	public boolean freeze = false;
+	
 	/**
 	 * cache data
 	 */
@@ -166,11 +168,14 @@ public abstract class Layer {
 		 * 合并路由层误差
 		 */
 		if(this.cache_delta != null) {
+//			System.out.println("in===>:"+this.getLayerType());
 			if(this.delta == null || this.delta.number != this.cache_delta.number) {
 				this.delta = this.cache_delta;
-			}else {
+			}else if(this.cache_delta != this.delta){
+//				System.out.println("in===>add:"+this.getLayerType()+"["+index+"]");
 				BaseGPUOP.getKernel().axpy_gpu(this.cache_delta, this.delta, this.delta.getDataLength(), 1, 1, 1);
 			}
+//			this.cache_delta.clearGPU();
 		}
 		
 	}

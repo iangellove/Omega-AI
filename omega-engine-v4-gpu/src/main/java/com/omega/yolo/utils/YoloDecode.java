@@ -7,7 +7,7 @@ public class YoloDecode {
 	
 	public static int grid_size = 7;
 	
-	public static int class_number = 1;
+	public static int class_number = 20;
 	
 	public static int bbox_num = 2;
 	
@@ -103,19 +103,62 @@ public class YoloDecode {
 	            
 	            bbox[class_number + 3] = (float) (x.data[box_index + 2] * w);
 	            bbox[class_number + 4] = (float) (x.data[box_index + 3] * h);
-	           
+	            bbox[0] = scale;
+	            
 	            for(int j = 0; j < class_number; ++j){
 	                float prob = scale * x.data[class_index+j];
-	                bbox[j] = (prob > thresh) ? prob : 0;
+	                bbox[j+1] = (prob > thresh) ? prob : 0;
 	            }
-
 	            if(scale == 1) {
-	            	System.out.println(x.data[box_index + 0]+":"+x.data[box_index + 1]+":"+x.data[box_index + 2]+":"+x.data[box_index + 3]);
+//	            	System.out.println(x.data[box_index + 0]+":"+x.data[box_index + 1]+":"+x.data[box_index + 2]+":"+x.data[box_index + 3]);
 	            	System.out.println(b+":"+JsonUtils.toJson(bbox));
 	            }
 
 	            score_bbox[l] = bbox;
 //	            System.out.println(JsonUtils.toJson(bbox));
+		    }
+			
+			/**
+			 * 使用nms(非极大值抑制)过滤重复和置信度低的bbox
+			 */
+//			nms(score_bbox);
+			
+			dets[b] = score_bbox;
+			
+		}
+		
+		return dets;
+	}
+	
+	public static float[][][] getDetectionLabelYolov3(Tensor x,int w,int h){
+		
+		int input_num_each = 90 * (1 + 4);
+
+		float[][][] dets = new float[x.number][90][1 + class_number + 4];
+
+		for(int b = 0;b<x.number;b++) {
+			
+			System.out.println(JsonUtils.toJson(x.getByNumber(b)));
+			
+			int input_index = b * input_num_each;
+			
+			float[][] score_bbox = new float[90][class_number + 4 + 1];
+			
+			for (int l = 0; l < 90; ++l){
+				int box_index = input_index + l * 5;
+				
+	            float[] bbox = new float[class_number + 1 + 4];
+	            if(x.data[box_index + 2] != 0 && x.data[box_index + 3] != 0) {
+	            	bbox[class_number + 1] = x.data[box_index + 0] * w;
+		            bbox[class_number + 2] = x.data[box_index + 1] * h;
+		            bbox[class_number + 3] = x.data[box_index + 2] * w;
+		            bbox[class_number + 4] = x.data[box_index + 3] * h;
+		            bbox[0] = 1;
+		            System.out.println(b+":"+JsonUtils.toJson(bbox));
+				}
+
+	            score_bbox[l] = bbox;
+
 		    }
 			
 			/**

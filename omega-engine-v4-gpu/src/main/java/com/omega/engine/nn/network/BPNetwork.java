@@ -153,4 +153,10 @@ public class BPNetwork extends Network{
 		return NetworkType.BP;
 	}
 
+	@Override
+	public void clearGrad() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

@@ -23,9 +23,9 @@ public class YoloDataTransformJob extends RecursiveAction {
 	
 	private float hue = 0.1f;
 	
-	private float saturation = 0.75f;
+	private float saturation = 1.5f;
 	
-	private float exposure = 0.75f;
+	private float exposure = 1.5f;
 	
 	private int classnum = 1;
 	
@@ -112,7 +112,7 @@ public class YoloDataTransformJob extends RecursiveAction {
 			/**
 			 * 随机裁剪边缘
 			 */
-			DataTransforms.randomCropWithLabel(i, getInput(), img, this.orgLabelData.get(key), rLabel, labelSize, getInput().height, getInput().width, jitter);
+			DataTransforms.randomCropWithLabel(i, getInput(), img, orgList, rLabel, labelSize, getInput().height, getInput().width, jitter);
 			/**
 			 * 随机上下反转
 			 */

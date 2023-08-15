@@ -6,6 +6,10 @@ import com.omega.engine.nn.network.RunModel;
 
 public abstract class BNBaseKernel extends BaseKernel{
 	
+	public Tensor runingMean;
+	
+	public Tensor runingVar;
+	
 	public abstract void forward(RunModel RUN_MODEL, Tensor gama, Tensor beta, Tensor input, Tensor output);
 	
 	public abstract void backward(Tensor input,Tensor delta,Tensor diff,Tensor gama,Tensor dgama,Tensor dbeta);

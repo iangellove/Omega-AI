@@ -16,6 +16,7 @@ import jcuda.Sizeof;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 import jcuda.runtime.cudaMemcpyKind;
+import jcuda.runtime.cudaStream_t;
 
 public class Tensor implements Serializable{
 	
@@ -62,6 +63,13 @@ public class Tensor implements Serializable{
 	public Tensor copy() {
 		float[] dest = new float[dataLength];
 		System.arraycopy(data, 0, dest, 0, dataLength);
+		Tensor dis = new Tensor(number, channel, height, width, dest, hasGPU);
+		return dis;
+	}
+	
+	public Tensor copyGPU() {
+		float[] dest = new float[dataLength];
+		System.arraycopy(this.syncHost(), 0, dest, 0, dataLength);
 		Tensor dis = new Tensor(number, channel, height, width, dest, hasGPU);
 		return dis;
 	}
@@ -301,7 +309,15 @@ public class Tensor implements Serializable{
 	    return false;
 	}
 	
+	public void clearGPU(cudaStream_t stream) {
+		
+		checkCUDA(JCuda.cudaMemsetAsync(gpuData, 0, this.dataLength * Sizeof.FLOAT, stream));
+		
+//		checkCUDA(JCuda.cudaMemset(gpuData, 0, this.dataLength * Sizeof.FLOAT));
+	}
+	
 	public void clearGPU() {
+		
 		checkCUDA(JCuda.cudaMemset(gpuData, 0, this.dataLength * Sizeof.FLOAT));
 	}
 	

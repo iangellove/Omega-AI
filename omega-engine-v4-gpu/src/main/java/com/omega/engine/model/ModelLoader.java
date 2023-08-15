@@ -182,13 +182,19 @@ public class ModelLoader {
 		int size = getInt(cfg.get("size").toString());
 		int stride = getInt(cfg.get("stride").toString());
 		int pad = getInt(cfg.get("pad").toString());
+		int freeze = 0;
+		if(cfg.get("freeze")!=null){
+			freeze = getInt(cfg.get("freeze").toString());
+		}
 		
 		int bn = 0;
 		boolean hasBias = true;
-		
+
 		if(cfg.get("batch_normalize") != null) {
 			bn = getInt(cfg.get("batch_normalize").toString());
-			hasBias = false;
+			if(bn > 0){
+				hasBias = false;
+			}
 		}
 		
 		String activation = null;
@@ -198,12 +204,21 @@ public class ModelLoader {
 		}
 
 		ConvolutionLayer conv = new ConvolutionLayer(pre.oChannel, kernel, pre.oWidth, pre.oHeight, size, size, pad, stride, hasBias);
+		
+		if(freeze == 1) {
+			conv.freeze = true;
+		}
+		
 		System.out.println(conv.oWidth);
 		nn.addLayer(conv);
 		cfg.put("lastIndex", conv.index);
 		
 		if(bn == 1) {
 			BNLayer bn1 = new BNLayer(conv);
+			bn1.preLayer = conv;
+			if(freeze == 1) {
+				bn1.freeze = true;
+			}
 			nn.addLayer(bn1);
 			cfg.put("lastIndex", bn1.index);
 		}
@@ -227,13 +242,19 @@ public class ModelLoader {
 		
 		int inputSize = pre.oChannel * pre.oHeight * pre.oWidth;
 		int outputSize = getInt(cfg.get("output").toString());
+		int freeze = 0;
+		if(cfg.get("freeze")!=null){
+			freeze = getInt(cfg.get("freeze").toString());
+		}
 		
 		int bn = 0;
 		boolean hasBias = true;
 		
-		if(cfg.get("batch_normalize") != null && cfg.get("batch_normalize").toString().equals("1")) {
+		if(cfg.get("batch_normalize") != null) {
 			bn = getInt(cfg.get("batch_normalize").toString());
-			hasBias = false;
+			if(bn > 0){
+				hasBias = false;
+			}
 		}
 		
 		String activation = null;
@@ -243,12 +264,18 @@ public class ModelLoader {
 		}
 		System.out.println(inputSize);
 		FullyLayer fully = new FullyLayer(inputSize, outputSize, hasBias);
-		
+		if(freeze == 1) {
+			fully.freeze = true;
+		}
 		nn.addLayer(fully);
 		cfg.put("lastIndex", fully.index);
 		
 		if(bn == 1) {
 			BNLayer bn1 = new BNLayer();
+			bn1.preLayer = fully;
+			if(freeze == 1) {
+				bn1.freeze = true;
+			}
 			nn.addLayer(bn1);
 			cfg.put("lastIndex", bn1.index);
 		}

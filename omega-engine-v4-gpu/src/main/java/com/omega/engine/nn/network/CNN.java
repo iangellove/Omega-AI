@@ -9,6 +9,8 @@ import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
 import com.omega.engine.updater.UpdaterType;
 
+import jcuda.runtime.JCuda;
+
 /**
  * Convolutional Neural Networks
  * @author Administrator
@@ -105,13 +107,19 @@ public class CNN extends Network {
 	@Override
 	public Tensor lossDiff(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub
+
+		/**
+		 * 清除梯度
+		 */
+		this.clearGrad();
+		
 		return this.lossFunction.diff(output, label);
 	}
 
 	@Override
 	public void back(Tensor lossDiff) {
 		// TODO Auto-generated method stub
-
+		
 		/**
 		 * 设置误差
 		 * 将误差值输入到最后一层
@@ -142,6 +150,27 @@ public class CNN extends Network {
 	public NetworkType getNetworkType() {
 		// TODO Auto-generated method stub
 		return NetworkType.CNN;
+	}
+
+	@Override
+	public void clearGrad() {
+		// TODO Auto-generated method stub
+		/**
+		 * forward
+		 */
+		for(int i = 0;i<layerCount;i++) {
+			
+			Layer layer = layerList.get(i);
+			
+			if(layer.delta != null) {
+				layer.delta.clearGPU();
+				if(layer.cache_delta != null) {
+					layer.cache_delta.clearGPU();
+				}
+			}
+			
+		}
+		JCuda.cudaDeviceSynchronize();
 	}
 	
 }

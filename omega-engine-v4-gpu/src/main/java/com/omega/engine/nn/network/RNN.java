@@ -145,4 +145,10 @@ public class RNN extends Network {
 		return t;
 	}
 
+	@Override
+	public void clearGrad() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

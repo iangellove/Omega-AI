@@ -9,10 +9,6 @@ public class MultiLabelSoftMargin extends LossFunction {
 	
 	private static MultiLabelSoftMargin instance;
 	
-	private Tensor loss;
-	
-	private Tensor diff;
-	
 	public static MultiLabelSoftMargin operation() {
 		if(instance == null) {
 			instance = new MultiLabelSoftMargin();

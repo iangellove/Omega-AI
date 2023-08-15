@@ -96,6 +96,8 @@ public abstract class Optimizer {
 	
 	public int counter = 0;
 	
+	public int[] lr_step;
+	
 	public abstract void train(BaseData trainingData);
 	
 	public abstract void train(BaseData trainingData,BaseData testData);
@@ -180,7 +182,7 @@ public abstract class Optimizer {
 		this.testData = testData;
 	}
 	
-	public void updateLR() {
+	public void updateLR(int[] lr_step) {
 		
 		if(warmUp && batchIndex < burnIn) {
 			this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
@@ -226,6 +228,25 @@ public abstract class Optimizer {
 				}
 				break;
 			case SMART_HALF:
+
+				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF) {
+					
+					if(lr_step != null) {
+						
+						for(int index:lr_step) {
+							if(index == this.trainIndex) {
+								this.network.learnRate = this.network.learnRate * 0.1f;
+							}
+						}
+						
+					}else if(this.trainIndex % 200 == 0){
+						
+						this.network.learnRate = this.network.learnRate * 0.5f;
+						
+					}
+					
+				}
+				
 				break;
 			default:
 				break;

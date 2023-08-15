@@ -1,9 +1,15 @@
 package com.omega.yolo.utils;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.w3c.dom.Document;
@@ -13,7 +19,6 @@ import org.w3c.dom.NodeList;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
-import com.omega.common.utils.JsonUtils;
 import com.omega.engine.nn.data.ImageData;
 import com.omega.yolo.model.YoloDataSet;
 import com.omega.yolo.model.YoloImage;
@@ -29,7 +34,7 @@ public class YoloImageUtils {
 	public float[] mean = new float[] {0.491f, 0.482f, 0.446f};
 	public float[] std = new float[] {0.247f, 0.243f, 0.261f};
 	
-	public static final int YOLO_IMG_SIZE = 448;
+	public static final int YOLO_IMG_SIZE = 416;
 	
 	public static final int GRID_SIZE = 7;
 	
@@ -118,6 +123,35 @@ public class YoloImageUtils {
 		}
 		
 		return output;
+	}
+	
+	public static int[][] anno2bbox(Map<String,List<int[]>> labelData,String filename){
+
+		try {
+//			System.out.println(filename);
+			List<int[]> objList = labelData.get(filename);
+			
+			int[][] output = new int[objList.size()][5];
+			
+			for(int i = 0;i<objList.size();i++){
+				
+				int[] bbox = objList.get(i);
+				
+				output[i][0] = bbox[4];
+				output[i][1] = bbox[0];
+				output[i][2] = bbox[1];
+				output[i][3] = bbox[2];
+				output[i][4] = bbox[3];
+
+			}
+			
+			return output;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		return null;
 	}
 	
 	public static int[][] anno2bbox(String src){
@@ -236,7 +270,7 @@ public class YoloImageUtils {
 	}
 	
 	public static int[][] resizeBBox(int padw,int padh,int w,int h,int[][] bbox) {
-		
+
 		for(int i = 0;i<bbox.length;i++) {
 			
 			if(padw != 0) {
@@ -458,14 +492,76 @@ public class YoloImageUtils {
 			
 			switch (version) {
 			case yolov1:
-
 				obj.setYoloLabel(LabelUtils.labelToYolo(bbox, GRID_SIZE, YOLO_IMG_SIZE));
-				
 				break;
 			case yolov3:
-
 				obj.setYoloLabel(LabelUtils.labelToYoloV3(bbox, YOLO_IMG_SIZE));
+				break;
+			case yolov3_xyxy:
+				obj.setYoloLabel(LabelUtils.labelToYoloV3_xyxy(bbox, YOLO_IMG_SIZE));
+				break;
 				
+			}
+			
+			return obj;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	public static YoloImage formatData(File file,String imgOutDir,Map<String, List<int[]>> labelData,YoloVersion version) {
+		
+		try {
+			
+			YoloImage obj = new YoloImage();
+			
+			String filename = file.getName();
+			
+			System.out.println(filename);
+			
+			String dataName = filename.substring(0, filename.lastIndexOf("."));
+
+			String imgOutPath = imgOutDir + "\\" + filename;
+			
+			ImageData data =  IU().getImageData(file);
+			
+			int padw = 0;
+			int padh = 0;
+			int w = data.getWeight();
+			int h = data.getHeight();
+			
+			if(h > w) {
+				padw = new BigDecimal(h).subtract(new BigDecimal(w)).divide(new BigDecimal(2),BigDecimal.ROUND_DOWN).intValue();
+			}else if(h < w){
+				padh = new BigDecimal(w).subtract(new BigDecimal(h)).divide(new BigDecimal(2),BigDecimal.ROUND_DOWN).intValue();
+			}
+			
+			int[][] label = anno2bbox(labelData, filename);
+			int[][] bbox = formatLabel(label);
+			
+			bbox = resizeBBox(padw, padh, w, h, bbox);
+
+			int[] resizeData = YoloImageUtils.resize(data, imgOutPath, YOLO_IMG_SIZE, YOLO_IMG_SIZE, padw, padh, w, h);
+			
+			obj.setName(dataName);
+			obj.setChannel(3);
+			obj.setHeight(YOLO_IMG_SIZE);
+			obj.setWidth(YOLO_IMG_SIZE);
+			obj.setBbox(bbox);
+			obj.setData(resizeData);
+			
+			switch (version) {
+			case yolov1:
+				obj.setYoloLabel(LabelUtils.labelToYolo(bbox, GRID_SIZE, YOLO_IMG_SIZE));
+				break;
+			case yolov3:
+				obj.setYoloLabel(LabelUtils.labelToYoloV3(bbox, YOLO_IMG_SIZE));
+				break;
+			case yolov3_xyxy:
+				obj.setYoloLabel(LabelUtils.labelToYoloV3_xyxy(bbox, YOLO_IMG_SIZE));
 				break;
 			}
 			
@@ -515,6 +611,117 @@ public class YoloImageUtils {
 					
 					for(float val:(float[])bboxList.get(name)) {
 						text += " " + val;
+					}
+					text += "\n";
+//					System.out.println(text);
+					fos.write(text.getBytes());
+				}
+	 
+				fos.flush();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void loadLabelDataForCSV(String labelPath,Map<String,List<int[]>> orgLabelData,String[] labelSet) {
+		
+		try (FileInputStream fin = new FileInputStream(labelPath);
+			InputStreamReader reader = new InputStreamReader(fin);	
+		    BufferedReader buffReader = new BufferedReader(reader);){
+
+			String strTmp = "";
+			int idx = 0;
+	        while((strTmp = buffReader.readLine())!=null){
+	        	if(idx > 0) {
+		        	String[] list = strTmp.split(",");
+		        	List<int[]> once = new ArrayList<int[]>();
+		        	String[] bboxData = list[1].split(" ");
+		        	int page = bboxData.length / 5;
+		        	for(int i = 0;i<page;i++) {
+		        		int[] bbox = new int[5];
+		        		for(int j = 0;j<5;j++) {
+		        			if(j == 4) {
+		        				bbox[j] = getIndexByLabelSet(labelSet, bboxData[i * 5 + j]);
+		        			}else {
+		        				bbox[j] = Integer.parseInt(bboxData[i * 5 + j]);
+		        			}
+		        		}
+		        		once.add(bbox);
+		        	}
+		        	orgLabelData.put(list[0], once);
+	        	}
+	        	idx++;
+	        }
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static int getIndexByLabelSet(String[] labelSet,String label) {
+		
+		for(int i = 0;i<labelSet.length;i++) {
+			if(label.equals(labelSet[i])) {
+				return i;
+			}
+		}
+		
+		return 0;
+	}
+	
+	public static void image2YoloFormCSV(String srcDir,String labelPath,String[] labelSet,String outDir,String bboxPath,YoloVersion version) {
+		
+		try {
+			
+			/**
+			 * 读取CSV label数据
+			 */
+			Map<String,List<int[]>> orgLabelData = new HashMap<String, List<int[]>>();
+			
+			loadLabelDataForCSV(labelPath, orgLabelData, labelSet);
+			
+			File file = new File(srcDir);
+			
+			Map<String, Object> bboxList = new LinkedHashMap<String, Object>(); 
+			
+			if(file.exists() && file.isDirectory()) {
+				
+				for(File img:file.listFiles()) {
+					
+					YoloImage yi = formatData(img, outDir, orgLabelData, version);
+//					System.out.println(yi.getName());
+					bboxList.put(yi.getName(), yi.getYoloLabel());
+					
+				}
+				
+			}
+			
+			File txt = new File(bboxPath);
+			
+			if(!txt.exists()) {
+				txt.createNewFile(); // 创建新文件,有同名的文件的话直接覆盖
+			}
+			
+			try (FileOutputStream fos = new FileOutputStream(txt);
+//					OutputStreamWriter osr = new OutputStreamWriter(fos,"utf-8");
+//					BufferedWriter bufferedWriter = new BufferedWriter(osr);
+					) {
+	 
+				for (String name : bboxList.keySet()) {
+					
+					String text = name;
+					
+					for(float val:(float[])bboxList.get(name)) {
+						text += " " + Math.round(val);
 					}
 					text += "\n";
 //					System.out.println(text);
@@ -748,16 +955,25 @@ public class YoloImageUtils {
 //		int[][] bbox = formatLabel(label);
 //		System.out.println(JsonUtils.toJson(label));
 //		System.out.println(JsonUtils.toJson(bbox));
-		
-		String rootPath = "H:\\voc\\test";
 //		String filename = "000005.jpg";
+//		formatData(filename, imgDir, labelDir, imgOutDir, true);
+		
+		String rootPath = "H:\\voc\\train\\";
 		String imgDir = rootPath + "\\JPEGImages";
 		String labelDir = rootPath + "\\Annotations";
 		String imgOutDir = rootPath + "\\imgs";
 		String bboxPath = rootPath + "\\labels\\yolov3.txt";
+
+		image2Yolo(imgDir, labelDir, imgOutDir, bboxPath, YoloVersion.yolov3_xyxy);
 		
-//		formatData(filename, imgDir, labelDir, imgOutDir, true);
-		image2Yolo(imgDir, labelDir, imgOutDir, bboxPath, YoloVersion.yolov3);
+//		String rootPath = "H:\\voc\\helmet_dataset";
+//		String imgDir = rootPath + "\\JPEGImages";
+//		String labelPath = rootPath + "\\train_labels.csv";
+//		String imgOutDir = rootPath + "\\imgs";
+//		String bboxPath = rootPath + "\\labels\\yolov3.txt";
+//		String[] labelSet = new String[] {"none","white","yellow","blue","red"};
+//
+//		image2YoloFormCSV(imgDir, labelPath, labelSet, imgOutDir, bboxPath, YoloVersion.yolov3_xyxy);
 	}
 	
 }

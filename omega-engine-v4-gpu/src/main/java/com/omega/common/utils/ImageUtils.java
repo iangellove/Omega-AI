@@ -703,6 +703,7 @@ public class ImageUtils {
             g.drawImage(resultingImage, 0, 0, null);
             g.setColor(Color.RED);
             if(bbox!=null) {
+            	System.out.println(JsonUtils.toJson(bbox));
             	for(int[] box:bbox) {
                 	int w = (box[3] - box[1]);
                 	int h = (box[4] - box[2]);

@@ -86,8 +86,8 @@ public class RouteLayer extends Layer{
 		for(int l = 0;l<layers.length;l++) {
 			Tensor delta = layers[l].cache_delta;
 			for(int n = 0;n<this.number;n++) {
-//				kernel.axpy_gpu(this.delta, delta, delta.getOnceSize(), 1, offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize(), 1);
-				kernel.copy_gpu(this.delta, delta, delta.getOnceSize(), offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize(), 1);
+				kernel.axpy_gpu(this.delta, delta, delta.getOnceSize(), 1, offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize(), 1);
+//				kernel.copy_gpu(this.delta, delta, delta.getOnceSize(), offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize(), 1);
 			}
 			offset += delta.getOnceSize();
 		}

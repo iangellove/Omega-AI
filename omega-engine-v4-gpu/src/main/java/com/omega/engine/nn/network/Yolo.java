@@ -8,6 +8,9 @@ import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.updater.UpdaterType;
 
+import jcuda.runtime.JCuda;
+import jcuda.runtime.cudaStream_t;
+
 /**
  * yolo model
  * @author Administrator
@@ -32,6 +35,16 @@ public class Yolo extends OutputsNetwork{
 	public Yolo(LossType lossType,UpdaterType updater) {
 		this.lossType = lossType;
 		this.updater = updater;
+	}
+	
+	public void initLayer() {
+		for(int i = 0;i<layerCount;i++) {
+			
+			Layer layer = layerList.get(i);
+
+			layer.init();
+
+		}
 	}
 	
 	@Override
@@ -186,12 +199,20 @@ public class Yolo extends OutputsNetwork{
 	@Override
 	public Tensor lossDiff(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub
+		/**
+		 * 清除梯度
+		 */
+		this.clearGrad();
 		return this.lossFunction.diff(output, label);
 	}
 	
 	@Override
 	public Tensor[] lossDiff(Tensor label) {
 		// TODO Auto-generated method stub
+		/**
+		 * 清除梯度
+		 */
+		this.clearGrad();
 		for(int i = 0;i<losses.length;i++) {
 			this.lossDiff[i] = losses[i].diff(getOutputs()[i], label);
 		}
@@ -233,5 +254,57 @@ public class Yolo extends OutputsNetwork{
 	public void setClass_num(int class_num) {
 		this.class_num = class_num;
 	}
+
+	@Override
+	public void clearGrad() {
+		// TODO Auto-generated method stub
+		
+		/**
+		 * forward
+		 */
+		for(int i = 0;i<layerCount;i++) {
+			
+			Layer layer = layerList.get(i);
+			
+			if(layer.delta != null) {
+//				layer.delta.clearGPU();
+			}
+			
+			if(layer.cache_delta != null) {
+				layer.cache_delta.clearGPU();
+			}
+			
+		}
+		
+		JCuda.cudaDeviceSynchronize();
+		
+	}
+	
+//	public void clearGrad() {
+//		// TODO Auto-generated method stub
+//		
+//		cudaStream_t stream = new cudaStream_t();
+//		JCuda.cudaStreamCreate(stream);
+//		
+//		/**
+//		 * forward
+//		 */
+//		for(int i = 0;i<layerCount;i++) {
+//			
+//			Layer layer = layerList.get(i);
+//			
+//			if(layer.delta != null) {
+//				layer.delta.clearGPU(stream);
+//				if(layer.cache_delta != null) {
+//					layer.cache_delta.clearGPU(stream);
+//				}
+//			}
+//			
+//		}
+//		
+//		JCuda.cudaStreamSynchronize(stream);
+//		JCuda.cudaStreamDestroy(stream);
+//		
+//	}
 
 }

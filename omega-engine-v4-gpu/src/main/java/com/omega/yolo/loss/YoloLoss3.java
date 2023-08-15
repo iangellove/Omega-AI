@@ -59,6 +59,8 @@ public class YoloLoss3 extends LossFunction {
 	
 	private float truthThresh = 1.0f;
 	
+	private float eta = 1e-6f;
+	
 	public YoloLoss3(int class_number,int bbox_num,int[] mask,float[] anchors,int orgH,int orgW,int maxBox,int total,float ignoreThresh,float truthThresh) {
 		this.class_number = class_number;
 		this.bbox_num = bbox_num;
@@ -171,6 +173,7 @@ public class YoloLoss3 extends LossFunction {
 	            for(int n = 0;n<this.total;n++) {
 	            	float[] pred = new float[] {0, 0, anchors[2 * n] / orgW, anchors[2 * n + 1] / orgH};
 	            	float iou = YoloUtils.box_iou(pred, truthShift);
+//	            	System.out.println(iou);
 	            	if (iou > bestIOU) { 
 	                    bestIOU = iou;// 记录最大的IOU
 	                    bestIndex = n;// 以及记录该bbox的编号n
@@ -178,7 +181,7 @@ public class YoloLoss3 extends LossFunction {
 	            }
 	            
 	            int mask_n = intIndex(mask, bestIndex, bbox_num);
-
+//	            System.out.println("mask_n:"+mask_n+"==="+bestIndex);
 	            if(mask_n >= 0) {
 	            	
 	            	int mask_n_index = mask_n*x.width*x.height + j*x.width + i;
@@ -211,6 +214,7 @@ public class YoloLoss3 extends LossFunction {
 	                if(iou > .5) recall += 1;
 	                if(iou > .75) recall75 += 1;
 	                avg_iou += iou;
+//	                System.out.println("iou:"+iou);
 	            }
 	            
 			}
@@ -222,6 +226,10 @@ public class YoloLoss3 extends LossFunction {
 //			System.out.println(JsonUtils.toJson(x.getByNumberAndChannel(0, 4)));
 //		}
 		
+//		if(Double.isInfinite(Math.pow(mag_array(this.diff.data), 2.0)/x.number) || avg_iou == 0) {
+//			x.showDM();
+//			label.showDM();
+//		}
 		
 		System.out.println("loss:"+Math.pow(mag_array(this.diff.data), 2.0)/x.number);
 		
@@ -248,7 +256,7 @@ public class YoloLoss3 extends LossFunction {
 			avg_cat += x.data[index + stride * clazz];
 			return avg_cat;
 		}
-
+		
 		for(int n = 0;n<classes;n++) {
 //			this.diff.data[index + stride * n] = ((n == clazz)?1 : 0) - x.data[index + stride * n];
 			this.diff.data[index + stride * n] = x.data[index + stride * n] - ((n == clazz)?1 : 0);
@@ -268,13 +276,18 @@ public class YoloLoss3 extends LossFunction {
 		
 		float tx = (truth[0]*lw - i);
 	    float ty = (truth[1]*lh - j);
-
+	    
+//	    float tw = (float) Math.log(truth[2] * orgW / anchors[2*n] + eta);
+//	    float th = (float) Math.log(truth[3] * orgH / anchors[2*n + 1] + eta);
+	    
 	    float tw = (float) Math.log(truth[2] * orgW / anchors[2*n]);
 	    float th = (float) Math.log(truth[3] * orgH / anchors[2*n + 1]);
-//	    this.diff.data[index + 0 * stride] = scale * (tx - x.data[index + 0 * stride]);
-//	    this.diff.data[index + 1 * stride] = scale * (ty - x.data[index + 1 * stride]);
-//	    this.diff.data[index + 2 * stride] = scale * (tw - x.data[index + 2 * stride]);
-//	    this.diff.data[index + 3 * stride] = scale * (th - x.data[index + 3 * stride]);
+
+//	    if(Float.isInfinite(tw) || Float.isInfinite(th) || Float.isNaN(tw) || Float.isNaN(th)) {
+//	    	System.out.println(JsonUtils.toJson(truth));
+//	    	System.out.println(tw+":"+th);
+//	    }
+
 	    this.diff.data[index + 0 * stride] = scale * (x.data[index + 0 * stride] - tx);
 	    this.diff.data[index + 1 * stride] = scale * (x.data[index + 1 * stride] - ty);
 	    this.diff.data[index + 2 * stride] = scale * (x.data[index + 2 * stride] - tw);

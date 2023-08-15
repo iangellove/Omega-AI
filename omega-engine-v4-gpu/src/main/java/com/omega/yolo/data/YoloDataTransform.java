@@ -258,14 +258,14 @@ public class YoloDataTransform extends DataTransform {
 			label.data[b * oneSize + gridy * stride * once + gridx * once + clazz] = 1.0f;
 			
 			/**
-			 * x1,y1,w1,h1
+			 * px,py,w,h
 			 */
 			label.data[b * oneSize + gridy * stride * once + gridx * once + classnum + 1] = px;
 			label.data[b * oneSize + gridy * stride * once + gridx * once + classnum + 2] = py;
 			label.data[b * oneSize + gridy * stride * once + gridx * once + classnum + 3] = w;
 			label.data[b * oneSize + gridy * stride * once + gridx * once + classnum + 4] = h;
-			
 		}
+		
 	}
 	
 	public static void loadLabelToYolov1(List<float[]> list, int b, Tensor label,int img_w,int img_h,int classnum,int numBoxes) {
@@ -339,10 +339,12 @@ public class YoloDataTransform extends DataTransform {
 	
 	public static void loadLabelToYolov3(float[] box, int i, Tensor label,int imgw,int imgh,int bbox_num) {
 		
+		int ignore = 0;
+		
 		for(int c = 0;c<box.length / 5;c++) {
 
 			int clazz = (int) box[c * 5 + 0];
-			
+//			System.out.println(JsonUtils.toJson(box));
 			float x1 = box[c * 5 + 1] / imgw;
 			float y1 = box[c * 5 + 2] / imgh;
 			float x2 = box[c * 5 + 3] / imgw;
@@ -354,11 +356,19 @@ public class YoloDataTransform extends DataTransform {
 			float w = (x2 - x1);
 			float h = (y2 - y1);
 			
-			label.data[i * bbox_num * 5 + c * 5 + 0] = cx;
-			label.data[i * bbox_num * 5 + c * 5 + 1] = cy;
-			label.data[i * bbox_num * 5 + c * 5 + 2] = w;
-			label.data[i * bbox_num * 5 + c * 5 + 3] = h;
-			label.data[i * bbox_num * 5 + c * 5 + 4] = clazz;
+			if(w == 0 || h == 0) {
+//				System.out.println(x2+"-"+x1+"|"+y2+"-"+y1);
+				ignore++;
+				continue;
+			}
+			
+			int currentC = c - ignore;
+			
+			label.data[i * bbox_num * 5 + currentC * 5 + 0] = cx;
+			label.data[i * bbox_num * 5 + currentC * 5 + 1] = cy;
+			label.data[i * bbox_num * 5 + currentC * 5 + 2] = w;
+			label.data[i * bbox_num * 5 + currentC * 5 + 3] = h;
+			label.data[i * bbox_num * 5 + currentC * 5 + 4] = clazz;
 			
 		}
 
