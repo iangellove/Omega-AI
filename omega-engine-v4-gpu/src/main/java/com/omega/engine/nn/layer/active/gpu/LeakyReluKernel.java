@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer.active.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
@@ -42,13 +43,13 @@ public class LeakyReluKernel extends BaseKernel{
 
 			if(function == null) {
 
-				function = CUDAModules.getFunctionByModule("H://activeFunction.cu", "leakyRelu_forward");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "leakyRelu_forward");
 				
 			}
 			
 			if(function_back == null) {
 
-				function_back = CUDAModules.getFunctionByModule("H://activeFunction.cu", "leakyRelu_backward");
+				function_back = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "leakyRelu_backward");
 				
 			}
 			

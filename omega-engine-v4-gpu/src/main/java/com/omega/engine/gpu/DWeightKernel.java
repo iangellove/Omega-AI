@@ -4,6 +4,7 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import static jcuda.jcublas.JCublas2.cublasGetVector;
 import static jcuda.jcublas.JCublas2.cublasSetVector;
 
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 
@@ -70,7 +71,7 @@ public class DWeightKernel {
 
 			if(function == null) {
 
-				function = CUDAModules.getFunctionByModule("H://Im2colKernel.cu", "im2col_gpu_kernelV2");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"Im2colKernel.cu", "im2col_gpu_kernelV2");
 				
 			}
 			

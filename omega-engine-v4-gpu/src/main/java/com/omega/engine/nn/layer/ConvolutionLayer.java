@@ -192,7 +192,7 @@ public class ConvolutionLayer extends Layer {
 //			System.out.println(JsonUtils.toJson(delta.syncHost()));
 //			
 //		}
-		
+
 		/**
 		 * 计算deltaW
 		 * 20220816: dw = diff * im2col(input)T 

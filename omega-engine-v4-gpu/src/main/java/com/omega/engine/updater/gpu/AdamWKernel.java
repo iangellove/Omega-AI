@@ -3,6 +3,7 @@ package com.omega.engine.updater.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
@@ -71,17 +72,17 @@ public class AdamWKernel {
 
 			if(function == null) {
 
-				function = CUDAModules.getFunctionByModule("H://updater.cu", "adamw");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"updater.cu", "adamw");
 				
 			}
 			
 			if(r_function == null) {
-				r_function = CUDAModules.getFunctionByModule("H://updater.cu", "adamwr");
+				r_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"updater.cu", "adamwr");
 			}
 			
 			if(bn_function == null) {
 				
-				bn_function = CUDAModules.getFunctionByModule("H://updater.cu", "adamw_bn");
+				bn_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"updater.cu", "adamw_bn");
 				
 			}
 			

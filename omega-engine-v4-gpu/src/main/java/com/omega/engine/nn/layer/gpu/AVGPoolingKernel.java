@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
@@ -38,12 +39,12 @@ public class AVGPoolingKernel extends BaseKernel{
 
 			if(forward_function == null) {
 				
-				forward_function = CUDAModules.getFunctionByModule("H://AVGPoolingKernel.cu", "pooling_forward");
+				forward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"AVGPoolingKernel.cu", "pooling_forward");
 				
 			}
 			
 			if(backward_function == null) {
-				backward_function = CUDAModules.getFunctionByModule("H://AVGPoolingKernel.cu", "pooling_backward");
+				backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"AVGPoolingKernel.cu", "pooling_backward");
 			}
 			
 		} catch (Exception e) {

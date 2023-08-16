@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
@@ -100,19 +101,19 @@ public class ConvKernel extends ConvBaseKernel{
 		try {
 
 			if(im2col_function == null) {
-				im2col_function = CUDAModules.getFunctionByModule("H://Im2colKernel.cu", "im2col_gpu_kernelV2");
+				im2col_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"Im2colKernel.cu", "im2col_gpu_kernelV2");
 			}
 			
 			if(bias_function == null) {
-				bias_function = CUDAModules.getFunctionByModule("H://BiasKernel.cu", "add_bias");
+				bias_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BiasKernel.cu", "add_bias");
 			}
 			
 			if(back_back_function == null) {
-				back_back_function = CUDAModules.getFunctionByModule("H://BiasKernel.cu", "backward_bias_kernel");
+				back_back_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BiasKernel.cu", "backward_bias_kernel");
 			}
 			
 			if(col2im_function == null) {
-				col2im_function = CUDAModules.getFunctionByModule("H://Col2imKernel.cu", "col2im_gpu_kernelV2");
+				col2im_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"Col2imKernel.cu", "col2im_gpu_kernelV2");
 			}
 			
 		} catch (Exception e) {

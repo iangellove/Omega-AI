@@ -64,7 +64,7 @@ public class BNCudnnKernel extends BNBaseKernel{
 	public void init() {
 		
 //		if(normalize_test_function == null) {
-//			normalize_test_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "normalize_test_kernel");
+//			normalize_test_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "normalize_test_kernel");
 //		}
 		
 		if(bnType == BNType.fully_bn) {

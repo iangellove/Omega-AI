@@ -1,6 +1,7 @@
 package com.omega.engine.nn.network;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
@@ -8,6 +9,7 @@ import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.updater.UpdaterType;
 
+import jcuda.Sizeof;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaStream_t;
 
@@ -262,14 +264,12 @@ public class Yolo extends OutputsNetwork{
 		/**
 		 * forward
 		 */
+		JCuda.cudaMemset(CUDAMemoryManager.workspace.getPointer(), 0, CUDAMemoryManager.workspace.getSize());
+		
 		for(int i = 0;i<layerCount;i++) {
 			
 			Layer layer = layerList.get(i);
-			
-			if(layer.delta != null) {
-//				layer.delta.clearGPU();
-			}
-			
+
 			if(layer.cache_delta != null) {
 				layer.cache_delta.clearGPU();
 			}

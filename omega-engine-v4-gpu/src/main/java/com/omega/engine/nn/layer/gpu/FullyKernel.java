@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
@@ -42,13 +43,13 @@ public class FullyKernel extends BaseKernel{
 
 			if(function == null) {
 
-				function = CUDAModules.getFunctionByModule("H://BiasKernel.cu", "add_bias");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BiasKernel.cu", "add_bias");
 				
 			}
 			
 			if(back_function == null) {
 
-				back_function = CUDAModules.getFunctionByModule("H://BiasKernel.cu", "backward_bias_conn_kernel");
+				back_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BiasKernel.cu", "backward_bias_conn_kernel");
 				
 			}
 			

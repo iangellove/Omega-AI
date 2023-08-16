@@ -1,10 +1,12 @@
 package com.omega.yolo.test;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -140,6 +142,13 @@ public class YoloV3Test {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 			
 	}
@@ -161,6 +170,8 @@ public class YoloV3Test {
 			String testPath = "H:\\voc\\helmet_dataset\\vail";
 			String testLabelPath = "H:\\voc\\helmet_dataset\\vail_label.txt";
 			
+			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
+			
 			YoloDataTransform2 dt = new YoloDataTransform2(class_num, DataType.yolov3, 90);
 			
 			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3, dt);
@@ -174,6 +185,8 @@ public class YoloV3Test {
 			netWork.learnRate = 0.001f;
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
+			
+			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 5000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
@@ -191,6 +204,13 @@ public class YoloV3Test {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 			
 	}
@@ -251,6 +271,13 @@ public class YoloV3Test {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 			
 	}
@@ -281,10 +308,10 @@ public class YoloV3Test {
 		int classNum = 20;
 		int batchSize = 64;
 		
-		String trainPath = "H:\\voc\\train\\imgs";
-		String trainLabelPath = "H:\\voc\\train\\labels\\yolov3.txt";
+		String trainPath = "H:\\voc\\mask\\data\\imgs";
+		String trainLabelPath = "H:\\voc\\mask\\data\\yolov3.txt";
 		
-		String outputPath = "H:\\voc\\train\\show\\";
+		String outputPath = "H:\\voc\\mask\\data\\show\\";
 		
 //		String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
 //		String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
@@ -336,6 +363,160 @@ public class YoloV3Test {
 			
 			trainData.showImg(outputPath, indexs, input, label);
 			
+		}
+		
+	}
+	
+	public void yolov3_tiny_mask() {
+		
+		int im_w = 416;
+		int im_h = 416;
+		int batchSize = 24;
+		int class_num = 2;
+		
+		try {
+			
+			String cfg_path = "H:\\voc\\mask\\data\\\\dataset\\yolov3-tiny-mask.cfg";
+			
+			String trainPath = "H:\\voc\\mask\\data\\dataset\\train";
+			String trainLabelPath = "H:\\voc\\mask\\data\\dataset\\labels\\train_label.txt";
+			
+			String testPath = "H:\\voc\\mask\\data\\dataset\\vail";
+			String testLabelPath = "H:\\voc\\mask\\data\\dataset\\labels\\vail_label.txt";
+			
+			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
+			
+			YoloDataTransform2 dt = new YoloDataTransform2(class_num, DataType.yolov3, 90);
+			
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3, dt);
+			
+			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+
+			Yolo netWork = new Yolo(LossType.yolo3, UpdaterType.adamw);
+			
+			netWork.CUDNN = true;
+			
+			netWork.learnRate = 0.001f;
+
+			ModelLoader.loadConfigToModel(netWork, cfg_path);
+			
+			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 3000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+
+			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
+			
+		}catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}	
+	}
+	
+	public void createMaskTrainTestDataSet() {
+		
+		try {
+
+			int im_w = 416;
+			int im_h = 416;
+			int classNum = 5;
+			int batchSize = 64;
+			
+			String trainDataPath = "H:\\voc\\mask\\data\\train.txt";
+			String testDataPath = "H:\\voc\\mask\\data\\test.txt";
+			
+			String orgPath = "H:\\voc\\mask\\data\\dataset\\imgs\\";
+			String orgLabelPath = "H:\\voc\\mask\\data\\dataset\\yolov3.txt";
+			
+			String trainPath = "H:\\voc\\mask\\data\\dataset\\train\\";
+			String vailPath = "H:\\voc\\mask\\data\\dataset\\vail\\";
+			
+			String trainLabelPath = "H:\\voc\\mask\\data\\dataset\\train_label.txt";
+			String vailLabelPath = "H:\\voc\\mask\\data\\dataset\\vail_label.txt";
+			
+			DetectionDataLoader orgData = new DetectionDataLoader(orgPath, orgLabelPath, LabelFileType.txt, im_w, im_h, classNum, batchSize, DataType.yolov3);
+
+			int trainSize = 360;
+			int testSize = 40;
+			
+			Map<String,float[]> trainLabelData = new HashMap<String, float[]>();
+			Map<String,float[]> testLabelData = new HashMap<String, float[]>();
+			
+			String[] trainNames = new String[trainSize];
+			String[] testNames = new String[testSize];
+			
+			try (FileInputStream fin = new FileInputStream(trainDataPath);
+				InputStreamReader reader = new InputStreamReader(fin);	
+			    BufferedReader buffReader = new BufferedReader(reader);){
+				
+				String strTmp = "";
+				int idx = 0;
+		        while((strTmp = buffReader.readLine())!=null){
+		        	trainNames[idx] = strTmp.split(".jpg")[0];
+		        	idx++;
+		        }
+				
+			} catch (Exception e) {
+				// TODO: handle exception
+				e.printStackTrace();
+			}
+			
+			try (FileInputStream fin = new FileInputStream(testDataPath);
+				InputStreamReader reader = new InputStreamReader(fin);	
+			    BufferedReader buffReader = new BufferedReader(reader);){
+				
+				String strTmp = "";
+				int idx = 0;
+		        while((strTmp = buffReader.readLine())!=null){
+		        	testNames[idx] = strTmp.split(".jpg")[0];
+		        	idx++;
+		        }
+				
+			} catch (Exception e) {
+				// TODO: handle exception
+				e.printStackTrace();
+			}
+			
+			/**
+			 * 复制文件
+			 */
+			for(int b = 0;b<trainSize;b++) {
+				String filename = trainNames[b];
+				System.out.println(filename);
+				if(orgData.orgLabelData.get(filename).length <= 450) {
+					File file = new File(orgPath+filename+".jpg");
+					File outFile = new File(trainPath+filename+".jpg");
+					copyFileUsingStream(file, outFile);
+					trainLabelData.put(filename, orgData.orgLabelData.get(filename));
+				}
+			}
+			
+			for(int b = 0;b<testSize;b++) {
+				String filename = testNames[b];
+				if(orgData.orgLabelData.get(filename).length <= 450) {
+					File file = new File(orgPath+filename+".jpg");
+					File outFile = new File(vailPath+filename+".jpg");
+					copyFileUsingStream(file, outFile);
+					testLabelData.put(filename, orgData.orgLabelData.get(filename));
+				}
+			}
+			
+			/**
+			 * 复制label
+			 */
+			createLabelTXT(trainLabelPath, trainLabelData);
+			
+			createLabelTXT(vailLabelPath, testLabelData);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
 		}
 		
 	}
@@ -428,7 +609,10 @@ public class YoloV3Test {
 	        while ((length = is.read(buffer)) > 0) {
 	            os.write(buffer, 0, length);
 	        }
-	    } finally {
+	    }catch (Exception e) {
+			// TODO: handle exception
+	    	e.printStackTrace();
+		} finally {
 	        is.close();
 	        os.close();
 	    }
@@ -472,7 +656,7 @@ public class YoloV3Test {
 			CUDAModules.initContext();
 			
 			YoloV3Test y = new YoloV3Test();
-			y.yolov3_tiny_voc();
+//			y.yolov3_tiny_voc();
 //			y.yolov3_tiny();
 //			y.getAnchors();
 //			y.yolov3_show();
@@ -480,6 +664,8 @@ public class YoloV3Test {
 //			y.yolov3_tiny_helmet();
 //			y.yolov3_show();
 //			y.yolov3_show2();
+//			y.createMaskTrainTestDataSet();
+			y.yolov3_tiny_mask();
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

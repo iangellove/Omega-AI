@@ -110,12 +110,6 @@ public class MBSGDOptimizer extends Optimizer {
 				this.trainIndex = i + 1;
 				
 				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
-
-//				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
-				
-//				int[][] indexs = new int[468][128];
-//				
-//				DataExportUtils.importTXT(indexs, "H://index3.txt");
 				
 				/**
 				 * 遍历整个训练集
@@ -263,12 +257,6 @@ public class MBSGDOptimizer extends Optimizer {
 				this.trainIndex = i + 1;
 				
 				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
-
-//				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
-				
-//				int[][] indexs = new int[468][128];
-//				
-//				DataExportUtils.importTXT(indexs, "H://index3.txt");
 				
 				this.network.RUN_MODEL = RunModel.TRAIN;
 				
@@ -276,7 +264,6 @@ public class MBSGDOptimizer extends Optimizer {
 				 * 遍历整个训练集
 				 */
 				for(int it = 0;it<indexs.length;it++) {
-//				for(int it = 0;it<1;it++) {
 					
 					if(Math.abs(this.currentError) <= this.error) {
 						break;
@@ -817,22 +804,11 @@ public class MBSGDOptimizer extends Optimizer {
 				
 				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
 
-//				int[][] indexs = MathUtils.sortInt(trainingData.number,this.batchSize);
-				
-//				int[][] indexs = new int[468][128];
-//				
-//				DataExportUtils.importTXT(indexs, "H://index3.txt");
-				
 				/**
 				 * 遍历整个训练集
 				 */
 				for(int it = 0;it<indexs.length;it++) {
-//				for(int it = 0;it<1;it++) {
-					
-//					if(Math.abs(this.currentError) <= this.error) {
-//						break;
-//					}
-					
+
 					long start = System.nanoTime();
 
 					this.loss.clear();

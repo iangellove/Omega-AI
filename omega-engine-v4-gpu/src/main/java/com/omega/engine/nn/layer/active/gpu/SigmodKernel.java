@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer.active.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
@@ -43,13 +44,13 @@ public class SigmodKernel extends BaseKernel{
 
 			if(function == null) {
 
-				function = CUDAModules.getFunctionByModule("H://activeFunction.cu", "sigmod_forward");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "sigmod_forward");
 				
 			}
 			
 			if(function_back == null) {
 
-				function_back = CUDAModules.getFunctionByModule("H://activeFunction.cu", "sigmod_backward");
+				function_back = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "sigmod_backward");
 				
 			}
 			

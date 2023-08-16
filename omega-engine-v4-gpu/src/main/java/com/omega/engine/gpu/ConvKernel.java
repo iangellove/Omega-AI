@@ -4,6 +4,7 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import static jcuda.jcublas.JCublas2.cublasGetVector;
 import static jcuda.jcublas.JCublas2.cublasSetVector;
 
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.Im2colToVector;
 import com.omega.common.utils.Im2colUtils;
@@ -79,7 +80,7 @@ public class ConvKernel {
 
 			if(function == null) {
 				
-				function = CUDAModules.getFunctionByModule("H://Im2colKernel.cu", "im2col_gpu_kernelV2");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"Im2colKernel.cu", "im2col_gpu_kernelV2");
         
 			}
 			

@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
@@ -42,7 +43,7 @@ public class UpSampleKernel extends BaseKernel{
 
 			if(forward_function == null) {
 				
-				forward_function = CUDAModules.getFunctionByModule("H://UpSampleKernel.cu", "upsample_kernel");
+				forward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"UpSampleKernel.cu", "upsample_kernel");
 				
 			}
 			

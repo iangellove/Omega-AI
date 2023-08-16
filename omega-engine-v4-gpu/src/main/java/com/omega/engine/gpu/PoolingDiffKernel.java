@@ -2,6 +2,7 @@ package com.omega.engine.gpu;
 
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
@@ -61,12 +62,12 @@ public class PoolingDiffKernel {
 				switch (type) {
 				case MAX_POOLING:
 
-					function = CUDAModules.getFunctionByModule("H://PoolingKernel.cu", "pooling_diff");
+					function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"PoolingKernel.cu", "pooling_diff");
 
 					break;
 				case MEAN_POOLING:
 
-					function = CUDAModules.getFunctionByModule("H://PoolingKernel.cu", "pooling_diff");
+					function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"PoolingKernel.cu", "pooling_diff");
 
 					break;
 				}

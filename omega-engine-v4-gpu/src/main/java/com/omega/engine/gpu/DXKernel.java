@@ -4,6 +4,7 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import static jcuda.driver.JCudaDriver.cuMemAlloc;
 import static jcuda.jcublas.JCublas2.cublasSetVector;
 
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 
@@ -73,7 +74,7 @@ public class DXKernel {
 		try {
 
 			if(function == null) {
-				function = CUDAModules.getFunctionByModule("H://Col2imKernel.cu", "col2im_gpu_kernelV2");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"Col2imKernel.cu", "col2im_gpu_kernelV2");
 			}
 			
 		} catch (Exception e) {

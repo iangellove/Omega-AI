@@ -3,6 +3,7 @@ package com.omega.engine.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 
 import jcuda.Pointer;
@@ -26,11 +27,11 @@ public class BaseKernel {
 	
 	public BaseKernel() {
 		
-		copy_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "copy_kernel");
+		copy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "copy_kernel");
 		
-		axpy_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "axpy_kernel");
+		axpy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "axpy_kernel");
 		
-		fill_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "fill_kernel");
+		fill_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "fill_kernel");
 		
 	}
 	
@@ -39,7 +40,7 @@ public class BaseKernel {
 		try {
 
 			if(fill_gpu_function == null) {
-				fill_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "fill_kernel");
+				fill_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "fill_kernel");
 			}
 			
 			/**
@@ -75,7 +76,7 @@ public class BaseKernel {
 		try {
 			
 			if(axpy_gpu_function == null) {
-				axpy_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "axpy_kernel");
+				axpy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "axpy_kernel");
 			}
 			
 			/**
@@ -111,7 +112,7 @@ public class BaseKernel {
 		try {
 			
 			if(copy_gpu_function == null) {
-				copy_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "copy_kernel");
+				copy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "copy_kernel");
 			}
 			
 			Pointer kernelParameter = Pointer.to(
@@ -143,7 +144,7 @@ public class BaseKernel {
 		try {
 			
 			if(copy_gpu_function == null) {
-				copy_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "copy_kernel");
+				copy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "copy_kernel");
 			}
 			
 			Pointer kernelParameter = Pointer.to(
@@ -175,7 +176,7 @@ public class BaseKernel {
 		try {
 			
 			if(copy_gpu_function == null) {
-				copy_gpu_function = CUDAModules.getFunctionByModule("H://BaseKernel.cu", "copy_kernel");
+				copy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "copy_kernel");
 			}
 			
 			Pointer kernelParameter = Pointer.to(

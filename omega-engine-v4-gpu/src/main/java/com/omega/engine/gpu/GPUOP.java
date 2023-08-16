@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.PrintUtils;
 import com.omega.common.utils.RandomUtils;
 
@@ -95,7 +96,7 @@ public class GPUOP {
 	
 	private Pointer im2col(float[] px,int n,int c,int h,int w,int kh,int kw,int s) {
 
-		CUfunction function = CUDAModules.getFunctionByModule("H://Im2colKernel.cu", "im2col_gpuv4");
+		CUfunction function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"Im2colKernel.cu", "im2col_gpuv4");
 		
 		int oH = ((h - kh ) / s) + 1;
 		int oW = ((w - kw) / s) + 1;

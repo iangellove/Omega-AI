@@ -3,7 +3,7 @@ package com.omega.engine.nn.layer.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
@@ -14,7 +14,6 @@ import com.omega.engine.pooling.PoolingType;
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
-import jcuda.driver.JCudaDriver;
 import jcuda.runtime.cudaError;
 
 public class PoolingKernel extends BaseKernel{
@@ -63,13 +62,13 @@ public class PoolingKernel extends BaseKernel{
 				
 				switch (type) {
 				case MAX_POOLING:
-					forward_function = CUDAModules.getFunctionByModule("H://PoolingV2Kernel.cu", "maxpool_forward");
+					forward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"PoolingV2Kernel.cu", "maxpool_forward");
 					break;
 				case MEAN_POOLING:
-					forward_function = CUDAModules.getFunctionByModule("H://PoolingV2Kernel.cu", "meanpool_forward");
+					forward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"PoolingV2Kernel.cu", "meanpool_forward");
 					break;
 				case AVG_POOLING:
-					forward_function = CUDAModules.getFunctionByModule("H://PoolingV2Kernel.cu", "avgpool_forward");
+					forward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"PoolingV2Kernel.cu", "avgpool_forward");
 					break;
 				}
 				
@@ -79,13 +78,13 @@ public class PoolingKernel extends BaseKernel{
 				
 				switch (type) {
 				case MAX_POOLING:
-					backward_function = CUDAModules.getFunctionByModule("H://PoolingV2Kernel.cu", "maxpool_backward");
+					backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"PoolingV2Kernel.cu", "maxpool_backward");
 					break;
 				case MEAN_POOLING:
-					backward_function = CUDAModules.getFunctionByModule("H://PoolingV2Kernel.cu", "meanpool_backward");
+					backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"PoolingV2Kernel.cu", "meanpool_backward");
 					break;
 				case AVG_POOLING:
-					backward_function = CUDAModules.getFunctionByModule("H://PoolingV2Kernel.cu", "avgpool_backward");
+					backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"PoolingV2Kernel.cu", "avgpool_backward");
 					break;
 				}
 

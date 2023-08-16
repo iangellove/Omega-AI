@@ -27,9 +27,11 @@ import com.omega.yolo.model.YoloImage;
 
 public class YoloImageUtils {
 	
-	public static final String[] GL_CLASSES = new String[] {"person", "bird", "cat", "cow", "dog", "horse", "sheep",
-	                                                         "aeroplane", "bicycle", "boat", "bus", "car", "motorbike", "train",
-	                                                         "bottle", "chair", "diningtable", "pottedplant", "sofa", "tvmonitor"};
+//	public static final String[] GL_CLASSES = new String[] {"person", "bird", "cat", "cow", "dog", "horse", "sheep",
+//	                                                         "aeroplane", "bicycle", "boat", "bus", "car", "motorbike", "train",
+//	                                                         "bottle", "chair", "diningtable", "pottedplant", "sofa", "tvmonitor"};
+	
+	public static final String[] GL_CLASSES = new String[] {"unmask", "mask"};
 	
 	public float[] mean = new float[] {0.491f, 0.482f, 0.446f};
 	public float[] std = new float[] {0.247f, 0.243f, 0.261f};
@@ -958,11 +960,11 @@ public class YoloImageUtils {
 //		String filename = "000005.jpg";
 //		formatData(filename, imgDir, labelDir, imgOutDir, true);
 		
-		String rootPath = "H:\\voc\\train\\";
+		String rootPath = "H:\\voc\\mask\\data\\";
 		String imgDir = rootPath + "\\JPEGImages";
 		String labelDir = rootPath + "\\Annotations";
 		String imgOutDir = rootPath + "\\imgs";
-		String bboxPath = rootPath + "\\labels\\yolov3.txt";
+		String bboxPath = rootPath + "\\yolov3.txt";
 
 		image2Yolo(imgDir, labelDir, imgOutDir, bboxPath, YoloVersion.yolov3_xyxy);
 		

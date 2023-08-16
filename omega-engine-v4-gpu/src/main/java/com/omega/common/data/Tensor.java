@@ -49,6 +49,8 @@ public class Tensor implements Serializable{
 	
 	private boolean requiresGrad = false;
 	
+	private boolean shareWorkspace = false;
+	
 	private Tensor grad;
 	
 	private Tape tape;
@@ -95,6 +97,24 @@ public class Tensor implements Serializable{
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
 			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
+		}
+	}
+	
+	public Tensor(int number,int channel,int height,int width,boolean hasGPU,boolean shareWorkspace) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.data = new float[this.dataLength];
+		this.shareWorkspace = shareWorkspace;
+		this.setHasGPU(hasGPU);
+		if(hasGPU) {
+//			gpuData = CUDAMemoryManager.getPointer(dataLength);
+			gpuData = CUDAMemoryManager.getWorkspace(this.dataLength);
+//			System.out.println(gpuData);
+//			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+//			JCuda.cudaDeviceSynchronize();
 		}
 	}
 	
@@ -317,7 +337,6 @@ public class Tensor implements Serializable{
 	}
 	
 	public void clearGPU() {
-		
 		checkCUDA(JCuda.cudaMemset(gpuData, 0, this.dataLength * Sizeof.FLOAT));
 	}
 	

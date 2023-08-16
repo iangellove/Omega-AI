@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer.normalization.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
@@ -111,51 +112,51 @@ public class BNKernel3 extends BNBaseKernel{
 		try {
 			
 			if(fast_mean_function == null) {
-				fast_mean_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "fast_mean_kernel");
+				fast_mean_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "fast_mean_kernel");
 			}
 			
 			if(fast_var_function == null) {
-				fast_var_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "fast_variance_kernel");
+				fast_var_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "fast_variance_kernel");
 			}
 			
 			if(normalize_function == null) {
-				normalize_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "normalize_kernel");
+				normalize_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "normalize_kernel");
 			}
 			
 			if(normalize_test_function == null) {
-				normalize_test_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "normalize_test_kernel");
+				normalize_test_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "normalize_test_kernel");
 			}
 			
 			if(mwa_function == null) {
-				mwa_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "mwa_kernel");
+				mwa_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "mwa_kernel");
 			}
 
 			if(dgamma_function == null) {
-				dgamma_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "backward_scale_kernel");
+				dgamma_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "backward_scale_kernel");
 			}
 			
 			if(dbeta_function == null) {
-				dbeta_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "backward_bias_kernel");
+				dbeta_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "backward_bias_kernel");
 			}
 			
 			if(dbeta_full_function == null) {
-				dbeta_full_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "backward_bias_conn_kernel");
+				dbeta_full_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "backward_bias_conn_kernel");
 			}
 			
 			if(dxhat_function == null) {
-				dxhat_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "scale_bias_kernel");
+				dxhat_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "scale_bias_kernel");
 			}
 			
 			if(fast_dmean_function == null) {
-				fast_dmean_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "fast_mean_delta_kernel");
+				fast_dmean_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "fast_mean_delta_kernel");
 			}
 			
 			if(fast_dvar_function == null) {
-				fast_dvar_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "fast_variance_delta_kernel");
+				fast_dvar_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "fast_variance_delta_kernel");
 			}
 			
 			if(dx_function == null) {
-				dx_function = CUDAModules.getFunctionByModule("H://BNKernel3.cu", "normalize_delta_kernel");
+				dx_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BNKernel3.cu", "normalize_delta_kernel");
 			}
 			
 		} catch (Exception e) {

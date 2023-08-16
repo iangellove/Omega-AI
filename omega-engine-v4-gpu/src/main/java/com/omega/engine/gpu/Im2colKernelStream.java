@@ -3,6 +3,7 @@ package com.omega.engine.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import static jcuda.driver.JCudaDriver.cuMemAlloc;
 
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.CheckArrayUtils;
 import com.omega.common.utils.Im2colToVector;
 import com.omega.common.utils.MatrixUtils;
@@ -59,12 +60,12 @@ public class Im2colKernelStream {
 
 			if(function == null) {
 				
-				function = CUDAModules.getFunctionByModule("H://Im2colKernelTmp.cu", "im2col_gpuv4");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"Im2colKernelTmp.cu", "im2col_gpuv4");
 //				
 //				/**
 //				 * 加载方法
 //				 */
-//				CUmodule module = CUDAModules.getModule("H://Im2colKernel.cu");
+//				CUmodule module = CUDAModules.getModule(LibPaths.LIB_PATH+"Im2colKernel.cu");
 //				
 //		        // Obtain a function pointer to the "add" function.
 //				function = new CUfunction();
@@ -173,7 +174,7 @@ public class Im2colKernelStream {
 
     public static void main(String args[]){	
 //
-//    	CUmodule module = CUDAModules.getModule("H://Im2colKernel.cu");
+//    	CUmodule module = CUDAModules.getModule(LibPaths.LIB_PATH+"Im2colKernel.cu");
 //		
 //        // Obtain a function pointer to the "add" function.
 //    	CUfunction function = new CUfunction();

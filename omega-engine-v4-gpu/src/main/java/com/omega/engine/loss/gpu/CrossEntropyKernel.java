@@ -3,6 +3,7 @@ package com.omega.engine.loss.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
@@ -71,31 +72,31 @@ public class CrossEntropyKernel extends BaseKernel {
 
 			if(loss_function == null) {
 				
-				loss_function = CUDAModules.getFunctionByModule("H://CrossEntropyKernel.cu", "loss");
+				loss_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"CrossEntropyKernel.cu", "loss");
         
 			}
 			
 			if(nl_loss_function == null) {
 				
-				nl_loss_function = CUDAModules.getFunctionByModule("H://CrossEntropyKernel.cu", "nl_loss");
+				nl_loss_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"CrossEntropyKernel.cu", "nl_loss");
         
 			}
 			
 			if(log_softmax_nl_loss_function == null) {
 				
-				log_softmax_nl_loss_function = CUDAModules.getFunctionByModule("H://CrossEntropyKernel.cu", "log_softmax_nl_loss");
+				log_softmax_nl_loss_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"CrossEntropyKernel.cu", "log_softmax_nl_loss");
         
 			}
 			
 			if(check_function == null) {
 				
-				check_function = CUDAModules.getFunctionByModule("H://CrossEntropyKernel.cu", "check");
+				check_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"CrossEntropyKernel.cu", "check");
         
 			}
 			
 			if(loss_backward_function == null) {
 				
-				loss_backward_function = CUDAModules.getFunctionByModule("H://CrossEntropyKernel.cu", "loss_back2");
+				loss_backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"CrossEntropyKernel.cu", "loss_back2");
         
 			}
 			

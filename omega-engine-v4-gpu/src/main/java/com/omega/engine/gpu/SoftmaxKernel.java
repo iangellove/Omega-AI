@@ -3,6 +3,7 @@ package com.omega.engine.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
@@ -39,25 +40,25 @@ public class SoftmaxKernel extends BaseKernel{
 
 			if(softmax_function == null) {
 				
-				softmax_function = CUDAModules.getFunctionByModule("H://SoftmaxKernel.cu", "softmax");
+				softmax_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"SoftmaxKernel.cu", "softmax");
         
 			}
 			
 			if(log_softmax_function == null) {
 				
-				log_softmax_function = CUDAModules.getFunctionByModule("H://SoftmaxKernel.cu", "log_softmax");
+				log_softmax_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"SoftmaxKernel.cu", "log_softmax");
         
 			}
 			
 			if(softmax_backward_function == null) {
 				
-				softmax_backward_function = CUDAModules.getFunctionByModule("H://SoftmaxKernel.cu", "softmax_back");
+				softmax_backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"SoftmaxKernel.cu", "softmax_back");
         
 			}
 			
 			if(softmax_backward_function2 == null) {
 				
-				softmax_backward_function2 = CUDAModules.getFunctionByModule("H://SoftmaxKernel.cu", "softmax_back2");
+				softmax_backward_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"SoftmaxKernel.cu", "softmax_back2");
         
 			}
 			

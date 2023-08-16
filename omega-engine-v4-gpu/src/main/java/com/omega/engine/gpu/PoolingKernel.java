@@ -2,6 +2,7 @@ package com.omega.engine.gpu;
 
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.pooling.PoolingType;
@@ -62,12 +63,12 @@ public class PoolingKernel {
 				switch (type) {
 				case MAX_POOLING:
 
-					function = CUDAModules.getFunctionByModule("H://PoolingKernel.cu", "max_pooling");
+					function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"PoolingKernel.cu", "max_pooling");
 
 					break;
 				case MEAN_POOLING:
 
-					function = CUDAModules.getFunctionByModule("H://PoolingKernel.cu", "mean_pooling");
+					function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"PoolingKernel.cu", "mean_pooling");
 
 					break;
 				}

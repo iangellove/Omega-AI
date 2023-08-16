@@ -3,6 +3,7 @@ package com.omega.yolo.data;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
@@ -48,7 +49,7 @@ public class DataNormalization {
 
 			if(function == null) {
 
-				function = CUDAModules.getFunctionByModule("H://DataNormalization.cu", "normalization");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"DataNormalization.cu", "normalization");
 				
 			}
 			

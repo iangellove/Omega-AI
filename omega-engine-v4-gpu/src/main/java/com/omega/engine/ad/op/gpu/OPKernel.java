@@ -5,6 +5,7 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import java.io.Serializable;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
@@ -90,69 +91,69 @@ public class OPKernel implements Serializable{
 	
 	public OPKernel() {
 		
-		fill_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "fill_kernel");
+		fill_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "fill_kernel");
 		
-		copy_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "copy_kernel");
+		copy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "copy_kernel");
 		
-		copy_number_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "copy_number_kernel");
+		copy_number_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "copy_number_kernel");
 		
-		copy_channel_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "copy_channel_kernel");
+		copy_channel_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "copy_channel_kernel");
 		
-		add_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "add_kernel");
+		add_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "add_kernel");
 		
-		add_scalar_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "add_scalar_kernel");
+		add_scalar_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "add_scalar_kernel");
 		
-		add_number_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "add_number_kernel");
+		add_number_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "add_number_kernel");
 		
-		add_channel_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "add_channel_kernel");
+		add_channel_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "add_channel_kernel");
 
-		sub_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "sub_kernel");
+		sub_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "sub_kernel");
 		
-		sub_scalar_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "sub_scalar_kernel");
+		sub_scalar_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "sub_scalar_kernel");
 		
-		scalar_sub_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "scalar_sub_kernel"); 
+		scalar_sub_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "scalar_sub_kernel"); 
 		
-		mul_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "mul_kernel");
+		mul_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "mul_kernel");
 		
-		mul_scalar_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "mul_scalar_kernel");
+		mul_scalar_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "mul_scalar_kernel");
 		
-		mul_plus_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "mul_plus_kernel");
+		mul_plus_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "mul_plus_kernel");
 		
-		mul_plus_scalar_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "mul_plus_scalar_kernel");
+		mul_plus_scalar_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "mul_plus_scalar_kernel");
 		
-		div_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "div_kernel");
+		div_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "div_kernel");
 		
-		div_scalar_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "div_scalar_kernel");
+		div_scalar_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "div_scalar_kernel");
 		
-		scalar_div_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "scalar_div_kernel");
+		scalar_div_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "scalar_div_kernel");
 		
-		div_plus_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "div_plus_kernel");
+		div_plus_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "div_plus_kernel");
 		
-		div_plus_scalar_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "div_plus_scalar_kernel");
+		div_plus_scalar_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "div_plus_scalar_kernel");
 		
-		scalar_plus_div_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "scalar_plus_div_kernel");
+		scalar_plus_div_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "scalar_plus_div_kernel");
 		
-		div_bGrad_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "div_bGrad_kernel");
+		div_bGrad_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "div_bGrad_kernel");
 		
-		div_scalar_bGrad_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "div_scalar_bGrad_kernel");
+		div_scalar_bGrad_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "div_scalar_bGrad_kernel");
 		
-		pow_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "pow_kernel");
+		pow_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "pow_kernel");
 		
-		log_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "log_kernel");
+		log_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "log_kernel");
 		
-		exp_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "exp_kernel");
+		exp_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "exp_kernel");
 		
-		sin_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "sin_kernel");
+		sin_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "sin_kernel");
 		
-		cos_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "cos_kernel");
+		cos_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "cos_kernel");
 		
-		sum_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "sum_kernel");
+		sum_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "sum_kernel");
 		
-		sum_channel_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "sum_channel_kernel");
+		sum_channel_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "sum_channel_kernel");
 		
-		broadcast_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "broadcast_kernel");
+		broadcast_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "broadcast_kernel");
 		
-		broadcast_channel_gpu_function = CUDAModules.getFunctionByModule("H://OPKernel.cu", "broadcast_number_kernel");
+		broadcast_channel_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "broadcast_number_kernel");
 		
 	}
 	

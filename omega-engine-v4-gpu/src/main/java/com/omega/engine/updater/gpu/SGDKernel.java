@@ -3,6 +3,7 @@ package com.omega.engine.updater.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.network.Network;
 
@@ -56,13 +57,13 @@ public class SGDKernel {
 
 			if(function == null) {
 
-				function = CUDAModules.getFunctionByModule("H://updater.cu", "sgd");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"updater.cu", "sgd");
 				
 			}
 			
 			if(bn_function == null) {
 				
-				bn_function = CUDAModules.getFunctionByModule("H://updater.cu", "sgd_bn");
+				bn_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"updater.cu", "sgd_bn");
 				
 			}
 			

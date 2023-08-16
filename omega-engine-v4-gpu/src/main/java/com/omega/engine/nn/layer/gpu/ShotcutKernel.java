@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
@@ -90,7 +91,7 @@ public class ShotcutKernel extends BaseKernel{
 
 			if(function == null) {
 
-				function = CUDAModules.getFunctionByModule("H://ShortcutKernel.cu", "shortcut_kernel");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"ShortcutKernel.cu", "shortcut_kernel");
 				
 			}
 			

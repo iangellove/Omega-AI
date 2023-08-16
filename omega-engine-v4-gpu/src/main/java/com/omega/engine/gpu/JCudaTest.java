@@ -17,6 +17,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
+import com.omega.common.lib.LibPaths;
+
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUcontext;
@@ -40,7 +42,7 @@ public class JCudaTest {
         JCudaDriver.setExceptionsEnabled(true);
 
         // Create the PTX file by calling the NVCC
-        String ptxFileName = preparePtxFile("H://JCudaVectorAddKernel.cu");
+        String ptxFileName = preparePtxFile(LibPaths.LIB_PATH+"JCudaVectorAddKernel.cu");
 
         // Initialize the driver and create a context for the first device.
         cuInit(0);

@@ -22,6 +22,8 @@ public class CUDAMemoryManager {
 	
 	public static List<Pointer> cu_porints = new ArrayList<Pointer>();
 	
+	public static GPUWorkspace workspace = new GPUWorkspace();
+	
 	public static CUdeviceptr getDevice(int size) {
 
 		CUdeviceptr device = new CUdeviceptr();
@@ -48,13 +50,21 @@ public class CUDAMemoryManager {
 		return device;
 	}
 	
-	public static Pointer getPointer(int size) {
+	public static Pointer getWorkspace(int size) {
 		
+		if(workspace.getSize() < size * Sizeof.FLOAT) {
+			GPUOP.getInstance().free(workspace.getPointer());
+			cudaMalloc(workspace.getPointer(), size * Sizeof.FLOAT);
+			workspace.setSize(size * Sizeof.FLOAT);
+		}
+		
+		return workspace.getPointer();
+	}
+	
+	public static Pointer getPointer(int size) {
 		Pointer p = new Pointer();
 		cudaMalloc(p, size * Sizeof.FLOAT);
-
 		cu_porints.add(p);
-		
 		return p;
 	}
 	
