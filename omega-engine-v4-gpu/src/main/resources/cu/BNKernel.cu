@@ -115,7 +115,7 @@ __global__ void meanDzSum(float* x,float* dz,float* mean,float* var,float* std,f
 			}
 		}	
 		
-		dvar[index] = dvar_val * -0.5 * pow(var[index] + eta, -1.5);
+		dvar[index] = dvar_val * -0.5 * powf(var[index] + eta, -1.5);
 		dmu[index] = dmu_val + dmu2_val * dvar[index];
 		
 	}
