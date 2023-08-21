@@ -50,6 +50,15 @@ public class RandomUtils {
 		return min + (float)(Math.random() * (max-min));
 	}
 	
+	public static float uniformFloat(float min,float max) {
+		if(max < min) {
+			float swap = min;
+	        min = max;
+	        max = swap;
+		}
+		return min + (float)(Math.random() * (max-min));
+	}
+	
 	public static float randomScale(float s) {
 		float scale = randomFloat(1, s);
 		if(Math.random() >= 0.5d) {
@@ -581,7 +590,7 @@ public class RandomUtils {
 		}
 		
 		Collections.shuffle(list);
-		
+
 		float[] data = new float[k * org.getOnceSize()];
 		
 		for(int kn = 0;kn<k;kn++) {

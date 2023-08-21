@@ -113,6 +113,9 @@ public class YoloImageUtils {
 	public static int[] paddingToSquare(int[] input,int w,int h,int padw,int padh,int ow,int oh){
 
 		int[] output = new int[3 * ow * oh];
+		for(int i = 0;i<output.length;i++) {
+			output[i] = 114;
+		}
 //		System.out.println(ow+":"+oh);
 //		System.out.println(padw+":"+padh+":"+output.length);
 		
@@ -452,6 +455,27 @@ public class YoloImageUtils {
 		return null;
 	}
 	
+	public static int[][] xml2xyxy(File file,String labelDir) {
+		
+		int[][] label = null;
+		
+		try {
+			
+			String filename = file.getName();
+			
+			String dataName = filename.substring(0, filename.lastIndexOf("."));
+
+			String labelPath = labelDir + "\\" + dataName + ".xml";
+			
+			label = anno2bbox(labelPath);
+		}catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}	
+		
+		return label;
+	}
+	
 	public static YoloImage formatData(File file,String labelDir,String imgOutDir,YoloVersion version) {
 		
 		try {
@@ -625,6 +649,121 @@ public class YoloImageUtils {
 			}
 			
 			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void xml2Yolo(String srcDir,String labelDir,String bboxPath) {
+		
+		try {
+			
+			File file = new File(srcDir);
+			
+			Map<String, Object> bboxList = new LinkedHashMap<String, Object>(); 
+			
+			if(file.exists() && file.isDirectory()) {
+				
+				for(File img:file.listFiles()) {
+					int[][] yi = xml2xyxy(img, labelDir);
+					String dataName = img.getName().substring(0, img.getName().lastIndexOf("."));
+					bboxList.put(dataName, yi);
+				}
+				
+			}
+			
+			File txt = new File(bboxPath);
+			
+			if(!txt.exists()) {
+				txt.createNewFile(); // 创建新文件,有同名的文件的话直接覆盖
+			}
+			
+			try (FileOutputStream fos = new FileOutputStream(txt);) {
+	 
+				for (String name : bboxList.keySet()) {
+					
+					String text = name;
+					
+					for(int[] vals:(int[][])bboxList.get(name)) {
+						for(int val:vals) {
+							text += " " + val;
+						}
+					}
+					text += "\n";
+//					System.out.println(text);
+					fos.write(text.getBytes());
+				}
+	 
+				fos.flush();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void csv2Yolo(String srcDir,String labelPath,String bboxPath,String[] labelSet) {
+		
+		try {
+			
+			/**
+			 * 读取CSV label数据
+			 */
+			Map<String,List<int[]>> orgLabelData = new HashMap<String, List<int[]>>();
+			
+			loadLabelDataForCSV(labelPath, orgLabelData, labelSet);
+			
+			Map<String, Object> bboxList = new LinkedHashMap<String, Object>(); 
+			
+			File file = new File(srcDir);
+			
+			if(file.exists() && file.isDirectory()) {
+				
+				for(File img:file.listFiles()) {
+					
+					int[][] label = anno2bbox(orgLabelData, img.getName());
+//					System.out.println(yi.getName());
+					String name = img.getName().split(".jpg")[0];
+					bboxList.put(name, label);
+					
+				}
+				
+			}
+			
+			File txt = new File(bboxPath);
+			
+			if(!txt.exists()) {
+				txt.createNewFile(); // 创建新文件,有同名的文件的话直接覆盖
+			}
+			
+			try (FileOutputStream fos = new FileOutputStream(txt);) {
+	 
+				for (String name : bboxList.keySet()) {
+					
+					String text = name;
+					
+					for(int[] vals:(int[][])bboxList.get(name)) {
+						for(int val:vals) {
+							text += " " + val;
+						}
+					}
+					text += "\n";
+//					System.out.println(text);
+					fos.write(text.getBytes());
+				}
+	 
+				fos.flush();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -960,13 +1099,13 @@ public class YoloImageUtils {
 //		String filename = "000005.jpg";
 //		formatData(filename, imgDir, labelDir, imgOutDir, true);
 		
-		String rootPath = "H:\\voc\\mask\\data\\";
-		String imgDir = rootPath + "\\JPEGImages";
-		String labelDir = rootPath + "\\Annotations";
-		String imgOutDir = rootPath + "\\imgs";
-		String bboxPath = rootPath + "\\yolov3.txt";
-
-		image2Yolo(imgDir, labelDir, imgOutDir, bboxPath, YoloVersion.yolov3_xyxy);
+//		String rootPath = "H:\\voc\\mask\\data\\";
+//		String imgDir = rootPath + "\\JPEGImages";
+//		String labelDir = rootPath + "\\Annotations";
+//		String imgOutDir = rootPath + "\\imgs";
+//		String bboxPath = rootPath + "\\yolov3.txt";
+//
+//		image2Yolo(imgDir, labelDir, imgOutDir, bboxPath, YoloVersion.yolov3_xyxy);
 		
 //		String rootPath = "H:\\voc\\helmet_dataset";
 //		String imgDir = rootPath + "\\JPEGImages";
@@ -976,6 +1115,16 @@ public class YoloImageUtils {
 //		String[] labelSet = new String[] {"none","white","yellow","blue","red"};
 //
 //		image2YoloFormCSV(imgDir, labelPath, labelSet, imgOutDir, bboxPath, YoloVersion.yolov3_xyxy);
+		
+		String rootPath = "H:\\voc\\helmet_dataset";
+		String imgDir = rootPath + "\\JPEGImages";
+		String bboxPath = rootPath + "\\labels.txt";
+		String labelPath = rootPath + "\\train_labels.csv";
+		String[] labelSet = new String[] {"none","white","yellow","blue","red"};
+
+//		xml2Yolo(imgDir, labelDir, bboxPath);
+		
+		csv2Yolo(imgDir, labelPath, bboxPath, labelSet);
 	}
 	
 }

@@ -1,4 +1,4 @@
-package com.omega.yolo.utils;
+package com.omega.yolo.data;
 
 import com.omega.common.data.Tensor;
 

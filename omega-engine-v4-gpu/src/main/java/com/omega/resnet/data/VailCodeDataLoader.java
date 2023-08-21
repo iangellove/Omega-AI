@@ -10,7 +10,7 @@ import java.util.Map;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MathUtils;
-import com.omega.yolo.utils.BaseDataLoader;
+import com.omega.yolo.data.BaseDataLoader;
 import com.omega.yolo.utils.YoloImageUtils;
 
 /**

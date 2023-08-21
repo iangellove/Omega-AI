@@ -20,7 +20,7 @@ public class AnchorBoxUtils {
 		int[] last_clu = new int[N];
 		
 		Tensor clu = RandomUtils.random(boxs, num_clusters);
-		
+
 		while (true) {
 			
 			for(int n = 0;n<bboxs.number;n++) {

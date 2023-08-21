@@ -93,6 +93,8 @@ public class YoloLoss3 extends LossFunction {
 		// TODO Auto-generated method stub
 //		System.out.println(JsonUtils.toJson(label.data));
 //		System.out.println(x.dataLength);
+
+//		System.out.println(x.number + ":" + x.height + ":" + x.getDataLength());
 		
 		init(x);
 		
@@ -181,11 +183,12 @@ public class YoloLoss3 extends LossFunction {
 	            }
 	            
 	            int mask_n = intIndex(mask, bestIndex, bbox_num);
-//	            System.out.println("mask_n:"+mask_n+"==="+bestIndex);
+	           
 	            if(mask_n >= 0) {
-	            	
+//					System.out.println(JsonUtils.toJson(truth));
 	            	int mask_n_index = mask_n*x.width*x.height + j*x.width + i;
 	            	int box_index = entryIndex(b, x.width, x.height, mask_n_index, 0);
+
 	            	float iou = deltaYoloBox(truth, x, anchors, bestIndex, box_index, i, j, x.width, x.height, (2.0f-truth[2]*truth[3]), stride);
 	            	int obj_index = entryIndex(b, x.width, x.height, mask_n_index, 4);
 	            	

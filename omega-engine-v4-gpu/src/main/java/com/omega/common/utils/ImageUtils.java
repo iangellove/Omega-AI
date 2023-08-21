@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.omega.engine.nn.data.ImageData;
+import com.omega.yolo.utils.OMImage;
 
 @Component
 public class ImageUtils {
@@ -309,9 +310,9 @@ public class ImageUtils {
 				r[i][j] = (pixel & 0xff0000) >> 16;
 				g[i][j] = (pixel & 0xff00) >> 8;
 				b[i][j] = (pixel & 0xff);
-				color[0 * width * height + i * height + j] = r[i][j];
-				color[1 * width * height + i * height + j] = g[i][j];
-				color[2 * width * height + i * height + j] = b[i][j];
+				color[0 * width * height + j * width + i] = r[i][j];
+				color[1 * width * height + j * width + i] = g[i][j];
+				color[2 * width * height + j * width + i] = b[i][j];
 			}
 		}
 		
@@ -357,9 +358,9 @@ public class ImageUtils {
 				r[i][j] = (pixel & 0xff0000) >> 16;
 				g[i][j] = (pixel & 0xff00) >> 8;
 				b[i][j] = (pixel & 0xff);
-				color[0 * width * height + i * height + j] = r[i][j];
-				color[1 * width * height + i * height + j] = g[i][j];
-				color[2 * width * height + i * height + j] = b[i][j];
+				color[0 * width * height + j * width + i] = r[i][j];
+				color[1 * width * height + j * width + i] = g[i][j];
+				color[2 * width * height + j * width + i] = b[i][j];
 			}
 		}
 		
@@ -409,13 +410,51 @@ public class ImageUtils {
 				r = (pixel & 0xff0000) >> 16;
 				g = (pixel & 0xff00) >> 8;
 				b = (pixel & 0xff);
-				color[0 * width * height + i * height + j] = r * 1.0f / n;
-				color[1 * width * height + i * height + j] = g * 1.0f / n;
-				color[2 * width * height + i * height + j] = b * 1.0f / n;
+				color[0 * width * height + j * width + i] = r * 1.0f / n;
+				color[1 * width * height + j * width + i] = g * 1.0f / n;
+				color[2 * width * height + j * width + i] = b * 1.0f / n;
 			}
 		}
 		
 		return color;
+	}
+	
+	public OMImage loadOMImage(File file) throws Exception {
+		
+		BufferedImage bi = null;
+		try {
+			bi = ImageIO.read(file);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		int width = bi.getWidth();
+		int height = bi.getHeight();
+		int minx = bi.getMinX();
+		int miny = bi.getMinY();
+
+		int size = height * width * 3;
+		float[] color = new float[size];
+		
+		float n = 255.0f;
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		int pixel = 0;
+		
+		for (int j = miny; j < height; j++) {
+			for (int i = minx; i < width; i++) {
+				pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+				r = (pixel & 0xff0000) >> 16;
+				g = (pixel & 0xff00) >> 8;
+				b = (pixel & 0xff);
+				
+				color[0 * width * height + j * width + i] = r * 1.0f / n;
+				color[1 * width * height + j * width + i] = g * 1.0f / n;
+				color[2 * width * height + j * width + i] = b * 1.0f / n;
+			}
+		}
+		
+		return new OMImage(3, height, width, color);
 	}
 	
 	public float[] getImageData(File file,boolean normalization,boolean meanStd) throws Exception {
@@ -453,13 +492,13 @@ public class ImageUtils {
 				b = (pixel & 0xff);
 				
 				if(meanStd) {
-					color[0 * width * height + i * height + j] = (float) ((r * 1.0f / n) - mean[0]) / std[0];
-					color[1 * width * height + i * height + j] = (float) ((g * 1.0f / n) - mean[1]) / std[1];
-					color[2 * width * height + i * height + j] = (float) ((b * 1.0f / n) - mean[2]) / std[2];
+					color[0 * width * height + j * width + i] = (float) ((r * 1.0f / n) - mean[0]) / std[0];
+					color[1 * width * height + j * width + i] = (float) ((g * 1.0f / n) - mean[1]) / std[1];
+					color[2 * width * height + j * width + i] = (float) ((b * 1.0f / n) - mean[2]) / std[2];
 				}else {
-					color[0 * width * height + i * height + j] = r * 1.0f / n;
-					color[1 * width * height + i * height + j] = g * 1.0f / n;
-					color[2 * width * height + i * height + j] = b * 1.0f / n;
+					color[0 * width * height + j * width + i] = r * 1.0f / n;
+					color[1 * width * height + j * width + i] = g * 1.0f / n;
+					color[2 * width * height + j * width + i] = b * 1.0f / n;
 				}
 				
 			}
@@ -564,13 +603,13 @@ public class ImageUtils {
 	}
 	
 	public BufferedImage convertRGBImage(int[][] rgbValue){
-		int height = rgbValue[0].length;
-		int width = rgbValue.length;
+		int height = rgbValue.length;
+		int width = rgbValue[0].length;
 //		System.out.println(width + ":" + height);
 		BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		for(int x=0;x<width;x++){
-			for(int y=0;y<height;y++){
-				bufferedImage.setRGB(x, y, rgbValue[x][y]);
+		for(int y=0;y<height;y++){
+			for(int x=0;x<width;x++){
+				bufferedImage.setRGB(x, y, rgbValue[y][x]);
 			}
 		}
 		return bufferedImage;
@@ -890,19 +929,15 @@ public class ImageUtils {
 	public static int[][] color2rgb2(float[] data,int height,int width){
 		
 		int[][] rgb = new int[height][width];
-		int ocount = height * width;
 		
 		for(int i = 0;i<height;i++) {
 			for(int j = 0;j<width;j++) {
-				int index = i * width + j;
-				int r = (int) data[index];
-				int g = (int) data[ocount + index];
-				int b = (int) data[ocount * 2 + index];
+				int r = (int) data[0 * width * height + i * width + j];
+				int g = (int) data[1 * width * height + i * width + j];
+				int b = (int) data[2 * width * height + i * width + j];
 //				System.out.println(r);
 				int orgb = colorToRGB(255, r, g, b);
-				
 				rgb[i][j] = orgb;
-				
 			}
 		}
 		

@@ -13,8 +13,8 @@ import com.omega.engine.nn.network.OutputsNetwork;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Yolo;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
-import com.omega.yolo.utils.BaseDataLoader;
-import com.omega.yolo.utils.DetectionDataLoader;
+import com.omega.yolo.data.BaseDataLoader;
+import com.omega.yolo.data.DetectionDataLoader;
 import com.omega.yolo.utils.YoloLabelUtils;
 
 import jcuda.driver.JCudaDriver;
@@ -1580,7 +1580,7 @@ public class MBSGDOptimizer extends Optimizer {
 				 */
 				this.updateLR(this.lr_step);
 				
-				if(this.trainIndex % 100 == 0) {
+				if(this.trainIndex % 50 == 0) {
 					
 					System.out.println("----------------testing start----------------");
 					

@@ -28,16 +28,13 @@ import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.yolo.data.DataType;
+import com.omega.yolo.data.DetectionDataLoader;
 import com.omega.yolo.data.YoloDataTransform2;
 import com.omega.yolo.model.YoloBox;
 import com.omega.yolo.model.YoloDetection;
 import com.omega.yolo.utils.AnchorBoxUtils;
-import com.omega.yolo.utils.DetectionDataLoader;
 import com.omega.yolo.utils.LabelFileType;
-import com.omega.yolo.utils.LabelType;
 import com.omega.yolo.utils.LabelUtils;
-import com.omega.yolo.utils.YoloDataLoader;
-import com.omega.yolo.utils.YoloLabelUtils;
 
 public class YoloV3Test {
 	
@@ -164,17 +161,15 @@ public class YoloV3Test {
 			
 			String cfg_path = "H:\\voc\\helmet_dataset\\yolov3-tiny-helmet.cfg";
 			
-			String trainPath = "H:\\voc\\helmet_dataset\\train";
-			String trainLabelPath = "H:\\voc\\helmet_dataset\\train_label.txt";
+			String trainPath = "H:\\voc\\helmet_dataset\\dataset\\train";
+			String trainLabelPath = "H:\\voc\\helmet_dataset\\dataset\\train_label.txt";
 			
-			String testPath = "H:\\voc\\helmet_dataset\\vail";
-			String testLabelPath = "H:\\voc\\helmet_dataset\\vail_label.txt";
+			String testPath = "H:\\voc\\helmet_dataset\\dataset\\vail";
+			String testLabelPath = "H:\\voc\\helmet_dataset\\dataset\\vail_label.txt";
 			
 			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
 			
-			YoloDataTransform2 dt = new YoloDataTransform2(class_num, DataType.yolov3, 90);
-			
-			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3, dt);
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
 			
 			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
 
@@ -188,18 +183,18 @@ public class YoloV3Test {
 			
 			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 5000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 300, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
 			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
 			
-//			/**
-//			 * 处理测试预测结果
-//			 */
-//			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
-//			
-//			String outputPath = "H:\\voc\\helmet_dataset\\test_yolov3\\";
-//			
-//			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h);
+			/**
+			 * 处理测试预测结果
+			 */
+			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
+			
+			String outputPath = "H:\\voc\\helmet_dataset\\test_yolov3\\";
+			
+			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h);
 		
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -286,11 +281,17 @@ public class YoloV3Test {
 		
 		try {
 
-			String trainLabelPath = "H:\\voc\\helmet_dataset\\train_label.txt";
+			String trainLabelPath = "H:\\voc\\mask\\data\\dataset\\labels\\train_label.txt";
 			
 			Tensor bbox = LabelUtils.loadBoxTXT(trainLabelPath);
 			
 			Tensor anchors = AnchorBoxUtils.getAnchorBox(bbox, 6);
+			
+			for(int i = 0;i<6;i++) {
+				float w = anchors.data[i * 2 + 0];
+				float h = anchors.data[i * 2 + 1];
+				System.out.println("w:"+w+"*h:"+h+"="+w * h);
+			}
 			
 			System.out.println(JsonUtils.toJson(anchors.data));
 			
@@ -306,19 +307,17 @@ public class YoloV3Test {
 		int im_w = 416;
 		int im_h = 416;
 		int classNum = 20;
-		int batchSize = 64;
+		int batchSize = 398;
 		
-		String trainPath = "H:\\voc\\mask\\data\\imgs";
-		String trainLabelPath = "H:\\voc\\mask\\data\\yolov3.txt";
+		String trainPath = "H:\\voc\\mask\\data\\JPEGImages";
+		String trainLabelPath = "H:\\voc\\mask\\data\\labels.txt";
 		
 		String outputPath = "H:\\voc\\mask\\data\\show\\";
 		
 //		String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
 //		String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
 		
-		YoloDataTransform2 dt = new YoloDataTransform2(classNum, DataType.yolov3, 90);
-		
-		DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, classNum, batchSize, DataType.yolov3, dt);
+		DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, classNum, batchSize, DataType.yolov3);
 		
 		Tensor input = new Tensor(batchSize, 3, im_w, im_h);
 		
@@ -431,8 +430,8 @@ public class YoloV3Test {
 			String trainDataPath = "H:\\voc\\mask\\data\\train.txt";
 			String testDataPath = "H:\\voc\\mask\\data\\test.txt";
 			
-			String orgPath = "H:\\voc\\mask\\data\\dataset\\imgs\\";
-			String orgLabelPath = "H:\\voc\\mask\\data\\dataset\\yolov3.txt";
+			String orgPath = "H:\\voc\\mask\\data\\JPEGImages\\";
+			String orgLabelPath = "H:\\voc\\mask\\data\\labels.txt";
 			
 			String trainPath = "H:\\voc\\mask\\data\\dataset\\train\\";
 			String vailPath = "H:\\voc\\mask\\data\\dataset\\vail\\";
@@ -443,7 +442,7 @@ public class YoloV3Test {
 			DetectionDataLoader orgData = new DetectionDataLoader(orgPath, orgLabelPath, LabelFileType.txt, im_w, im_h, classNum, batchSize, DataType.yolov3);
 
 			int trainSize = 360;
-			int testSize = 40;
+			int testSize = 38;
 			
 			Map<String,float[]> trainLabelData = new HashMap<String, float[]>();
 			Map<String,float[]> testLabelData = new HashMap<String, float[]>();
@@ -521,7 +520,7 @@ public class YoloV3Test {
 		
 	}
 	
-	public static void createTrainTestDataSet() {
+	public void createTrainTestDataSet() {
 		
 		try {
 
@@ -531,14 +530,14 @@ public class YoloV3Test {
 			int batchSize = 64;
 			float trainRatio = 0.8f;
 			
-			String orgPath = "H:\\voc\\helmet_dataset\\imgs\\";
-			String orgLabelPath = "H:\\voc\\helmet_dataset\\labels\\yolov3.txt";
+			String orgPath = "H:\\voc\\helmet_dataset\\JPEGImages\\";
+			String orgLabelPath = "H:\\voc\\helmet_dataset\\labels.txt";
 			
-			String trainPath = "H:\\voc\\helmet_dataset\\train\\";
-			String vailPath = "H:\\voc\\helmet_dataset\\vail\\";
+			String trainPath = "H:\\voc\\helmet_dataset\\dataset\\train\\";
+			String vailPath = "H:\\voc\\helmet_dataset\\dataset\\vail\\";
 			
-			String trainLabelPath = "H:\\voc\\helmet_dataset\\train_label.txt";
-			String vailLabelPath = "H:\\voc\\helmet_dataset\\vail_label.txt";
+			String trainLabelPath = "H:\\voc\\helmet_dataset\\dataset\\train_label.txt";
+			String vailLabelPath = "H:\\voc\\helmet_dataset\\dataset\\vail_label.txt";
 			
 			DetectionDataLoader orgData = new DetectionDataLoader(orgPath, orgLabelPath, LabelFileType.txt, im_w, im_h, classNum, batchSize, DataType.yolov3);
 			
@@ -550,9 +549,10 @@ public class YoloV3Test {
 			
 			Collections.shuffle(list);
 			
-			System.out.println(JsonUtils.toJson(list));
+//			System.out.println(JsonUtils.toJson(list));
 			
 			int trainSize = Math.round(orgData.idxSet.length * trainRatio);
+			System.out.println(trainSize);
 			int testSize = orgData.idxSet.length - trainSize;
 			
 			Map<String,float[]> trainLabelData = new HashMap<String, float[]>();
@@ -564,6 +564,7 @@ public class YoloV3Test {
 			for(int b = 0;b<trainSize;b++) {
 				int index = list.get(b);
 				String filename = orgData.idxSet[index];
+				System.out.println(filename);
 				if(orgData.orgLabelData.get(filename).length <= 450) {
 					File file = new File(orgPath+filename+".jpg");
 					File outFile = new File(trainPath+filename+".jpg");
@@ -653,19 +654,26 @@ public class YoloV3Test {
 		
 		try {
 			
-			CUDAModules.initContext();
+//			float[] ac = new float[] {10,14,23,27,37,58,81,82,135,169,344,319};
+//			
+//			float[] x = MatrixOperation.division(ac, 416);
+//			float[] y = MatrixOperation.multiplication(x, 256);
+//			
+//			System.out.println(JsonUtils.toJson(y));
 			
+			CUDAModules.initContext();
+
 			YoloV3Test y = new YoloV3Test();
 //			y.yolov3_tiny_voc();
 //			y.yolov3_tiny();
 //			y.getAnchors();
 //			y.yolov3_show();
 //			y.createTrainTestDataSet();
-//			y.yolov3_tiny_helmet();
 //			y.yolov3_show();
 //			y.yolov3_show2();
 //			y.createMaskTrainTestDataSet();
-			y.yolov3_tiny_mask();
+//			y.yolov3_tiny_mask();
+			y.yolov3_tiny_helmet();
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

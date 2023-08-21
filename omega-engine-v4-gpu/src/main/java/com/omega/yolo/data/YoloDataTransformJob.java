@@ -19,13 +19,13 @@ public class YoloDataTransformJob extends RecursiveAction {
 	
 	private int end = 0;
 	
-	private float jitter = 0.3f;
+	private float jitter = 0.1f;
 	
 	private float hue = 0.1f;
 	
-	private float saturation = 1.5f;
+	private float saturation = 0.75f;
 	
-	private float exposure = 1.5f;
+	private float exposure = 0.75f;
 	
 	private int classnum = 1;
 	
