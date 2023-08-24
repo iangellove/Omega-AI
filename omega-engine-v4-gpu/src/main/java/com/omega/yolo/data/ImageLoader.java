@@ -66,9 +66,9 @@ public class ImageLoader {
 //		
 //		showImg(x, y, classes, outputPath);
 		
-//		formatImage();
+		formatImage();
 		
-		testFormatImage();
+//		testFormatImage();
 		
 	}
 	
@@ -127,7 +127,7 @@ public class ImageLoader {
 			
 			String imgDirPath = "H:\\voc\\helmet\\JPEGImages";
 			String labelPath = "H:\\voc\\helmet\\labels.txt";
-			String outputDirPath = "H:\\voc\\helmet\\resized\\";
+			String outputDirPath = "H:\\voc\\helmet\\resized\\imgs\\";
 			String labelTXTPath = "H:\\voc\\helmet\\resized\\rlabels.txt";
 			
 			int width = 416;
@@ -282,7 +282,7 @@ public class ImageLoader {
 		ImageUtils utils = new ImageUtils();
 		
 		for(int i = 0;i<input.number;i++) {
-			System.out.println(i);
+//			System.out.println(i);
 			
 			float[] once = input.getByNumber(i);
 			
@@ -368,8 +368,6 @@ public class ImageLoader {
 	}
 	
 	public static float[] formatXYWH(float[] label,int imw,int imh) {
-		System.out.println(imw+":"+imh);
-		System.out.println(JsonUtils.toJson(label));
 		float[] output = new float[label.length];
 		
 		for(int i = 0;i<label.length/5;i++) {
@@ -470,12 +468,12 @@ public class ImageLoader {
             nw = scale * w;
             nh = nw / new_ar;
         }
-		System.out.println(nw+":"+nh);
+//		System.out.println(nw+":"+nh);
 		float dx = (w - nw) / 2;
         float dy = (h - nh) / 2;
         
         placeImage(orig, (int) nw, (int) nh, (int) dx, (int) dy, sized);
-		System.out.println(JsonUtils.toJson(labelBoxs));
+//		System.out.println(JsonUtils.toJson(labelBoxs));
         setData(x, sized.getData(), index);
         
         if(y != null) {
