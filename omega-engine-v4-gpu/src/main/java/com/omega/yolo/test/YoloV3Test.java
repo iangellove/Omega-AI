@@ -160,6 +160,8 @@ public class YoloV3Test {
 		int batchSize = 24;
 		int class_num = 5;
 		
+		String[] labelset = new String[] {"none","white","yellow","blue","red"};
+		
 		try {
 			
 			String cfg_path = "H:\\voc\\helmet_dataset\\yolov3-tiny-helmet.cfg";
@@ -197,7 +199,7 @@ public class YoloV3Test {
 			
 			String outputPath = "H:\\voc\\helmet\\test_yolov3\\";
 			
-			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, null);
+			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
 		
 		} catch (Exception e) {
 			// TODO: handle exception
