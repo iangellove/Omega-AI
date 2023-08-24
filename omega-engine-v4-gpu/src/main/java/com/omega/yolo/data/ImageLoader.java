@@ -1,6 +1,13 @@
 package com.omega.yolo.data;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
@@ -20,6 +27,204 @@ import com.omega.yolo.utils.YoloImageUtils;
  */
 public class ImageLoader {
 	
+	public static void main(String[] args) {
+		
+//		String imagePath = "H:\\voc\\mask\\data\\face1.jpg";
+//		
+//		String outputPath = "H:\\voc\\mask\\data\\";
+//		
+////		float[] labelBoxs = new float[] {1,42,16,83,43,1,129,88,152,108,1,208,94,243,118};
+//		
+//		float[] labelBoxs = new float[] {0,81,163,268,309};
+//		
+//		int number = 1;
+//		int channel = 3;
+//		int height = 416;
+//		int width = 416;
+//		
+//		int boxes = 90;
+//		int classes = 2;
+//		float jitter = 0.1f;
+//		float hue = 0.1f;
+//		float saturation = 1.5f;
+//		float exposure = 1.5f;
+//		
+//		Tensor x = new Tensor(number, channel, height, width);
+//		Tensor y = new Tensor(number, 1, 1, boxes * 5);
+//		
+//		OMImage orig = loadImage(imagePath);
+//		
+//		float[] labelXYWH = formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
+//		
+//		loadVailDataDetection(x, y, 0, orig, labelXYWH, width, height, boxes, classes);
+//		
+////		loadDataDetection(x, y, 0, orig, labelXYWH, width, height, boxes, classes, jitter, hue, saturation, exposure);
+//		
+////		System.out.println(JsonUtils.toJson(x));
+//		
+//		System.out.println(JsonUtils.toJson(y));
+//		
+//		showImg(x, y, classes, outputPath);
+		
+		formatImage();
+		
+//		testFormatImage();
+		
+	}
+	
+	public static void testFormatImage() {
+		
+		String imagePath = "H:\\voc\\mask\\data\\resized\\face1.jpg";
+		
+		String outputPath = "H:\\voc\\mask\\data\\";
+		
+//		float[] labelBoxs = new float[] {1,42,16,83,43,1,129,88,152,108,1,208,94,243,118};
+		
+		float[] labelBoxs = new float[] {0,115,200,312,406};
+		
+		int number = 1;
+		int channel = 3;
+		int height = 416;
+		int width = 416;
+		
+		int boxes = 90;
+		int classes = 2;
+		float jitter = 0.3f;
+		float hue = 0.1f;
+		float saturation = 1.5f;
+		float exposure = 1.5f;
+		
+		Tensor x = new Tensor(number, channel, height, width);
+		Tensor y = new Tensor(number, 1, 1, boxes * 5);
+		
+		OMImage orig = loadImage(imagePath);
+		
+		float[] labelXYWH = formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
+		
+//		loadVailDataDetection(x, y, 0, orig, labelXYWH, width, height, boxes, classes);
+		
+		loadDataDetection(x, y, 0, orig, labelXYWH, width, height, boxes, classes, jitter, hue, saturation, exposure);
+		
+//		System.out.println(JsonUtils.toJson(x));
+		
+		System.out.println(JsonUtils.toJson(y));
+		
+		showImg(x, y, classes, outputPath);
+		
+	}
+	
+	public static void formatImage() {
+		
+		try {
+			
+			String imgDirPath = "H:\\voc\\helmet\\JPEGImages";
+			String labelPath = "H:\\voc\\helmet\\labels.txt";
+			String outputDirPath = "H:\\voc\\helmet\\resized\\";
+			String labelTXTPath = "H:\\voc\\helmet\\resized\\rlabels.txt";
+			
+			int width = 416;
+			int height = 416;
+			
+			Map<String,float[]> labelMap = loadLabelDataForTXT(labelPath);
+			
+			Map<String,float[]> rlabelMap = new HashMap<String, float[]>();
+			
+			String[] names = new String[labelMap.size()];
+			
+			File file = new File(imgDirPath);
+			
+			if(file.exists() && file.isDirectory()) {
+				
+				int i = 0;
+				
+				for(File img:file.listFiles()) {
+					
+					String key = img.getName().split("\\.")[0];
+
+					float[] rlabel = resizeImage(img, labelMap.get(key), width, height, outputDirPath + img.getName());
+					
+					rlabelMap.put(key, rlabel);
+					
+					names[i] = key;
+					
+					i++;
+				}
+				
+			}
+			
+			File txt = new File(labelTXTPath);
+			
+			if(!txt.exists()) {
+				txt.createNewFile(); // 创建新文件,有同名的文件的话直接覆盖
+			}
+			
+			try (FileOutputStream fos = new FileOutputStream(txt);) {
+	 
+				for (String name : names) {
+					
+					String text = name;
+					
+					for(float val:(float[])rlabelMap.get(name)) {
+						text += " " + Math.round(val);
+					}
+					text += "\n";
+//					System.out.println(text);
+					fos.write(text.getBytes());
+				}
+	 
+				fos.flush();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static Map<String,float[]> loadLabelDataForTXT(String labelPath) {
+		
+		Map<String,float[]> orgLabelData = new HashMap<String, float[]>();
+		
+		try (FileInputStream fin = new FileInputStream(labelPath);
+			InputStreamReader reader = new InputStreamReader(fin);	
+		    BufferedReader buffReader = new BufferedReader(reader);){
+
+			String strTmp = "";
+	        while((strTmp = buffReader.readLine())!=null){
+	        	String[] list = strTmp.split(" ");
+	        	List<float[]> once = new ArrayList<float[]>();
+	        	int page = (list.length - 1) / 5;
+	        	for(int i = 0;i<page;i++) {
+	        		float[] bbox = new float[5];
+	        		for(int j = 0;j<5;j++) {
+	        			bbox[j] = Float.parseFloat(list[i * 5 + j + 1]);
+	        		}
+	        		once.add(bbox);
+	        	}
+	        	/**
+	        	 * 组装bbox
+	        	 */
+	        	float[] r = new float[once.size() * 5];
+	        	for(int i = 0;i<once.size();i++) {
+	        		for(int j = 0;j<once.get(i).length;j++) {
+	        			r[i * 5 + j] = once.get(i)[j];
+	        		}
+	        	}
+	        	orgLabelData.put(list[0], r);
+	        }
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	
+		return orgLabelData;
+	}
+	
 	public static void load(String path,String extName,Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,int boxes,int classes) {
 		
 		label.clear();
@@ -32,52 +237,13 @@ public class ImageLoader {
 	
 	public static void loadVail(String path,String extName,Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,int boxes,int classes) {
 		
-		label.clear();
+		if(label != null) {
+			label.clear();
+		}
 		
 		ImageLoaderVailJob job = ImageLoaderVailJob.getInstance(path, extName, input, label, idxSet, indexs, orgLabelData, boxes, classes, 0, input.number - 1);
 		
 		ForkJobEngine.run(job);
-		
-	}
-	
-	public static void main(String[] args) {
-		
-		String imagePath = "H:\\voc\\mask\\data\\face1.jpg";
-		
-		String outputPath = "H:\\voc\\mask\\data\\";
-		
-//		float[] labelBoxs = new float[] {1,42,16,83,43,1,129,88,152,108,1,208,94,243,118};
-		
-		float[] labelBoxs = new float[] {0,81,163,268,309};
-		
-		int number = 1;
-		int channel = 3;
-		int height = 416;
-		int width = 416;
-		
-		int boxes = 90;
-		int classes = 2;
-		float jitter = 0.1f;
-		float hue = 0.1f;
-		float saturation = 1.5f;
-		float exposure = 1.5f;
-		
-		Tensor x = new Tensor(number, channel, height, width);
-		Tensor y = new Tensor(number, 1, 1, boxes * 5);
-		
-		OMImage orig = loadImage(imagePath);
-		
-		float[] labelXYWH = formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
-		
-		loadVailDataDetection(x, y, 0, orig, labelXYWH, width, height, boxes, classes);
-		
-//		loadDataDetection(x, y, 0, orig, labelXYWH, width, height, boxes, classes, jitter, hue, saturation, exposure);
-		
-//		System.out.println(JsonUtils.toJson(x));
-		
-		System.out.println(JsonUtils.toJson(y));
-		
-		showImg(x, y, classes, outputPath);
 		
 	}
 	
@@ -87,7 +253,17 @@ public class ImageLoader {
 
 		img.setData(MatrixOperation.multiplication(img.getData(), 255.0f));
 
-		utils.createRGBImage(outputPath + 0 + ".png", "png", ImageUtils.color2rgb2(img.getData(), img.getHeight(), img.getWidth()), img.getWidth(), img.getHeight(), null);
+		utils.createRGBImage(outputPath, "png", ImageUtils.color2rgb2(img.getData(), img.getHeight(), img.getWidth()), img.getWidth(), img.getHeight(), null);
+		
+	}
+	
+	public static void showImg(OMImage img,String outputPath,String filename) {
+		
+		ImageUtils utils = new ImageUtils();
+
+		img.setData(MatrixOperation.multiplication(img.getData(), 255.0f));
+
+		utils.createRGBImage(outputPath + filename, "png", ImageUtils.color2rgb2(img.getData(), img.getHeight(), img.getWidth()), img.getWidth(), img.getHeight(), null);
 		
 	}
 	
@@ -229,6 +405,39 @@ public class ImageLoader {
 		}
 		
 		return output;
+	}
+	
+	public static float[] resized(String filePath,int w,int h) {
+		
+//		System.out.println(filePath);
+		
+		OMImage orig = loadImage(filePath);
+		
+		float dw = 0;
+        float dh = 0;
+        float nw = 0;
+        float nh = 0;
+        
+        OMImage sized = createImage(w, h, orig.getChannel(), 0.5f);
+        
+		float new_ar = (orig.getWidth() + RandomUtils.uniformFloat(-dw, dw)) / (orig.getHeight() + RandomUtils.uniformFloat(-dh, dh));
+		
+		float scale = 1;
+		
+		if(new_ar < 1){
+            nh = scale * h;
+            nw = nh * new_ar;
+        } else {
+            nw = scale * w;
+            nh = nw / new_ar;
+        }
+		
+		float dx = (w - nw) / 2;
+        float dy = (h - nh) / 2;
+        
+        placeImage(orig, (int) nw, (int) nh, (int) dx, (int) dy, sized);
+        
+        return sized.getData();
 	}
 	
 	public static void loadVailDataDetection(Tensor x,Tensor y,int index,OMImage orig,float[] labelBoxs,
@@ -381,6 +590,33 @@ public class ImageLoader {
 		
 	}
 	
+	public static float[] fillTruth(float[] label,float dx, float dy, float sx, float sy,int tw,int th) {
+		
+		float[] truth = new float[label.length];
+		
+		BoxLabel[] boxes = formatBox(label);
+		
+		int count = boxes.length;
+		
+		randomizeBoxes(boxes, count);
+		
+//		System.out.println(JsonUtils.toJson(boxes));
+		
+		correctBoxes(boxes, count, dx, dy, sx, sy, 0);
+		
+//		System.out.println(JsonUtils.toJson(boxes));
+		
+		for (int i = 0; i < count; ++i) {
+			truth[i * 5 + 0] = boxes[i].clazz;
+			truth[i * 5 + 1] = boxes[i].left * tw;
+			truth[i * 5 + 2] = boxes[i].top * th;
+			truth[i * 5 + 3] = boxes[i].right * tw;
+			truth[i * 5 + 4] = boxes[i].bottom * th;
+		}
+		
+	    return truth;
+	}
+	
 	public static void correctBoxes(BoxLabel[] boxes, int n, float dx, float dy, float sx, float sy, int flip) {
 
 	    for(int i = 0; i < n; ++i){
@@ -433,6 +669,44 @@ public class ImageLoader {
 	    }
 	}
 	
+
+	public static float[] resizeImage(File file,float[] labelBoxs,int w,int h,String outputPath) {
+		
+		float dw = 0;
+        float dh = 0;
+        float nw = 0;
+        float nh = 0;
+        
+        OMImage orig = loadImage(file);
+        
+        OMImage sized = createImage(w, h, orig.getChannel(), 0.5f);
+        
+		float new_ar = (orig.getWidth() + RandomUtils.uniformFloat(-dw, dw)) / (orig.getHeight() + RandomUtils.uniformFloat(-dh, dh));
+		
+		float scale = 1;
+		
+		if(new_ar < 1){
+            nh = scale * h;
+            nw = nh * new_ar;
+        } else {
+            nw = scale * w;
+            nh = nw / new_ar;
+        }
+		
+		float dx = (w - nw) / 2;
+        float dy = (h - nh) / 2;
+        
+        placeImage(orig, (int) nw, (int) nh, (int) dx, (int) dy, sized);
+		
+        float[] label_xywh = formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
+
+        float[] labels = fillTruth(label_xywh, -dx/w, -dy/h, nw/w, nh/h, w, h);
+
+        showImg(sized, outputPath);
+        
+        return labels;
+	}
+	
 	public static BoxLabel[] formatBox(float[] label) {
 		
 		int count = label.length / 5;
@@ -467,6 +741,24 @@ public class ImageLoader {
 		try {
 			
 			File file = new File(filePath);
+			
+			if(file.exists()) {
+				image =  YoloImageUtils.IU().loadOMImage(file);
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		return image;
+	}
+	
+	public static OMImage loadImage(File file) {
+		
+		OMImage image = null;
+		
+		try {
 			
 			if(file.exists()) {
 				image =  YoloImageUtils.IU().loadOMImage(file);

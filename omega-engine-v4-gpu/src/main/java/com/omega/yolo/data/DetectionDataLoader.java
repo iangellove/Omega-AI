@@ -324,7 +324,14 @@ public class DetectionDataLoader extends BaseDataLoader{
 	public float[] loadData(int index) {
 		// TODO Auto-generated method stub
 		String filePath = imgDirPath + "/" + idxSet[index];
-		return YoloImageUtils.loadImgDataToArray(filePath);
+		if(!filePath.contains(".")) {
+			filePath += ".jpg";
+		}
+		if(dataType == DataType.yolov3) {
+			return ImageLoader.resized(filePath, this.img_w, this.img_h);
+		}else {
+			return YoloImageUtils.loadImgDataToArray(filePath);	
+		}
 	}
 	
 	@Override

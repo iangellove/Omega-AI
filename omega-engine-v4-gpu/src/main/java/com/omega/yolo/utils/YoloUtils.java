@@ -111,11 +111,18 @@ public class YoloUtils {
 			            det.setBbox(getYoloBox(output, anchors, mask[n], box_index, col, row, output.width, output.height, orgW, orgH, output.height * output.width));
 			            det.setObjectness(objectness);
 	//		            det.setClasses(classes);
+			            float classes = 0.0f;
+			            float max = 0.0f;
 			            for(int j = 0; j < class_number; ++j){
 			                int class_index = entryIndex(b, output.width, output.height, n_index, 4 + 1 + j, outputs, class_number);
+			                if(output.data[class_index] >= max) {
+			                	max = output.data[class_index];
+			                	classes = j;
+			                }
 			                float prob = objectness*output.data[class_index];
 			                det.getProb()[j] = (prob > thresh) ? prob : 0;
 			            }
+		                det.setClasses(classes);
 	//		            System.out.println(b+":"+det.getBbox()[0] + ":" + det.getBbox()[1] + ":" + det.getBbox()[2] + ":" + det.getBbox()[3]);
 			            dets[b][i * bbox_num + n] = det;
 		            }

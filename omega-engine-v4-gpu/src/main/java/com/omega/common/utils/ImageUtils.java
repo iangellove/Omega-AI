@@ -26,6 +26,8 @@ public class ImageUtils {
 	
 	public static float[] mean = new float[] {0.491f, 0.482f, 0.446f};
 	public static float[] std = new float[] {0.247f, 0.243f, 0.261f};
+	
+	public static Color[] colors = new Color[] {Color.red,Color.blue,Color.green,Color.yellow,Color.white,Color.gray,Color.pink,Color.orange};
 	 
 	/**
 	 * 读取一张图片的RGB值
@@ -696,7 +698,12 @@ public class ImageUtils {
 //		System.out.println(extName);
 		File outputfile = new File(path);
 		try {
-			BufferedImage output = resizeImage(bufferedImage, weight, height, bbox, classLabel);
+			BufferedImage output = null;
+			if(classLabel != null) {
+				output = resizeImage(bufferedImage, weight, height, bbox, classLabel);
+			}else {
+				output = resizeImage(bufferedImage, weight, height, bbox);
+			}
 			ImageIO.write(output, extName, outputfile);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -729,6 +736,7 @@ public class ImageUtils {
             g.setColor(Color.RED);
             if(bbox!=null) {
             	for(int[] box:bbox) {
+            		g.setColor(colors[box[0]]);
                 	int w = (box[3] - box[1]);
                 	int h = (box[4] - box[2]);
                 	g.drawRect(box[1], box[2], w, h);
@@ -742,8 +750,8 @@ public class ImageUtils {
             g.drawImage(resultingImage, 0, 0, null);
             g.setColor(Color.RED);
             if(bbox!=null) {
-            	System.out.println(JsonUtils.toJson(bbox));
             	for(int[] box:bbox) {
+            		g.setColor(colors[box[0]]);
                 	int w = (box[3] - box[1]);
                 	int h = (box[4] - box[2]);
                 	g.drawRect(box[1], box[2], w, h);
@@ -751,7 +759,6 @@ public class ImageUtils {
             }
             return outputImage;
     	}
-
     }
     
 	/**
@@ -759,20 +766,37 @@ public class ImageUtils {
      * 指定压缩后长宽
      */
     public static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight,int[][] bbox,String[] classLabel) throws IOException {
-        Image resultingImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_AREA_AVERAGING);
-        BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
-        Graphics g = outputImage.getGraphics();
-        g.drawImage(resultingImage, 0, 0, null);
-        g.setColor(Color.RED);
-        for(int[] box:bbox) {
-        	int w = (box[3] - box[1]);
-        	int h = (box[4] - box[2]);
-        	g.drawRect(box[1], box[2], w, h);
-        	int index = box[0];
-            g.drawString(classLabel[index-1], box[1], box[2]);
-        }
-       
-        return outputImage;
+    	if(originalImage.getWidth() == targetWidth && originalImage.getHeight() == targetHeight) {
+    		Graphics g = originalImage.getGraphics();
+            g.drawImage(originalImage, 0, 0, null);
+            g.setColor(Color.RED);
+            if(bbox!=null) {
+            	for(int[] box:bbox) {
+            		g.setColor(colors[box[0]]);
+                	int w = (box[3] - box[1]);
+                	int h = (box[4] - box[2]);
+                	g.drawRect(box[1], box[2], w, h);
+                	g.drawString(classLabel[box[0]], box[1], box[2]);
+                }
+            }
+    		return originalImage;
+    	}else {
+    		Image resultingImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_AREA_AVERAGING);
+            BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+            Graphics g = outputImage.getGraphics();
+            g.drawImage(resultingImage, 0, 0, null);
+            g.setColor(Color.RED);
+            if(bbox!=null) {
+            	for(int[] box:bbox) {
+            		g.setColor(colors[box[0]]);
+                	int w = (box[3] - box[1]);
+                	int h = (box[4] - box[2]);
+                	g.drawRect(box[1], box[2], w, h);
+                	g.drawString(classLabel[box[0]], box[1], box[2]);
+                }
+            }
+            return outputImage;
+    	}
     }
     
 	/**
