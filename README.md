@@ -127,6 +127,10 @@ cifar_10 （cifar_10数据集）
 
 [vailCode](https://pan.baidu.com/s/11wZY9gQQ9OuoViw11IW6BQ?pwd=2rdt)
 
+[helmet](https://pan.baidu.com/s/1pbTaDHoRzhV-kuWoXOCPqw?pwd=y8ij)
+
+[mask](https://pan.baidu.com/s/1D3zTYTiNYmtU6x7Ui9ej_A?pwd=r4o3)
+
 ### 数据集成绩
 
 iris epoch:5 bp神经网络[3层全连接层]  测试数据集准确率100%
