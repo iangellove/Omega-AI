@@ -560,6 +560,128 @@ public void yolov1_tiny() {
 	}
 ```
 
+#### yolov3 mask demo（口罩佩戴识别）
+``` java
+public void yolov3_tiny_mask() {
+		
+		int im_w = 416;
+		int im_h = 416;
+		int batchSize = 24;
+		int class_num = 2;
+		String[] labelset = new String[] {"unmask","mask"};
+		try {
+			String cfg_path = "H:\\voc\\mask\\data\\\\dataset\\yolov3-tiny-mask.cfg";
+			String trainPath = "H:\\voc\\mask\\data\\resized\\train";
+			String trainLabelPath = "H:\\voc\\mask\\data\\resized\\train_label.txt";
+			String testPath = "H:\\voc\\mask\\data\\resized\\vail";
+			String testLabelPath = "H:\\voc\\mask\\data\\resized\\vail_label.txt";
+			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
+			/**
+			 * 数据加载器
+			 */
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+                        /**
+			 * 创建yolo模型
+			 */
+			Yolo netWork = new Yolo(LossType.yolo3, UpdaterType.adamw);
+			netWork.CUDNN = true;
+			netWork.learnRate = 0.001f;
+                        /**
+			 * 加载模型结构
+			 */
+			ModelLoader.loadConfigToModel(netWork, cfg_path);
+                        /**
+			 * 加载预训练权重
+			 */
+			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
+                        /**
+			 * 创建优化器
+			 */
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
+			/**
+			 * 处理测试预测结果
+			 */
+			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
+			String outputPath = "H:\\voc\\mask\\data\\resized\\test_yolov3\\";
+			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
+
+		}catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}	
+	}
+```
+
+#### yolov3 helmet demo（安全帽佩戴识别）
+``` java
+public void yolov3_tiny_helmet() {
+		
+		int im_w = 416;
+		int im_h = 416;
+		int batchSize = 24;
+		int class_num = 5;
+		String[] labelset = new String[] {"none","white","yellow","blue","red"};
+		try {
+			String cfg_path = "H:\\voc\\helmet_dataset\\yolov3-tiny-helmet.cfg";
+			String trainPath = "H:\\voc\\helmet\\resized\\train";
+			String trainLabelPath = "H:\\voc\\helmet\\resized\\train_label.txt";
+			String testPath = "H:\\voc\\helmet\\resized\\vail";
+			String testLabelPath = "H:\\voc\\helmet\\resized\\vail_label.txt";
+			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
+			/**
+			 * 数据加载器
+			 */
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+                        /**
+			 * 创建yolo模型
+			 */
+			Yolo netWork = new Yolo(LossType.yolo3, UpdaterType.adamw);
+			netWork.CUDNN = true;
+			netWork.learnRate = 0.001f;
+                        /**
+			 * 加载模型结构
+			 */
+			ModelLoader.loadConfigToModel(netWork, cfg_path);
+                        /**
+			 * 加载预训练权重
+			 */
+			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
+                        /**
+			 * 创建优化器
+			 */
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 300, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
+			/**
+			 * 处理测试预测结果
+			 */
+			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
+			String outputPath = "H:\\voc\\helmet\\test_yolov3\\";
+			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
+		
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+			
+	}
+```
 
 
 ## 未来可期
