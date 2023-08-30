@@ -3,6 +3,9 @@ package com.omega.engine.optimizer;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import com.omega.common.data.Tensor;
@@ -947,8 +950,14 @@ public abstract class Optimizer {
 				YoloLayer layer = (YoloLayer) net.outputLayers.get(i);
 				
 				YoloDetection[][] dets = YoloUtils.getYoloDetections(output[i], layer.anchors, layer.mask, layer.bbox_num, layer.outputs, layer.class_number, this.network.height, this.network.width, 0.5f);
-
+				
 				for(int j = 0;j<dets.length;j++) {
+					
+					/**
+					 * nms
+					 */
+					nmsSort(dets[j], dets[j].length, layer.class_number, 0.7f);
+					
 					if(boxs[j] != null) {
 						boxs[j].getDets().addAll(new ArrayList<>(Arrays.asList(dets[j])));
 					}else{
@@ -959,11 +968,64 @@ public abstract class Optimizer {
 				
 			}
 			
-			list.addAll(new ArrayList<>(Arrays.asList(boxs)));
+			list.addAll(new ArrayList<YoloBox>(Arrays.asList(boxs)));
 			
 		}
 		
 		return list;
+	}
+	
+	public void nmsSort(YoloDetection[] dets,int total,int classes,float thresh) {
+		int k = total - 1;
+		for(int i = 0;i<=k;i++) {
+//			System.out.println(dets[i]);
+			if(dets[i] == null || dets[i].getObjectness() == 0) {
+				YoloDetection swap = dets[i];
+				dets[i] = dets[k];
+				dets[k] = swap;
+				k--;
+				i--;
+			}
+		}
+		total = k + 1;
+//		System.out.println("total:"+total);
+		for(int c = 0;c<classes;c++) {
+			for(int i = 0;i<total;i++) {
+				if(dets[i] != null) {
+					dets[i].setSortClass(c);
+				}
+			}
+			
+			Arrays.sort(dets, new Comparator<YoloDetection>() {
+
+				@Override
+				public int compare(YoloDetection a, YoloDetection b) {
+					// TODO Auto-generated method stub
+					float diff = 0;
+				    if(b.getSortClass() >= 0){
+				        diff = a.getProb()[b.getSortClass()] - b.getProb()[b.getSortClass()];
+				    } else {
+				        diff = a.getObjectness() - b.getObjectness();
+				    }
+				    if(diff < 0) return 1;
+				    else if(diff > 0) return -1;
+				    return 0;
+				}
+				
+			});
+			
+			for(int i = 0; i < total; ++i){
+	            if(dets[i].getProb()[c] == 0) continue;
+	            float[] a = dets[i].getBbox();
+	            for(int j = i+1; j < total; ++j){
+	            	float[] b = dets[j].getBbox();
+	                if (YoloUtils.box_iou(a, b) > thresh){
+	                    dets[j].getProb()[c] = 0;
+	                }
+	            }
+	        }
+		}
+		
 	}
 	
 	public float[][][] showObjectRecognition(BaseData testData,int batchSize) {

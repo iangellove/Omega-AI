@@ -1580,7 +1580,7 @@ public class MBSGDOptimizer extends Optimizer {
 				 */
 				this.updateLR(this.lr_step);
 				
-				if(this.trainIndex % 50 == 0) {
+				if(this.trainIndex % 100 == 0) {
 					
 					System.out.println("----------------testing start----------------");
 					

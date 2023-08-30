@@ -10,6 +10,7 @@ public enum LayerType {
 	full("full"),
 	softmax("softmax"),
 	conv("conv"),
+	conv_transpose("conv_transpose"),
 	pooling("pooling"),
 	input("input"),
 	softmax_cross_entropy("softmax_cross_entropy"),

@@ -419,5 +419,11 @@ public class ConvKernel extends ConvBaseKernel{
     	
     	
 	}
+
+	@Override
+	public void convTranspose(Tensor input, Tensor kernel, Tensor output) {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

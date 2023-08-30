@@ -1,15 +1,21 @@
 package com.omega.engine.gpu.cudnn;
 
+import static jcuda.jcudnn.cudnnConvolutionBwdDataAlgo.CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT;
+import static jcuda.jcudnn.cudnnConvolutionFwdAlgo.CUDNN_CONVOLUTION_FWD_ALGO_COUNT;
+import static jcuda.jcudnn.cudnnConvolutionMode.CUDNN_CROSS_CORRELATION;
+import static jcuda.jcudnn.cudnnDataType.CUDNN_DATA_FLOAT;
+import static jcuda.jcudnn.cudnnTensorFormat.CUDNN_TENSOR_NCHW;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAModules;
+
 import jcuda.Pointer;
 import jcuda.jcudnn.JCudnn;
 import jcuda.jcudnn.cudnnBatchNormMode;
 import jcuda.jcudnn.cudnnConvolutionBwdDataAlgoPerf;
-import jcuda.jcudnn.cudnnConvolutionBwdFilterAlgo;
 import jcuda.jcudnn.cudnnConvolutionBwdFilterAlgoPerf;
 import jcuda.jcudnn.cudnnConvolutionDescriptor;
 import jcuda.jcudnn.cudnnConvolutionFwdAlgoPerf;
@@ -17,11 +23,6 @@ import jcuda.jcudnn.cudnnFilterDescriptor;
 import jcuda.jcudnn.cudnnHandle;
 import jcuda.jcudnn.cudnnTensorDescriptor;
 import jcuda.runtime.JCuda;
-import static jcuda.jcudnn.cudnnDataType.CUDNN_DATA_FLOAT;
-import static jcuda.jcudnn.cudnnTensorFormat.CUDNN_TENSOR_NCHW;
-import static jcuda.jcudnn.cudnnConvolutionMode.CUDNN_CROSS_CORRELATION;
-import static jcuda.jcudnn.cudnnConvolutionFwdAlgo.CUDNN_CONVOLUTION_FWD_ALGO_COUNT;
-import static jcuda.jcudnn.cudnnConvolutionBwdDataAlgo.CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT;
 
 public class TestJCudnn {
 	
@@ -46,10 +47,157 @@ public class TestJCudnn {
 	    
 //	    testBN1D();
 	    
-	    conv();
-	    
+//	    conv();
+	    conv_transpose(); 
 //	    System.out.println(new Date().getTime());
 	    
+	}
+	
+	public static void conv_transpose() {
+		
+		int convAlgorithm = -1;
+		
+		int N = 1;
+		int C = 1;
+		int H = 3;
+		int W = 3;
+		
+		int ko = 1;
+		int kH = 2;
+		int kW = 3;
+		int padding = 1;
+		int output_padding = 1;
+		int dilation = 1;
+		int stride = 2;
+		
+		int convDims = 2;
+		int[] padA = {0, 1};
+		int[] weight = {ko, C, kH, kW};
+		int[] upscaleA = {dilation, dilation};
+		
+		int[] tensorOuputDimA = {N, C, H, W};
+		
+		cudnnTensorDescriptor xDesc = new cudnnTensorDescriptor();
+		cudnnFilterDescriptor wDesc = new cudnnFilterDescriptor();
+		cudnnTensorDescriptor dstDesc = new cudnnTensorDescriptor();
+//		cudnnTensorDescriptor yDesc = new cudnnTensorDescriptor();
+		cudnnConvolutionDescriptor convDesc = new cudnnConvolutionDescriptor();
+		
+		/**
+		 * backward pararms
+		 */
+//		cudnnTensorDescriptor dxDesc = new cudnnTensorDescriptor();
+//		cudnnTensorDescriptor dyDesc = new cudnnTensorDescriptor();
+//		cudnnFilterDescriptor dwDesc = new cudnnFilterDescriptor();
+
+
+		JCudnn.cudnnCreateTensorDescriptor(xDesc);
+		JCudnn.cudnnCreateFilterDescriptor(wDesc);
+		JCudnn.cudnnCreateTensorDescriptor(dstDesc);
+		JCudnn.cudnnCreateConvolutionDescriptor(convDesc);
+		
+//		JCudnn.cudnnCreateTensorDescriptor(dxDesc);
+//		JCudnn.cudnnCreateTensorDescriptor(dyDesc);
+//		JCudnn.cudnnCreateFilterDescriptor(dwDesc);
+		
+		JCudnn.cudnnSetTensor4dDescriptor(xDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
+		JCudnn.cudnnSetFilterNdDescriptor(wDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, 4, weight);
+		
+//		JCudnn.cudnnSetTensor4dDescriptor(dxDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
+//		JCudnn.cudnnSetFilterNdDescriptor(dwDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, 4, weight);
+		
+		int[] filterStrideA = {stride, stride};
+		JCudnn.cudnnSetConvolutionNdDescriptor(convDesc, convDims, padA, filterStrideA, upscaleA, CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT);
+		
+		int on = tensorOuputDimA[0];
+		int oc = tensorOuputDimA[1];
+		
+		//Hout=(Hin−1)×stride[0]−2×padding[0]+dilation[0]×(kernel_size[0]−1)+output_padding[0]+1
+		int oh = (H - 1) * stride - 2 * padA[0] + dilation * (kH - 1) + output_padding + 1;
+		int ow = (W - 1) * stride - 2 * padA[1] + dilation * (kW - 1) + output_padding + 1;
+		
+		System.out.println(on+":"+oc+":"+oh+":"+ow);
+		
+		JCudnn.cudnnSetTensor4dDescriptor(dstDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, on, oc, oh, ow);
+//		JCudnn.cudnnSetTensor4dDescriptor(dyDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, on, oc, oh, ow);
+
+		int fw_algo = getForwardAlgorithm(convAlgorithm, dstDesc, wDesc, convDesc, xDesc);
+		int bkf_algo = getBKFGO(convAlgorithm, dstDesc, xDesc, wDesc, convDesc);
+		int bkd_algo = getBKDGO(convAlgorithm, dstDesc, xDesc, wDesc, convDesc);
+		
+//		System.out.println(fw_algo);
+		
+		/**
+		 * getWorkspaceSize
+		 */
+		long workspaceSize = 0;
+		Pointer workSpace = new Pointer();
+		workspaceSize = getConvTransposeWorkSpace(xDesc, dstDesc, wDesc, wDesc, convDesc, dstDesc, xDesc, fw_algo, bkf_algo, bkd_algo);
+		if (workspaceSize != 0){
+			handle(JCuda.cudaMalloc(workSpace, workspaceSize));
+        } 
+
+		System.out.println(workspaceSize);
+		
+		Pointer alpha_P = Pointer.to(new float[] { 1 });
+	    Pointer beta_P = Pointer.to(new float[] { 0 });
+		
+//	    float[] x = RandomUtils.gaussianRandom(N * C * H * W, 0.1f);
+	    
+	    float[] x = MatrixUtils.order(N * C * H * W, 1, 1);
+	    
+//	    float[] grad = MatrixUtils.one(on * oc * oh * ow);
+	    
+	    float[] grad = MatrixUtils.order(on * oc * oh * ow, 1, 1);
+	    
+//	    float[] k = RandomUtils.gaussianRandom(ko * C * kH * kW, 0.1f);
+	    
+//	    float[] k = MatrixUtils.one(ko * C * kH * kW);
+	    
+	    float[] k = MatrixUtils.order(ko * C * kH * kW, 1, 1);
+	    
+	    Tensor input = new Tensor(N, C, H, W, x, true);
+	    
+	    Tensor kernel = new Tensor(ko, C, kH, kW, k, true);
+	    
+	    Tensor output = new Tensor(on, oc, oh, ow, true);
+	    
+	    Tensor delta = new Tensor(on, oc, oh, ow, grad, true);
+	    
+	    Tensor dw = new Tensor(ko, C, kH, kW, true);
+	    
+	    Tensor dx = new Tensor(N, C, H, W, true);
+
+//		System.out.println("dw:"+JsonUtils.toJson(dw.syncHost()));
+
+		handle(JCudnn.cudnnConvolutionBackwardData(cudnnHandle, alpha_P, wDesc, kernel.getGpuData(), xDesc, input.getGpuData(), convDesc, bkd_algo,
+				workSpace, workspaceSize, beta_P, dstDesc, output.getGpuData()));
+		
+		handle(JCudnn.cudnnConvolutionForward(cudnnHandle, alpha_P, dstDesc, delta.getGpuData(), wDesc, kernel.getGpuData(), convDesc, fw_algo,
+				workSpace, workspaceSize, beta_P, xDesc, dx.getGpuData()));
+
+		handle(JCudnn.cudnnConvolutionBackwardFilter(cudnnHandle, alpha_P, dstDesc, delta.getGpuData(), xDesc, input.getGpuData(), convDesc, bkf_algo,
+				workSpace, workspaceSize, beta_P, wDesc, dw.getGpuData()));
+		
+		input.showDM();
+		kernel.showDM();
+		System.out.println("output:");
+		output.showDM();
+		
+		System.out.println("delta:");
+		delta.showDM();
+		
+		System.out.println("dx:");
+		dx.showDM();
+		
+		System.out.println("dw:");
+		dw.showDM();
+		
+		if (workspaceSize != 0){
+			JCuda.cudaFree(workSpace);
+        }
+
+		
 	}
 	
 	public static void conv() {
@@ -119,8 +267,8 @@ public class TestJCudnn {
 		JCudnn.cudnnSetTensor4dDescriptor(dyDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, on, oc, oh, ow);
 
 		int fw_algo = getForwardAlgorithm(convAlgorithm, xDesc, wDesc, convDesc, dstDesc);
-		int bkf_algo = getBKFGO(convAlgorithm, xDesc, dyDesc, dwDesc, convDesc, dstDesc);
-		int bkd_algo = getBKDGO(convAlgorithm, dxDesc, dyDesc, wDesc, convDesc, dstDesc);
+		int bkf_algo = getBKFGO(convAlgorithm, xDesc, dyDesc, dwDesc, convDesc);
+		int bkd_algo = getBKDGO(convAlgorithm, dxDesc, dyDesc, wDesc, convDesc);
 		
 //		System.out.println(fw_algo);
 		
@@ -185,29 +333,69 @@ public class TestJCudnn {
 		long most = 0;
 		long[] sa = { most };
 		System.out.println("fw_algo:"+fw_algo);
-		handle(JCudnn.cudnnGetConvolutionForwardWorkspaceSize(cudnnHandle, xDesc, wDesc, convDesc, dstDesc, fw_algo, sa));
-		System.out.println(sa[0]);
-		if(sa[0] > most) {
-			most = sa[0];
+		if(fw_algo != 9999) {
+			handle(JCudnn.cudnnGetConvolutionForwardWorkspaceSize(cudnnHandle, xDesc, wDesc, convDesc, dstDesc, fw_algo, sa));
+			System.out.println(sa[0]);
+			if(sa[0] > most) {
+				most = sa[0];
+			}
 		}
 		System.out.println("bkf_algo:"+bkf_algo);
-		handle(JCudnn.cudnnGetConvolutionBackwardFilterWorkspaceSize(cudnnHandle, xDesc, dyDesc, convDesc, dwDesc, bkf_algo, sa));
-		System.out.println(sa[0]);
-		if(sa[0] > most) {
-			most = sa[0];
+		if(bkf_algo != 9999) {
+			handle(JCudnn.cudnnGetConvolutionBackwardFilterWorkspaceSize(cudnnHandle, xDesc, dyDesc, convDesc, dwDesc, bkf_algo, sa));
+			System.out.println(sa[0]);
+			if(sa[0] > most) {
+				most = sa[0];
+			}
 		}
 		System.out.println("bkd_algo:"+bkd_algo);
-		handle(JCudnn.cudnnGetConvolutionBackwardDataWorkspaceSize(cudnnHandle, wDesc, dyDesc, convDesc, dxDesc, bkd_algo, sa));
-		System.out.println(sa[0]);
-		if(sa[0] > most) {
-			most = sa[0];
+		if(bkd_algo != 9999) {
+			handle(JCudnn.cudnnGetConvolutionBackwardDataWorkspaceSize(cudnnHandle, wDesc, dyDesc, convDesc, dxDesc, bkd_algo, sa));
+			System.out.println(sa[0]);
+			if(sa[0] > most) {
+				most = sa[0];
+			}
+		}
+		
+		return most;
+	}
+	
+	public static long getConvTransposeWorkSpace(cudnnTensorDescriptor xDesc,cudnnTensorDescriptor dyDesc,  
+			cudnnFilterDescriptor wDesc, cudnnFilterDescriptor dwDesc,cudnnConvolutionDescriptor convDesc,
+			cudnnTensorDescriptor dstDesc, cudnnTensorDescriptor dxDesc,int fw_algo,int bkf_algo,int bkd_algo) {
+
+		long most = 0;
+		long[] sa = { most };
+		System.out.println("fw_algo:"+fw_algo);
+		if(fw_algo != 9999) {
+			handle(JCudnn.cudnnGetConvolutionForwardWorkspaceSize(cudnnHandle, dyDesc, wDesc, convDesc, dxDesc, fw_algo, sa));
+			System.out.println(sa[0]);
+			if(sa[0] > most) {
+				most = sa[0];
+			}
+		}
+		System.out.println("bkf_algo:"+bkf_algo);
+		if(bkf_algo != 9999) {
+			handle(JCudnn.cudnnGetConvolutionBackwardFilterWorkspaceSize(cudnnHandle, dyDesc, xDesc, convDesc, dwDesc, bkf_algo, sa));
+			System.out.println(sa[0]);
+			if(sa[0] > most) {
+				most = sa[0];
+			}
+		}
+		System.out.println("bkd_algo:"+bkd_algo);
+		if(bkd_algo != 9999) {
+			handle(JCudnn.cudnnGetConvolutionBackwardDataWorkspaceSize(cudnnHandle, wDesc, xDesc, convDesc, dstDesc, bkd_algo, sa));
+			System.out.println(sa[0]);
+			if(sa[0] > most) {
+				most = sa[0];
+			}
 		}
 		
 		return most;
 	}
 	
 	public static int getBKDGO(int convAlgorithm, cudnnTensorDescriptor dxDesc,cudnnTensorDescriptor dyDesc,  
-			cudnnFilterDescriptor wDesc, cudnnConvolutionDescriptor convDesc, cudnnTensorDescriptor dstDesc) {
+			cudnnFilterDescriptor wDesc, cudnnConvolutionDescriptor convDesc) {
 		
 		int requestedAlgoCount = CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT;
         int returnedAlgoCount = -1;
@@ -233,7 +421,7 @@ public class TestJCudnn {
 	}
 	
 	public static int getBKFGO(int convAlgorithm, cudnnTensorDescriptor xDesc,cudnnTensorDescriptor dyDesc,  
-			cudnnFilterDescriptor dwDesc, cudnnConvolutionDescriptor convDesc, cudnnTensorDescriptor dstDesc) {
+			cudnnFilterDescriptor dwDesc, cudnnConvolutionDescriptor convDesc) {
 		
 		int requestedAlgoCount = CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT;
         int returnedAlgoCount = -1;

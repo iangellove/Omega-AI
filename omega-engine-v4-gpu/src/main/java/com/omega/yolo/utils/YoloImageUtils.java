@@ -19,6 +19,7 @@ import org.w3c.dom.NodeList;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
+import com.omega.common.utils.JsonUtils;
 import com.omega.engine.nn.data.ImageData;
 import com.omega.yolo.model.YoloDataSet;
 import com.omega.yolo.model.YoloImage;
@@ -27,11 +28,11 @@ import com.omega.yolo.model.YoloImage;
 
 public class YoloImageUtils {
 	
-//	public static final String[] GL_CLASSES = new String[] {"person", "bird", "cat", "cow", "dog", "horse", "sheep",
-//	                                                         "aeroplane", "bicycle", "boat", "bus", "car", "motorbike", "train",
-//	                                                         "bottle", "chair", "diningtable", "pottedplant", "sofa", "tvmonitor"};
+	public static final String[] GL_CLASSES = new String[] {"person", "bird", "cat", "cow", "dog", "horse", "sheep",
+	                                                         "aeroplane", "bicycle", "boat", "bus", "car", "motorbike", "train",
+	                                                         "bottle", "chair", "diningtable", "pottedplant", "sofa", "tvmonitor"};
 	
-	public static final String[] GL_CLASSES = new String[] {"unmask", "mask"};
+//	public static final String[] GL_CLASSES = new String[] {"unmask", "mask"};
 	
 	public float[] mean = new float[] {0.491f, 0.482f, 0.446f};
 	public float[] std = new float[] {0.247f, 0.243f, 0.261f};
@@ -164,7 +165,7 @@ public class YoloImageUtils {
 		try {
 			
 			File file = new File(src);
-			
+//			System.out.println(file.exists());
 			if(file.exists()) {
 
 				Document doc = XmlParser.DB().parse(file);
@@ -201,7 +202,7 @@ public class YoloImageUtils {
 						
 						nodeList = boxe.getElementsByTagName("xmin");
 						int xmin = Integer.parseInt(nodeList.item(0).getChildNodes().item(0).getNodeValue());
-						
+
 						nodeList = boxe.getElementsByTagName("ymin");
 						int ymin = Integer.parseInt(nodeList.item(0).getChildNodes().item(0).getNodeValue());
 						
@@ -1116,15 +1117,16 @@ public class YoloImageUtils {
 //
 //		image2YoloFormCSV(imgDir, labelPath, labelSet, imgOutDir, bboxPath, YoloVersion.yolov3_xyxy);
 		
-		String rootPath = "H:\\voc\\helmet_dataset";
+		String rootPath = "H:\\voc\\test";
 		String imgDir = rootPath + "\\JPEGImages";
+		String labelDir = rootPath + "\\Annotations";
 		String bboxPath = rootPath + "\\labels.txt";
-		String labelPath = rootPath + "\\train_labels.csv";
-		String[] labelSet = new String[] {"none","white","yellow","blue","red"};
+//		String labelPath = rootPath + "\\train_labels.csv";
+//		String[] labelSet = new String[] {"none","white","yellow","blue","red"};
 
-//		xml2Yolo(imgDir, labelDir, bboxPath);
+		xml2Yolo(imgDir, labelDir, bboxPath);
 		
-		csv2Yolo(imgDir, labelPath, bboxPath, labelSet);
+//		csv2Yolo(imgDir, labelPath, bboxPath, labelSet);
 	}
 	
 }

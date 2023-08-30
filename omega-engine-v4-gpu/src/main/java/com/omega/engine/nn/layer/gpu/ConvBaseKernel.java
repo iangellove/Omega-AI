@@ -12,6 +12,8 @@ public abstract class ConvBaseKernel extends BaseKernel{
 	
 	public abstract void conv(Tensor input,Tensor kernel,Tensor output);
 	
+	public abstract void convTranspose(Tensor input,Tensor kernel,Tensor output);
+	
 	public abstract void dw(Tensor input,Tensor delta,Tensor diffW);
 	
 	public abstract void dx(Tensor delta,Tensor kernel,Tensor diff);

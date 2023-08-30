@@ -15,6 +15,15 @@ public class MatrixUtils {
 	
 	private static final int threadNum = 8;
 	
+	public static boolean isZero(float[] x) {
+		for(int i = 0;i<x.length;i++) {
+			if(x[i] > 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	/**
 	 * 
 	 * @Title: zero

@@ -103,7 +103,7 @@ public class YoloUtils {
 		            int obj_index = entryIndex(b, output.width, output.height, n_index, 4, outputs, class_number);
 		            float objectness = output.data[obj_index];
 		            
-		            if(objectness > thresh) {
+//		            if(objectness > thresh) {
 		            	nCount++;
 	//		            System.out.println(objectness);
 			            int box_index = entryIndex(b, output.width, output.height, n_index, 0, outputs, class_number);
@@ -125,7 +125,7 @@ public class YoloUtils {
 		                det.setClasses(classes);
 	//		            System.out.println(b+":"+det.getBbox()[0] + ":" + det.getBbox()[1] + ":" + det.getBbox()[2] + ":" + det.getBbox()[3]);
 			            dets[b][i * bbox_num + n] = det;
-		            }
+//		            }
 		        }
 		        if(nCount > 0) {
 		        	count++;

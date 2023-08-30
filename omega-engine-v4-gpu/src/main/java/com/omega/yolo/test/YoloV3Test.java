@@ -65,7 +65,7 @@ public class YoloV3Test {
 			
 			for(int l = 0;l<box.getDets().size();l++) {
 
-				if(box.getDets().get(l) != null && box.getDets().get(l).getObjectness() > 0) {
+				if(box.getDets().get(l) != null && box.getDets().get(l).getObjectness() > 0 && !MatrixUtils.isZero(box.getDets().get(l).getProb())) {
 					indexs.add(l);
 				}
 				
@@ -222,23 +222,23 @@ public class YoloV3Test {
 		int batchSize = 24;
 		int class_num = 20;
 		
+		String[] labelset = new String[] {"person", "bird", "cat", "cow", "dog", "horse", "sheep",
+                "aeroplane", "bicycle", "boat", "bus", "car", "motorbike", "train",
+                "bottle", "chair", "diningtable", "pottedplant", "sofa", "tvmonitor"};
+		
 		try {
 			
 			String cfg_path = "H:/voc/train/yolov3-tiny-voc.cfg";
 			
-			String trainPath = "H:\\voc\\train\\imgs";
-			String trainLabelPath = "H:\\voc\\train\\labels\\yolov3.txt";
+			String trainPath = "H:\\voc\\train\\resized\\imgs";
+			String trainLabelPath = "H:\\voc\\train\\resized\\rlabels.txt";
 			
-			String testPath = "H:\\voc\\test\\imgs";
-			String testLabelPath = "H:\\voc\\test\\labels\\yolov3.txt";
+			String testPath = "H:\\voc\\test\\resized\\imgs";
+			String testLabelPath = "H:\\voc\\test\\resized\\rlabels.txt";
 			
 			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
 			
-//			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.weights";
-			
-			YoloDataTransform2 dt = new YoloDataTransform2(class_num, DataType.yolov3, 90);
-			
-			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3, dt);
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
 			
 			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
 
@@ -257,16 +257,15 @@ public class YoloV3Test {
 //			optimizer.lr_step = new int[] {200,500,1000,1500,2000};
 			
 			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
+
+			/**
+			 * 处理测试预测结果
+			 */
+			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
 			
-//			
-//			/**
-//			 * 处理测试预测结果
-//			 */
-//			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
-//			
-//			String outputPath = "H:\\voc\\banana-detection\\test_yolov3\\";
-//			
-//			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h);
+			String outputPath = "H:\\voc\\test\\resized\\test_yolov3\\";
+			
+			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
 
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -412,9 +411,9 @@ public class YoloV3Test {
 			
 			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 300, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 			
-//			optimizer.lr_step = new int[] {200,200,250};
+			optimizer.lr_step = new int[] {50,100,250};
 			
 			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
 			
@@ -696,6 +695,7 @@ public class YoloV3Test {
 //			y.createMaskTrainTestDataSet();
 //			y.yolov3_tiny_mask();
 			y.yolov3_tiny_helmet();
+//			y.yolov3_tiny_voc();
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

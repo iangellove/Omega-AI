@@ -21,6 +21,8 @@ public class YoloDetection implements Serializable{
 	private float classes = 0.0f;
 	
 	private float[] prob;
+	
+	private int sortClass = 0;
 
 	public YoloDetection(int class_num) {
 		this.prob = new float[class_num];
@@ -56,6 +58,14 @@ public class YoloDetection implements Serializable{
 
 	public void setProb(float[] prob) {
 		this.prob = prob;
+	}
+
+	public int getSortClass() {
+		return sortClass;
+	}
+
+	public void setSortClass(int sortClass) {
+		this.sortClass = sortClass;
 	}
 
 }

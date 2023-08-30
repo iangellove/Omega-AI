@@ -42,17 +42,17 @@ public class MultiLabelSoftMargin extends LossFunction {
 	}
 
 	@Override
-	public Tensor[] loss(Tensor[] x, Tensor label) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public Tensor diff(Tensor x, Tensor label) {
 		// TODO Auto-generated method stub
 		Graph.clearGrad();
 		Graph.backward();
 		return x.getGrad();
+	}
+
+	@Override
+	public Tensor[] loss(Tensor[] x, Tensor label) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@Override

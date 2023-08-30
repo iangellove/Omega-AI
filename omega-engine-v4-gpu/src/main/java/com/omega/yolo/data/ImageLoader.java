@@ -66,9 +66,9 @@ public class ImageLoader {
 //		
 //		showImg(x, y, classes, outputPath);
 		
-		formatImage();
+//		formatImage();
 		
-//		testFormatImage();
+		testFormatImage();
 		
 	}
 	
@@ -76,9 +76,9 @@ public class ImageLoader {
 		
 //		String imagePath = "H:\\voc\\helmet\\resized\\train\\00000.jpg";
 		
-		String imagePath = "H:\\voc\\helmet\\JPEGImages\\00000.jpg";
+		String imagePath = "H:\\voc\\test\\JPEGImages\\000390.jpg";
 		
-		String outputPath = "H:\\voc\\helmet\\resized\\";
+		String outputPath = "H:\\voc\\test\\";
 		
 //		float[] labelBoxs = new float[] {1,42,16,83,43,1,129,88,152,108,1,208,94,243,118};
 		
@@ -86,9 +86,7 @@ public class ImageLoader {
 //				1, 332, 154, 389, 165, 1, 155, 159, 211, 167, 1, 23, 173, 74, 183, 1, 353, 147, 416, 163, 1, 291, 142, 353, 153,
 //				1, 117, 155, 174, 164, 1, 261, 157, 323, 167, 1, 88, 170, 145, 179, 1, 320, 146, 369, 155};
 		
-		float[] labelBoxs = new float[] {1, 9, 111, 61, 182, 1, 95, 138, 143, 197, 1, 185, 98, 235, 166, 1, 262, 125, 311, 192,
-				1, 334, 89, 382, 156, 1, 429, 98, 474, 163, 1, 503, 100, 552, 166, 1, 588, 115, 637, 177, 1, 694, 92, 743, 164,
-				1, 763, 57, 821, 129, 1, 827, 71, 869, 129, 1, 860, 89, 915, 155, 1, 922, 67, 1001, 155};
+		float[] labelBoxs = new float[] {};
 		
 		int number = 1;
 		int channel = 3;
@@ -96,7 +94,7 @@ public class ImageLoader {
 		int width = 416;
 		
 		int boxes = 90;
-		int classes = 5;
+		int classes = 20;
 		float jitter = 0.1f;
 		float hue = 0.1f;
 		float saturation = 1.5f;
@@ -109,9 +107,9 @@ public class ImageLoader {
 		
 		float[] labelXYWH = formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
 		
-//		loadVailDataDetection(x, y, 0, orig, labelXYWH, width, height, boxes, classes);
+		loadVailDataDetection(x, y, 0, orig, labelXYWH, width, height, boxes, classes);
 		
-		loadDataDetection(x, y, 0, orig, labelXYWH, width, height, boxes, classes, jitter, hue, saturation, exposure);
+//		loadDataDetection(x, y, 0, orig, labelXYWH, width, height, boxes, classes, jitter, hue, saturation, exposure);
 		
 //		System.out.println(JsonUtils.toJson(x));
 		
@@ -125,10 +123,10 @@ public class ImageLoader {
 		
 		try {
 			
-			String imgDirPath = "H:\\voc\\helmet\\JPEGImages";
-			String labelPath = "H:\\voc\\helmet\\labels.txt";
-			String outputDirPath = "H:\\voc\\helmet\\resized\\imgs\\";
-			String labelTXTPath = "H:\\voc\\helmet\\resized\\rlabels.txt";
+			String imgDirPath = "H:\\voc\\test\\JPEGImages";
+			String labelPath = "H:\\voc\\test\\labels.txt";
+			String outputDirPath = "H:\\voc\\test\\resized\\imgs\\";
+			String labelTXTPath = "H:\\voc\\test\\resized\\rlabels.txt";
 			
 			int width = 416;
 			int height = 416;
@@ -759,6 +757,7 @@ public class ImageLoader {
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
+			System.out.println("=====================>:"+filePath);
 		}
 		
 		return image;

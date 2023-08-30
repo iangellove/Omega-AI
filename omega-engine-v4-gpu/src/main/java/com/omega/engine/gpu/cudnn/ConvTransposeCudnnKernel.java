@@ -20,7 +20,7 @@ import jcuda.jcudnn.cudnnFilterDescriptor;
 import jcuda.jcudnn.cudnnTensorDescriptor;
 import jcuda.runtime.JCuda;
 
-public class ConvCudnnKernel extends ConvBaseKernel{
+public class ConvTransposeCudnnKernel extends ConvBaseKernel{
 	
 	private int C;
 	private int H;
@@ -36,6 +36,8 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 	private int ow;
 	
 	private int padding = 0;
+	private int output_padding = 0;
+	private int dilation = 1;
 	private int stride = 1;
 	
 	private int convAlgorithm = -1;
@@ -54,8 +56,8 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 	private cudnnFilterDescriptor kernelDesc;
 	private cudnnTensorDescriptor yDesc;
 	private cudnnConvolutionDescriptor convDesc;
-	
-	public ConvCudnnKernel(Network network,int C,int H,int W,int ko,int kh,int kw,int s,int p) {
+
+	public ConvTransposeCudnnKernel(Network network,int C,int H,int W,int ko,int kh,int kw,int s,int p,int d,int op) {
 		this.network = network;
 		this.C = C;
 		this.H = H;
@@ -86,28 +88,25 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 			int convDims = 2;
 			int[] padA = {padding, padding};
 			int[] weight = {ko, C, kh, kw};
-			int[] upscaleA = {1, 1};
-			
-			int[] tensorOuputDimA = {N, C, H, W};
+			int[] upscaleA = {dilation, dilation};
 			
 			JCudnn.cudnnSetTensor4dDescriptor(xDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
 			JCudnn.cudnnSetFilterNdDescriptor(kernelDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, 4, weight);
-
+			
 			int[] filterStrideA = {stride, stride};
+			
 			JCudnn.cudnnSetConvolutionNdDescriptor(convDesc, convDims, padA, filterStrideA, upscaleA, CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT);
 			
-			handle(JCudnn.cudnnGetConvolutionNdForwardOutputDim(convDesc, xDesc, kernelDesc, 4, tensorOuputDimA));
-			
-			this.on = tensorOuputDimA[0];
-			this.oc = tensorOuputDimA[1];
-			this.oh = tensorOuputDimA[2];
-			this.ow = tensorOuputDimA[3];
+			this.on = this.N;
+			this.oc = this.ko;
+			this.oh = (H - 1) * stride - 2 * padA[0] + dilation * (this.kh - 1) + output_padding + 1;
+			this.ow = (W - 1) * stride - 2 * padA[1] + dilation * (this.kw - 1) + output_padding + 1;
 			
 			JCudnn.cudnnSetTensor4dDescriptor(yDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, this.on, this.oc, this.oh, this.ow);
-
-			this.fw_algo = getForwardAlgorithm(convAlgorithm, xDesc, kernelDesc, convDesc, yDesc);
-			this.bkf_algo = getBKFGO(convDims, xDesc, yDesc, kernelDesc, convDesc);
-			this.bkd_algo = getBKDGO(convDims, xDesc, yDesc, kernelDesc, convDesc);
+			
+			this.fw_algo = getForwardAlgorithm(convAlgorithm, yDesc, kernelDesc, convDesc, xDesc);
+			this.bkf_algo = getBKFGO(convDims, yDesc, xDesc, kernelDesc, convDesc);
+			this.bkd_algo = getBKDGO(convDims, yDesc, xDesc, kernelDesc, convDesc);
 			
 			getWorkSpace();
 			
@@ -115,25 +114,25 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 		
 	}
 	
-	public void conv(Tensor input,Tensor kernel,Tensor output) {
+	public void convTranspose(Tensor input,Tensor kernel,Tensor output) {
 		
 		this.init(input.number);
 		
-		handle(JCudnn.cudnnConvolutionForward(CudnnHandleManager.getHandle(), alpha_P, xDesc, input.getGpuData(), kernelDesc, kernel.getGpuData(), convDesc, fw_algo,
+		handle(JCudnn.cudnnConvolutionBackwardData(CudnnHandleManager.getHandle(), alpha_P, kernelDesc, kernel.getGpuData(), xDesc, input.getGpuData(), convDesc, bkd_algo, 
 				this.network.workspace, this.network.workspaceSize, beta_P, yDesc, output.getGpuData()));
 		
 	}
 	
 	public void dw(Tensor input,Tensor delta,Tensor dKernel) {
 	
-		handle(JCudnn.cudnnConvolutionBackwardFilter(CudnnHandleManager.getHandle(), alpha_P, xDesc, input.getGpuData(), yDesc, delta.getGpuData(), convDesc, bkf_algo,
+		handle(JCudnn.cudnnConvolutionBackwardFilter(CudnnHandleManager.getHandle(), alpha_P, yDesc, delta.getGpuData(), xDesc, input.getGpuData(), convDesc, bkf_algo,
 				this.network.workspace, this.network.workspaceSize, beta_P, kernelDesc, dKernel.getGpuData()));
 
 	}
 	
 	public void dx(Tensor delta,Tensor kernel,Tensor diff) {
 
-		handle(JCudnn.cudnnConvolutionBackwardData(CudnnHandleManager.getHandle(), alpha_P, kernelDesc, kernel.getGpuData(), yDesc, delta.getGpuData(), convDesc, bkd_algo,
+		handle(JCudnn.cudnnConvolutionForward(CudnnHandleManager.getHandle(), alpha_P, yDesc, delta.getGpuData(), kernelDesc, kernel.getGpuData(), convDesc, fw_algo,
 				this.network.workspace, this.network.workspaceSize, beta_P, xDesc, diff.getGpuData()));
 		
 	}
@@ -141,11 +140,13 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 	public int getBKDGO(int convAlgorithm, cudnnTensorDescriptor dxDesc,cudnnTensorDescriptor dyDesc,  
 			cudnnFilterDescriptor wDesc, cudnnConvolutionDescriptor convDesc) {
 		
-		int requestedAlgoCount = CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT;
+		int knum = CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT * 2;
+		
+		int requestedAlgoCount = knum;
         int returnedAlgoCount = -1;
-        int returnedAlgoCountArray[] = { returnedAlgoCount }; 
+        int returnedAlgoCountArray[] = { knum }; 
         cudnnConvolutionBwdDataAlgoPerf results[] = 
-            new cudnnConvolutionBwdDataAlgoPerf[2 * CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT];
+            new cudnnConvolutionBwdDataAlgoPerf[knum];
 		
         System.out.println("Testing cudnnFindConvolutionBackwardDataAlgorithm ...");
 		JCudnn.cudnnFindConvolutionBackwardDataAlgorithm(CudnnHandleManager.getHandle(), wDesc, dyDesc, convDesc, dxDesc,
@@ -217,7 +218,7 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 	}
 	
 	public void getWorkSpace() {
-		
+
 		if(this.network.workspace == null) {
 			this.network.workspace = new Pointer();
 		}
@@ -225,18 +226,18 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 		long most = 0;
 		long[] sa = { most };
 //		System.out.println("fw_algo:"+fw_algo);
-		handle(JCudnn.cudnnGetConvolutionForwardWorkspaceSize(CudnnHandleManager.getHandle(), xDesc, kernelDesc, convDesc, yDesc, fw_algo, sa));
+		handle(JCudnn.cudnnGetConvolutionForwardWorkspaceSize(CudnnHandleManager.getHandle(), yDesc, kernelDesc, convDesc, xDesc, fw_algo, sa));
 		if(sa[0] > most) {
 			most = sa[0];
 		}
 //		System.out.println("bkf_algo:"+bkf_algo);
-		handle(JCudnn.cudnnGetConvolutionBackwardFilterWorkspaceSize(CudnnHandleManager.getHandle(), xDesc, yDesc, convDesc, kernelDesc, bkf_algo, sa));
+		handle(JCudnn.cudnnGetConvolutionBackwardFilterWorkspaceSize(CudnnHandleManager.getHandle(), yDesc, xDesc, convDesc, kernelDesc, bkf_algo, sa));
 
 		if(sa[0] > most) {
 			most = sa[0];
 		}
 //		System.out.println("bkd_algo:"+bkd_algo);
-		handle(JCudnn.cudnnGetConvolutionBackwardDataWorkspaceSize(CudnnHandleManager.getHandle(), kernelDesc, yDesc, convDesc, xDesc, bkd_algo, sa));
+		handle(JCudnn.cudnnGetConvolutionBackwardDataWorkspaceSize(CudnnHandleManager.getHandle(), kernelDesc, xDesc, convDesc, yDesc, bkd_algo, sa));
 		
 		if(sa[0] > most) {
 			most = sa[0];
@@ -271,7 +272,7 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 	}
 
 	@Override
-	public void convTranspose(Tensor input, Tensor kernel, Tensor output) {
+	public void conv(Tensor input, Tensor kernel, Tensor output) {
 		// TODO Auto-generated method stub
 		
 	}
