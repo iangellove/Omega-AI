@@ -26,11 +26,11 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ![输入图片说明](images/11.png)![输入图片说明](images/49.png)![输入图片说明](images/32.png)![输入图片说明](images/41.png)
 
-[基于yolov3算法口罩佩戴识别](#yolov3-mask-demo口罩佩戴识别)
+[基于yolov3口罩佩戴识别](#yolov3-mask-demo口罩佩戴识别)
 
 ![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093228.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093408.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901094543.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901095142.png)
 
-[基于yolov3算法口罩安全帽识别](#yolov3-helmet-demo安全帽佩戴识别)
+[基于yolov3安全帽佩戴识别](#yolov3-helmet-demo安全帽佩戴识别)
 
 ![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093438.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093541.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093622.png)![输入图片说明](QQ%E6%88%AA%E5%9B%BE20230901093658.png)
 
