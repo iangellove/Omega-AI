@@ -188,7 +188,7 @@ public class YoloV3Test {
 			
 			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 300, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
 			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
 			
@@ -196,9 +196,7 @@ public class YoloV3Test {
 			 * 处理测试预测结果
 			 */
 			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
-			
 			String outputPath = "H:\\voc\\helmet\\test_yolov3\\";
-			
 			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
 		
 		} catch (Exception e) {
@@ -674,14 +672,7 @@ public class YoloV3Test {
 	public static void main(String[] args) {
 		
 		try {
-			
-//			float[] ac = new float[] {10,14,23,27,37,58,81,82,135,169,344,319};
-//			
-//			float[] x = MatrixOperation.division(ac, 416);
-//			float[] y = MatrixOperation.multiplication(x, 256);
-//			
-//			System.out.println(JsonUtils.toJson(y));
-			
+
 			CUDAModules.initContext();
 
 			YoloV3Test y = new YoloV3Test();

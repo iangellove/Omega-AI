@@ -195,6 +195,14 @@
             <artifactId>log4j-to-slf4j</artifactId>
             <version>${log4j.version}</version>
         </dependency>
+        
+        <!-- https://mvnrepository.com/artifact/com.gif4j/gif4j_pro -->
+		<dependency>
+            <groupId>com.madgag</groupId>
+            <artifactId>animated-gif-lib</artifactId>
+            <version>1.4</version>
+        </dependency>
+        
 		
 		<!--引入Swagger2依赖——开始 -->
 		 <dependency>

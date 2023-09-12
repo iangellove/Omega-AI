@@ -71,16 +71,16 @@ public class CNN extends Network {
 		 * 设置输入数据
 		 */
 		this.setInputData(input);
-		
+//		System.out.println(layerCount);
 		/**
 		 * forward
 		 */
 		for(int i = 0;i<layerCount;i++) {
 			
 			Layer layer = layerList.get(i);
-
+//			System.out.println(layer.index);
 			layer.forward();
-
+			
 		}
 
 		return this.getOuput();
@@ -117,6 +117,18 @@ public class CNN extends Network {
 	}
 
 	@Override
+	public Tensor loss(Tensor output, Tensor label, Tensor loss) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.loss(output, label, loss);
+	}
+
+	@Override
+	public Tensor lossDiff(Tensor output, Tensor label, Tensor diff) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.diff(output, label, diff);
+	}
+	
+	@Override
 	public void back(Tensor lossDiff) {
 		// TODO Auto-generated method stub
 		
@@ -131,9 +143,11 @@ public class CNN extends Network {
 			Layer layer = layerList.get(i);
 			
 			layer.learnRate = this.learnRate;
-
+			
 			layer.back();
 
+//			System.out.println(layer.getLayerType().toString()+"["+layer.index+"]:"+layer.delta.isZero());
+			
 		}
 
 	}
@@ -172,5 +186,5 @@ public class CNN extends Network {
 		}
 		JCuda.cudaDeviceSynchronize();
 	}
-	
+
 }

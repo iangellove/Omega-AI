@@ -13,7 +13,7 @@ import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
 
-public class SigmodKernel extends BaseKernel{
+public class TanhKernel extends BaseKernel{
 	
 	private CUfunction function;
 	
@@ -27,7 +27,7 @@ public class SigmodKernel extends BaseKernel{
 	
 	private Pointer backwardKernelParameters;
 	
-	public SigmodKernel() {
+	public TanhKernel() {
 		
 		init();
 	}
@@ -45,20 +45,16 @@ public class SigmodKernel extends BaseKernel{
 		try {
 
 			if(function == null) {
-
-				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "sigmod_forward");
-				
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "tanh_forward");
 			}
 			
 			if(function_back == null) {
-
-				function_back = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "sigmod_backward");
-				
+				function_back = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "tanh_backward");
 			}
 			
 			if(function_back_temp == null) {
 
-				function_back_temp = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "sigmod_backward_temp");
+				function_back_temp = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "tanh_backward_temp");
 				
 			}
 			
@@ -104,7 +100,7 @@ public class SigmodKernel extends BaseKernel{
 	public void forward(Tensor input,Tensor output) {
 		
 		try {
-
+			
 //			if(forwardKernelParameters == null || this.N != output.number) {
 
 		        /**
@@ -140,12 +136,8 @@ public class SigmodKernel extends BaseKernel{
 	public void backward(Tensor output,Tensor delta,Tensor diff) {
 		
 		try {
-//			System.out.println(delta);
+			
 //			if(backwardKernelParameters == null) {
-
-//			delta.showDM();
-//			output.showDM();
-//			System.out.println(JsonUtils.toJson(delta.getByNumber(0)));
 		        /**
 		         * 设置入参
 		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
@@ -166,8 +158,6 @@ public class SigmodKernel extends BaseKernel{
 		            backwardKernelParameters, null // Kernel- and extra parameters
 		        );
 
-//			diff.showDM();
-			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -178,12 +168,8 @@ public class SigmodKernel extends BaseKernel{
 	public void backwardTemp(Tensor output,Tensor delta,Tensor diff) {
 		
 		try {
-//			System.out.println(delta);
+			
 //			if(backwardKernelParameters == null) {
-
-//			delta.showDM();
-//			output.showDM();
-//			System.out.println(JsonUtils.toJson(delta.getByNumber(0)));
 		        /**
 		         * 设置入参
 		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
@@ -204,8 +190,6 @@ public class SigmodKernel extends BaseKernel{
 		            backwardKernelParameters, null // Kernel- and extra parameters
 		        );
 
-//			diff.showDM();
-			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -259,7 +243,7 @@ public class SigmodKernel extends BaseKernel{
 	    	
 	    	Tensor diff = new Tensor(N, C, H, W, true);
 	    	
-	    	SigmodKernel k = new SigmodKernel();
+	    	TanhKernel k = new TanhKernel();
 
 	    	k.forward(input, output);
 	    	

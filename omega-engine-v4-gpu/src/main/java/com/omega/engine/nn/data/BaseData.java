@@ -40,6 +40,13 @@ public abstract class BaseData {
 		}
 	}
 	
+	public void getRandomData(int[] indexs,Tensor input) {
+		for(int i = 0;i<indexs.length;i++) {
+			int index = indexs[i];
+			System.arraycopy(this.input.data, index * channel * height * width, input.data, i * channel * height * width, channel * height * width);
+		}
+	}
+	
 	public void randomData(int[] indexs,float[] data,Tensor input,Tensor label) {
 		for(int i = 0;i<indexs.length;i++) {
 			int index = indexs[i];

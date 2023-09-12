@@ -240,11 +240,48 @@ public class RandomUtils {
 	 * @param x
 	 * @return
 	 */
+	public static void gaussianRandom(float[] temp,float ratio){
+		for(int i = 0;i<temp.length;i++) {
+			temp[i] = (float)(getInstance().nextGaussian() * ratio);
+		}
+	}
+	
+	/**
+	 * 高斯随机数
+	 * @param x
+	 * @return
+	 */
+	public static void random(float[] temp,float ratio){
+		for(int i = 0;i<temp.length;i++) {
+			temp[i] = (float)(getInstance().nextFloat() * ratio);
+		}
+	}
+	
+	/**
+	 * 高斯随机数
+	 * @param x
+	 * @return
+	 */
 	public static float[][] gaussianRandom(int x,int y,float ratio){
 		float[][] temp = new float[x][y];
 		for(int i = 0;i<x;i++) {
 			for(int j = 0;j<y;j++) {
 				temp[i][j] = (float) (getInstance().nextGaussian() * ratio);
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 高斯随机数
+	 * @param x
+	 * @return
+	 */
+	public static float[][] random(int x,int y,float ratio){
+		float[][] temp = new float[x][y];
+		for(int i = 0;i<x;i++) {
+			for(int j = 0;j<y;j++) {
+				temp[i][j] = (float) (getInstance().nextFloat() * ratio);
 			}
 		}
 		return temp;
@@ -391,7 +428,7 @@ public class RandomUtils {
 			gain = (float) Math.sqrt(2.0f);
 			break;
 		case leaky_relu:
-			gain = (float) Math.sqrt(2.0f / (1.0f + 0.01f * 0.01f));
+			gain = (float) Math.sqrt(2.0f / (1.0f + Math.sqrt(0.5) *Math.sqrt(0.5)));
 			break;
 		default:
 			gain = 1.0f;

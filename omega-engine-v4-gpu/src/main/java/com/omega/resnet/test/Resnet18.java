@@ -186,12 +186,7 @@ public class Resnet18 {
 		        Map<String,Object> layers = new LinkedHashMap<String, Object>();
 		        
 		        layers = JsonUtils.gson.fromJson(jsonStr, layers.getClass());
-		        
-		      
-		        
-		        
-		        
-		        
+
 			}
 			
 		} catch (Exception e) {

@@ -121,7 +121,8 @@ public class ConvolutionLayer extends Layer {
 		this.oChannel = this.kernelNum;
 		this.oWidth = (this.width + this.padding * 2 - kWidth) / this.stride + 1;
 		this.oHeight = (this.height + this.padding * 2 - kHeight) / this.stride + 1;
-		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaiming_normal(dataLength, this.oChannel * this.oHeight * this.oWidth, this.paramsInit), true);
+		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaiming_uniform(dataLength, this.channel * kHeight * kWidth, this.paramsInit), true);
+//		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaiming_normal(dataLength, this.oChannel * this.oHeight * this.oWidth, this.paramsInit), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierReluRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaimingNormalRandom(kernelNum * channel * kHeight * kWidth, 0, kernelNum * kHeight * kWidth), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth));
@@ -129,7 +130,8 @@ public class ConvolutionLayer extends Layer {
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.heRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.oChannel * this.kHeight * this.kWidth));
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.val(kernelNum * channel * kHeight * kWidth, 0.1f), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.order(kernelNum * channel * kHeight * kWidth, 0.1f, 0.01f), true);
-		this.bias = new Tensor(1, 1, 1, kernelNum, true);
+		this.bias = new Tensor(1, 1, 1, kernelNum, RandomUtils.kaimingUniformBias(kernelNum, this.channel * kHeight * kWidth), true);
+//		this.bias = new Tensor(1, 1, 1, kernelNum, true);
 		this.diffB = new Tensor(1, 1, 1, kernelNum, true);
 		this.diffW = new Tensor(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);
 	}
@@ -211,8 +213,8 @@ public class ConvolutionLayer extends Layer {
 		/**
 		 * 计算diff
 		 */
-		if(PROPAGATE_DOWN) {
-			
+		
+		if(PROPAGATE_DOWN || this.network.PROPAGATE_DOWN) {
 			/**
 			 * dx = col2im(a)
 			 * a = (weight)T * diff
@@ -221,6 +223,7 @@ public class ConvolutionLayer extends Layer {
 			 * diff[ko * oh * ow]
 			 */
 			kernel.dx(delta, weight, diff);
+//			System.out.println(this.index+":"+diff.isZero()+":"+delta.isZero());
 		}
 		
 //		System.out.println("back:"+(System.nanoTime() - start) / 1e6 + "ms.");
@@ -369,6 +372,12 @@ public class ConvolutionLayer extends Layer {
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
+	}
+
+	@Override
+	public void backTemp() {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }

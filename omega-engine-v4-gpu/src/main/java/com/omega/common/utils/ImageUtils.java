@@ -18,6 +18,7 @@ import javax.imageio.ImageIO;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.madgag.gif.fmsware.AnimatedGifEncoder;
 import com.omega.engine.nn.data.ImageData;
 import com.omega.yolo.utils.OMImage;
 
@@ -714,6 +715,19 @@ public class ImageUtils {
 		return true;
 	}
 	
+	public boolean createRGBGIF(String path,String extName,int[][][] rgb,int weight,int height) {
+		AnimatedGifEncoder ae = new AnimatedGifEncoder();
+		ae.setSize(weight, height);
+		ae.start(path);
+		ae.setDelay(100);
+		ae.setRepeat(0);
+		for(int i = 0;i<rgb.length;i++) {
+			BufferedImage bufferedImage = this.convertRGBImage(rgb[i]);
+			ae.addFrame(bufferedImage);
+		}
+		return ae.finish();
+	}
+	
 	/**
      * 通过BufferedImage图片流调整图片大小
      * 指定压缩后长宽
@@ -733,8 +747,9 @@ public class ImageUtils {
     	if(originalImage.getWidth() == targetWidth && originalImage.getHeight() == targetHeight) {
     		Graphics g = originalImage.getGraphics();
             g.drawImage(originalImage, 0, 0, null);
-            g.setColor(Color.RED);
+           
             if(bbox!=null) {
+            	 g.setColor(Color.RED);
             	for(int[] box:bbox) {
             		g.setColor(colors[box[0]]);
                 	int w = (box[3] - box[1]);
@@ -989,6 +1004,56 @@ public class ImageUtils {
 				
 				rgb[i][j] = orgb;
 				
+			}
+		}
+		
+		return rgb;
+	}
+	
+	public static int[][] color2rgb2(float[] data,int channel,int height,int width,boolean format){
+		
+		int[][] rgb = new int[height][width];
+		int ocount = height * width;
+		
+		if(channel > 1) {
+
+			for(int i = 0;i<height;i++) {
+				for(int j = 0;j<width;j++) {
+					int index = i * width + j;
+					int r = (int) data[index];
+					int g = (int) data[ocount + index];
+					int b = (int) data[ocount * 2 + index];
+					if(format) {
+						r = (int) ((r * std[0] + mean[0]) * 255);
+						g = (int) ((g * std[0] + mean[0]) * 255);
+						b = (int) ((b * std[0] + mean[0]) * 255);
+					}
+					
+					int orgb = colorToRGB(255, r, g, b);
+					
+					rgb[i][j] = orgb;
+					
+				}
+			}
+			
+		}else {
+			for(int i = 0;i<height;i++) {
+				for(int j = 0;j<width;j++) {
+					int index = i * width + j;
+					int r = (int) data[index];
+					int g = (int) data[index];
+					int b = (int) data[index];
+					if(format) {
+						r = (int) ((r * std[0] + mean[0]) * 255);
+						g = (int) ((g * std[0] + mean[0]) * 255);
+						b = (int) ((b * std[0] + mean[0]) * 255);
+					}
+					
+					int orgb = colorToRGB(255, r, g, b);
+					
+					rgb[i][j] = orgb;
+					
+				}
 			}
 		}
 		

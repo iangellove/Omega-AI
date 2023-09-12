@@ -46,4 +46,10 @@ public abstract class ActiveFunctionLayer extends Layer {
 		this.oWidth = this.width;
 	}
 	
+	@Override
+	public void update() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

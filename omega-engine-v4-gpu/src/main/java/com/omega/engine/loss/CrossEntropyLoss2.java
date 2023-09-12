@@ -141,4 +141,33 @@ public class CrossEntropyLoss2 extends LossFunction {
 		return null;
 	}
 
+	@Override
+	public Tensor loss(Tensor x, Tensor label, Tensor loss) {
+		// TODO Auto-generated method stub
+		init(x);
+		
+		/**
+		 * q(x) = softmax(x)
+		 * H(p,q) = - ∑p(x)logq(x)
+		 * 简化log_softmax:
+		 * log(exp(xi)/sum(exp(X))) = (xi - max) - log(sum(exp(xi - max)))
+		 * 该操作为了防止上溢出与下溢出情况导致nan与inf出现.
+		 */
+		crossEntropyKernel.forward(x, label, loss);
+		
+		return loss;
+	}
+
+	@Override
+	public Tensor diff(Tensor x, Tensor label, Tensor diff) {
+		// TODO Auto-generated method stub
+
+		/**
+		 * diff(x) = softmax(x) - label
+		 */
+		crossEntropyKernel.backward(x, label, diff);
+		
+		return diff;
+	}
+
 }

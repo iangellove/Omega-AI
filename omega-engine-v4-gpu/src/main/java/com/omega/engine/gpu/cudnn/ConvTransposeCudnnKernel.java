@@ -67,6 +67,8 @@ public class ConvTransposeCudnnKernel extends ConvBaseKernel{
 		this.kw = kw;
 		this.stride = s;
 		this.padding = p;
+		this.output_padding = op;
+		this.dilation = d;
 		
 		xDesc = new cudnnTensorDescriptor();
 		kernelDesc = new cudnnFilterDescriptor();
@@ -87,13 +89,20 @@ public class ConvTransposeCudnnKernel extends ConvBaseKernel{
 
 			int convDims = 2;
 			int[] padA = {padding, padding};
-			int[] weight = {ko, C, kh, kw};
+			int[] weight = {C, ko, kh, kw};
 			int[] upscaleA = {dilation, dilation};
-			
+
 			JCudnn.cudnnSetTensor4dDescriptor(xDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
 			JCudnn.cudnnSetFilterNdDescriptor(kernelDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, 4, weight);
 			
 			int[] filterStrideA = {stride, stride};
+			
+//			System.out.println(N+":"+C+":"+H+":"+W);
+//			System.out.println(JsonUtils.toJson(weight));
+//			System.out.println(JsonUtils.toJson(upscaleA));
+//			System.out.println(JsonUtils.toJson(filterStrideA));
+//			System.out.println(JsonUtils.toJson(padA));
+//			System.out.println("output_padding:"+output_padding);
 			
 			JCudnn.cudnnSetConvolutionNdDescriptor(convDesc, convDims, padA, filterStrideA, upscaleA, CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT);
 			
@@ -216,7 +225,7 @@ public class ConvTransposeCudnnKernel extends ConvBaseKernel{
          }
 		
 	}
-	
+
 	public void getWorkSpace() {
 
 		if(this.network.workspace == null) {

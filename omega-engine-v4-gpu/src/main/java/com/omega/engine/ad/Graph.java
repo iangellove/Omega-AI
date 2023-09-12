@@ -35,49 +35,49 @@ public class Graph{
 	/**
 	 * 计算图map
 	 */
-	private static List<Tape> tapes = new ArrayList<Tape>();
+	private List<Tape> tapes = new ArrayList<Tape>();
 	
-	public static int tapeIndex = 0;
+	public int tapeIndex = 0;
 	
-	private static boolean lock = false;
+	private boolean lock = false;
 	
-	public static void start() {
+	public void start() {
 		tapeIndex = 0;
 	}
 	
-	public static void lock() {
+	public void lock() {
 		lock = true;
 	}
 	
-	public static void unlock() {
+	public void unlock() {
 		lock = false;
 	}
 	
-	public static void showGraph() {
+	public void showGraph() {
 		for(int i = 0;i<tapes.size();i++) {
 			System.out.println(i+":["+tapes.get(i).getOp().getOpType()+"]");
 		}
 	}
 	
-	public static void reset() {
-		Graph.tapes.clear();
+	public void reset() {
+		this.tapes.clear();
 	}
 	
-	public static void clearGrad() {
+	public void clearGrad() {
 		for(int i = 0;i<tapes.size();i++) {
-			Graph.tapes.get(i).zeroGrad();
+			this.tapes.get(i).zeroGrad();
 		}
 //		reset();
 	}
 	
-	public static void add(Tape tape) {
-		Graph.tapes.add(tape);
+	public void add(Tape tape) {
+		this.tapes.add(tape);
 	}
 	
-	public static Tape getTape(OP op,Tensor self,Tensor other,float scalar,int[] position) {
+	public Tape getTape(OP op,Tensor self,Tensor other,float scalar,int[] position) {
 		Tape tape = null;
 		if(!lock) {
-			tape = new Tape(op, self, other, scalar, position);
+			tape = new Tape(op, self, other, scalar, position, this);
 			if(self.getTape() != null) {
 				self.getTape().setSub(true);
 			}
@@ -88,7 +88,7 @@ public class Graph{
 				}
 				other.setTape(tape);
 			}
-			Graph.add(tape);
+			this.add(tape);
 		}else {
 			tape = tapes.get(tapeIndex);
 			if(tape.getOp().getOpType().equals(OPType.sum)) {
@@ -99,7 +99,7 @@ public class Graph{
 		return tape;
 	}
 	
-	public static Tensor OP(OPType opType,Tensor self,Tensor other) {
+	public Tensor OP(OPType opType,Tensor self,Tensor other) {
 		OP op = null;
 		switch (opType) {
 		case add:
@@ -122,13 +122,14 @@ public class Graph{
 			throw new RuntimeException("the op is not support.");
 		}
 		
-		Tape tape = getTape(op, self, other, 0, null);
+		Tape tape = this.getTape(op, self, other, 0, null);
 		Tensor output = tape.forward();
 		output.setTape(tape);
+		output.setG(this);
 		return output;
 	}
 	
-	public static Tensor OP(OPType opType,Tensor self,float other) {
+	public Tensor OP(OPType opType,Tensor self,float other) {
 		
 		OP op = null;
 		
@@ -165,10 +166,11 @@ public class Graph{
 		Tape tape = getTape(op, self, null, other, null);
 		Tensor output = tape.forward();
 		output.setTape(tape);
+		output.setG(this);
 		return output;
 	}
 	
-	public static Tensor OP(OPType opType,Tensor self) {
+	public Tensor OP(OPType opType,Tensor self) {
 		
 		OP op = null;
 		
@@ -190,13 +192,14 @@ public class Graph{
 			throw new RuntimeException("the op is not support.");
 		}
 		
-		Tape tape = getTape(op, self, null, 0, null);
+		Tape tape = this.getTape(op, self, null, 0, null);
 		Tensor output = tape.forward();
 		output.setTape(tape);
+		output.setG(this);
 		return output;
 	}
 	
-	public static Tensor OP(OPType opType,Tensor self,int[] position) {
+	public Tensor OP(OPType opType,Tensor self,int[] position) {
 		OP op = null;
 		
 		switch (opType) {
@@ -217,12 +220,13 @@ public class Graph{
 		Tape tape = getTape(op, self, null, 0, position);
 		Tensor output = tape.forward();
 		output.setTape(tape);
+		output.setG(this);
 		return output;
 	}
 	
-	public static void backward(Tensor delta) {
+	public void backward(Tensor delta) {
 //		float[] preDelta = null;
-		Graph.lock = true;
+		this.lock = true;
 		for(int i = tapes.size() - 1;i >= 0;i--) {
 			Tape tape = tapes.get(i);
 			if(i == tapes.size() - 1) {
@@ -232,11 +236,11 @@ public class Graph{
 			}
 //			preDelta = tape.getInputs().get(0).getGrad();
 		}
-		Graph.tapeIndex = 0;
+		this.tapeIndex = 0;
 	}
 	
-	public static void backward() {
-		Graph.lock = true;
+	public void backward() {
+		this.lock = true;
 		for(int i = tapes.size() - 1;i >= 0;i--) {
 			Tape tape = tapes.get(i);
 			/**
@@ -248,10 +252,10 @@ public class Graph{
 			}
 			tape.backward();
 		}
-		Graph.tapeIndex = 0;
+		this.tapeIndex = 0;
 	}
 	
-	public static void formula1(){
+	public void formula1(){
 		int number = 1;
 		int channel  = 1;
 		int height = 1;
@@ -267,14 +271,14 @@ public class Graph{
 		
 		for(int i = 0;i<10;i++) {
 			
-			Graph.clearGrad();
+			this.clearGrad();
 			
 			/**
 			 * f(x,y)=ln(x)+x*y−sin(y)
 			 */
 			Tensor v5 = x.log().add(x.mul(y)).sub(y.sin());
 			
-			Graph.backward();
+			this.backward();
 			
 //			System.out.println(JsonUtils.toJson(Graph.tapes));
 			
@@ -287,7 +291,7 @@ public class Graph{
 		}
 	}
 	
-	public static void sigmoid_gpu(Tensor x,Tensor y) {
+	public void sigmoid_gpu(Tensor x,Tensor y) {
 		
 		x.setRequiresGrad(true);
 		
@@ -307,7 +311,7 @@ public class Graph{
 		
 //		Graph.showGraph();
 		
-		Graph.backward();
+		this.backward();
 
 		z.syncHost();
 		
@@ -329,6 +333,8 @@ public class Graph{
 		int width = 32;
 		int length = number * channel * height * width;
 		
+		Graph graph = new Graph();
+		
 		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.order(length, 0, 1), true);
 		
 		long start = System.nanoTime();
@@ -343,9 +349,9 @@ public class Graph{
 		
 		Tensor v2 = x.get(1, 14, 10);
 		
-		Graph.showGraph();
+		graph.showGraph();
 		
-		Graph.backward();
+		graph.backward();
 		
 		v1.syncHost();
 		
@@ -377,6 +383,8 @@ public class Graph{
 		int width = 5;
 		int length = number * channel * height * width;
 		
+		Graph graph = new Graph();
+		
 		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.order(length, 0, 1), true);
 		
 		long start = System.nanoTime();
@@ -387,9 +395,9 @@ public class Graph{
 		
 		Tensor v1 = x.pow(3);
 		
-		Graph.showGraph();
+		graph.showGraph();
 		
-		Graph.backward();
+		graph.backward();
 		
 		v1.syncHost();
 		
@@ -437,6 +445,8 @@ public class Graph{
 		
 		int bboxNum = 3;
 		
+		Graph graph = new Graph();
+		
 		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.val(length, 0.6f), true);
 		
 		Tensor y = new Tensor(number, channel, height, width, MatrixUtils.val(length, 1f), true);
@@ -465,7 +475,7 @@ public class Graph{
 		
 //		Graph.showGraph();
 		
-		Graph.backward();
+		graph.backward();
 
 		z.syncHost();
 		
@@ -508,6 +518,8 @@ public class Graph{
 		
 		float[] ya = new float[] {1,1,0,0,0,1,0,1};
 		
+		Graph graph = new Graph();
+		
 		Tensor x = new Tensor(number, channel, height, width, xa, true);
 		
 		Tensor y = new Tensor(number, channel, height, width, ya, true);
@@ -533,9 +545,9 @@ public class Graph{
 			
 			loss = loss.sum(1).div(C).sum(0).div(x.number);
 			
-			Graph.clearGrad();
+			graph.clearGrad();
 			
-			Graph.backward();
+			graph.backward();
 			
 			loss.syncHost();
 			
@@ -565,9 +577,11 @@ public class Graph{
 		
 		float[] ya = RandomUtils.gaussianRandom(length, 0.1f);
 		
-		Tensor x = new Tensor(number, channel, height, width, xa, true);
+		Graph graph = new Graph();
 		
-		Tensor y = new Tensor(number, channel, height, width, ya, true);
+		Tensor x = new Tensor(number, channel, height, width, xa, true, graph);
+		
+		Tensor y = new Tensor(number, channel, height, width, ya, true, graph);
 		
 		x.setRequiresGrad(true);
 		
@@ -582,7 +596,7 @@ public class Graph{
 
 			long start = System.nanoTime();
 			
-			Graph.tapeIndex = 0;
+			graph.start();
 			
 			Tensor x0 = sigmoid(x).log();
 			
@@ -592,11 +606,11 @@ public class Graph{
 			
 			loss = loss.sum(1).div(C).sum(0).div(x.number);
 			
-			Graph.lock = true;
+			graph.lock = true;
 			
-			Graph.clearGrad();
+			graph.clearGrad();
 			
-			Graph.backward();
+			graph.backward();
 			
 			loss.syncHost();
 			
@@ -604,7 +618,7 @@ public class Graph{
 			
 //			x.getGrad().syncHost();
 //			System.out.println("dx:"+JsonUtils.toJson(x.getGrad()));
-			
+//			x.getGrad().showDM();
 			System.out.println(((System.nanoTime() - start) / 1e6) + "ms.");
 		
 //			PrintUtils.printImage(x.getGrad());
@@ -626,6 +640,8 @@ public class Graph{
 		
 		float[] cpy = RandomUtils.gaussianRandom(length, 0.1f);
 		
+		Graph graph = new Graph();
+		
 		Tensor x = new Tensor(number, channel, height, width, cpx, true);
 		
 		Tensor y = new Tensor(number, channel, height, width, cpy, true);
@@ -645,9 +661,9 @@ public class Graph{
 			
 			Tensor loss1 = y.sub(x).pow(2.0f).div(2.0f);
 
-			Graph.clearGrad();
+			graph.clearGrad();
 			
-			Graph.backward();
+			graph.backward();
 			
 			x.getGrad().syncHost();
 			System.out.println("dx_gpu:"+JsonUtils.toJson(x.getGrad().data));
@@ -673,7 +689,9 @@ public class Graph{
 		int width = 5;
 		int length = number * channel * height * width;
 
-		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.val(length, 0.6f), true);
+		Graph graph = new Graph();
+		
+		Tensor x = new Tensor(number, channel, height, width, MatrixUtils.val(length, 0.6f), true, graph);
 		
 		x.setRequiresGrad(true);
 		
@@ -681,7 +699,7 @@ public class Graph{
 		
 		Tensor z = x.sum(1);
 		
-		Graph.backward();
+		graph.backward();
 		
 		z.syncHost();
 		

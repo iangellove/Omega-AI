@@ -2,6 +2,7 @@ package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.FullyKernel;
 
@@ -67,7 +68,8 @@ public class FullyLayer extends Layer{
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub
-		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_normal(this.width * this.oWidth, this.oWidth, this.paramsInit), true);
+		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_uniform(this.width * this.oWidth, this.width, this.paramsInit), true);
+//		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_normal(this.width * this.oWidth, this.width, this.paramsInit), true);
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.xavierReluRandom(this.width * this.oWidth, this.width, this.oWidth), true);
 //		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaimingNormalRandom(this.width * this.oWidth, 0, this.oWidth), true);
 //		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaimingUniformRandom(this.width * this.oWidth, 0, this.oWidth), true);
@@ -75,7 +77,7 @@ public class FullyLayer extends Layer{
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.order(this.width * this.oWidth, 0.1f, 0.01f), true);
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.val(this.width * this.oWidth, 0.1f), true);
 //		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.heRandom(this.width * this.oWidth, this.width * this.oWidth));
-		this.bias = new Tensor(1, 1, 1, oWidth, true);
+		this.bias = new Tensor(1, 1, 1, oWidth, RandomUtils.kaimingUniformBias(oWidth, this.width), true);
 //		this.bias = new Tensor(1, 1, 1, oWidth, RandomUtils.kaimingUniformBias(x, n), true);
 		this.diffB = new Tensor(1, 1, 1, oWidth, true);
 		this.diffW = new Tensor(1, 1, width, oWidth, true);
@@ -144,6 +146,35 @@ public class FullyLayer extends Layer{
 //		diff.showDM();
 		
 	}
+	
+	public void diffTemp() {
+		// TODO Auto-generated method stub
+
+		/**
+		 * deltaW = inputT * delta
+		 * int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta
+		 * number * w
+		 * number * ow
+		 * m = w,k = number,n = ow
+		 */
+		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, input.getGpuData(), delta.getGpuData(), diffW.getGpuData(),
+				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 0.5f, 1.0f);
+
+		
+		if(hasBias) {
+			kernel.backwardBias(diffB, delta);
+		}
+
+		/**
+		 * diff = delta * weightT
+		 * number * ow
+		 * w * ow
+		 * m = number,k = ow,n = w
+		 */
+		GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData(), weight.getGpuData(), diff.getGpuData(),
+				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 1.0f);
+		
+	}
 
 	@Override
 	public void forward() {
@@ -177,6 +208,25 @@ public class FullyLayer extends Layer{
 		 * 计算梯度
 		 */
 		this.diff();
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+
+	}
+	
+	public void backTemp() {
+		// TODO Auto-generated method stub
+
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta();
+		/**
+		 * 计算梯度
+		 */
+		this.diffTemp();
 		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();

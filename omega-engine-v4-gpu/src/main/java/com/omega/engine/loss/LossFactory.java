@@ -29,6 +29,8 @@ public class LossFactory {
 		switch (type) {
 		case MSE:
 			return new MSELoss();
+		case BCE:
+			return new BCELoss();
 		case cross_entropy:
 			return new CrossEntropyLoss();
 		case softmax_with_cross_entropy:
@@ -58,6 +60,8 @@ public class LossFactory {
 		switch (type) {
 		case MSE:
 			return new MSELoss();
+		case BCE:
+			return new BCELoss();
 		case cross_entropy:
 			return new CrossEntropyLoss();
 		case softmax_with_cross_entropy:
@@ -83,6 +87,8 @@ public class LossFactory {
 			case MSE:
 				losses[i] = new MSELoss();
 				break;
+			case BCE:
+				losses[i] = new BCELoss();
 			case cross_entropy:
 				losses[i] = new CrossEntropyLoss();
 				break;
@@ -122,6 +128,9 @@ public class LossFactory {
 			switch (type) {
 			case MSE:
 				losses[i] = new MSELoss();
+				break;
+			case BCE:
+				losses[i] = new BCELoss();
 				break;
 			case cross_entropy:
 				losses[i] = new CrossEntropyLoss();

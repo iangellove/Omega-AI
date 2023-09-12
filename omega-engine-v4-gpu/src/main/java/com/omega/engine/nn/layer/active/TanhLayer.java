@@ -7,23 +7,23 @@ import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.active.gpu.ReluKernel;
+import com.omega.engine.nn.layer.active.gpu.TanhKernel;
 import com.omega.engine.nn.network.Network;
 
 /**
- * Relu active function Layer
+ * Sigmod active function Layer
  * @author Administrator
  *
  */
-public class ReluLayer extends ActiveFunctionLayer {
+public class TanhLayer extends ActiveFunctionLayer {
 	
-	private ReluKernel kernel;
+	private TanhKernel kernel;
 	
-	public ReluLayer() {
+	public TanhLayer() {
 
 	}
 	
-	public ReluLayer(Layer preLayer) {
+	public TanhLayer(Layer preLayer) {
 		this.width = preLayer.width;
 		this.height = preLayer.height;
 		this.oWidth = preLayer.oWidth;
@@ -32,15 +32,8 @@ public class ReluLayer extends ActiveFunctionLayer {
 		this.oChannel = preLayer.oChannel;
 	}
 	
-	public ReluLayer(Network network) {
+	public TanhLayer(Network network) {
 		this.network = network;
-	}
-	
-	public void init() {
-		super.init();
-		if(kernel == null) {
-			kernel = new ReluKernel();
-		}
 	}
 	
 	@Override
@@ -49,6 +42,13 @@ public class ReluLayer extends ActiveFunctionLayer {
 		
 	}
 
+	public void init() {
+		super.init();
+		if(kernel == null) {
+			kernel = new TanhKernel();
+		}
+	}
+	
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
@@ -64,12 +64,12 @@ public class ReluLayer extends ActiveFunctionLayer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		kernel.backward(input, delta, diff);
+		kernel.backward(output, delta, diff);
 	}
 	
 	public void diffTemp() {
 		// TODO Auto-generated method stub
-		kernel.backwardTemp(input, delta, diff);
+		kernel.backwardTemp(output, delta, diff);
 	}
 
 	@Override
@@ -87,6 +87,9 @@ public class ReluLayer extends ActiveFunctionLayer {
 		 * 计算输出
 		 */
 		this.output();
+		
+//		System.out.println(getOutput());
+		
 	}
 
 	@Override
@@ -101,7 +104,6 @@ public class ReluLayer extends ActiveFunctionLayer {
 		 * 计算梯度
 		 */
 		this.diff();
-		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
@@ -126,18 +128,18 @@ public class ReluLayer extends ActiveFunctionLayer {
 	@Override
 	public void showDiff() {
 		// TODO Auto-generated method stub
+		
 	}
 
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.relu;
+		return LayerType.tanh;
 	}
 
 	@Override
 	public float[][][][] output(float[][][][] input) {
 		// TODO Auto-generated method stub
-		
 		float[][][][] output = new float[this.number][this.oChannel][this.oHeight][this.oWidth];
 		
 		Vector<Task<Object>> workers = new Vector<Task<Object>>();
@@ -150,11 +152,7 @@ public class ReluLayer extends ActiveFunctionLayer {
 					for(int c = 0;c<channel;c++) {
 						for(int h = 0;h<height;h++) {
 							for(int w = 0;w<width;w++) {
-								if(input[index][c][h][w] > 0) {
-									output[index][c][h][w] = input[index][c][h][w];
-								}else {
-									output[index][c][h][w] = 0;
-								}
+								output[index][c][h][w] = (float) (1f / (1f + Math.exp(-input[index][c][h][w])));
 							}
 						}
 					}
@@ -173,11 +171,11 @@ public class ReluLayer extends ActiveFunctionLayer {
 		// TODO Auto-generated method stub
 		
 	}
-	
+
 	public void initBack(Tensor diff) {
 		this.diff = diff;
 	}
-	
+
 	@Override
 	public void forward(Tensor inpnut) {
 		// TODO Auto-generated method stub
@@ -211,5 +209,5 @@ public class ReluLayer extends ActiveFunctionLayer {
 			this.gradientCheck();
 		}
 	}
-
+	
 }

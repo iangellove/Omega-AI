@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.Graph;
 import com.omega.engine.ad.Tape;
 import com.omega.engine.ad.op.OPType;
@@ -55,6 +56,8 @@ public class Tensor implements Serializable{
 	
 	private Tape tape;
 	
+	private Graph g;
+	
 	public String getId() {
 		if(this.id == null) {
 			this.id = UUID.randomUUID().toString();
@@ -76,6 +79,13 @@ public class Tensor implements Serializable{
 		return dis;
 	}
 	
+	public void copy(Tensor tmp) {
+		System.arraycopy(this.syncHost(), 0, tmp.data, 0, dataLength);
+		if(tmp.hasGPU) {
+			tmp.hostToDevice();
+		}
+	}
+	
 	public Tensor(int number,int channel,int height,int width) {
 		this.number = number;
 		this.channel = channel;
@@ -86,6 +96,22 @@ public class Tensor implements Serializable{
 	}
 	
 	public Tensor(int number,int channel,int height,int width,boolean hasGPU) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.data = new float[this.dataLength];
+		this.setHasGPU(hasGPU);
+		if(hasGPU) {
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaDeviceSynchronize();
+		}
+	}
+	
+	public Tensor(int number,int channel,int height,int width,boolean hasGPU,Graph g) {
+		this.g = g;
 		this.number = number;
 		this.channel = channel;
 		this.height = height;
@@ -142,7 +168,37 @@ public class Tensor implements Serializable{
 		}
 	}
 	
+	public Tensor(int number,int channel,int height,int width,float[] data,boolean hasGPU,Graph g) {
+		this.g = g;
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.data = data;
+		this.setHasGPU(hasGPU);
+		if(hasGPU) {
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaDeviceSynchronize();
+		}
+	}
+	
 	public Tensor(int number,int channel,int height,int width,int val,boolean hasGPU) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.data = MatrixUtils.val(this.dataLength, val);
+		this.setHasGPU(hasGPU);
+		if(hasGPU) {
+			hostToDevice();
+		}
+	}
+	
+	public Tensor(int number,int channel,int height,int width,int val,boolean hasGPU,Graph g) {
+		this.g = g;
 		this.number = number;
 		this.channel = channel;
 		this.height = height;
@@ -432,73 +488,87 @@ public class Tensor implements Serializable{
 			this.grad.fill(0.0f);
 		}
 	}
-
+	
+	public void random() {
+		RandomUtils.gaussianRandom(data, 1.0f);
+		if(isHasGPU()){
+			this.hostToDevice();
+		}
+	}
+	
+	public boolean isZero() {
+		if(isHasGPU()) {
+			return  MatrixUtils.isZero(this.syncHost());
+		}
+		return MatrixUtils.isZero(data);
+	}
+	
 	/**
 	 * tensor基础操作
 	 * @return
 	 */
 	public Tensor add(Tensor y) {
-		return Graph.OP(OPType.add, this, y);
+		return g.OP(OPType.add, this, y);
 	}
 	
 	public Tensor add(float y) {
-		return Graph.OP(OPType.add, this, y);
+		return g.OP(OPType.add, this, y);
 	}
 	
 	public Tensor sub(Tensor y) {
-		return Graph.OP(OPType.subtraction, this, y);
+		return g.OP(OPType.subtraction, this, y);
 	}
 	
 	public Tensor sub(float y) {
-		return Graph.OP(OPType.subtraction, this, y);
+		return g.OP(OPType.subtraction, this, y);
 	}
 	
 	public Tensor scalarSub(float scalar) {
-		return Graph.OP(OPType.scalarSubtraction, this, scalar);
+		return g.OP(OPType.scalarSubtraction, this, scalar);
 	}
 	
 	public Tensor mul(Tensor y) {
-		return Graph.OP(OPType.multiplication, this, y);
+		return g.OP(OPType.multiplication, this, y);
 	}
 	
 	public Tensor mul(float scalar) {
-		return Graph.OP(OPType.multiplication, this, scalar);
+		return g.OP(OPType.multiplication, this, scalar);
 	}
 	
 	public Tensor div(Tensor y) {
-		return Graph.OP(OPType.division, this, y);
+		return g.OP(OPType.division, this, y);
 	}
 	
 	public Tensor div(float scalar) {
-		return Graph.OP(OPType.division, this, scalar);
+		return g.OP(OPType.division, this, scalar);
 	}
 	
 	public Tensor scalarDiv(float scalar) {
-		return Graph.OP(OPType.scalarDivision, this, scalar);
+		return g.OP(OPType.scalarDivision, this, scalar);
 	}
 	
 	public Tensor log() {
-		return Graph.OP(OPType.log, this);
+		return g.OP(OPType.log, this);
 	}
 	
 	public Tensor pow() {
-		return Graph.OP(OPType.pow, this, 2.0f);
+		return g.OP(OPType.pow, this, 2.0f);
 	}
 	
 	public Tensor pow(float scalar) {
-		return Graph.OP(OPType.pow, this, scalar);
+		return g.OP(OPType.pow, this, scalar);
 	}
 	
 	public Tensor sin() {
-		return Graph.OP(OPType.sin, this);
+		return g.OP(OPType.sin, this);
 	}
 	
 	public Tensor exp() {
-		return Graph.OP(OPType.exp, this);
+		return g.OP(OPType.exp, this);
 	}
 	
 	public Tensor sum(int axis) {
-		return Graph.OP(OPType.sum, this, new int[] {axis});
+		return g.OP(OPType.sum, this, new int[] {axis});
 	}
 	
 	/**
@@ -510,7 +580,7 @@ public class Tensor implements Serializable{
 	 * @return
 	 */
 	public Tensor get(int[] position) {
-		return Graph.OP(OPType.get, this, position);
+		return g.OP(OPType.get, this, position);
 	}
 	
 	/**
@@ -521,7 +591,7 @@ public class Tensor implements Serializable{
 	 */
 	public Tensor get(int dim,int start,int count) {
 		int[] position = new int[] {dim, start, count};
-		return Graph.OP(OPType.get, this, position);
+		return g.OP(OPType.get, this, position);
 	}
 	
 	public void setGradByNumber(float[] data,int start,int count) {
@@ -559,6 +629,14 @@ public class Tensor implements Serializable{
 			this.once = new float[channel * height * width];
 		}
 		return once;
+	}
+
+	public Graph getG() {
+		return g;
+	}
+
+	public void setG(Graph g) {
+		this.g = g;
 	}
 	
 //	public void backward() {

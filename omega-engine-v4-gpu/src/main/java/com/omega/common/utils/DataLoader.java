@@ -268,7 +268,7 @@ public class DataLoader {
 		
 		try {
 			
-			int dataSize = DataLoader.getNumber(inputDataFile, normalization);
+			int dataSize = DataLoader.getNumber(inputDataFile);
 			
 			float[] dataInput = DataLoader.getImagesTo1d(inputDataFile,normalization);
 			
@@ -278,6 +278,70 @@ public class DataLoader {
 				int labelSize = labelSet.length;
 				float[] dataLabel = LabelUtils.labelToVector1d(labels, labelSet);
 				return new DataSet(dataSize, channel, height, width, labelSize, dataInput, dataLabel, labels, labelSet);
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * getDataByUByte
+	 * @param inputDataFileName
+	 * @param labelDataFileName
+	 * @return
+	 */
+	public static DataSet loadDataByUByte(File inputDataFile,File labelDataFile,String[] labelSet,int channel,int height,int width,boolean normalization,float[] mean,float[] std) {
+		
+		try {
+			
+			int dataSize = DataLoader.getNumber(inputDataFile);
+			
+			float[] dataInput = DataLoader.getImagesTo1d(inputDataFile,normalization, mean[0], std[0]);
+			
+			String[] labels = DataLoader.getLabels(labelDataFile);
+			
+			if(dataInput!=null) {
+				int labelSize = labelSet.length;
+				float[] dataLabel = LabelUtils.labelToVector1d(labels, labelSet);
+				return new DataSet(dataSize, channel, height, width, labelSize, dataInput, dataLabel, labels, labelSet);
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * getDataByUByte
+	 * @param inputDataFileName
+	 * @param labelDataFileName
+	 * @return
+	 */
+	public static DataSet loadDataByUByte(File inputDataFile,File labelDataFile,String[] labelSet,int channel,int height,int width,DataloarderTransforms transforms) {
+		
+		try {
+			
+			int dataSize = DataLoader.getNumber(inputDataFile);
+			
+			float[] dataInput = DataLoader.getImagesTo1d(inputDataFile,false);
+			
+			String[] labels = DataLoader.getLabels(labelDataFile);
+			
+			if(dataInput!=null) {
+				int labelSize = labelSet.length;
+				float[] dataLabel = LabelUtils.labelToVector1d(labels, labelSet);
+				DataSet org = new DataSet(dataSize, channel, height, width, labelSize, dataInput, dataLabel, labels, labelSet);
+				if(transforms != null){
+					transforms.compose(org);
+				}
+				return org;
 			}
 			
 		} catch (Exception e) {
@@ -466,7 +530,7 @@ public class DataLoader {
      * @param fileName the file of 'train' or 'test' about image
      * @return one row show a `picture`
      */
-    public static int getNumber(File file,boolean normalization) {
+    public static int getNumber(File file) {
         int number = 0;
         try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(file))) {
             byte[] bytes = new byte[4];
@@ -549,6 +613,43 @@ public class DataLoader {
                     float val = 0.0f;
                     if(normalization){
                     	val = bin.read() / 255.0f;
+                	}else {
+                		val = bin.read();
+                	}
+                    x[i] = val;
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return x;
+    }
+    
+    /**
+     * get images of 'train' or 'test'
+     *
+     * @param fileName the file of 'train' or 'test' about image
+     * @return one row show a `picture`
+     */
+    public static float[] getImagesTo1d(File file,boolean normalization,float mean,float std) {
+        float[] x = null;
+        try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] bytes = new byte[4];
+            bin.read(bytes, 0, 4);
+            if (!"00000803".equals(bytesToHex(bytes))) {                        // 读取魔数
+                throw new RuntimeException("Please select the correct file!");
+            } else {
+            	bin.read(bytes, 0, 4);
+                int number = Integer.parseInt(bytesToHex(bytes), 16);           // 读取样本总数
+                bin.read(bytes, 0, 4);
+                int xPixel = Integer.parseInt(bytesToHex(bytes), 16);           // 读取每行所含像素点数
+                bin.read(bytes, 0, 4);
+                int yPixel = Integer.parseInt(bytesToHex(bytes), 16);           // 读取每列所含像素点数
+                x = new float[number * xPixel * yPixel];
+                for (int i = 0; i < x.length; i++) {
+                    float val = 0.0f;
+                    if(normalization){
+                    	val = ((bin.read() / 255.0f) - mean) / std;
                 	}else {
                 		val = bin.read();
                 	}

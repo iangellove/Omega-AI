@@ -130,14 +130,16 @@ public class ConvolutionTransposeLayer extends Layer {
 		this.oChannel = this.kernelNum;
 		this.oWidth = (this.width - 1) * this.stride - 2 * this.padding + this.dilation * (this.kWidth - 1) + this.output_padding + 1;
 		this.oHeight = (this.height - 1) * this.stride - 2 * this.padding + this.dilation * (this.kHeight - 1) + this.output_padding + 1;
-		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaiming_normal(dataLength, this.oChannel * this.oHeight * this.oWidth, this.paramsInit), true);
+		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaiming_uniform(dataLength, this.channel * kHeight * kWidth, this.paramsInit), true);
+//		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaiming_normal(dataLength, this.oChannel * kHeight * kWidth, this.paramsInit), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierReluRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth));
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.kHeight, this.kWidth * this.kHeight * this.kWidth));
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.heRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.oChannel * this.kHeight * this.kWidth));
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.val(kernelNum * channel * kHeight * kWidth, 0.1f), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.order(kernelNum * channel * kHeight * kWidth, 0.1f, 0.01f), true);
-		this.bias = new Tensor(1, 1, 1, kernelNum, true);
+//		this.bias = new Tensor(1, 1, 1, kernelNum, true);
+		this.bias = new Tensor(1, 1, 1, kernelNum, RandomUtils.kaimingUniformBias(kernelNum, this.channel * kHeight * kWidth), true);
 		this.diffB = new Tensor(1, 1, 1, kernelNum, true);
 		this.diffW = new Tensor(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);
 	}
@@ -219,7 +221,7 @@ public class ConvolutionTransposeLayer extends Layer {
 		/**
 		 * 计算diff
 		 */
-		if(PROPAGATE_DOWN) {
+		if(PROPAGATE_DOWN || this.network.PROPAGATE_DOWN) {
 			
 			/**
 			 * dx = col2im(a)
@@ -377,6 +379,12 @@ public class ConvolutionTransposeLayer extends Layer {
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
+	}
+
+	@Override
+	public void backTemp() {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }

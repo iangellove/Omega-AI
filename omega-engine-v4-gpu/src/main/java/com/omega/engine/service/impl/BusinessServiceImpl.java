@@ -304,7 +304,7 @@ public class BusinessServiceImpl implements BusinessService {
 //		BGDOptimizer optimizer = new BGDOptimizer(netWork, 20000, 0.001d);
 		
 //		netWork.GRADIENT_CHECK = true;
-		
+	
 		try {
 
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1, 0.001f, 32, LearnRateUpdate.NONE, false);

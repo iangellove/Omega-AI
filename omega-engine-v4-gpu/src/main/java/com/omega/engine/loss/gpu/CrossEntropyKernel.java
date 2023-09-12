@@ -52,15 +52,11 @@ public class CrossEntropyKernel extends BaseKernel {
 	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
-	private Pointer kernelParameters;
-	
 	private Pointer log_softmax_nl_loss_kernelParameters;
 	
 	private Pointer checkParameters;
 	
 	private Pointer backKernelParameters;
-	
-//	private RunModel model = RunModel.TRAIN;
 	
 	public CrossEntropyKernel() {
 		init();

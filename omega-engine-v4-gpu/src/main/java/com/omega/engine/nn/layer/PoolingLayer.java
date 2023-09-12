@@ -192,5 +192,11 @@ public class PoolingLayer extends Layer {
 			this.gradientCheck();
 		}
 	}
+
+	@Override
+	public void backTemp() {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

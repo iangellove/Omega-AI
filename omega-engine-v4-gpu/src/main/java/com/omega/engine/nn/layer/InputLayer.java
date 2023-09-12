@@ -41,6 +41,7 @@ public class InputLayer extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+		this.diff = this.network.getNextLayer(0).diff;
 	}
 
 	@Override
@@ -59,7 +60,13 @@ public class InputLayer extends Layer {
 	@Override
 	public void back() {
 		// TODO Auto-generated method stub
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta();
 		
+		this.diff();
 	}
 	
 	@Override
@@ -126,5 +133,11 @@ public class InputLayer extends Layer {
 			this.gradientCheck();
 		}
 	}
-	
+
+	@Override
+	public void backTemp() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

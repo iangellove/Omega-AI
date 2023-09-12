@@ -2,6 +2,10 @@ package com.omega.common.data;
 
 public class Tensors {
 	
+	public static Tensor tensor(int n,int c,int h,int w,float[] x,boolean isGPU) {
+		return new Tensor(n, c, h, w, x, isGPU);
+	}
+	
 	public static Tensor tensor(int n,int c,int h,int w,float[] x) {
 		return new Tensor(n, c, h, w, x);
 	}

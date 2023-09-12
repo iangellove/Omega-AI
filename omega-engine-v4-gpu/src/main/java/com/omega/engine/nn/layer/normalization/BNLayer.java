@@ -91,7 +91,11 @@ public class BNLayer extends NormalizationLayer {
 			}else if(this.preLayer.getLayerType() == LayerType.full){
 				this.setBnType(BNType.fully_bn);
 				this.meanNum = this.channel * this.height * this.width;
+			}else if(this.preLayer.getLayerType() == LayerType.conv_transpose) {
+				this.setBnType(BNType.conv_bn);
+				this.meanNum = this.channel;
 			}
+			
 		}
 		
 		if(this.gamma == null || this.beta == null) {
@@ -144,6 +148,9 @@ public class BNLayer extends NormalizationLayer {
 	public void output() {
 		// TODO Auto-generated method stub
 //		System.out.println(this.index+":"+input.number+":"+input.channel+":"+input.height+":"+input.width);
+//		System.out.println(this.index+":"+output.number+":"+output.channel+":"+output.height+":"+output.width);
+//		System.out.println(JsonUtils.toJson(gamma.shape()));
+//		System.out.println(JsonUtils.toJson(beta.shape()));
 		kernel.forward(this.network.RUN_MODEL, gamma, beta, input, output);
 //		
 //		System.out.println("bn-output:");
@@ -309,6 +316,12 @@ public class BNLayer extends NormalizationLayer {
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
+	}
+
+	@Override
+	public void backTemp() {
+		// TODO Auto-generated method stub
+		
 	}
 	
 

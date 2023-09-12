@@ -285,4 +285,10 @@ public class RNNLayer extends Layer{
 		
 	}
 
+	@Override
+	public void backTemp() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

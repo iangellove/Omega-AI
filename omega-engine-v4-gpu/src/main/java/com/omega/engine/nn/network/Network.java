@@ -77,6 +77,8 @@ public abstract class Network {
 	
 	public Pointer workspace;
 	
+	public boolean PROPAGATE_DOWN = false;
+	
 	public abstract void init() throws Exception;
 	
 	public abstract Tensor predict(Tensor input);
@@ -89,9 +91,18 @@ public abstract class Network {
 	
 	public abstract Tensor lossDiff(Tensor output,Tensor label);
 	
+	public abstract Tensor loss(Tensor output,Tensor label, Tensor loss);
+	
+	public abstract Tensor lossDiff(Tensor output,Tensor label, Tensor diff);
+	
 	public abstract NetworkType getNetworkType();
 	
 	public abstract void clearGrad();
+	
+	public Tensor getDiff() {
+//		System.out.println(this.getNextLayer(0).getLayerType().toString());
+		return this.getNextLayer(0).diff;
+	}
 	
 	public void setNumber(int number) {
 		this.number = number;
@@ -131,10 +142,17 @@ public abstract class Network {
 	}
 	
 	public Layer getNextLayer(int index) {
-		if(index > 0 && index < this.layerCount - 1) {
+//		if(index > 0 && index < this.layerCount - 1) {
+		if(index < this.layerCount - 1) {
 			return this.layerList.get(index + 1);
 		}
-		
+		return null;
+	}
+	
+	public Layer getLayer(int index) {
+		if(index < this.layerCount) {
+			return this.layerList.get(index);
+		}
 		return null;
 	}
 	
@@ -167,6 +185,22 @@ public abstract class Network {
 	}
 	
 	public void update() {
+		
+		this.train_time += 1;
+		
+		for(int i = layerCount - 1;i>=0;i--) {
+			
+			Layer layer = layerList.get(i);
+			
+			layer.learnRate = this.learnRate;
+
+			layer.update();
+			
+		}	
+		
+	}
+	
+	public void update(int count) {
 		
 		this.train_time += 1;
 		

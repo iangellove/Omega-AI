@@ -85,4 +85,16 @@ public class SoftmaxWithCrossEntropyLoss extends LossFunction {
 		return null;
 	}
 
+	@Override
+	public Tensor loss(Tensor x, Tensor label, Tensor loss) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Tensor diff(Tensor x, Tensor label, Tensor diff) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

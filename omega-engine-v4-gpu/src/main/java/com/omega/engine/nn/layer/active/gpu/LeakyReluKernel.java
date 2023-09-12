@@ -19,6 +19,8 @@ public class LeakyReluKernel extends BaseKernel{
 	
 	private CUfunction function_back;
 	
+	private CUfunction function_back_temp;
+	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
 	private Pointer forwardKernelParameters;
@@ -53,6 +55,12 @@ public class LeakyReluKernel extends BaseKernel{
 				
 			}
 			
+			if(function_back_temp == null) {
+
+				function_back_temp = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "leakyRelu_backward_temp");
+				
+			}
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -68,7 +76,7 @@ public class LeakyReluKernel extends BaseKernel{
 		
 		try {
 
-			if(forwardKernelParameters == null || this.N != output.number) {
+//			if(forwardKernelParameters == null || this.N != output.number) {
 
 		        /**
 		         * 设置入参
@@ -82,7 +90,7 @@ public class LeakyReluKernel extends BaseKernel{
 				
 				this.N = output.number;
 				
-			}
+//			}
 			
 			cuLaunchKernel(function,
 		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
@@ -104,7 +112,7 @@ public class LeakyReluKernel extends BaseKernel{
 		
 		try {
 			
-			if(backwardKernelParameters == null) {
+//			if(backwardKernelParameters == null) {
 
 		        /**
 		         * 设置入参
@@ -117,9 +125,44 @@ public class LeakyReluKernel extends BaseKernel{
 		                Pointer.to(new int[]{input.dataLength})
 		            );
 		        
-			}
+//			}
 			
 			cuLaunchKernel(function_back,
+		            this.CAFFE_GET_BLOCKS(delta.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            backwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
+//	        JCudaDriver.cuCtxSynchronize();
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backwardTemp(Tensor input,Tensor delta,Tensor diff) {
+		
+		try {
+			
+//			if(backwardKernelParameters == null) {
+
+		        /**
+		         * 设置入参
+		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+		         */ 
+				backwardKernelParameters = Pointer.to(
+						Pointer.to(input.getGpuData()),
+		        		Pointer.to(delta.getGpuData()),
+		                Pointer.to(diff.getGpuData()),
+		                Pointer.to(new int[]{input.dataLength})
+		            );
+		        
+//			}
+			
+			cuLaunchKernel(function_back_temp,
 		            this.CAFFE_GET_BLOCKS(delta.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream

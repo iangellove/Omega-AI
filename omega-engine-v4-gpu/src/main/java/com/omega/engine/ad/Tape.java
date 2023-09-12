@@ -35,7 +35,7 @@ public class Tape implements Serializable{
 	
 	private boolean sub = false;
 	
-	public Tape(OP op,Tensor self,Tensor other,float scalar,int[] position) {
+	public Tape(OP op,Tensor self,Tensor other,float scalar,int[] position,Graph g) {
 		this.setX(self);
 		this.setY(other);
 		if(position!=null) {
@@ -44,25 +44,25 @@ public class Tape implements Serializable{
 				int count = position[2];
 				switch (dims) {
 				case 0:
-					setOutput(new Tensor(count, self.channel, self.height, self.width, self.isHasGPU()));
+					setOutput(new Tensor(count, self.channel, self.height, self.width, self.isHasGPU(), g));
 					break;
 				case 1:
-					setOutput(new Tensor(self.number, count, self.height, self.width, self.isHasGPU()));
+					setOutput(new Tensor(self.number, count, self.height, self.width, self.isHasGPU(), g));
 					break;
 				}
 			}else{
 				switch (dims) {
 				case 0:
-					setOutput(new Tensor(1, 1, 1, 1, self.isHasGPU()));
+					setOutput(new Tensor(1, 1, 1, 1, self.isHasGPU(), g));
 					break;
 				case 1:
-					setOutput(new Tensor(self.number, 1, 1, 1, self.isHasGPU()));
+					setOutput(new Tensor(self.number, 1, 1, 1, self.isHasGPU(), g));
 					break;
 				}
 			}
 			
 		}else {
-			setOutput(new Tensor(self.number, self.channel, self.height, self.width, self.isHasGPU()));
+			setOutput(new Tensor(self.number, self.channel, self.height, self.width, self.isHasGPU(), g));
 		}
 		this.setOp(op);
 		this.scalar = scalar;

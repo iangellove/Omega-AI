@@ -151,4 +151,16 @@ public class RNN extends Network {
 		
 	}
 
+	@Override
+	public Tensor loss(Tensor output, Tensor label, Tensor loss) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.loss(output, label, loss);
+	}
+
+	@Override
+	public Tensor lossDiff(Tensor output, Tensor label, Tensor diff) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.diff(output, label, diff);
+	}
+
 }

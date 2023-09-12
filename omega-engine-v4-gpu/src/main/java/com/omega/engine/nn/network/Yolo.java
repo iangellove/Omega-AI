@@ -9,9 +9,7 @@ import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.updater.UpdaterType;
 
-import jcuda.Sizeof;
 import jcuda.runtime.JCuda;
-import jcuda.runtime.cudaStream_t;
 
 /**
  * yolo model
@@ -278,6 +276,18 @@ public class Yolo extends OutputsNetwork{
 		
 		JCuda.cudaDeviceSynchronize();
 		
+	}
+
+	@Override
+	public Tensor loss(Tensor output, Tensor label, Tensor loss) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.loss(output, label, loss);
+	}
+
+	@Override
+	public Tensor lossDiff(Tensor output, Tensor label, Tensor diff) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.diff(output, label, diff);
 	}
 	
 //	public void clearGrad() {

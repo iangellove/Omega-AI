@@ -445,6 +445,37 @@ public class ImageLoader {
         return sized.getData();
 	}
 	
+	public static float[] resized(float[] data,int oc,int ow,int oh,int c,int w,int h) {
+
+		float dw = 0;
+        float dh = 0;
+        float nw = 0;
+        float nh = 0;
+        
+        OMImage orig = new OMImage(oc, oh, ow, data);
+        
+        OMImage sized = createImage(w, h, oc, 0.0f);
+        
+		float new_ar = (ow + RandomUtils.uniformFloat(-dw, dw)) / (oh + RandomUtils.uniformFloat(-dh, dh));
+		
+		float scale = 1;
+		
+		if(new_ar < 1){
+            nh = scale * h;
+            nw = nh * new_ar;
+        } else {
+            nw = scale * w;
+            nh = nw / new_ar;
+        }
+		
+		float dx = (w - nw) / 2;
+        float dy = (h - nh) / 2;
+        
+        placeImage(orig, (int) nw, (int) nh, (int) dx, (int) dy, sized);
+        
+        return sized.getData();
+	}
+	
 	public static void loadVailDataDetection(Tensor x,Tensor y,int index,OMImage orig,float[] labelBoxs,
 			int w,int h,int boxes,int classes){
 		

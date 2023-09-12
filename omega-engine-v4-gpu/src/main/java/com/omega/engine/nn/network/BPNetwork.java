@@ -111,6 +111,32 @@ public class BPNetwork extends Network{
 		
 	}
 	
+	public void backTemp(Tensor lossDiff) {
+		// TODO Auto-generated method stub
+		
+		/**
+		 * 设置误差
+		 * 将误差值输入到最后一层
+		 */
+		this.setLossDiff(lossDiff);
+		
+		for(int i = layerCount - 1;i>=0;i--) {
+
+			Layer layer = layerList.get(i);
+			
+			layer.learnRate = this.learnRate;
+			
+			layer.backTemp();
+			
+//			if(layer.diff != null) {
+//				System.out.println(layer.getLayerType());
+//				layer.diff.showDM();
+//			}
+			
+		}
+		
+	}
+	
 	@Override
 	public Tensor loss(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub
@@ -157,6 +183,18 @@ public class BPNetwork extends Network{
 	public void clearGrad() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public Tensor loss(Tensor output, Tensor label, Tensor loss) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.loss(output, label, loss);
+	}
+
+	@Override
+	public Tensor lossDiff(Tensor output, Tensor label, Tensor diff) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.diff(output, label, diff);
 	}
 
 }

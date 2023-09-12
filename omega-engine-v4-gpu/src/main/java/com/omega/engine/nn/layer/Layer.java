@@ -103,6 +103,8 @@ public abstract class Layer {
 	
 	public abstract void back();
 	
+	public abstract void backTemp();
+	
 	public abstract void forward(Tensor inpnut);
 	
 	public abstract void back(Tensor delta);

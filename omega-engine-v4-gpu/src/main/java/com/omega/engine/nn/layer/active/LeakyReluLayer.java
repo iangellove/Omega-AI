@@ -72,6 +72,10 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 		kernel.backward(input, delta, diff);
 	}
 
+	public void diffTemp() {
+		kernel.backwardTemp(input, delta, diff);
+	}
+	
 	@Override
 	public void forward() {
 		// TODO Auto-generated method stub
@@ -104,12 +108,6 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
-	}
-
-	@Override
-	public void update() {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
@@ -197,6 +195,22 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 		 * 计算梯度
 		 */
 		this.diff();
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+	}
+	
+	public void backTemp() {
+		// TODO Auto-generated method stub
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta();
+		/**
+		 * 计算梯度
+		 */
+		this.diffTemp();
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}

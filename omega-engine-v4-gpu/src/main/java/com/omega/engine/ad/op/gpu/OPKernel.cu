@@ -255,7 +255,12 @@ extern "C"
 __global__ void log_kernel(int N, float *X, float *Y)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
-    if(i < N) Y[i] = logf(X[i]);
+    if(i < N) {
+    	if(X[i] == 0){
+    		X[i] = 0.00000000000000000000001f;
+    	}
+   	 	Y[i] = logf(X[i]);
+    }
 }
 
 extern "C"

@@ -52,6 +52,7 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+//		input.showDM();
 		kernel.forward(input, output);
 	}
 
@@ -65,6 +66,11 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	public void diff() {
 		// TODO Auto-generated method stub
 		kernel.backward(output, delta, diff);
+	}
+	
+	public void diffTemp() {
+		// TODO Auto-generated method stub
+		kernel.backwardTemp(output, delta, diff);
 	}
 
 	@Override
@@ -82,6 +88,7 @@ public class SigmodLayer extends ActiveFunctionLayer {
 		 * 计算输出
 		 */
 		this.output();
+
 	}
 
 	@Override
@@ -100,11 +107,21 @@ public class SigmodLayer extends ActiveFunctionLayer {
 			this.gradientCheck();
 		}
 	}
-
-	@Override
-	public void update() {
+	
+	public void backTemp() {
 		// TODO Auto-generated method stub
-		
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta();
+		/**
+		 * 计算梯度
+		 */
+		this.diffTemp();
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
 	}
 
 	@Override
