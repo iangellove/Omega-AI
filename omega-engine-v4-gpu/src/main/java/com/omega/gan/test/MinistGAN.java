@@ -111,6 +111,7 @@ public class MinistGAN {
 			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 3500, d_every, g_every, 0.001f, LearnRateUpdate.CONSTANT, false);
 			
 			optimizer.train(trainData);
+			
 
 		} catch (Exception e) {
 			// TODO: handle exception
