@@ -35,6 +35,11 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093438.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093541.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093622.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093658.png)
 
+[基于DCGAN生成对抗神经网络](#dcgan-mnist-demo生成手写数字图片)
+
+![输入图片说明](images/gan-3000.gif)
+
+
 
 ##  功能介绍
 #### 支持的网络层类型：
@@ -689,6 +694,65 @@ public void yolov3_tiny_helmet() {
 			}
 		}
 			
+	}
+```
+
+#### dcgan mnist demo（生成手写数字）
+``` java
+public static void gan_anime() {
+		
+		int imgw = 28;
+		int imgh = 28;
+		int tw = 64;
+		int th = 64;
+		int nz = 100; //生成器featrue map数
+		int nf = 64; //噪声维度
+		int batchSize = 512;
+		
+		int d_every = 1;
+		int g_every = 1;
+		
+		float[] mean = new float[] {0.5f};
+		float[] std = new float[] {0.5f};
+		
+		try {
+			
+			String mnist_train_data = "/dataset/mnist/train-images.idx3-ubyte";
+			
+			String mnist_train_label = "/dataset/mnist/train-labels.idx1-ubyte";
+			
+			String[] labelSet = new String[] {"0","1","2","3","4","5","6","7","8","9"};
+			
+			Resource trainDataRes = new ClassPathResource(mnist_train_data);
+
+			Resource trainLabelRes = new ClassPathResource(mnist_train_label);
+			
+			DataloarderTransforms transforms = new DataloarderTransforms() {
+				
+				@Override
+				public void compose(DataSet org) {
+					// TODO Auto-generated method stub
+					DataloarderTransforms.resize(org, th, tw);
+					DataloarderTransforms.normalize(org, mean, std);
+				}
+				
+			};
+			
+			DataSet trainData = DataLoader.loadDataByUByte(trainDataRes.getFile(), trainLabelRes.getFile(), labelSet, 1, imgh , imgw, transforms);
+			
+			CNN netG = NetG(nf, nz);
+			
+			CNN netD = NetD(nf, tw, th);
+			
+			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 300, d_every, g_every, 0.001f, LearnRateUpdate.CONSTANT, false);
+			
+			optimizer.train(trainData);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
 	}
 ```
 
