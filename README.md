@@ -35,7 +35,7 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093438.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093541.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093622.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093658.png)
 
-[基于DCGAN生成对抗神经网络](#dcgan-mnist-demo-生成手写数字)
+[基于GAN生成对抗神经网络](#gan-mnist-demo-生成手写数字)
 
 ![输入图片说明](images/gan-3000.gif)
 
@@ -697,17 +697,14 @@ public void yolov3_tiny_helmet() {
 	}
 ```
 
-#### dcgan mnist demo 生成手写数字
+#### gan mnist demo 生成手写数字
 ``` java
 public static void gan_anime() {
 		
-		int imgw = 28;
-		int imgh = 28;
-		int tw = 64;
-		int th = 64;
-		int nz = 100; //生成器featrue map数
-		int nf = 64; //噪声维度
-		int batchSize = 512;
+		int imgSize = 784;
+		int ngf = 784; //生成器featrue map数
+		int nz = 100; //噪声维度
+		int batchSize = 2048;
 		
 		int d_every = 1;
 		int g_every = 1;
@@ -727,26 +724,16 @@ public static void gan_anime() {
 
 			Resource trainLabelRes = new ClassPathResource(mnist_train_label);
 			
-			DataloarderTransforms transforms = new DataloarderTransforms() {
-				
-				@Override
-				public void compose(DataSet org) {
-					// TODO Auto-generated method stub
-					DataloarderTransforms.resize(org, th, tw);
-					DataloarderTransforms.normalize(org, mean, std);
-				}
-				
-			};
+			DataSet trainData = DataLoader.loadDataByUByte(trainDataRes.getFile(), trainLabelRes.getFile(), labelSet, 1, 1 , 784, true, mean, std);
 			
-			DataSet trainData = DataLoader.loadDataByUByte(trainDataRes.getFile(), trainLabelRes.getFile(), labelSet, 1, imgh , imgw, transforms);
+			BPNetwork netG = NetG(ngf, nz);
 			
-			CNN netG = NetG(nf, nz);
+			BPNetwork netD = NetD(imgSize);
 			
-			CNN netD = NetD(nf, tw, th);
-			
-			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 300, d_every, g_every, 0.001f, LearnRateUpdate.CONSTANT, false);
+			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 3500, d_every, g_every, 0.001f, LearnRateUpdate.CONSTANT, false);
 			
 			optimizer.train(trainData);
+			
 
 		} catch (Exception e) {
 			// TODO: handle exception
