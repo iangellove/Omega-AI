@@ -112,7 +112,6 @@ public class MinistGAN {
 			
 			optimizer.train(trainData);
 			
-
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

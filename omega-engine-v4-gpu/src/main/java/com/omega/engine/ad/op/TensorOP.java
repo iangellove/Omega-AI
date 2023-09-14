@@ -214,4 +214,20 @@ public class TensorOP {
 		}
 	}
 	
+	public static void clamp(Tensor a,float b1,float b2,Tensor c) {
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().clamp_gpu(a, b1, b2, c);
+		}else {
+			c.data = MatrixOperation.clamp(a.data, b1, b2);
+		}
+	}
+	
+	public static void clamp_back(Tensor a,float b1,float b2,Tensor c) {
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().clamp_back_gpu(a, b1, b2, c);
+		}else {
+			c.data = MatrixOperation.clamp_back(a.data, b1, b2);
+		}
+	}
+	
 }

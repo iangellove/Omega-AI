@@ -11,6 +11,7 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.OP;
 import com.omega.engine.ad.op.OPType;
 import com.omega.engine.ad.op.data.GetOP;
+import com.omega.engine.ad.op.functions.ClampOP;
 import com.omega.engine.ad.op.functions.ExpOP;
 import com.omega.engine.ad.op.functions.LogOP;
 import com.omega.engine.ad.op.functions.PowOP;
@@ -74,20 +75,13 @@ public class Graph{
 		this.tapes.add(tape);
 	}
 	
-	public Tape getTape(OP op,Tensor self,Tensor other,float scalar,int[] position) {
+	public Tape getTape(OP op,Tensor self,Tensor other,float scalar,float constant,int[] position) {
 		Tape tape = null;
 		if(!lock) {
-			tape = new Tape(op, self, other, scalar, position, this);
-			if(self.getTape() != null) {
-				self.getTape().setSub(true);
-			}
-			self.setTape(tape);
-			if(other != null) {
-				if(other.getTape() != null) {
-					other.getTape().setSub(true);
-				}
-				other.setTape(tape);
-			}
+			tape = new Tape(op, self, other, scalar, constant, position, this);
+//			System.out.println(tape.getOp().getOpType()+":"+tape.isSub());
+			checkSubTape(self, other);
+			
 			this.add(tape);
 		}else {
 			tape = tapes.get(tapeIndex);
@@ -97,6 +91,16 @@ public class Graph{
 			tapeIndex++;
 		}
 		return tape;
+	}
+	
+	public void checkSubTape(Tensor a,Tensor b) {
+		for(Tape tape:tapes) {
+			if(!tape.isSub() && (tape.getX() == a || tape.getY() == a || tape.getX() == b || tape.getY() == b ||
+					tape.getOutput() == a || tape.getOutput() == b)) {
+//				System.out.println(this.toString()+":"+tape.getOp().getOpType().toString());
+				tape.setSub(true);
+			}
+		}
 	}
 	
 	public Tensor OP(OPType opType,Tensor self,Tensor other) {
@@ -122,9 +126,8 @@ public class Graph{
 			throw new RuntimeException("the op is not support.");
 		}
 		
-		Tape tape = this.getTape(op, self, other, 0, null);
+		Tape tape = this.getTape(op, self, other, 0, 0, null);
 		Tensor output = tape.forward();
-		output.setTape(tape);
 		output.setG(this);
 		return output;
 	}
@@ -163,9 +166,30 @@ public class Graph{
 			throw new RuntimeException("the op is not support.");
 		}
 		
-		Tape tape = getTape(op, self, null, other, null);
+		Tape tape = getTape(op, self, null, other, 0, null);
 		Tensor output = tape.forward();
-		output.setTape(tape);
+		output.setG(this);
+		return output;
+	}
+	
+	public Tensor OP(OPType opType,Tensor self,float constant1,float constant2) {
+		
+		OP op = null;
+		
+		switch (opType) {
+		case clamp:
+			op = ClampOP.getInstance();
+			break;
+		default:
+			break;	
+		}
+		
+		if(op == null) {
+			throw new RuntimeException("the op is not support.");
+		}
+		
+		Tape tape = getTape(op, self, null, constant1, constant2, null);
+		Tensor output = tape.forward();
 		output.setG(this);
 		return output;
 	}
@@ -192,9 +216,8 @@ public class Graph{
 			throw new RuntimeException("the op is not support.");
 		}
 		
-		Tape tape = this.getTape(op, self, null, 0, null);
+		Tape tape = this.getTape(op, self, null, 0, 0, null);
 		Tensor output = tape.forward();
-		output.setTape(tape);
 		output.setG(this);
 		return output;
 	}
@@ -217,9 +240,8 @@ public class Graph{
 			throw new RuntimeException("the op is not support.");
 		}
 		
-		Tape tape = getTape(op, self, null, 0, position);
+		Tape tape = getTape(op, self, null, 0, 0, position);
 		Tensor output = tape.forward();
-		output.setTape(tape);
 		output.setG(this);
 		return output;
 	}

@@ -2115,6 +2115,60 @@ public class MatrixOperation {
 	
 	/**
 	 * 
+	 * @Title: clamp
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static float[] clamp(float[] x,float min,float max) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			float val = x[i];
+			if(val < min) {
+				temp[i] = min;
+			}else if(val > max) {
+				temp[i] = max;
+			}else {
+				temp[i] = val;
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: clamp
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static float[] clamp_back(float[] x,float min,float max) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			float val = x[i];
+			if(val < min || val > max) {
+				temp[i] = 0;
+			}else {
+				temp[i] = 1;
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
 	 * @Title: maxIndex
 	 *
 	 * @return

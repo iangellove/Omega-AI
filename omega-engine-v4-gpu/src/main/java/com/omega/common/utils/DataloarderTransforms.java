@@ -15,11 +15,8 @@ public abstract class DataloarderTransforms {
 		float[] target = new float[org.number * org.channel * th * tw];
 		
 		for(int b = 0;b<oi.number;b++) {
-
 			float[] sized = ImageLoader.resized(oi.getByNumber(b), oi.channel, oi.width, oi.height, oi.channel, tw, th);
-			
 			System.arraycopy(sized, 0, target, b * sized.length, sized.length);
-			
 		}
 		
 		oi.data = target;

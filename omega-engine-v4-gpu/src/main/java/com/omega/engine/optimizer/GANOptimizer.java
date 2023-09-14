@@ -9,7 +9,6 @@ import com.omega.engine.ad.Graph;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
-import com.omega.engine.nn.network.BPNetwork;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
@@ -113,7 +112,7 @@ public class GANOptimizer extends Optimizer {
 					
 					long start = System.nanoTime();
 					
-					d_loss = trainDG(trainingData, i, indexs[i], it, true_label, fake_label, inputG, inputD, gd1, gd2, gg, d_fake_output, d_true_output, d_loss);
+					d_loss = trainDG(trainingData, i, indexs[it], it, true_label, fake_label, inputG, inputD, gd1, gd2, gg, d_fake_output, d_true_output, d_loss);
 
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
@@ -133,7 +132,8 @@ public class GANOptimizer extends Optimizer {
 					inputG.random();
 					Tensor output = this.netG.forward(inputG);
 					output.syncHost();
-					showImgs("H:\\voc\\gan_anime\\test\\", output);
+//					showImgs("H:\\voc\\gan_anime\\test\\", output);
+					showBigImg("H:\\voc\\gan_anime\\test\\", output, this.trainIndex);
 				}
 				
 			}
@@ -182,7 +182,7 @@ public class GANOptimizer extends Optimizer {
 			true_label.hostToDevice();
 			fake_label.hostToDevice();
 			
-			int[][][] rgbs = new int[300][64*28][64*28];
+//			int[][][] rgbs = new int[300][64*28][64*28];
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				
@@ -223,15 +223,15 @@ public class GANOptimizer extends Optimizer {
 				this.updateLR(this.lr_step);
 				this.netG.learnRate = this.network.learnRate;
 				
-				if(this.trainIndex % 10 == 0) {
+				if(this.trainIndex % 1 == 0) {
 					this.netG.RUN_MODEL = RunModel.TEST;
 					inputG.random();
 					Tensor output = this.netG.forward(inputG);
 					output.syncHost();
 //					showImg("H:\\voc\\gan_anime\\test\\", output);
 //					showGif("H:\\voc\\gan_anime\\test\\", output, this.trainIndex);
-//					showBigImg("H:\\voc\\gan_anime\\test\\", output, this.trainIndex);
-					showGif("H:\\voc\\gan_anime\\test\\", output, rgbs, trainIndex, rgbs.length);
+					showBigImg("H:\\voc\\gan_anime\\test\\", output, this.trainIndex);
+//					showGif("H:\\voc\\gan_anime\\test\\", output, rgbs, trainIndex, rgbs.length);
 				}
 				
 			}
@@ -260,11 +260,11 @@ public class GANOptimizer extends Optimizer {
 		y.setG(g);
 //		Tensor a = sigmoid(x);
 //		a.showDM();
-		Tensor loss1 = y.mul(x.log());
-		Tensor loss2 = y.scalarSub(1.0f).mul(x.scalarSub(1.0f).log());
+		Tensor i = x.clamp(1e-7f, 1f - 1e-7f);
+		Tensor loss1 = y.mul(i.log());
+		Tensor loss2 = y.scalarSub(1.0f).mul(i.scalarSub(1.0f).log());
 		Tensor loss = loss1.add(loss2);
 		return loss.sum(0).div(-x.number * x.width);
-//		return loss.sum(0).div(-x.width);
 	}
 	
 	public Tensor MSELoss(Tensor x,Tensor y,Graph g) {
@@ -375,7 +375,7 @@ public class GANOptimizer extends Optimizer {
 			/**
 			 * 判别器判断真图片
 			 */
-			this.netD.forward(inputD).copy(d_true_output);
+			d_true_output = this.netD.forward(inputD);
 			
 			Tensor real_loss = BCELoss(d_true_output, true_labels, gd1);
 			
@@ -396,7 +396,7 @@ public class GANOptimizer extends Optimizer {
 			 */
 			inputG.random();
 			g_fake_output = this.netG.forward(inputG);
-			this.netD.forward(g_fake_output).copy(d_fake_output);
+			d_fake_output = this.netD.forward(g_fake_output);
 			Tensor fake_loss = BCELoss(d_fake_output, fake_labels, gd2);
 
 //			Tensor d_loss = real_loss.add(fake_loss).div(2);
@@ -426,7 +426,7 @@ public class GANOptimizer extends Optimizer {
 			/**
 			 * 判别器判断假图片
 			 */
-			this.netD.forward(g_fake_output).copy(d_fake_output);
+			d_fake_output = this.netD.forward(g_fake_output);
 
 			Tensor g_loss = BCELoss(d_fake_output, true_labels, gg);
 
@@ -437,7 +437,6 @@ public class GANOptimizer extends Optimizer {
 
 			this.netD.back(d_fake_output.getGrad());
 			this.g_loss_diff = this.netD.getDiff();
-
 			this.netG.back(this.g_loss_diff);
 			this.netG.update();
 		}	
@@ -465,7 +464,7 @@ public class GANOptimizer extends Optimizer {
 			/**
 			 * 判别器判断真图片
 			 */
-			this.netD.forward(inputD).copy(d_true_output);
+			d_true_output = this.netD.forward(inputD);
 			Tensor real_loss = BCELoss(d_true_output, true_labels, gd1);
 			
 			gd1.clearGrad();
@@ -476,7 +475,7 @@ public class GANOptimizer extends Optimizer {
 			/**
 			 * 判别器判断假图片
 			 */
-			this.netD.forward(g_fake_output).copy(d_fake_output);
+			d_fake_output = this.netD.forward(g_fake_output);
 
 			Tensor fake_loss = BCELoss(d_fake_output, fake_labels, gd2);
 			
@@ -506,7 +505,7 @@ public class GANOptimizer extends Optimizer {
 				/**
 				 * 判别器判断假图片
 				 */
-				this.netD.forward(g_fake_output).copy(d_fake_output);
+				d_fake_output = this.netD.forward(g_fake_output);
 
 				Tensor g_loss = BCELoss(d_fake_output, true_labels, gg);
 				
@@ -706,27 +705,31 @@ public class GANOptimizer extends Optimizer {
 		int gifWidth = gifw * imgw;
 		int gifHeight = gifh * imgh;
 		
-		float[] gif = new float[imgw * imgh * 64];
+		float[] gif = new float[imgw * imgh * 64 * input.channel];
 		
-		for(int b = 0;b<gifw * gifh;b++) {
-			
-			int gh = b / gifw;
-			int gw = b % gifh;
-			
-			float[] once = input.getByNumber(b);
-			
-			once = MatrixOperation.multiplication(MatrixOperation.add(once, 1.0f), 255.0f/2);
-			
-			for(int i = 0;i<imgh;i++) {
-				int startH = gh * imgh + i;
-				for(int j = 0;j<imgw;j++) {
-					int startW = gw * imgw + j;
-					gif[startH * imgw * gifw + startW] = once[i * imgw + j];
-				}
-			}
-	
-		}
+		for(int c = 0;c<input.channel;c++) {
 
+			for(int b = 0;b<gifw * gifh;b++) {
+				
+				int gh = b / gifw;
+				int gw = b % gifh;
+				
+				float[] once = input.getByNumber(b);
+				
+				once = MatrixOperation.multiplication(MatrixOperation.add(once, 1.0f), 255.0f/2);
+				
+				for(int i = 0;i<imgh;i++) {
+					int startH = gh * imgh + i;
+					for(int j = 0;j<imgw;j++) {
+						int startW = gw * imgw + j;
+						gif[c * imgh * gifh * imgw * gifw + startH * imgw * gifw + startW] = once[c * imgh * imgw + i * imgw + j];
+					}
+				}
+		
+			}
+
+		}
+		
 		utils.createRGBImage(outputPath + it + ".png", "png", ImageUtils.color2rgb2(gif, input.channel, gifHeight, gifWidth, false), gifWidth, gifHeight, null, null);
 		
 	}

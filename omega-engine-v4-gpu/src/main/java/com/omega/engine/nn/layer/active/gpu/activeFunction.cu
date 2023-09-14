@@ -134,3 +134,30 @@ __global__ void tanh_backward_temp(float *output, float *delta, float *diff, int
     	diff[i] += delta[i] * (1.0f - output[i]  * output[i]);
     }
 }
+
+extern "C"
+__global__ void silu_forward(float *x, float *output, int n)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < n) {
+    	output[i] = (float) (x[i] / (1.0f + expf(-x[i])));
+    }
+}
+
+extern "C"
+__global__ void silu_backward(float *x, float *output, float *delta, float *diff, int n)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < n) {
+    	diff[i] = delta[i] * output[i] * (1.0f +  x[i] * (1.0f - output[i]));
+    }
+}
+
+extern "C"
+__global__ void silu_backward_temp(float *x, float *output, float *delta, float *diff, int n)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < n) {
+    	diff[i] += delta[i] * output[i] * (1.0f +  x[i] * (1.0f - output[i]));
+    }
+}

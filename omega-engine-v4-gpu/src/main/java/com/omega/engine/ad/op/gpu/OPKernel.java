@@ -89,6 +89,10 @@ public class OPKernel implements Serializable{
 
 	private CUfunction broadcast_channel_gpu_function;
 	
+	private CUfunction clamp_gpu_function;
+	
+	private CUfunction clamp_back_gpu_function;
+	
 	public OPKernel() {
 		
 		fill_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "fill_kernel");
@@ -154,6 +158,10 @@ public class OPKernel implements Serializable{
 		broadcast_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "broadcast_kernel");
 		
 		broadcast_channel_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "broadcast_number_kernel");
+		
+		clamp_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "clamp_kernel");
+		
+		clamp_back_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "clamp_back_kernel");
 		
 	}
 	
@@ -1058,6 +1066,64 @@ public class OPKernel implements Serializable{
 			        ));
 			}
 
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void clamp_gpu(Tensor a,float b1,float b2,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float ALPHA, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(new float[] {b1}),
+	        		Pointer.to(new float[] {b2}),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(clamp_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void clamp_back_gpu(Tensor a,float b1,float b2,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float ALPHA, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(new float[] {b1}),
+	        		Pointer.to(new float[] {b2}),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(clamp_back_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

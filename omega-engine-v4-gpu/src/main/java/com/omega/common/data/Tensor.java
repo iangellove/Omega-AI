@@ -54,8 +54,6 @@ public class Tensor implements Serializable{
 	
 	private Tensor grad;
 	
-	private Tape tape;
-	
 	private Graph g;
 	
 	public String getId() {
@@ -571,6 +569,10 @@ public class Tensor implements Serializable{
 		return g.OP(OPType.sum, this, new int[] {axis});
 	}
 	
+	public Tensor clamp(float min,float max) {
+		return g.OP(OPType.clamp, this, min, max);
+	}
+	
 	/**
 	 * 获取指定维度数据
 	 * @param position int[dims,start,count]
@@ -614,14 +616,6 @@ public class Tensor implements Serializable{
 		}else {
 			MatrixUtils.val(this.data, val);
 		}
-	}
-
-	public Tape getTape() {
-		return tape;
-	}
-
-	public void setTape(Tape tape) {
-		this.tape = tape;
 	}
 
 	public float[] getOnce() {

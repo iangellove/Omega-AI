@@ -256,9 +256,9 @@ __global__ void log_kernel(int N, float *X, float *Y)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < N) {
-    	if(X[i] == 0){
-    		X[i] = 0.00000000000000000000001f;
-    	}
+    	//if(X[i] == 0){
+    		//X[i] = 0.00000000000000000000001f;
+    	//}
    	 	Y[i] = logf(X[i]);
     }
 }
@@ -284,3 +284,32 @@ __global__ void cos_kernel(int N, float *X, float *Y)
     if(i < N) Y[i] = cos(X[i]);
 }
 
+extern "C"
+__global__ void clamp_kernel(int N, float *X, float min, float max, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+    	float val = X[i];
+		if(val < min) {
+			Y[i] = min;
+		}else if(val > max) {
+			Y[i] = max;
+		}else {
+			Y[i] = val;
+		}
+    }
+}
+
+extern "C"
+__global__ void clamp_back_kernel(int N, float *X, float min, float max, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+    	float val = X[i];
+		if(val < min || val > max) {
+			Y[i] = 0;
+		}else {
+			Y[i] = 1;
+		}
+    }
+}

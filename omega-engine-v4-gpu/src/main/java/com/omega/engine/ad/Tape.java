@@ -31,11 +31,13 @@ public class Tape implements Serializable{
 	
 	private float scalar;
 	
+	private float constant;
+	
 	private Tensor tmp;
 	
 	private boolean sub = false;
 	
-	public Tape(OP op,Tensor self,Tensor other,float scalar,int[] position,Graph g) {
+	public Tape(OP op,Tensor self,Tensor other,float scalar,float constant,int[] position,Graph g) {
 		this.setX(self);
 		this.setY(other);
 		if(position!=null) {
@@ -66,6 +68,7 @@ public class Tape implements Serializable{
 		}
 		this.setOp(op);
 		this.scalar = scalar;
+		this.constant = constant;
 		this.setPosition(position);
 	}
 
@@ -164,6 +167,14 @@ public class Tape implements Serializable{
 
 	public void setSub(boolean sub) {
 		this.sub = sub;
+	}
+
+	public float getConstant() {
+		return constant;
+	}
+
+	public void setConstant(float constant) {
+		this.constant = constant;
 	}
 	
 }
