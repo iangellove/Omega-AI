@@ -35,7 +35,7 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093438.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093541.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093622.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093658.png)
 
-[基于DCGAN生成对抗神经网络](#dcgan-mnist-demo生成手写数字图片)
+[基于DCGAN生成对抗神经网络](#dcgan-mnist-demo生成手写数字)
 
 ![输入图片说明](images/gan-3000.gif)
 
@@ -697,7 +697,7 @@ public void yolov3_tiny_helmet() {
 	}
 ```
 
-#### dcgan mnist demo（生成手写数字）
+#### dcgan mnist demo 生成手写数字
 ``` java
 public static void gan_anime() {
 		
