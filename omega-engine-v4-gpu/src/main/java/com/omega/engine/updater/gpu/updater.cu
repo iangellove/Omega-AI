@@ -98,3 +98,22 @@ __global__ void sgd_bn(float *diffW, float *v,float *weight,float momentum,float
     gt = gt + momentum * v[i];
 	weight[i] = weight[i] - learnRate * gt;
 }
+
+extern "C"
+__global__ void RMSProp(float *diffW, float *rw, float *weight, float mul, float eta, float learnRate, int n, int batch,int clamp,float min,float max)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (i >= n) return;
+    float gt = diffW[i] / batch;
+    rw[i] = mul * rw[i] + (1 - mul) * gt * gt;
+    gt = learnRate / sqrtf(rw[i] + eta) * gt;
+	weight[i] = weight[i] - gt;
+	if(clamp == 1){
+		if(weight[i] < min){
+			weight[i] = min;
+		}
+		if(weight[i] > max){
+			weight[i] = max;
+		}
+	}
+}
