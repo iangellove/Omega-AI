@@ -10,10 +10,14 @@ public enum OPType {
 	log,
 	sin,
 	cos,
+	tan,
+	atan,
 	exp,
 	dot,
 	get,
 	pow,
 	sum,
-	clamp
+	clamp,
+	maximum,
+	minimum
 }

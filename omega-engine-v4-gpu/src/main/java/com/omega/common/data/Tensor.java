@@ -7,7 +7,6 @@ import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.Graph;
-import com.omega.engine.ad.Tape;
 import com.omega.engine.ad.op.OPType;
 import com.omega.engine.ad.op.gpu.OPKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
@@ -545,6 +544,14 @@ public class Tensor implements Serializable{
 		return g.OP(OPType.scalarDivision, this, scalar);
 	}
 	
+	public Tensor maximum(Tensor y) {
+		return g.OP(OPType.maximum, this, y);
+	}
+	
+	public Tensor minimum(Tensor y) {
+		return g.OP(OPType.minimum, this, y);
+	}
+	
 	public Tensor log() {
 		return g.OP(OPType.log, this);
 	}
@@ -559,6 +566,18 @@ public class Tensor implements Serializable{
 	
 	public Tensor sin() {
 		return g.OP(OPType.sin, this);
+	}
+	
+	public Tensor cos() {
+		return g.OP(OPType.cos, this);
+	}
+	
+	public Tensor tan() {
+		return g.OP(OPType.tan, this);
+	}
+	
+	public Tensor atan() {
+		return g.OP(OPType.atan, this);
 	}
 	
 	public Tensor exp() {

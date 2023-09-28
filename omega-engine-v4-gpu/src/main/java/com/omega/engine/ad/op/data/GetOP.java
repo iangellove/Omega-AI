@@ -52,10 +52,8 @@ public class GetOP extends OP{
 	}
 	
 	public void addByPosition(Tensor a,Tensor b,int[] position) {
-		
 		int dims = position[0];
 		int start = position[1];
-		
 		if(a.isHasGPU()) {
 			switch (dims) {
 			case 0:
@@ -72,7 +70,6 @@ public class GetOP extends OP{
 			int w = a.getWidth();
 			MatrixOperation.add(a.data, b.data, n, c, h, w, position);
 		}
-		
 	}
 	
 	public void getByPosition(Tensor org,Tensor target,int[] position) {

@@ -11,12 +11,17 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.OP;
 import com.omega.engine.ad.op.OPType;
 import com.omega.engine.ad.op.data.GetOP;
+import com.omega.engine.ad.op.functions.ATanOP;
 import com.omega.engine.ad.op.functions.ClampOP;
+import com.omega.engine.ad.op.functions.CosOP;
 import com.omega.engine.ad.op.functions.ExpOP;
 import com.omega.engine.ad.op.functions.LogOP;
+import com.omega.engine.ad.op.functions.MaximumOP;
+import com.omega.engine.ad.op.functions.MinimumOP;
 import com.omega.engine.ad.op.functions.PowOP;
 import com.omega.engine.ad.op.functions.SinOP;
 import com.omega.engine.ad.op.functions.SumOP;
+import com.omega.engine.ad.op.functions.TanOP;
 import com.omega.engine.ad.op.sign.AddOP;
 import com.omega.engine.ad.op.sign.DivOP;
 import com.omega.engine.ad.op.sign.MulOP;
@@ -57,6 +62,7 @@ public class Graph{
 	public void showGraph() {
 		for(int i = 0;i<tapes.size();i++) {
 			System.out.println(i+":["+tapes.get(i).getOp().getOpType()+"]");
+			System.out.println("x1:["+tapes.get(i).getX()+"]|x2:["+tapes.get(i).getY()+"]|out:["+tapes.get(i).getOutput()+"]");
 		}
 	}
 	
@@ -117,6 +123,12 @@ public class Graph{
 			break;
 		case division:
 			op = DivOP.getInstance();
+			break;
+		case maximum:
+			op = MaximumOP.getInstance();
+			break;
+		case minimum:
+			op = MinimumOP.getInstance();
 			break;
 		default:
 			break;	
@@ -204,6 +216,15 @@ public class Graph{
 			break;
 		case sin:
 			op = SinOP.getInstance();
+			break;
+		case cos:
+			op = CosOP.getInstance();
+			break;
+		case tan:
+			op = TanOP.getInstance();
+			break;
+		case atan:
+			op = ATanOP.getInstance();
 			break;
 		case exp:
 			op = ExpOP.getInstance();
@@ -734,6 +755,195 @@ public class Graph{
 		
 	}
 	
+	public static void maximum() {
+		
+		int number = 1;
+		int channel  = 1;
+		int height = 1;
+		int width = 5;
+
+		Graph graph = new Graph();
+		
+		float[] t1 = new float[] {0.1f,1,0.06f,-1,1.3f};
+		
+		float[] t2 = new float[] {-0.1f,1,0.07f,-1.2f,0.003f};
+		
+		Tensor b1 = new Tensor(number, channel, height, width, t1, true, graph);
+		
+		Tensor b2 = new Tensor(number, channel, height, width, t2, true, graph);
+		
+		b1.setRequiresGrad(true);
+		b2.setRequiresGrad(true);
+		
+		Tensor c = b1.maximum(b2);
+		
+		c.showDM();
+		
+		graph.clearGrad();
+		
+		graph.backward();
+		
+		b1.getGrad().showDM();
+		
+		b2.getGrad().showDM();
+		
+	}
+	
+	public static void minimum() {
+		
+		int number = 1;
+		int channel  = 1;
+		int height = 1;
+		int width = 5;
+
+		Graph graph = new Graph();
+		
+		float[] t1 = new float[] {0.1f,1,0.06f,-1,1.3f};
+		
+		float[] t2 = new float[] {-0.1f,1,0.07f,-1.2f,0.003f};
+		
+		Tensor b1 = new Tensor(number, channel, height, width, t1, true, graph);
+		
+		Tensor b2 = new Tensor(number, channel, height, width, t2, true, graph);
+		
+		b1.setRequiresGrad(true);
+		b2.setRequiresGrad(true);
+		
+		Tensor c = b1.minimum(b2);
+		
+		c.showDM();
+		
+		graph.clearGrad();
+		
+		graph.backward();
+		
+		b1.getGrad().showDM();
+		
+		b2.getGrad().showDM();
+		
+	}
+	
+	public static void Lciou() {
+		
+		float eps = 1e-7f;
+		int number = 1;
+		int channel  = 4;
+		int height = 1;
+		int width = 1;
+//		int length = number * channel * height * width;
+
+		Graph graph = new Graph();
+		
+		float[] b1a = new float[] {0.5f,0.02f,0.3f,0.6f};
+		
+		float[] b2a = new float[] {0.3f,0.2f,0.03f,0.12f};
+		
+		Tensor b1 = new Tensor(number, channel, height, width, b1a, true, graph);
+		
+		Tensor b2 = new Tensor(number, channel, height, width, b2a, true, graph);
+		
+		b1.setRequiresGrad(true);
+		
+		/**
+		 * get x y w h
+		 */
+		Tensor px = b1.get(1, 0, 1);
+		Tensor py = b1.get(1, 1, 1);
+		Tensor pw = b1.get(1, 2, 1);
+		Tensor ph = b1.get(1, 3, 1);
+		Tensor pw_= pw.div(2);
+		Tensor ph_= ph.div(2);
+		
+		Tensor tx = b2.get(1, 0, 1);
+		Tensor ty = b2.get(1, 1, 1);
+		Tensor tw = b2.get(1, 2, 1);
+		Tensor th = b2.get(1, 3, 1);
+		Tensor tw_ = tw.div(2);
+		Tensor th_ = th.div(2);
+		
+		/**
+		 * transform form xywh to xyxy
+		 */
+		Tensor b1_x1 = px.sub(pw_);
+		Tensor b1_x2 = px.add(pw_);
+		Tensor b1_y1 = py.sub(ph_);
+		Tensor b1_y2 = py.add(ph_);
+
+		Tensor b2_x1 = tx.sub(tw_);
+		Tensor b2_x2 = tx.add(tw_);
+		Tensor b2_y1 = ty.sub(th_);
+		Tensor b2_y2 = ty.add(th_);
+		
+		/**
+		 * Intersection area
+		 */
+		Tensor iw = b1_x2.minimum(b2_x2).sub(b1_x1.maximum(b2_x1));
+		Tensor ih = b1_y2.minimum(b2_y2).sub(b1_y1.maximum(b2_y1));
+		Tensor inter = iw.mul(ih);
+		
+		/**
+		 * Union Area
+		 * w1 * h1 + w2 * h2 - inter
+		 */
+		Tensor union = pw.mul(ph).add(tw.mul(th)).sub(inter);
+		
+		/**
+		 * ciou
+		 */
+		Tensor iou = inter.div(union);
+
+		Tensor cw = b1_x2.maximum(b2_x2).sub(b1_x1.minimum(b2_x1));
+		Tensor ch = b1_y2.maximum(b2_y2).sub(b1_y1.minimum(b2_y1));
+		Tensor c2 = cw.pow().add(ch.pow());
+		Tensor rho2_1 = b2_x1.add(b2_x2).sub(b1_x1).sub(b1_x2).pow(); //(b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2
+		Tensor rho2_2 = b2_y1.add(b2_y2).sub(b1_y1).sub(b1_y2).pow(); //(b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2
+		Tensor rho2 = rho2_1.add(rho2_2).div(4);
+		float tmp1 = (float) (4.0f / (Math.PI * Math.PI));
+		Tensor v = tw.div(th).atan().sub(pw.div(ph).atan()).pow().mul(tmp1);
+		Tensor alpha = v.div(v.sub(iou).add(1+eps));
+		Tensor ciou = iou.sub(rho2.div(c2).add(v.mul(alpha)));
+		
+		System.out.println("===================");
+		
+		ciou.showDM();
+		
+		graph.clearGrad();
+//		graph.showGraph();
+		graph.backward();
+		
+		System.out.println("==========grad=========");
+//		t1.getGrad().showDM();
+//		alpha.getGrad().showDM();
+//		v.getGrad().showDM();
+		b1.getGrad().showDM();
+
+
+	}
+	
+	public static void atan() {
+		
+		int number = 1;
+		int channel  = 4;
+		int height = 1;
+		int width = 1;
+
+		Graph graph = new Graph();
+		
+		float[] b1a = new float[] {0.5f,0.02f,0.3f,0.6f};
+		
+		Tensor b1 = new Tensor(number, channel, height, width, b1a, true, graph);
+		b1.setRequiresGrad(true);
+		
+		Tensor t = b1.atan();
+		
+		graph.clearGrad();
+		graph.backward();
+		
+		t.showDM();
+		b1.getGrad().showDM();
+		
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -776,11 +986,19 @@ public class Graph{
 			
 //			pow_gpu();
 			
-			multiLabelSoftMarginLoss2();
+//			multiLabelSoftMarginLoss2();
 			
 //			sq();
 			
 //			sum();
+			
+//			maximum();
+			
+//			minimum();
+			
+//			atan();
+			
+			Lciou();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

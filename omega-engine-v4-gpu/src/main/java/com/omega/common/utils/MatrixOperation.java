@@ -74,6 +74,38 @@ public class MatrixOperation {
 		return temp;
 	}
 	
+	public static float[] tan(float[] x) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = (float)Math.tan(x[i]);
+		}
+		return temp;
+	}
+	
+	public static float[] atan(float[] x) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = (float)Math.atan(x[i]);
+		}
+		return temp;
+	}
+	
+	public static float[] tan_back(float[] x) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = (float)(1.0f / Math.pow(Math.cos(x[i]), 2));
+		}
+		return temp;
+	}
+	
+	public static float[] atan_back(float[] x) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			temp[i] = 1.0f / (1.0f + x[i] * x[i]);
+		}
+		return temp;
+	}
+	
 	/**
 	 * 
 	 * @Title: exp
@@ -2143,6 +2175,106 @@ public class MatrixOperation {
 	
 	/**
 	 * 
+	 * @Title: maximum
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static float[] maximum(float[] x,float[] b) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			if(x[i] >= b[i]) {
+				temp[i] = x[i];
+			}else {
+				temp[i] = b[i];
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: maximum
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static float[] minimum(float[] x,float[] b) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			if(x[i] < b[i]) {
+				temp[i] = x[i];
+			}else {
+				temp[i] = b[i];
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: maximum
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static float[] maximum_back(float[] x,float[] b) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			if(x[i] >= b[i]) {
+				temp[i] = 1;
+			}else {
+				temp[i] = 0;
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: maximum
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static float[] minimum_back(float[] x,float[] b) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			if(x[i] < b[i]) {
+				temp[i] = 1;
+			}else {
+				temp[i] = 0;
+			}
+		}
+		return temp;
+	}
+	
+	/**
+	 * 
 	 * @Title: clamp
 	 *
 	 * @param x
@@ -2164,6 +2296,29 @@ public class MatrixOperation {
 				temp[i] = 1;
 			}
 		}
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: clamp
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static float[] mean(float[] x,int number,int channel,int height,int width,int dim) {
+		int scal = number;
+		if(dim == 1) {
+			scal = channel;
+		}
+		float[] temp = MatrixOperation.sum(x, number, channel, height, width, dim);
+		MatrixOperation.division_self(temp, scal);
 		return temp;
 	}
 	

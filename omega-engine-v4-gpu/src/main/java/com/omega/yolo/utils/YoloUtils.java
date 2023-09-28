@@ -39,7 +39,7 @@ public class YoloUtils {
 	    float w = overlap(a[0], a[2], b[0], b[2]);
 	    float h = overlap(a[1], a[3], b[1], b[3]);
 	    if(w < 0 || h < 0) return 0;
-	    float area = w*h;
+	    float area = w * h;
 	    return area;
 	}
 	

@@ -206,6 +206,46 @@ public class TensorOP {
 		
 	}
 	
+	public static void tan(Tensor a,Tensor c) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().tan_gpu(a, c);
+		}else {
+			c.data = MatrixOperation.tan(a.data);
+		}
+		
+	}
+	
+	public static void tan_back(Tensor a,Tensor c) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().tan_back_gpu(a, c);
+		}else {
+			c.data = MatrixOperation.tan_back(a.data);
+		}
+		
+	}
+	
+	public static void atan(Tensor a,Tensor c) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().atan_gpu(a, c);
+		}else {
+			c.data = MatrixOperation.atan(a.data);
+		}
+		
+	}
+	
+	public static void atan_back(Tensor a,Tensor c) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().atan_back_gpu(a, c);
+		}else {
+			c.data = MatrixOperation.atan_back(a.data);
+		}
+		
+	}
+	
 	public static void broadcast(Tensor a,Tensor c,int axis) {
 		if(c.isHasGPU()) {
 			OPKernel.getInstance().broadcast_gpu(a, c, axis);
@@ -227,6 +267,46 @@ public class TensorOP {
 			OPKernel.getInstance().clamp_back_gpu(a, b1, b2, c);
 		}else {
 			c.data = MatrixOperation.clamp_back(a.data, b1, b2);
+		}
+	}
+	
+	public static void maximum(Tensor a,Tensor b,Tensor c) {
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().maximum_gpu(a, b, c);
+		}else {
+			c.data = MatrixOperation.maximum(a.data, b.data);
+		}
+	}
+	
+	public static void minimum(Tensor a,Tensor b,Tensor c) {
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().minimum_gpu(a, b, c);
+		}else {
+			c.data = MatrixOperation.minimum(a.data, b.data);
+		}
+	}
+	
+	public static void maximum_back(Tensor a,Tensor b,Tensor c) {
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().maximum_back_gpu(a, b, c);
+		}else {
+			c.data = MatrixOperation.maximum_back(a.data, b.data);
+		}
+	}
+	
+	public static void minimum_back(Tensor a,Tensor b,Tensor c) {
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().minimum_back_gpu(a, b, c);
+		}else {
+			c.data = MatrixOperation.minimum_back(a.data, b.data);
+		}
+	}
+	
+	public static void mean(Tensor a,int dim,Tensor c) {
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().mean_gpu(a, dim, c);
+		}else {
+			c.data = MatrixOperation.mean(a.data, a.number, a.channel, a.height, a.width, dim);
 		}
 	}
 	

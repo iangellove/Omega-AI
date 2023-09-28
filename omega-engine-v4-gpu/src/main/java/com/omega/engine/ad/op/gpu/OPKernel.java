@@ -81,6 +81,14 @@ public class OPKernel implements Serializable{
 	
 	private CUfunction cos_gpu_function;
 	
+	private CUfunction tan_gpu_function;
+	
+	private CUfunction tan_back_gpu_function;
+	
+	private CUfunction atan_gpu_function;
+	
+	private CUfunction atan_back_gpu_function;
+	
 	private CUfunction sum_gpu_function;
 	
 	private CUfunction sum_channel_gpu_function;
@@ -92,6 +100,16 @@ public class OPKernel implements Serializable{
 	private CUfunction clamp_gpu_function;
 	
 	private CUfunction clamp_back_gpu_function;
+	
+	private CUfunction maximum_gpu_function;
+	
+	private CUfunction minimum_gpu_function;
+	
+	private CUfunction maximum_back_gpu_function;
+	
+	private CUfunction minimum_back_gpu_function;
+	
+	
 	
 	public OPKernel() {
 		
@@ -151,6 +169,14 @@ public class OPKernel implements Serializable{
 		
 		cos_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "cos_kernel");
 		
+		tan_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "tan_kernel");
+		
+		atan_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "atan_kernel");
+		
+		tan_back_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "tan_back_kernel");
+		
+		atan_back_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "atan_back_kernel");
+		
 		sum_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "sum_kernel");
 		
 		sum_channel_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "sum_channel_kernel");
@@ -162,6 +188,14 @@ public class OPKernel implements Serializable{
 		clamp_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "clamp_kernel");
 		
 		clamp_back_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "clamp_back_kernel");
+		
+		maximum_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "maximum_kernel");
+		
+		minimum_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "minimum_kernel");
+		
+		maximum_back_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "maximum_back_kernel");
+		
+		minimum_back_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "minimum_back_kernel");
 		
 	}
 	
@@ -1023,6 +1057,114 @@ public class OPKernel implements Serializable{
 		
 	}
 	
+	public void tan_gpu(Tensor a,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float *Y
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(tan_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void tan_back_gpu(Tensor a,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float *Y
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(tan_back_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void atan_gpu(Tensor a,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float *Y
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(atan_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void atan_back_gpu(Tensor a,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float *Y
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(atan_back_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void broadcast_gpu(Tensor a,Tensor y,int axis) {
 		
 		try {
@@ -1123,6 +1265,139 @@ public class OPKernel implements Serializable{
 		            0, null,               // Shared memory size and stream
 		            kernelParameter, null // Kernel- and extra parameters
 		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void maximum_gpu(Tensor a,Tensor b,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float ALPHA, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(b.getGpuData()),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(maximum_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void minimum_gpu(Tensor a,Tensor b,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float ALPHA, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(b.getGpuData()),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(minimum_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void maximum_back_gpu(Tensor a,Tensor b,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float ALPHA, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(b.getGpuData()),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(maximum_back_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void minimum_back_gpu(Tensor a,Tensor b,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float ALPHA, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(b.getGpuData()),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(minimum_back_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void mean_gpu(Tensor a,int dim,Tensor y) {
+		
+		try {
+			
+			int scalar = a.number;
+			
+			if(dim == 1) {
+				scalar = a.channel;
+			}
+			
+			sum_gpu(a, y, dim);
+
+			div_scalar_gpu(y, scalar, y);
 			
 		} catch (Exception e) {
 			// TODO: handle exception

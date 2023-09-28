@@ -428,7 +428,7 @@ public class RandomUtils {
 			gain = (float) Math.sqrt(2.0f);
 			break;
 		case leaky_relu:
-			gain = (float) Math.sqrt(2.0f / (1.0f + Math.sqrt(0.5) *Math.sqrt(0.5)));
+			gain = (float) Math.sqrt(2.0f / (1.0f + Math.sqrt(0.5) * Math.sqrt(0.5)));
 			break;
 		default:
 			gain = 1.0f;
@@ -465,6 +465,17 @@ public class RandomUtils {
 		
 		for(int i = 0;i<x;i++) {
 			temp[i] = (float) Math.random() * (bound - (-bound)) + (-bound);
+		}
+		
+		return temp;
+	}
+	
+	public static float[] uniform(int x,float mean,float std) {
+		
+		float[] temp = new float[x];
+		
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) (std * RandomUtils.getInstance().nextGaussian() + mean);
 		}
 		
 		return temp;

@@ -210,10 +210,10 @@ __global__ void scalar_div_kernel(int N, float *X, float ALPHA, float *R)
 }
 
 extern "C"
-__global__ void div_bGrad_kernel(int N, float *A, float *B, float *C, float *Y)
+__global__ void div_bGrad_kernel(int N, float *D, float *A, float *B, float *Y)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
-    if(i < N) Y[i] += - 1.0f * C[i] * A[i] / (B[i] * B[i]); 
+    if(i < N) Y[i] += - 1.0f * D[i] * A[i] / (B[i] * B[i]); 
 }
 
 extern "C"
@@ -285,6 +285,34 @@ __global__ void cos_kernel(int N, float *X, float *Y)
 }
 
 extern "C"
+__global__ void tan_kernel(int N, float *X, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) Y[i] = tan(X[i]);
+}
+
+extern "C"
+__global__ void tan_back_kernel(int N, float *X, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) Y[i] = 1 / powf(cos(X[i]), 2);
+}
+
+extern "C"
+__global__ void atan_kernel(int N, float *X, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) Y[i] = atan(X[i]);
+}
+
+extern "C"
+__global__ void atan_back_kernel(int N, float *X, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) Y[i] = 1.0f / (1 + X[i] * X[i]);
+}
+
+extern "C"
 __global__ void clamp_kernel(int N, float *X, float min, float max, float *Y)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
@@ -313,3 +341,56 @@ __global__ void clamp_back_kernel(int N, float *X, float min, float max, float *
 		}
     }
 }
+
+extern "C"
+__global__ void maximum_kernel(int N, float *X, float *Z, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+		if(X[i] >= Z[i]) {
+			Y[i] = X[i];
+		}else {
+			Y[i] = Z[i];
+		}
+    }
+}
+
+extern "C"
+__global__ void minimum_kernel(int N, float *X, float *Z, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+		if(X[i] < Z[i]) {
+			Y[i] = X[i];
+		}else {
+			Y[i] = Z[i];
+		}
+    }
+}
+
+extern "C"
+__global__ void maximum_back_kernel(int N, float *X, float *Z, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+		if(X[i] >= Z[i]) {
+			Y[i] = 1;
+		}else {
+			Y[i] = 0;
+		}
+    }
+}
+
+extern "C"
+__global__ void minimum_back_kernel(int N, float *X, float *Z, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+		if(X[i] < Z[i]) {
+			Y[i] = 1;
+		}else {
+			Y[i] = 0;
+		}
+    }
+}
+

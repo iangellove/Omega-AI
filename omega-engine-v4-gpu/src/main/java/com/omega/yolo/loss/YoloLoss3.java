@@ -15,7 +15,7 @@ import com.omega.yolo.utils.YoloUtils;
  *   [n][maxBox = 90][box = 4][class = 1]
  *   
  *   output: channel * height * width
- *   channel: tx + ty + tw + th + obj + class[class_num]
+ *   channel: (tx + ty + tw + th + obj + class[class_num]) * anchor
  *   tx,ty:anchor offset(锚框偏移:锚框的锚点[左上角点的偏移值]),结合锚框的锚点可以定位出预测框的中心点
  *   tw,th:anchor sacle(锚框的比值)
  *   bx = sigmoid(tx)+  cx
@@ -120,6 +120,10 @@ public class YoloLoss3 extends LossFunction {
 		int stride = x.width * x.height;
 		
 		for(int b = 0;b<x.number;b++) {
+			
+			/**
+			 * 计算负样本损失
+			 */
 			for(int h = 0;h<x.height;h++) {
 				for(int w = 0;w<x.width;w++) {
 					for(int n = 0;n<this.bbox_num;n++) {
@@ -181,7 +185,10 @@ public class YoloLoss3 extends LossFunction {
 	            }
 	            
 	            int mask_n = intIndex(mask, bestIndex, bbox_num);
-	           
+	            
+	            /**
+	             * 计算正样本Lobj,Lcls,Lloct
+	             */
 	            if(mask_n >= 0) {
 //					System.out.println(JsonUtils.toJson(truth));
 	            	int mask_n_index = mask_n*x.width*x.height + j*x.width + i;
