@@ -36,7 +36,6 @@ public class SubOP extends SignOP{
 		}else {
 			TensorOP.sub(self, tape.getScalar(), y);
 		}
-		TensorOP.sub(self, other, y);
 		if(self.isRequiresGrad() || other.isRequiresGrad()) {
 			y.setRequiresGrad(true);
 		}
