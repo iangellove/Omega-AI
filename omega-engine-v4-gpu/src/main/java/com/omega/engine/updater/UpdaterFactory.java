@@ -28,6 +28,8 @@ public class UpdaterFactory {
 			return new Adam();
 		case adamw:
 			return new AdamW();
+		case RMSProp:
+			return new RMSProp();
 		default:
 			return null;
 		}

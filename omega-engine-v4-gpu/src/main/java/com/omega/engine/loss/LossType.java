@@ -12,9 +12,11 @@ public enum LossType {
 	multiLabel_soft_margin,
 	detection,
 	yolo,
-	yolo2,
-	yolo3,
+	yolov2,
+	yolov3,
+	yolov5,
 	MSE,
-	BCE
+	BCE,
+	BCEWithLogits
 	
 }

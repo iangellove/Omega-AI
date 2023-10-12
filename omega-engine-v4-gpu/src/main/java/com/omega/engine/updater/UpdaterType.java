@@ -11,6 +11,7 @@ public enum UpdaterType {
 	momentum("momentum"),
 	sgd("sgd"),
 	adam("adam"),
+	RMSProp("rmsprop"),
 	adamw("adamw");
 
 	UpdaterType(String key){
