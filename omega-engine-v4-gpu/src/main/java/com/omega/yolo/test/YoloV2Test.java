@@ -109,7 +109,7 @@ public class YoloV2Test {
 			
 			DataSet vailSet = YoloLabelUtils.formatToYoloV3(vailData.getDataSet(), im_w, im_h);
 			
-			Yolo netWork = new Yolo(LossType.yolo2, UpdaterType.adamw);
+			Yolo netWork = new Yolo(LossType.yolov2, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
@@ -162,7 +162,7 @@ public class YoloV2Test {
 			
 			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
 
-			Yolo netWork = new Yolo(LossType.yolo2, UpdaterType.adamw);
+			Yolo netWork = new Yolo(LossType.yolov2, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
