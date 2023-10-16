@@ -37,7 +37,7 @@ public class LossFactory {
 			return new CrossEntropyLoss2();
 		case yolo:
 			return new YoloLoss(1);
-		case yolo3:
+		case yolov3:
 			return null;
 		case multiLabel_soft_margin:
 			return new MultiLabelSoftMargin();
@@ -68,7 +68,7 @@ public class LossFactory {
 			return new CrossEntropyLoss2();
 		case yolo:
 			return new YoloLoss(classNum);
-		case yolo3:
+		case yolov3:
 			return null;
 		case multiLabel_soft_margin:
 			return new MultiLabelSoftMargin();
@@ -98,11 +98,11 @@ public class LossFactory {
 			case yolo:
 				losses[i] = new YoloLoss(1);
 				break;
-			case yolo2:
+			case yolov2:
 				YoloLayer yolo2 = (YoloLayer) outputs.get(i);
 				losses[i] = new YoloLoss2(yolo2.class_number, yolo2.bbox_num, yolo2.anchors, yolo2.network.height, yolo2.network.width, yolo2.maxBox, yolo2.total, yolo2.ignoreThresh, yolo2.truthThresh);
 				break;
-			case yolo3:
+			case yolov3:
 				YoloLayer yolo = (YoloLayer) outputs.get(i);
 				losses[i] = new YoloLoss3(yolo.class_number, yolo.bbox_num, yolo.mask, yolo.anchors, yolo.network.height, yolo.network.width, yolo.maxBox, yolo.total, yolo.ignoreThresh, yolo.truthThresh);
 				break;
@@ -141,11 +141,11 @@ public class LossFactory {
 			case yolo:
 				losses[i] = new YoloLoss(classNum);
 				break;
-			case yolo2:
+			case yolov2:
 				YoloLayer yolo2 = (YoloLayer) outputs.get(i);
 				losses[i] = new YoloLoss2(yolo2.class_number, yolo2.bbox_num, yolo2.anchors, yolo2.network.height, yolo2.network.width, yolo2.maxBox, yolo2.total, yolo2.ignoreThresh, yolo2.truthThresh);
 				break;
-			case yolo3:
+			case yolov3:
 				YoloLayer yolo = (YoloLayer) outputs.get(i);
 				losses[i] = new YoloLoss3(yolo.class_number, yolo.bbox_num, yolo.mask, yolo.anchors, yolo.network.height, yolo.network.width, yolo.maxBox, yolo.total, yolo.ignoreThresh, yolo.truthThresh);
 				break;
