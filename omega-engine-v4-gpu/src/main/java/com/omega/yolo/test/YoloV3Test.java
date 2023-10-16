@@ -116,7 +116,7 @@ public class YoloV3Test {
 			
 			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.csv, im_w, im_h, class_num, batchSize, DataType.yolov3);
 
-			Yolo netWork = new Yolo(LossType.yolo3, UpdaterType.adamw);
+			Yolo netWork = new Yolo(LossType.yolov3, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
@@ -178,7 +178,7 @@ public class YoloV3Test {
 			
 			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
 
-			Yolo netWork = new Yolo(LossType.yolo3, UpdaterType.adamw);
+			Yolo netWork = new Yolo(LossType.yolov3, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
@@ -240,7 +240,7 @@ public class YoloV3Test {
 			
 			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
 
-			Yolo netWork = new Yolo(LossType.yolo3, UpdaterType.adamw);
+			Yolo netWork = new Yolo(LossType.yolov3, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
