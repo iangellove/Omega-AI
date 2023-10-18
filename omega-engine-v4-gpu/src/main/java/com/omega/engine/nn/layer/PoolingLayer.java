@@ -1,6 +1,8 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.gpu.cudnn.PoolingCudnnKernel;
+import com.omega.engine.nn.layer.gpu.PoolingBaseKernel;
 import com.omega.engine.nn.layer.gpu.PoolingKernel;
 import com.omega.engine.pooling.PoolingType;
 
@@ -20,7 +22,9 @@ public class PoolingLayer extends Layer {
 	
 	public int stride = 1;
 	
-	private PoolingKernel kernel;
+	public int padding = 0;
+	
+	private PoolingBaseKernel kernel;
 	
 	public PoolingLayer(int channel,int width,int height,int pWidth,int pHeight,int stride,PoolingType poolingType) {
 		this.channel = channel;
@@ -33,6 +37,18 @@ public class PoolingLayer extends Layer {
 		initParam();
 	}
 	
+	public PoolingLayer(int channel,int width,int height,int pWidth,int pHeight,int stride,int padding,PoolingType poolingType) {
+		this.channel = channel;
+		this.width = width;
+		this.height = height;
+		this.pWidth = pWidth;
+		this.pHeight = pHeight;
+		this.stride = stride;
+		this.padding = padding;
+		this.poolingType = poolingType;
+		initParam();
+	}
+	
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
@@ -40,11 +56,14 @@ public class PoolingLayer extends Layer {
 		if(this.output == null || this.output.number != number) {
 			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		}
-
-		if(kernel == null) {
-			kernel = new PoolingKernel(poolingType, channel, height, width, pHeight, pWidth, stride);
-		}
 		
+		if(kernel == null) {
+			if(this.network.CUDNN) {
+				kernel = new PoolingCudnnKernel(poolingType, channel, height, width, oHeight, oWidth, pWidth, pHeight, stride, padding);
+			}else {
+				kernel = new PoolingKernel(poolingType, channel, height, width, pHeight, pWidth, stride, padding);
+			}
+		}
 	}
 
 	@Override
@@ -75,7 +94,7 @@ public class PoolingLayer extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		kernel.backward(delta, diff);
+		kernel.backward(input, output, delta, diff);
 //		System.out.print("pooling-delta:");
 //		delta.showDM();
 //		System.out.print("pooling-diff:");

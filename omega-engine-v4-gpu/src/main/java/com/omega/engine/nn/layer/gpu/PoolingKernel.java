@@ -6,7 +6,6 @@ import com.omega.common.data.Tensor;
 import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.pooling.PoolingType;
@@ -16,7 +15,7 @@ import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
 import jcuda.runtime.cudaError;
 
-public class PoolingKernel extends BaseKernel{
+public class PoolingKernel extends PoolingBaseKernel{
 	private PoolingType type;
 	private int C;
 	private int H;
@@ -24,6 +23,7 @@ public class PoolingKernel extends BaseKernel{
 	private int ph;
 	private int pw;
 	private int s;
+	private int padding = 0;
 	private int oHeight;
 	private int oWidth;
 	private int numKernels;
@@ -50,6 +50,21 @@ public class PoolingKernel extends BaseKernel{
 		this.s = s;
 		this.oHeight = (H - ph) / s + 1;
 		this.oWidth = (W - pw) / s + 1;
+		this.numKernels = 0;
+		init();
+	}
+	
+	public PoolingKernel(PoolingType type,int C,int H,int W,int ph,int pw,int s,int p) {
+		this.type = type;
+		this.C = C;
+		this.H = H;
+		this.W = W;
+		this.ph = ph;
+		this.pw = pw;
+		this.s = s;
+		this.padding = p;
+		this.oHeight = (H + p - ph) / s + 1;
+		this.oWidth = (W + p - pw) / s + 1;
 		this.numKernels = 0;
 		init();
 	}
@@ -121,7 +136,7 @@ public class PoolingKernel extends BaseKernel{
 		}
 	}
 	
-	public void backward(Tensor delta,Tensor diff) {
+	public void backward(Tensor input,Tensor output,Tensor delta,Tensor diff) {
 		diff.clearGPU();
 		switch (type) {
 		case MAX_POOLING:
@@ -160,7 +175,7 @@ public class PoolingKernel extends BaseKernel{
 		                Pointer.to(new int[]{C}),
 		                Pointer.to(new int[]{s}),
 		                Pointer.to(new int[]{ph}),
-		                Pointer.to(new int[]{0}),
+		                Pointer.to(new int[]{padding}),
 		                Pointer.to(input.getGpuData()),
 		                Pointer.to(output.getGpuData()),
 		                Pointer.to(dm)
@@ -209,7 +224,7 @@ public class PoolingKernel extends BaseKernel{
 		                Pointer.to(new int[]{C}),
 		                Pointer.to(new int[]{s}),
 		                Pointer.to(new int[]{ph}),
-		                Pointer.to(new int[]{0}),
+		                Pointer.to(new int[]{padding}),
 		                Pointer.to(input.getGpuData()),
 		                Pointer.to(output.getGpuData())
 		            );
@@ -291,7 +306,7 @@ public class PoolingKernel extends BaseKernel{
 		                Pointer.to(new int[]{C}),
 		                Pointer.to(new int[]{s}),
 		                Pointer.to(new int[]{ph}),
-		                Pointer.to(new int[]{0}),
+		                Pointer.to(new int[]{padding}),
 		                Pointer.to(delta.getGpuData()),
 		                Pointer.to(diff.getGpuData()),
 		                Pointer.to(dm)
@@ -333,7 +348,7 @@ public class PoolingKernel extends BaseKernel{
 		                Pointer.to(new int[]{C}),
 		                Pointer.to(new int[]{s}),
 		                Pointer.to(new int[]{ph}),
-		                Pointer.to(new int[]{0}),
+		                Pointer.to(new int[]{padding}),
 		                Pointer.to(delta.getGpuData()),
 		                Pointer.to(diff.getGpuData())
 		            );
@@ -479,7 +494,7 @@ public class PoolingKernel extends BaseKernel{
     	
     	input.showDM();
     	
-    	pooling.backward(delta, diff);
+    	pooling.backward(input,output,delta, diff);
     	
     	delta.showDM();
     	

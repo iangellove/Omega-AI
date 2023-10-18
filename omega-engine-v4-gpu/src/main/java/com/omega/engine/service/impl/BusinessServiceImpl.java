@@ -2687,7 +2687,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 32;
 			
-			int batchSize = 128;
+			int batchSize = 256;
 			
 			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw);
 			
