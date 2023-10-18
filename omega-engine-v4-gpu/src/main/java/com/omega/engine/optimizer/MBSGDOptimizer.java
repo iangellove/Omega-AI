@@ -166,8 +166,12 @@ public class MBSGDOptimizer extends Optimizer {
 					/**
 					 * current time error
 					 */
-					this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
-					
+					if(this.loss.isHasGPU()){
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / this.batchSize;
+					}
+
 //					long back_start = System.nanoTime();
 					
 					lossDiff.hostToDevice();
@@ -183,9 +187,7 @@ public class MBSGDOptimizer extends Optimizer {
 					this.network.update();
 					
 					output.syncHost();
-					
-//					JCudaDriver.cuCtxSynchronize();
-					
+
 //					System.out.println("back:"+(System.nanoTime() - back_start) / 1e6 + "ms.");
 					
 					float error = this.accuracy(output, label, trainingData.labelSet);
@@ -482,8 +484,12 @@ public class MBSGDOptimizer extends Optimizer {
 					/**
 					 * current time error
 					 */
-					this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
-					
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / this.batchSize;
+					}
+
 					train_loss += this.currentError;
 					
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";

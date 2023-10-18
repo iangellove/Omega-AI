@@ -35,7 +35,7 @@ public class DropoutLayer extends Layer {
 			this.oWidth = this.width;
 		}
 		this.number = this.network.number;
-		this.output = new Tensor(number, oChannel, oHeight, oWidth);
+		this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		initParam();
 	}
 
@@ -66,6 +66,7 @@ public class DropoutLayer extends Layer {
 		}else {
 			this.output.data = MatrixOperation.multiplication(this.input.data, 1.0f - probability);
 		}
+		
 	}
 
 	@Override

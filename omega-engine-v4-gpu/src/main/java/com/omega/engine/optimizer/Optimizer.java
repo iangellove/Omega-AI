@@ -489,8 +489,12 @@ public abstract class Optimizer {
 			/**
 			 * current time error
 			 */
-			vailLoss += MatrixOperation.sum(loss.syncHost());
-			
+			if(loss.isHasGPU()) {
+				vailLoss += MatrixOperation.sum(loss.syncHost());
+			}else {
+				vailLoss += MatrixOperation.sum(loss.data);
+			}
+
 			output.syncHost();
 
 			int currentError = this.accuracyTrueCount(output, label, testData.labelSet);

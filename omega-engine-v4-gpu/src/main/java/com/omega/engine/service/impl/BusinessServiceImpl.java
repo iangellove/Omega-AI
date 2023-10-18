@@ -488,7 +488,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 32;
 			
-			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
+			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adam);
 			
 			netWork.learnRate = 0.01f;
 			
@@ -905,7 +905,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 28;
 			
-			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adamw);
+			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
@@ -966,8 +966,6 @@ public class BusinessServiceImpl implements BusinessService {
 
 			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
-//			SoftmaxLayer softmax = new SoftmaxLayer(10);
-			
 			netWork.addLayer(inputLayer);
 			netWork.addLayer(conv1);
 			netWork.addLayer(bn1);
@@ -1054,7 +1052,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 32;
 			
-			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.sgd);
+			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw);
 			
 			netWork.CUDNN = true;
 			
@@ -1320,7 +1318,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			FullyLayer full3 = new FullyLayer(inputCount, 10);
 
-//			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
+			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 			
 			/**
 			 * 装载网络
@@ -1384,7 +1382,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(full2);
 			netWork.addLayer(active15);
 			netWork.addLayer(full3);
-//			netWork.addLayer(softmax);
+			netWork.addLayer(softmax);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 20, 0.001f, 128, LearnRateUpdate.CONSTANT, false);
 
@@ -1694,7 +1692,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 32;
 			
-			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
+			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adam);
 			
 			netWork.learnRate = lr;
 			
@@ -1750,7 +1748,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			FullyLayer full3 = new FullyLayer(512, 10);
 
-			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
+//			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
 //			SoftmaxLayer softmax = new SoftmaxLayer(10);
 			
@@ -1781,7 +1779,7 @@ public class BusinessServiceImpl implements BusinessService {
 			netWork.addLayer(bn7);
 			netWork.addLayer(active5);
 			netWork.addLayer(full3);
-			netWork.addLayer(softmax);
+//			netWork.addLayer(softmax);
 
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(sid, netWork, 30, 0.0001f, 128, LearnRateUpdate.CONSTANT, false);
 
@@ -2687,7 +2685,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 32;
 			
-			int batchSize = 256;
+			int batchSize = 128;
 			
 			CNN netWork = new CNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw);
 			
@@ -2764,6 +2762,8 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			FullyLayer full1 = new FullyLayer(fInputCount, 10);
 
+			SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
+			
 			netWork.addLayer(inputLayer);
 			netWork.addLayer(conv1);
 			netWork.addLayer(bn1);
@@ -2803,6 +2803,8 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			netWork.addLayer(pool2);
 			netWork.addLayer(full1);
+			
+			netWork.addLayer(softmax);
 
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 500, 0.0001f, batchSize, LearnRateUpdate.GD_GECAY, false);
 

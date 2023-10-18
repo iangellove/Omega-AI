@@ -390,11 +390,15 @@ public class Tensor implements Serializable{
 	}
 	
 	public void clearGPU() {
-		checkCUDA(JCuda.cudaMemset(gpuData, 0, this.dataLength * Sizeof.FLOAT));
+		if(gpuData!=null) {
+			checkCUDA(JCuda.cudaMemset(gpuData, 0, this.dataLength * Sizeof.FLOAT));
+		}
 	}
 	
 	public void valueGPU(int val) {
-		checkCUDA(JCuda.cudaMemset(gpuData, val, this.dataLength * Sizeof.FLOAT));
+		if(gpuData!=null) {
+			checkCUDA(JCuda.cudaMemset(gpuData, val, this.dataLength * Sizeof.FLOAT));
+		}
 	}
 	
 	public void checkCUDA(int code) {
