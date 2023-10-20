@@ -217,4 +217,8 @@ public abstract class Layer {
 		this.tampDataSet = tampDataSet;
 	}
 
+	public int[] outputShape() {
+		return new int[] {number, oChannel, oHeight, oWidth};
+	}
+	
 }

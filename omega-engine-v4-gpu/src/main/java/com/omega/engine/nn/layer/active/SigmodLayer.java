@@ -24,12 +24,7 @@ public class SigmodLayer extends ActiveFunctionLayer {
 	}
 	
 	public SigmodLayer(Layer preLayer) {
-		this.width = preLayer.width;
-		this.height = preLayer.height;
-		this.oWidth = preLayer.oWidth;
-		this.oHeight = preLayer.oHeight;
-		this.channel = preLayer.channel;
-		this.oChannel = preLayer.oChannel;
+		this.setPreLayer(preLayer);
 	}
 	
 	public SigmodLayer(Network network) {

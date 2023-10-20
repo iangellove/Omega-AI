@@ -9,6 +9,7 @@ import com.omega.engine.nn.layer.gpu.BNBaseKernel;
 import com.omega.engine.nn.layer.normalization.gpu.BNKernel3;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * 
@@ -56,13 +57,9 @@ public class BNLayer extends NormalizationLayer {
 	}
 	
 	public BNLayer(Layer preLayer) {
-		this.width = preLayer.width;
-		this.height = preLayer.height;
-		this.oWidth = preLayer.oWidth;
-		this.oHeight = preLayer.oHeight;
-		this.channel = preLayer.channel;
-		this.oChannel = preLayer.oChannel;
+		this.setPreLayer(preLayer);
 		this.hasParams = true;
+		this.setUpdater(UpdaterFactory.create(this.network.updater));
 	}
 	
 	public BNLayer(Network network) {

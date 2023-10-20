@@ -979,6 +979,57 @@ public abstract class Optimizer {
 		return list;
 	}
 	
+	public List<YoloBox> showObjectRecognitionYoloV7(DetectionDataLoader testData,int batchSize) {
+		// TODO Auto-generated method stub
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		List<YoloBox> list = new ArrayList<YoloBox>();
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+		
+		Yolo net = (Yolo) this.network;
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.loadData(pageIndex, batchSize, input);
+			
+			Tensor[] output = net.predicts(input);
+			
+			YoloBox[] boxs = new YoloBox[input.number];
+			
+			for(int i = 0;i<net.outputLayers.size();i++){
+				
+				YoloLayer layer = (YoloLayer) net.outputLayers.get(i);
+				
+				YoloDetection[][] dets = YoloUtils.getYoloDetectionsV7(output[i], layer.anchors, layer.mask, layer.bbox_num, layer.outputs, layer.class_number, this.network.height, this.network.width, 0.5f);
+				
+				for(int j = 0;j<dets.length;j++) {
+					
+					/**
+					 * nms
+					 */
+					nmsSort(dets[j], dets[j].length, layer.class_number, 0.7f);
+					
+					if(boxs[j] != null) {
+						boxs[j].getDets().addAll(new ArrayList<>(Arrays.asList(dets[j])));
+					}else{
+						YoloBox box = new YoloBox(dets[j]);
+						boxs[j] = box;
+					}
+				}
+				
+			}
+			
+			list.addAll(new ArrayList<YoloBox>(Arrays.asList(boxs)));
+			
+		}
+		
+		return list;
+	}
+	
 	public void nmsSort(YoloDetection[] dets,int total,int classes,float thresh) {
 		int k = total - 1;
 		for(int i = 0;i<=k;i++) {

@@ -111,7 +111,7 @@ public class PoolingCudnnKernel extends PoolingBaseKernel{
 		
 		handle(JCudnn.cudnnPoolingBackward(CudnnHandleManager.getHandle(),
 				poolingDesc, alpha_P, yDesc, output.getGpuData(), yDesc, delta.getGpuData(), xDesc, input.getGpuData(), beta_P, xDesc, diff.getGpuData()));
-
+		
 	}	
 	
 	/**

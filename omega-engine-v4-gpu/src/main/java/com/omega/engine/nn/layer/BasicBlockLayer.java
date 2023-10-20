@@ -81,28 +81,21 @@ public class BasicBlockLayer extends Layer {
 		conv1.setUpdater(UpdaterFactory.create(this.network.updater));
 		conv1.paramsInit = ParamsInit.relu;
 		
-		bn1 = new BNLayer(this.network);
-		bn1.setUpdater(UpdaterFactory.create(this.network.updater));
-		bn1.setPreLayer(conv1);
+		bn1 = new BNLayer(conv1);
 		
-		a1 = new ReluLayer(this.network);
-		a1.setPreLayer(bn1);
+		a1 = new ReluLayer(bn1);
 		
 		conv2 = new ConvolutionLayer(conv1.oChannel, oChannel, conv1.oWidth, conv1.oHeight, 3, 3, 1, 1, false, this.network);
 		conv2.setUpdater(UpdaterFactory.create(this.network.updater));
 		conv2.paramsInit = ParamsInit.relu;
 		
-		bn2 = new BNLayer(this.network);
-		bn2.setUpdater(UpdaterFactory.create(this.network.updater));
-		bn2.setPreLayer(conv2);
+		bn2 = new BNLayer(conv2);
 		
 		if(downsample) {
 			identityConv = new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, fisrtLayerStride, false, this.network); 
 			identityConv.setUpdater(UpdaterFactory.create(this.network.updater));
 			identityConv.paramsInit = ParamsInit.relu;
-			identityBN = new BNLayer(this.network);
-			identityBN.setUpdater(UpdaterFactory.create(this.network.updater));
-			identityBN.setPreLayer(identityConv);
+			identityBN = new BNLayer(identityConv);
 		}
 		
 //		shortcut = new ShortcutLayer(bn2.oChannel, bn2.oHeight, bn2.oWidth, a1.oChannel, a1.oHeight, a1.oWidth, this.network);

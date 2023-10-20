@@ -60,6 +60,7 @@ public class PoolingLayer extends Layer {
 		if(kernel == null) {
 			if(this.network.CUDNN) {
 				kernel = new PoolingCudnnKernel(poolingType, channel, height, width, oHeight, oWidth, pWidth, pHeight, stride, padding);
+//				kernel = new PoolingKernel(poolingType, channel, height, width, pHeight, pWidth, stride, padding);
 			}else {
 				kernel = new PoolingKernel(poolingType, channel, height, width, pHeight, pWidth, stride, padding);
 			}
@@ -78,8 +79,9 @@ public class PoolingLayer extends Layer {
 	public void initParam() {
 		// TODO Auto-generated method stub
 		this.oChannel = this.channel;
-		this.oWidth = (this.width - pWidth) / this.stride + 1;
-		this.oHeight = (this.height - pHeight) / this.stride + 1;
+		this.oWidth = (this.width + padding - pWidth) / this.stride + 1;
+		this.oHeight = (this.height + padding - pHeight) / this.stride + 1;
+//		System.out.println("=========>:"+oHeight+":"+height);
 	}
 
 	@Override
@@ -95,6 +97,7 @@ public class PoolingLayer extends Layer {
 	public void diff() {
 		// TODO Auto-generated method stub
 		kernel.backward(input, output, delta, diff);
+//		diff.showDM();
 //		System.out.print("pooling-delta:");
 //		delta.showDM();
 //		System.out.print("pooling-diff:");

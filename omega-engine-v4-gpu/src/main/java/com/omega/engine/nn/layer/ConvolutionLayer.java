@@ -114,6 +114,37 @@ public class ConvolutionLayer extends Layer {
 		this.initParam();
 	}
 	
+	public ConvolutionLayer(int channel,int kernelNum,int width,int height,int kWidth,int kHeight,int padding,int stride,boolean hasBias,ParamsInit paramsInit) {
+		this.kernelNum = kernelNum;
+		this.channel = channel;
+		this.width = width;
+		this.height = height;
+		this.kWidth = kWidth;
+		this.kHeight = kHeight;
+		this.padding = padding;
+		this.stride = stride;
+		this.hasBias = hasBias;
+		this.hasParams = true;
+		this.paramsInit = paramsInit;
+		this.initParam();
+	}
+	
+	public ConvolutionLayer(int channel,int kernelNum,int width,int height,int kWidth,int kHeight,int padding,int stride,boolean hasBias,Network network,ParamsInit paramsInit) {
+		this.kernelNum = kernelNum;
+		this.channel = channel;
+		this.width = width;
+		this.height = height;
+		this.kWidth = kWidth;
+		this.kHeight = kHeight;
+		this.padding = padding;
+		this.stride = stride;
+		this.hasBias = hasBias;
+		this.network = network;
+		this.hasParams = true;
+		this.paramsInit = paramsInit;
+		this.initParam();
+	}
+	
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub

@@ -7,6 +7,6 @@ package com.omega.engine.active;
  */
 public enum ActiveType {
 	
-	sigmoid,relu,tanh,softmax
+	sigmoid,relu,tanh,softmax,silu,leaky_relu,none
 	
 }

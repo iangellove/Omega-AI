@@ -7,41 +7,28 @@ import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.active.gpu.LeakyReluKernel;
+import com.omega.engine.nn.layer.active.gpu.SiLUKernel;
 import com.omega.engine.nn.network.Network;
 
 /**
- * Relu active function Layer
+ * SiLU active function Layer
  * @author Administrator
  *
  */
-public class LeakyReluLayer extends ActiveFunctionLayer {
+public class SiLULayer extends ActiveFunctionLayer {
 	
-	private float leak = 0.2f;
+	private SiLUKernel kernel;
 	
-	private LeakyReluKernel kernel;
-	
-	public LeakyReluLayer() {
+	public SiLULayer() {
 
 	}
 	
-	public LeakyReluLayer(Layer preLayer) {
+	public SiLULayer(Layer preLayer) {
 		this.setPreLayer(preLayer);
 	}
 	
-	public LeakyReluLayer(Network network) {
+	public SiLULayer(Network network) {
 		this.network = network;
-	}
-	
-	public LeakyReluLayer(float leak) {
-		this.leak = leak;
-	}
-	
-	public void init() {
-		super.init();
-		if(kernel == null) {
-			kernel = new LeakyReluKernel();
-		}
 	}
 	
 	@Override
@@ -50,9 +37,17 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 		
 	}
 
+	public void init() {
+		super.init();
+		if(kernel == null) {
+			kernel = new SiLUKernel();
+		}
+	}
+	
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+//		input.showDM();
 		kernel.forward(input, output);
 	}
 
@@ -64,13 +59,15 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 
 	@Override
 	public void diff() {
-		kernel.backward(input, delta, diff);
-	}
-
-	public void diffTemp() {
-		kernel.backwardTemp(input, delta, diff);
+		// TODO Auto-generated method stub
+		kernel.backward(input, output, delta, diff);
 	}
 	
+	public void diffTemp() {
+		// TODO Auto-generated method stub
+		kernel.backwardTemp(input, output, delta, diff);
+	}
+
 	@Override
 	public void forward() {
 		// TODO Auto-generated method stub
@@ -86,6 +83,7 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 		 * 计算输出
 		 */
 		this.output();
+
 	}
 
 	@Override
@@ -100,6 +98,24 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 		 * 计算梯度
 		 */
 		this.diff();
+
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+	}
+	
+	public void backTemp() {
+		// TODO Auto-generated method stub
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta();
+		/**
+		 * 计算梯度
+		 */
+		this.diffTemp();
+
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
@@ -114,13 +130,12 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.leakyRelu;
+		return LayerType.silu;
 	}
 
 	@Override
 	public float[][][][] output(float[][][][] input) {
 		// TODO Auto-generated method stub
-		
 		float[][][][] output = new float[this.number][this.oChannel][this.oHeight][this.oWidth];
 		
 		Vector<Task<Object>> workers = new Vector<Task<Object>>();
@@ -133,11 +148,7 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 					for(int c = 0;c<channel;c++) {
 						for(int h = 0;h<height;h++) {
 							for(int w = 0;w<width;w++) {
-								if(input[index][c][h][w] > 0) {
-									output[index][c][h][w] = input[index][c][h][w];
-								}else {
-									output[index][c][h][w] = leak * input[index][c][h][w];
-								}
+								output[index][c][h][w] = (float) (1f / (1f + Math.exp(-input[index][c][h][w])));
 							}
 						}
 					}
@@ -155,10 +166,6 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 	public void initCache() {
 		// TODO Auto-generated method stub
 		
-	}
-	
-	public void initBack(Tensor diff) {
-		this.diff = diff;
 	}
 
 	@Override
@@ -178,6 +185,10 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 		this.output();
 	}
 
+	public void initBack(Tensor delta) {
+		this.diff = delta;
+	}
+	
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
@@ -190,25 +201,10 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 		 * 计算梯度
 		 */
 		this.diff();
+
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
 	}
 	
-	public void backTemp() {
-		// TODO Auto-generated method stub
-		this.initBack();
-		/**
-		 * 设置梯度
-		 */
-		this.setDelta();
-		/**
-		 * 计算梯度
-		 */
-		this.diffTemp();
-		if(this.network.GRADIENT_CHECK) {
-			this.gradientCheck();
-		}
-	}
-
 }

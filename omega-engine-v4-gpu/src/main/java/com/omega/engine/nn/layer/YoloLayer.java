@@ -3,7 +3,6 @@ package com.omega.engine.nn.layer;
 import com.omega.common.data.Tensor;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.gpu.SigmodKernel;
-import com.omega.engine.nn.network.Yolo;
 
 /**
  * yolo layer
@@ -38,6 +37,8 @@ public class YoloLayer extends Layer {
 	
 	public int outputs = 0;
 	
+	public int active = 1;
+	
 	public YoloLayer(int class_number,int bbox_num,int[] mask,float[] anchors,int maxBox,int total,float ignoreThresh,float truthThresh) {
 		this.class_number = class_number;
 		this.bbox_num = bbox_num;
@@ -50,20 +51,25 @@ public class YoloLayer extends Layer {
 		this.isOutput = true;
 	}
 	
+	public YoloLayer(int class_number,int bbox_num,int[] mask,float[] anchors,int maxBox,int total,float ignoreThresh,float truthThresh,int active) {
+		this.class_number = class_number;
+		this.bbox_num = bbox_num;
+		this.mask = mask;
+		this.anchors = anchors;
+		this.maxBox = maxBox;
+		this.total = total;
+		this.ignoreThresh = ignoreThresh;
+		this.truthThresh = truthThresh;
+		this.isOutput = true;
+		this.active = active;
+	}
+	
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
 
 		this.number = this.network.number;
 		
-		if(kernel == null) {
-			kernel = new SigmodKernel();
-		}
-		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
-		}
-
 		if(this.preLayer == null) {
 			this.preLayer = this.network.getPreLayer(this.index);
 			this.channel = preLayer.oChannel;
@@ -74,12 +80,24 @@ public class YoloLayer extends Layer {
 			this.oWidth = this.width;
 		}
 		
-		if(output == null || number != output.number) {
-			output = new Tensor(number, oChannel, oHeight, oWidth, true);
+		if(this.active == 1) {
+
+			if(kernel == null) {
+				kernel = new SigmodKernel();
+			}
+			
+			if(baseKernel == null) {
+				baseKernel = new BaseKernel();
+			}
+
+			if(output == null || number != output.number) {
+				output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			}
+			
+			this.outputs = bbox_num*(class_number + 4 + 1) * this.height*this.width;
+
 		}
 		
-		this.outputs = bbox_num*(class_number + 4 + 1) * this.height*this.width;
-
 	}
 
 	@Override
@@ -105,17 +123,21 @@ public class YoloLayer extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		baseKernel.copy_gpu(input, output, input.dataLength, 1, 1);
-//		System.out.println("bbox_num:"+bbox_num);
-		for(int b = 0;b<this.input.number;b++) {
-			for(int n = 0;n<bbox_num;n++) {
-				int index = entryIndex(b, n * width * height, 0);
-//				int index = b * this.outputs + n * input.width * input.height * (4+1+class_number);
-				kernel.forward(input, output, index, 2 * input.width * input.height);
-//				index = b * this.outputs + n * input.width * input.height * (4+1+class_number) + 4 * input.width * input.height;
-				int index2 = entryIndex(b, n * width * height, 4);
-				kernel.forward(input, output, index2, (1+class_number) * input.width * input.height);
+		if(this.active == 1) {
+			baseKernel.copy_gpu(input, output, input.dataLength, 1, 1);
+	//		System.out.println("bbox_num:"+bbox_num);
+			for(int b = 0;b<this.input.number;b++) {
+				for(int n = 0;n<bbox_num;n++) {
+					int index = entryIndex(b, n * width * height, 0);
+	//				int index = b * this.outputs + n * input.width * input.height * (4+1+class_number);
+					kernel.forward(input, output, index, 2 * input.width * input.height);
+	//				index = b * this.outputs + n * input.width * input.height * (4+1+class_number) + 4 * input.width * input.height;
+					int index2 = entryIndex(b, n * width * height, 4);
+					kernel.forward(input, output, index2, (1+class_number) * input.width * input.height);
+				}
 			}
+		}else {
+			this.output = this.input;
 		}
 	}
 
@@ -129,7 +151,6 @@ public class YoloLayer extends Layer {
 	public void diff() {
 		// TODO Auto-generated method stub
 		this.diff = this.delta;
-//		System.out.println(this.delta);
 //		baseKernel.copy_gpu(this.delta, this.diff, this.delta.dataLength, 1, 1);
 //		for(int b = 0;b<this.delta.number;b++) {
 //			for(int n = 0;n<bbox_num;n++) {
