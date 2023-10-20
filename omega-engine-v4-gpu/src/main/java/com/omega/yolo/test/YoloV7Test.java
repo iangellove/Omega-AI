@@ -157,20 +157,20 @@ public class YoloV7Test {
 		
 		int im_w = 416;
 		int im_h = 416;
-		int batchSize = 12;
+		int batchSize = 28;
 		int class_num = 5;
 		
 		String[] labelset = new String[] {"none","white","yellow","blue","red"};
 		
 		try {
 			
-			String cfg_path = "H:\\voc\\helmet_dataset\\yolov7-tiny-helmet.cfg";
+			String cfg_path = "E:\\voc\\helmet\\yolov7-tiny-helmet.cfg";
 			
-			String trainPath = "H:\\voc\\helmet\\resized\\train";
-			String trainLabelPath = "H:\\voc\\helmet\\resized\\train_label.txt";
+			String trainPath = "E:\\voc\\helmet\\resized\\train";
+			String trainLabelPath = "E:\\voc\\helmet\\resized\\train_label.txt";
 			
-			String testPath = "H:\\voc\\helmet\\resized\\vail";
-			String testLabelPath = "H:\\voc\\helmet\\resized\\vail_label.txt";
+			String testPath = "E:\\voc\\helmet\\resized\\vail";
+			String testLabelPath = "E:\\voc\\helmet\\resized\\vail_label.txt";
 			
 //			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
 			
@@ -188,7 +188,7 @@ public class YoloV7Test {
 			
 //			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 5000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
 			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
 			
@@ -196,7 +196,7 @@ public class YoloV7Test {
 			 * 处理测试预测结果
 			 */
 			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV7(vailData, batchSize);
-			String outputPath = "H:\\voc\\helmet\\test_yolov7\\";
+			String outputPath = "E:\\voc\\helmet\\test_yolov7\\";
 			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
 		
 		} catch (Exception e) {

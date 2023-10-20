@@ -21,6 +21,7 @@ import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
+import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.model.DarknetLoader;
 import com.omega.engine.model.ModelLoader;
@@ -157,22 +158,22 @@ public class YoloV3Test {
 		
 		int im_w = 416;
 		int im_h = 416;
-		int batchSize = 24;
+		int batchSize = 48;
 		int class_num = 5;
 		
 		String[] labelset = new String[] {"none","white","yellow","blue","red"};
 		
 		try {
 			
-			String cfg_path = "H:\\voc\\helmet_dataset\\yolov3-tiny-helmet2.cfg";
+			String cfg_path = "E:\\voc\\helmet\\yolov3-tiny-helmet2.cfg";
 			
-			String trainPath = "H:\\voc\\helmet\\resized\\train";
-			String trainLabelPath = "H:\\voc\\helmet\\resized\\train_label.txt";
+			String trainPath = "E:\\voc\\helmet\\resized\\train";
+			String trainLabelPath = "E:\\voc\\helmet\\resized\\train_label.txt";
 			
-			String testPath = "H:\\voc\\helmet\\resized\\vail";
-			String testLabelPath = "H:\\voc\\helmet\\resized\\vail_label.txt";
+			String testPath = "E:\\voc\\helmet\\resized\\vail";
+			String testLabelPath = "E:\\voc\\helmet\\resized\\vail_label.txt";
 			
-			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
+			String weightPath = "E:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
 			
 			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
 			
@@ -188,7 +189,7 @@ public class YoloV3Test {
 			
 			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
 			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
 			
@@ -196,7 +197,7 @@ public class YoloV3Test {
 			 * 处理测试预测结果
 			 */
 			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
-			String outputPath = "H:\\voc\\helmet\\test_yolov3\\";
+			String outputPath = "E:\\voc\\helmet\\test_yolov3\\";
 			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
 		
 		} catch (Exception e) {

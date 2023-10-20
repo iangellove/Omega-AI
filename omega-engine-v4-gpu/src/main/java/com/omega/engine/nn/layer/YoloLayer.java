@@ -39,6 +39,8 @@ public class YoloLayer extends Layer {
 	
 	public int active = 1;
 	
+	public float scaleXY = 1.0f;
+	
 	public YoloLayer(int class_number,int bbox_num,int[] mask,float[] anchors,int maxBox,int total,float ignoreThresh,float truthThresh) {
 		this.class_number = class_number;
 		this.bbox_num = bbox_num;
@@ -51,7 +53,7 @@ public class YoloLayer extends Layer {
 		this.isOutput = true;
 	}
 	
-	public YoloLayer(int class_number,int bbox_num,int[] mask,float[] anchors,int maxBox,int total,float ignoreThresh,float truthThresh,int active) {
+	public YoloLayer(int class_number,int bbox_num,int[] mask,float[] anchors,int maxBox,int total,float ignoreThresh,float truthThresh,int active,float scaleXY) {
 		this.class_number = class_number;
 		this.bbox_num = bbox_num;
 		this.mask = mask;
@@ -62,6 +64,7 @@ public class YoloLayer extends Layer {
 		this.truthThresh = truthThresh;
 		this.isOutput = true;
 		this.active = active;
+		this.scaleXY = scaleXY;
 	}
 	
 	@Override
@@ -79,17 +82,17 @@ public class YoloLayer extends Layer {
 			this.oHeight = this.height;
 			this.oWidth = this.width;
 		}
-		
+
+		if(baseKernel == null) {
+			baseKernel = new BaseKernel();
+		}
+
 		if(this.active == 1) {
 
 			if(kernel == null) {
 				kernel = new SigmodKernel();
 			}
 			
-			if(baseKernel == null) {
-				baseKernel = new BaseKernel();
-			}
-
 			if(output == null || number != output.number) {
 				output = new Tensor(number, oChannel, oHeight, oWidth, true);
 			}
@@ -125,19 +128,26 @@ public class YoloLayer extends Layer {
 		// TODO Auto-generated method stub
 		if(this.active == 1) {
 			baseKernel.copy_gpu(input, output, input.dataLength, 1, 1);
-	//		System.out.println("bbox_num:"+bbox_num);
 			for(int b = 0;b<this.input.number;b++) {
 				for(int n = 0;n<bbox_num;n++) {
 					int index = entryIndex(b, n * width * height, 0);
-	//				int index = b * this.outputs + n * input.width * input.height * (4+1+class_number);
 					kernel.forward(input, output, index, 2 * input.width * input.height);
-	//				index = b * this.outputs + n * input.width * input.height * (4+1+class_number) + 4 * input.width * input.height;
 					int index2 = entryIndex(b, n * width * height, 4);
 					kernel.forward(input, output, index2, (1+class_number) * input.width * input.height);
+					
+					baseKernel.scal_add_gpu(input, output, 2 * input.width * input.height, scaleXY, -0.5f*(scaleXY - 1), index, 1, index, 1);
+					
 				}
 			}
+			
 		}else {
 			this.output = this.input;
+			for(int b = 0;b<this.input.number;b++) {
+				for(int n = 0;n<bbox_num;n++) {
+					int index = entryIndex(b, n * width * height, 0);
+					baseKernel.scal_add_gpu(input, output, 2 * input.width * input.height, scaleXY, -0.5f*(scaleXY - 1), index, 1, index, 1);
+				}
+			}
 		}
 	}
 

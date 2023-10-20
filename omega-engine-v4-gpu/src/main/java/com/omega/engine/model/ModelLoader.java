@@ -394,6 +394,12 @@ public class ModelLoader {
 		int maxBox = getInt(cfg.get("maxBox").toString());
 		float ignoreThresh = getFloat(cfg.get("ignore_thresh").toString());
 		float truthThresh = getFloat(cfg.get("truth_thresh").toString());
+		
+		float scale_x_y = 1;
+		if(cfg.get("scale_x_y") != null) {
+			scale_x_y = getInt(cfg.get("scale_x_y").toString());
+		}
+		
 		int active = 1;
 		if(cfg.get("active") != null) {
 			active = getInt(cfg.get("active").toString());
@@ -416,7 +422,7 @@ public class ModelLoader {
 			mask = new int[total];
 		}
 		
-		YoloLayer yoloLayer = new YoloLayer(class_number, mask.length, mask, anchors, maxBox, total, ignoreThresh, truthThresh, active);
+		YoloLayer yoloLayer = new YoloLayer(class_number, mask.length, mask, anchors, maxBox, total, ignoreThresh, truthThresh, active, scale_x_y);
 		nn.addLayer(yoloLayer);
 		cfg.put("lastIndex", yoloLayer.index);
 		

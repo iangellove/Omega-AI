@@ -1,6 +1,7 @@
 package com.omega.yolo.loss;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.loss.LossFunction;
@@ -70,8 +71,6 @@ public class YoloLoss7 extends LossFunction {
 	
 	private float iou_thresh = 0.2f;
 	
-	private float scale_x_y = 2.0f;
-	
 	public YoloLoss7(int class_number,int bbox_num,int[] mask,float[] anchors,int orgH,int orgW,int maxBox,int total,float ignoreThresh,float truthThresh) {
 		this.class_number = class_number;
 		this.bbox_num = bbox_num;
@@ -104,16 +103,9 @@ public class YoloLoss7 extends LossFunction {
 		// TODO Auto-generated method stub
 
 		init(x);
-		
+
 		if(x.isHasGPU()) {
 			x.syncHost();
-		}
-		
-		for(int b = 0;b<x.number;b++) {
-			for(int n = 0;n<bbox_num;n++) {
-				int index = entryIndex(b, x.width, x.height, n * x.width * x.height, 0);
-				scal_add_cpu(x, 2 * x.width*x.height, scale_x_y, -0.5f*(scale_x_y - 1), index, 1);    // scale x,y
-			}
 		}
 		
 	    float avg_iou = 0;
@@ -179,13 +171,10 @@ public class YoloLoss7 extends LossFunction {
 						}
 
 						avg_anyobj += x.data[obj_index];
-//						this.diff.data[obj_index] =  this.obj_normalizer * (0 - x.data[obj_index]);
 						this.diff.data[obj_index] = this.obj_normalizer * x.data[obj_index];
 						if (best_match_iou > ignoreThresh) {
-							
 							if(objectness_smooth == 1) {
-//								float delta_obj = obj_normalizer * (best_match_iou - x.data[obj_index]);
-								float delta_obj = obj_normalizer * (x.data[obj_index] - best_match_iou);
+								float delta_obj = this.obj_normalizer * (x.data[obj_index] - best_match_iou);
 								if (delta_obj > this.diff.data[obj_index]) {
 									this.diff.data[obj_index] = delta_obj;
 								}
@@ -240,8 +229,6 @@ public class YoloLoss7 extends LossFunction {
 
 	            	int mask_n_index = mask_n*x.width*x.height + j*x.width + i;
 	            	
-	            	int class_id = (int) label.data[t*(4+1)+b*truths+4];
-	            	
 	            	int box_index = entryIndex(b, x.width, x.height, mask_n_index, 0);
 
 	            	float iou = deltaYoloBox(truth, x, anchors, bestIndex, box_index, i, j, x.width, x.height, stride);
@@ -256,12 +243,14 @@ public class YoloLoss7 extends LossFunction {
 	            	
 	            	if(objectness_smooth == 1){
 	            		if(this.diff.data[obj_index] == 0){
-	            			this.diff.data[obj_index] = obj_normalizer * (x.data[obj_index] - 1.0f);
+	            			this.diff.data[obj_index] = this.obj_normalizer * (x.data[obj_index] - 1.0f);
 	            		}
 	            	}else {
-	            		this.diff.data[obj_index] = obj_normalizer * (x.data[obj_index] - 1.0f);
+	            		this.diff.data[obj_index] = this.obj_normalizer * (x.data[obj_index] - 1.0f);
 	            	}
 
+	            	int class_id = (int) label.data[t*(4+1)+b*truths+4];
+	            	
 	            	int class_index = entryIndex(b, x.width, x.height, mask_n_index, 4 + 1);
 	            	
 	            	avg_cat = deltaYoloClass(x, class_index, class_id, class_number, stride, avg_cat);
@@ -301,10 +290,10 @@ public class YoloLoss7 extends LossFunction {
 			            	
 			            	if(objectness_smooth == 1){
 			            		if(this.diff.data[obj_index] == 0){
-			            			this.diff.data[obj_index] = obj_normalizer * (x.data[obj_index] - 1.0f);
+			            			this.diff.data[obj_index] = this.obj_normalizer * (x.data[obj_index] - 1.0f);
 			            		}
 			            	}else {
-			            		this.diff.data[obj_index] = obj_normalizer * (x.data[obj_index] - 1.0f);
+			            		this.diff.data[obj_index] = this.obj_normalizer * (x.data[obj_index] - 1.0f);
 			            	}
 
 			            	int class_index = entryIndex(b, x.width, x.height, mask_n_t, 4 + 1);
@@ -325,23 +314,23 @@ public class YoloLoss7 extends LossFunction {
 	            
 			}
 			
-//			if (iou_thresh < 1.0f) {
-//	            // averages the deltas obtained by the function: delta_yolo_box()_accumulate
-//				for(int h = 0;h<x.height;h++) {
-//					for(int w = 0;w<x.width;w++) {
-//						for(int n = 0;n<this.bbox_num;n++) {
-//							int n_index = n*x.width*x.height + h*x.width + w;
-//							int box_index = entryIndex(b, x.width, x.height, n_index, 0);
-//							int obj_index = entryIndex(b, x.width, x.height, n_index, 4);
-//							int class_index = entryIndex(b, x.width, x.height, n_index, 4 + 1);
-//
-//	                        if (this.diff.data[obj_index] != 0) {
-//	                        	averagesYoloDeltas(class_index, box_index, stride, class_number, this.diff);
-//	                        }
-//	                    }
-//	                }
-//	            }
-//	        }
+			if (iou_thresh < 1.0f) {
+	            // averages the deltas obtained by the function: delta_yolo_box()_accumulate
+				for(int h = 0;h<x.height;h++) {
+					for(int w = 0;w<x.width;w++) {
+						for(int n = 0;n<this.bbox_num;n++) {
+							int n_index = n*x.width*x.height + h*x.width + w;
+							int box_index = entryIndex(b, x.width, x.height, n_index, 0);
+							int obj_index = entryIndex(b, x.width, x.height, n_index, 4);
+							int class_index = entryIndex(b, x.width, x.height, n_index, 4 + 1);
+
+	                        if (this.diff.data[obj_index] != 0) {
+	                        	averagesYoloDeltas(class_index, box_index, stride, class_number, this.diff);
+	                        }
+	                    }
+	                }
+	            }
+	        }
 			
 		}
 
@@ -369,13 +358,21 @@ public class YoloLoss7 extends LossFunction {
 		
 		float ciou = YoloUtils.box_ciou(pred, truth);
 		
+		if(pred[2] == 0) {
+			pred[2] = 1.0f;
+		}
+		
+		if(pred[3] == 0) {
+			pred[3] = 1.0f;
+		}
+		
 		float[] dx = YoloUtils.dx_box_ciou(pred, truth);
 		
 		dx = MatrixOperation.multiplication(dx, this.iou_normalizer);
 		
 		fix_nan_inf(dx);
 		
-//		clip(dx, this.max_delta);
+		clip(dx, this.max_delta);
 		
 	    this.diff.data[index + 0 * stride] -= dx[0];
 	    this.diff.data[index + 1 * stride] -= dx[1];
@@ -421,7 +418,7 @@ public class YoloLoss7 extends LossFunction {
 //			float result_delta = y_true - output.data[index + stride*n];
 			float result_delta = output.data[index + stride*n] - y_true;
 			if(!Float.isNaN(result_delta) && !Float.isInfinite(result_delta)) {
-				this.diff.data[index + stride*class_id] = result_delta;
+				this.diff.data[index + stride * n] = result_delta;
 			}
 			if(n == class_id) {
 				avg_cat += output.data[index + stride*n];
