@@ -16,7 +16,26 @@ public class RouteLayer extends Layer{
 	
 	private BaseKernel kernel;
 	
+	private int groups = 1;
+	
+	private int groupId = 0;
+	
 	public RouteLayer(Layer[] layers) {
+		this.layers = layers;
+		Layer first = layers[0];
+		this.oHeight = first.oHeight;
+		this.oWidth = first.oWidth;
+		for(Layer layer:layers) {
+			if(layer.oHeight != this.oHeight || layer.oWidth != this.oWidth) {
+				throw new RuntimeException("input size must be all same in the route layer.");
+			}
+			this.oChannel += layer.oChannel;
+		}
+	}
+	
+	public RouteLayer(Layer[] layers,int groups,int groupId) {
+		this.groups = groups;
+		this.groupId = groupId;
 		this.layers = layers;
 		Layer first = layers[0];
 		this.oHeight = first.oHeight;
@@ -47,11 +66,13 @@ public class RouteLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		if(layers[0].cache_delta == null || layers[0].cache_delta.number != this.number) {
+//		if(layers[0].cache_delta == null || layers[0].cache_delta.number != this.number) {
 			for(Layer layer:layers) {
-				layer.cache_delta = new Tensor(number, layer.oChannel, oHeight, oWidth, true);
+				if(layer.cache_delta == null || layer.cache_delta.number != this.number) {
+					layer.cache_delta = new Tensor(number, layer.oChannel, oHeight, oWidth, true);
+				}
 			}
-		}
+//		}
 	}
 
 	@Override
@@ -66,10 +87,11 @@ public class RouteLayer extends Layer{
 		int offset = 0;
 		for(int l = 0;l<layers.length;l++) {
 			Tensor input = layers[l].output;
+			int part_input_size = input.getOnceSize() / groups;
 			for(int n = 0;n<this.number;n++) {
-				kernel.copy_gpu(input, this.output, input.getOnceSize(), n * input.getOnceSize(), 1, offset + n * output.getOnceSize(), 1);
+				kernel.copy_gpu(input, this.output, part_input_size, n * input.getOnceSize() + part_input_size * groupId, 1, offset + n * output.getOnceSize(), 1);
 			}
-			offset += input.getOnceSize();
+			offset += part_input_size;
 		}
 	}
 
@@ -85,11 +107,13 @@ public class RouteLayer extends Layer{
 		int offset = 0;
 		for(int l = 0;l<layers.length;l++) {
 			Tensor delta = layers[l].cache_delta;
+//			System.out.println(layers[l].index+":"+delta);
+			int part_input_size = delta.getOnceSize() / groups;
 			for(int n = 0;n<this.number;n++) {
-				kernel.axpy_gpu(this.delta, delta, delta.getOnceSize(), 1, offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize(), 1);
+				kernel.axpy_gpu(this.delta, delta, part_input_size, 1, offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize() + part_input_size * groupId, 1);
 //				kernel.copy_gpu(this.delta, delta, delta.getOnceSize(), offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize(), 1);
 			}
-			offset += delta.getOnceSize();
+			offset += part_input_size;
 		}
 	}
 	

@@ -10,6 +10,7 @@ import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
+import com.omega.yolo.utils.OMImage;
 
 /**
  * 
@@ -374,6 +375,47 @@ public class YoloDataTransform extends DataTransform {
 
 	}
 	
+	public static void loadLabelToYolov7(float[] box, int i, Tensor label,int imgw,int imgh,int bbox_num,int index) {
+		
+		int ignore = 0;
+		
+		float lowest_w = 1.0f / imgw;
+	    float lowest_h = 1.0f / imgh;
+		
+		for(int c = 0;c<box.length / 5;c++) {
+
+			int clazz = (int) box[c * 5 + 0];
+//			System.out.println(JsonUtils.toJson(box));
+			float x1 = box[c * 5 + 1] / imgw;
+			float y1 = box[c * 5 + 2] / imgh;
+			float x2 = box[c * 5 + 3] / imgw;
+			float y2 = box[c * 5 + 4] / imgh;
+			
+			float cx = (x1 + x2) / 2;
+			float cy = (y1 + y2) / 2;
+			
+			float w = (x2 - x1);
+			float h = (y2 - y1);
+			
+			if(w == 0 || h == 0) {
+//				System.out.println(x2+"-"+x1+"|"+y2+"-"+y1);
+				ignore++;
+				continue;
+			}
+			
+			int currentC = c - ignore;
+			
+			label.data[i * bbox_num * 6 + currentC * 6 + 0] = cx;
+			label.data[i * bbox_num * 6 + currentC * 6 + 1] = cy;
+			label.data[i * bbox_num * 6 + currentC * 6 + 2] = w;
+			label.data[i * bbox_num * 6 + currentC * 6 + 3] = h;
+			label.data[i * bbox_num * 6 + currentC * 6 + 4] = clazz;
+			label.data[i * bbox_num * 6 + currentC * 6 + 5] = index;
+			
+		}
+
+	}
+	
 	public static List<float[]> correctBoxes(float[] orgLabelData,float dx,float dy,float sx,float sy,int flip,int img_w,int img_h) {
 		
 		List<float[]> rList = new ArrayList<float[]>();
@@ -429,23 +471,48 @@ public class YoloDataTransform extends DataTransform {
 	
 	public static void randomDistortImage(float[] img,int imgw,int imgh,int imgc,float hue,float saturation,float exposure) {
 		
-		float dhue = RandomUtils.randomFloat(-hue, hue);
-		float dsat = RandomUtils.randomScale(saturation);
-		float dexp = RandomUtils.randomScale(exposure);
-		
-		rgb2hsv(img, imgw, imgh, imgc);
-		scaleImageChannel(img, imgw, imgh, imgc, 1, dsat);
-		scaleImageChannel(img, imgw, imgh, imgc, 2, dexp);
-		
-		for(int i = 0; i < imgw*imgh; ++i){
-			img[i] = img[i] + dhue;
-	        if (img[i] > 1) img[i] -= 1;
-	        if (img[i] < 0) img[i] += 1;
-	    }
-		
-		hsv2rgb(img, imgw, imgh, imgc);
-		constrainImage(img, imgw, imgh, imgc);
+		if(imgc >= 3) {
 
+			float dhue = RandomUtils.randomFloat(-hue, hue);
+			float dsat = RandomUtils.randomScale(saturation);
+			float dexp = RandomUtils.randomScale(exposure);
+			
+			rgb2hsv(img, imgw, imgh, imgc);
+			scaleImageChannel(img, imgw, imgh, imgc, 1, dsat);
+			scaleImageChannel(img, imgw, imgh, imgc, 2, dexp);
+			
+			for(int i = 0; i < imgw*imgh; ++i){
+				img[i] = img[i] + dhue;
+		        if (img[i] > 1) img[i] -= 1;
+		        if (img[i] < 0) img[i] += 1;
+		    }
+			
+			hsv2rgb(img, imgw, imgh, imgc);
+			constrainImage(img, imgw, imgh, imgc);
+
+		}
+		
+	}
+	
+	public static void distortImage(OMImage img,float hue,float saturation,float exposure) {
+		
+		if(img.getChannel() >= 3) {
+
+			rgb2hsv(img.getData(), img.getWidth(), img.getHeight(), img.getChannel());
+			scaleImageChannel(img.getData(), img.getWidth(), img.getHeight(), img.getChannel(), 1, saturation);
+			scaleImageChannel(img.getData(), img.getWidth(), img.getHeight(), img.getChannel(), 2, exposure);
+			
+			for(int i = 0; i < img.getWidth()*img.getHeight(); ++i){
+				img.getData()[i] = img.getData()[i] + hue;
+		        if (img.getData()[i] > 1) img.getData()[i] -= 1;
+		        if (img.getData()[i] < 0) img.getData()[i] += 1;
+		    }
+			
+			hsv2rgb(img.getData(), img.getWidth(), img.getHeight(), img.getChannel());
+			constrainImage(img.getData(), img.getWidth(), img.getHeight(), img.getChannel());
+
+		}
+		
 	}
 	
 	public static void constrainImage(float[] img,int imgw,int imgh,int imgc) {

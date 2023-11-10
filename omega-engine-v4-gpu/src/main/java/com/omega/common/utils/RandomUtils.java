@@ -50,6 +50,10 @@ public class RandomUtils {
 		return min + (float)(Math.random() * (max-min));
 	}
 	
+	public static float randomFloat() {
+		return (float) Math.random();
+	}
+	
 	public static float uniformFloat(float min,float max) {
 		if(max < min) {
 			float swap = min;

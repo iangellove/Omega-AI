@@ -93,7 +93,11 @@ public abstract class Optimizer {
 	
 	public int lrStartTime = 5;
 	
-	public float max_lr = 0.1f;
+	public float max_lr = 0.0001f;
+	
+	public float min_lr = 0;
+	
+	public int trainMax = 100;
 	
 	public float min_loss = Float.POSITIVE_INFINITY;
 	
@@ -204,10 +208,14 @@ public abstract class Optimizer {
 				break;
 			case COSINE:
 				if(this.trainIndex >= lrStartTime) {
-					this.network.learnRate = (float) (0.5d * max_lr * (Math.cos(this.trainIndex/trainTime * Math.PI)) + 1.0d) * this.network.learnRate;
+					this.network.learnRate = (float) (0.5d * max_lr * (Math.cos(this.trainIndex * Math.PI / trainTime) + 1.0d)) * this.network.learnRate;
 				}else {
 					this.network.learnRate = this.trainIndex * this.network.learnRate / lrStartTime;
 				}
+				break;
+			case COSINE_ANNEALING:
+				this.network.learnRate = (float) (min_lr + 0.5d * (max_lr - min_lr) * (Math.cos(this.trainIndex * Math.PI / this.trainMax) + 1.0d));
+//				System.out.println(this.trainMax);
 				break;
 			case RANDOM:
 				this.network.learnRate = (float) Math.pow(RandomUtils.getInstance().nextFloat(), power) * this.lr;
@@ -954,6 +962,57 @@ public abstract class Optimizer {
 				YoloLayer layer = (YoloLayer) net.outputLayers.get(i);
 				
 				YoloDetection[][] dets = YoloUtils.getYoloDetections(output[i], layer.anchors, layer.mask, layer.bbox_num, layer.outputs, layer.class_number, this.network.height, this.network.width, 0.5f);
+				
+				for(int j = 0;j<dets.length;j++) {
+					
+					/**
+					 * nms
+					 */
+					nmsSort(dets[j], dets[j].length, layer.class_number, 0.7f);
+					
+					if(boxs[j] != null) {
+						boxs[j].getDets().addAll(new ArrayList<>(Arrays.asList(dets[j])));
+					}else{
+						YoloBox box = new YoloBox(dets[j]);
+						boxs[j] = box;
+					}
+				}
+				
+			}
+			
+			list.addAll(new ArrayList<YoloBox>(Arrays.asList(boxs)));
+			
+		}
+		
+		return list;
+	}
+	
+	public List<YoloBox> showObjectRecognitionYoloV7(DetectionDataLoader testData,int batchSize) {
+		// TODO Auto-generated method stub
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		List<YoloBox> list = new ArrayList<YoloBox>();
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+		
+		Yolo net = (Yolo) this.network;
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.loadData(pageIndex, batchSize, input);
+			
+			Tensor[] output = net.predicts(input);
+			
+			YoloBox[] boxs = new YoloBox[input.number];
+			
+			for(int i = 0;i<net.outputLayers.size();i++){
+				
+				YoloLayer layer = (YoloLayer) net.outputLayers.get(i);
+				
+				YoloDetection[][] dets = YoloUtils.getYoloDetectionsV7(output[i], layer.anchors, layer.mask, layer.bbox_num, layer.outputs, layer.class_number, this.network.height, this.network.width, 0.5f);
 				
 				for(int j = 0;j<dets.length;j++) {
 					

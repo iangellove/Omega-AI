@@ -17,7 +17,7 @@ import com.omega.engine.nn.network.Network;
  */
 public class LeakyReluLayer extends ActiveFunctionLayer {
 	
-	private float leak = 0.2f;
+	private float leak = 0.1f;
 	
 	private LeakyReluKernel kernel;
 	
@@ -26,12 +26,7 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 	}
 	
 	public LeakyReluLayer(Layer preLayer) {
-		this.width = preLayer.width;
-		this.height = preLayer.height;
-		this.oWidth = preLayer.oWidth;
-		this.oHeight = preLayer.oHeight;
-		this.channel = preLayer.channel;
-		this.oChannel = preLayer.oChannel;
+		this.setPreLayer(preLayer);
 	}
 	
 	public LeakyReluLayer(Network network) {

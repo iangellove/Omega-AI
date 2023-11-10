@@ -3,7 +3,6 @@ package com.omega.engine.nn.layer;
 import com.omega.common.data.Tensor;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.gpu.SigmodKernel;
-import com.omega.engine.nn.network.Yolo;
 
 /**
  * yolo layer
@@ -38,6 +37,10 @@ public class YoloLayer extends Layer {
 	
 	public int outputs = 0;
 	
+	public int active = 1;
+	
+	public float scaleXY = 1.0f;
+	
 	public YoloLayer(int class_number,int bbox_num,int[] mask,float[] anchors,int maxBox,int total,float ignoreThresh,float truthThresh) {
 		this.class_number = class_number;
 		this.bbox_num = bbox_num;
@@ -50,20 +53,26 @@ public class YoloLayer extends Layer {
 		this.isOutput = true;
 	}
 	
+	public YoloLayer(int class_number,int bbox_num,int[] mask,float[] anchors,int maxBox,int total,float ignoreThresh,float truthThresh,int active,float scaleXY) {
+		this.class_number = class_number;
+		this.bbox_num = bbox_num;
+		this.mask = mask;
+		this.anchors = anchors;
+		this.maxBox = maxBox;
+		this.total = total;
+		this.ignoreThresh = ignoreThresh;
+		this.truthThresh = truthThresh;
+		this.isOutput = true;
+		this.active = active;
+		this.scaleXY = scaleXY;
+	}
+	
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
 
 		this.number = this.network.number;
 		
-		if(kernel == null) {
-			kernel = new SigmodKernel();
-		}
-		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
-		}
-
 		if(this.preLayer == null) {
 			this.preLayer = this.network.getPreLayer(this.index);
 			this.channel = preLayer.oChannel;
@@ -72,6 +81,18 @@ public class YoloLayer extends Layer {
 			this.oChannel = this.channel;
 			this.oHeight = this.height;
 			this.oWidth = this.width;
+		}
+
+		if(baseKernel == null) {
+			baseKernel = new BaseKernel();
+		}
+
+		if(this.active == 1) {
+
+			if(kernel == null) {
+				kernel = new SigmodKernel();
+			}
+
 		}
 		
 		if(output == null || number != output.number) {
@@ -85,9 +106,7 @@ public class YoloLayer extends Layer {
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-//		if(this.diff == null) {
-//			this.diff = this.network.getDelta(this.index);
-//		}
+
 	}
 
 	@Override
@@ -96,7 +115,7 @@ public class YoloLayer extends Layer {
 		
 	}
 	
-	public int entryIndex(int batch,int location,int entry) {
+	private int entryIndex(int batch,int location,int entry) {
 		int n = location / (width * height);
 	    int loc = location % (width * height);
 	    return batch * outputs + n * width * height * (4 + class_number + 1) + entry * width * height + loc;
@@ -106,17 +125,22 @@ public class YoloLayer extends Layer {
 	public void output() {
 		// TODO Auto-generated method stub
 		baseKernel.copy_gpu(input, output, input.dataLength, 1, 1);
-//		System.out.println("bbox_num:"+bbox_num);
+		
 		for(int b = 0;b<this.input.number;b++) {
 			for(int n = 0;n<bbox_num;n++) {
 				int index = entryIndex(b, n * width * height, 0);
-//				int index = b * this.outputs + n * input.width * input.height * (4+1+class_number);
-				kernel.forward(input, output, index, 2 * input.width * input.height);
-//				index = b * this.outputs + n * input.width * input.height * (4+1+class_number) + 4 * input.width * input.height;
-				int index2 = entryIndex(b, n * width * height, 4);
-				kernel.forward(input, output, index2, (1+class_number) * input.width * input.height);
+				
+				if(this.active == 1) {
+					kernel.forward(input, output, index, 2 * input.width * input.height);
+					int index2 = entryIndex(b, n * width * height, 4);
+					kernel.forward(input, output, index2, (1+class_number) * input.width * input.height);
+				}
+				
+				baseKernel.scal_add_gpu(output, 2 * input.width * input.height, scaleXY, -0.5f*(scaleXY - 1), index, 1);
+				
 			}
 		}
+
 	}
 
 	@Override
@@ -129,18 +153,6 @@ public class YoloLayer extends Layer {
 	public void diff() {
 		// TODO Auto-generated method stub
 		this.diff = this.delta;
-//		System.out.println(this.delta);
-//		baseKernel.copy_gpu(this.delta, this.diff, this.delta.dataLength, 1, 1);
-//		for(int b = 0;b<this.delta.number;b++) {
-//			for(int n = 0;n<bbox_num;n++) {
-//				int index = entryIndex(b, n * width * height, 0);
-////				int index = b * this.outputs + n * input.width * input.height * (4+1+class_number);
-//				kernel.forward(input, output, index, 2 * input.width * input.height);
-////				index = b * this.outputs + n * input.width * input.height * (4+1+class_number) + 4 * input.width * input.height;
-//				int index2 = entryIndex(b, n * width * height, 4);
-//				kernel.forward(input, output, index2, (1+class_number) * input.width * input.height);
-//			}
-//		}
 	}
 
 	@Override

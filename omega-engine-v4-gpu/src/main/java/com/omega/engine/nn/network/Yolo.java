@@ -213,6 +213,7 @@ public class Yolo extends OutputsNetwork{
 		 * 清除梯度
 		 */
 		this.clearGrad();
+		
 		for(int i = 0;i<losses.length;i++) {
 			this.lossDiff[i] = losses[i].diff(getOutputs()[i], label);
 		}

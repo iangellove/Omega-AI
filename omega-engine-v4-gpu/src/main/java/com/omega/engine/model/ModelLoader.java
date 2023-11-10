@@ -10,6 +10,7 @@ import java.util.Map;
 
 import com.omega.common.utils.JsonUtils;
 import com.omega.engine.nn.layer.AVGPoolingLayer;
+import com.omega.engine.nn.layer.CBLLayer;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.InputLayer;
@@ -21,7 +22,9 @@ import com.omega.engine.nn.layer.UPSampleLayer;
 import com.omega.engine.nn.layer.YoloLayer;
 import com.omega.engine.nn.layer.active.LeakyReluLayer;
 import com.omega.engine.nn.layer.active.ReluLayer;
+import com.omega.engine.nn.layer.active.SiLULayer;
 import com.omega.engine.nn.layer.active.SigmodLayer;
+import com.omega.engine.nn.layer.active.TanhLayer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.pooling.PoolingType;
@@ -58,43 +61,50 @@ public class ModelLoader {
 		for(int i = 0;i<layerCfgs.size();i++) {
 			
 			Map<String,Object> cfg = layerCfgs.get(i);
-			
+
 			String layerType = cfg.get("layerType").toString();
 			
 			Layer layer = null;
 			
+			int[] shape = null;
+			
 			switch (layerType) {
 			case "fully":
-				addFullyLayers(cfg, nn);
+				shape = addFullyLayers(cfg, nn);
 				break;
 			case "convolutional":
-				addConvLayers(cfg, nn);
+				shape = addConvLayers(cfg, nn);
+				break;
+			case "cbl":
+				shape = addCBLs(cfg, nn);
 				break;
 			case "maxpool":
-				addMaxPoolingLayer(cfg, nn);
+				shape = addMaxPoolingLayer(cfg, nn);
 				break;
 			case "meanpool":
-				addMeanPoolingLayer(cfg, nn);
+				shape = addMeanPoolingLayer(cfg, nn);
 				break;
 			case "avgpool":
-				addAvgPoolingLayer(cfg, nn);
+				shape = addAvgPoolingLayer(cfg, nn);
 				break;
 			case "input":
-				addInputLayer(cfg, nn);
+				shape = addInputLayer(cfg, nn);
 				break;
 			case "route":
-				addRouteLayer(cfg, nn, layerCfgs, i);
+				shape = addRouteLayer(cfg, nn, layerCfgs, i);
 				break;
 			case "upsample":
-				addUpsampleLayer(cfg, nn);
+				shape = addUpsampleLayer(cfg, nn);
 				break;
 			case "yolo":
-				addYoloLayer(cfg, nn);
+				shape = addYoloLayer(cfg, nn);
 				break;
 			default:
 				break;
 			}
-			System.out.println(layerType);
+
+			System.out.println(layerType + "("+i+")" + ":" + JsonUtils.toJson(shape));
+
 		}
 		
 	}
@@ -107,7 +117,7 @@ public class ModelLoader {
 		return new Float(val);
 	}
 	
-	public static void addInputLayer(Map<String,Object> cfg,Network nn) {
+	public static int[] addInputLayer(Map<String,Object> cfg,Network nn) {
 
 		int channel = getInt(cfg.get("channel").toString());
 		int width = getInt(cfg.get("width").toString());
@@ -117,9 +127,11 @@ public class ModelLoader {
 
 		nn.addLayer(inputLayer);
 		cfg.put("lastIndex", inputLayer.index);
+		
+		return inputLayer.outputShape();
 	}
 	
-	public static void addMaxPoolingLayer(Map<String,Object> cfg,Network nn) {
+	public static int[] addMaxPoolingLayer(Map<String,Object> cfg,Network nn) {
 		
 		Layer pre = nn.getLastLayer();
 		
@@ -129,15 +141,23 @@ public class ModelLoader {
 		
 		int size = getInt(cfg.get("size").toString());
 		int stride = getInt(cfg.get("stride").toString());
-//		System.out.println(pre.oWidth);
-		PoolingLayer pool1 = new PoolingLayer(pre.oChannel, pre.oWidth, pre.oHeight, size, size, stride, PoolingType.MAX_POOLING);
+		int padding = 0;
+		if(cfg.get("padding") != null) {
+			padding = getInt(cfg.get("padding").toString());
+		}else {
+			padding = size - 1;
+		}
 		
-		nn.addLayer(pool1);
+		PoolingLayer pool = new PoolingLayer(pre.oChannel, pre.oWidth, pre.oHeight, size, size, stride, padding, PoolingType.MAX_POOLING);
 		
-		cfg.put("lastIndex", pool1.index);
+		nn.addLayer(pool);
+		
+		cfg.put("lastIndex", pool.index);
+		
+		return pool.outputShape();
 	}
 	
-	public static void addMeanPoolingLayer(Map<String,Object> cfg,Network nn) {
+	public static int[] addMeanPoolingLayer(Map<String,Object> cfg,Network nn) {
 		
 		Layer pre = nn.getLastLayer();
 		
@@ -147,15 +167,17 @@ public class ModelLoader {
 		
 		int size = getInt(cfg.get("size").toString());
 		int stride = getInt(cfg.get("stride").toString());
-//		System.out.println(pre.oWidth);
+
 		PoolingLayer pool1 = new PoolingLayer(pre.oChannel, pre.oWidth, pre.oHeight, size, size, stride, PoolingType.MEAN_POOLING);
 		
 		nn.addLayer(pool1);
 		
 		cfg.put("lastIndex", pool1.index);
+		
+		return pool1.outputShape();
 	}
 	
-	public static void addAvgPoolingLayer(Map<String,Object> cfg,Network nn) {
+	public static int[] addAvgPoolingLayer(Map<String,Object> cfg,Network nn) {
 		
 		Layer pre = nn.getLastLayer();
 		
@@ -168,9 +190,11 @@ public class ModelLoader {
 		nn.addLayer(pool1);
 		
 		cfg.put("lastIndex", pool1.index);
+		
+		return pool1.outputShape();
 	}
 	
-	public static void addConvLayers(Map<String,Object> cfg,Network nn) {
+	public static int[] addConvLayers(Map<String,Object> cfg,Network nn) {
 		
 		Layer pre = nn.getLastLayer();
 		
@@ -208,8 +232,7 @@ public class ModelLoader {
 		if(freeze == 1) {
 			conv.freeze = true;
 		}
-		
-		System.out.println(conv.oWidth);
+
 		nn.addLayer(conv);
 		cfg.put("lastIndex", conv.index);
 		
@@ -230,9 +253,39 @@ public class ModelLoader {
 			cfg.put("lastIndex", activeLayer.index);
 		}
 		
+		return conv.outputShape();
 	}
 	
-	public static void addFullyLayers(Map<String,Object> cfg,Network nn) {
+	public static int[] addCBLs(Map<String,Object> cfg,Network nn) {
+		
+		Layer pre = nn.getLastLayer();
+		
+		if(pre == null) {
+			throw new RuntimeException("the convolution layer cant be the fisrt layer.");
+		}
+		
+		int kernel = getInt(cfg.get("kernel").toString());
+		int size = getInt(cfg.get("size").toString());
+		int stride = getInt(cfg.get("stride").toString());
+		int pad = getInt(cfg.get("pad").toString());
+		
+		String activation = null;
+		
+		if(cfg.get("activation") != null) {
+			activation = cfg.get("activation").toString();
+			if(activation.equals("leaky")) {
+				activation = "leaky_relu";
+			}
+		}
+		
+		CBLLayer cbl = new CBLLayer(pre.oChannel, kernel, pre.oHeight, pre.oWidth, size, size, stride, pad, activation, nn);
+		nn.addLayer(cbl);
+		cfg.put("lastIndex", cbl.index);
+		
+		return cbl.outputShape();
+	}
+	
+	public static int[] addFullyLayers(Map<String,Object> cfg,Network nn) {
 		
 		Layer pre = nn.getLastLayer();
 		
@@ -262,7 +315,6 @@ public class ModelLoader {
 		if(cfg.get("activation") != null) {
 			activation = cfg.get("activation").toString();
 		}
-		System.out.println(inputSize);
 		FullyLayer fully = new FullyLayer(inputSize, outputSize, hasBias);
 		if(freeze == 1) {
 			fully.freeze = true;
@@ -287,9 +339,20 @@ public class ModelLoader {
 			cfg.put("lastIndex", activeLayer.index);
 		}
 		
+		return fully.outputShape();
 	}
 	
-	public static void addRouteLayer(Map<String,Object> cfg,Network nn,List<Map<String,Object>> layerCfgs,int current) {
+	public static int[] addRouteLayer(Map<String,Object> cfg,Network nn,List<Map<String,Object>> layerCfgs,int current) {
+		
+		int group = 1;
+		if(cfg.get("group")!=null){
+			group = getInt(cfg.get("group").toString());
+		}
+		
+		int groupId = 0;
+		if(cfg.get("group_id")!=null){
+			groupId = getInt(cfg.get("group_id").toString());
+		}
 		
 		List<Double> layerIndexList = (List<Double>) cfg.get("layers");
 		int[] layerIndexs = new int[layerIndexList.size()];
@@ -310,13 +373,14 @@ public class ModelLoader {
 			layers[i] = nn.layerList.get(index);
 		}
 
-		RouteLayer routeLayer = new RouteLayer(layers);
-		System.out.println(routeLayer.oWidth);
+		RouteLayer routeLayer = new RouteLayer(layers, group, groupId);
 		nn.addLayer(routeLayer);
 		cfg.put("lastIndex", routeLayer.index);
+		
+		return routeLayer.outputShape();
 	}
 	
-	public static void addUpsampleLayer(Map<String,Object> cfg,Network nn) {
+	public static int[] addUpsampleLayer(Map<String,Object> cfg,Network nn) {
 
 		Layer pre = nn.getLastLayer();
 		
@@ -327,18 +391,29 @@ public class ModelLoader {
 		int stride = getInt(cfg.get("stride").toString());
 		
 		UPSampleLayer upsampleLayer = new UPSampleLayer(pre.oChannel, pre.oHeight, pre.oWidth, stride);
-		System.out.println(upsampleLayer.oWidth);
 		nn.addLayer(upsampleLayer);
 		cfg.put("lastIndex", upsampleLayer.index);
+		
+		return upsampleLayer.outputShape();
 	}
 	
-	public static void addYoloLayer(Map<String,Object> cfg,Network nn) {
+	public static int[] addYoloLayer(Map<String,Object> cfg,Network nn) {
 
 		int class_number = getInt(cfg.get("classes").toString());
 		int total = getInt(cfg.get("num").toString());
 		int maxBox = getInt(cfg.get("maxBox").toString());
 		float ignoreThresh = getFloat(cfg.get("ignore_thresh").toString());
 		float truthThresh = getFloat(cfg.get("truth_thresh").toString());
+		
+		float scale_x_y = 1;
+		if(cfg.get("scale_x_y") != null) {
+			scale_x_y = getInt(cfg.get("scale_x_y").toString());
+		}
+		
+		int active = 1;
+		if(cfg.get("active") != null) {
+			active = getInt(cfg.get("active").toString());
+		}
 		
 		List<Double> anchorsList = (List<Double>) cfg.get("anchors");
 		float[] anchors = new float[anchorsList.size()];
@@ -357,9 +432,11 @@ public class ModelLoader {
 			mask = new int[total];
 		}
 		
-		YoloLayer yoloLayer = new YoloLayer(class_number, mask.length, mask, anchors, maxBox, total, ignoreThresh, truthThresh);
+		YoloLayer yoloLayer = new YoloLayer(class_number, mask.length, mask, anchors, maxBox, total, ignoreThresh, truthThresh, active, scale_x_y);
 		nn.addLayer(yoloLayer);
 		cfg.put("lastIndex", yoloLayer.index);
+		
+		return yoloLayer.outputShape();
 	}
 	
 	public static Layer makeActivation(String activation,Layer preLayer) {
@@ -371,7 +448,7 @@ public class ModelLoader {
 			layer = new ReluLayer(preLayer);
 			preLayer.paramsInit = ParamsInit.relu;
 			break;
-		case "sigmod":
+		case "sigmoid":
 			layer = new SigmodLayer(preLayer);
 			preLayer.paramsInit = ParamsInit.sigmoid;
 			break;
@@ -380,9 +457,17 @@ public class ModelLoader {
 			preLayer.paramsInit = ParamsInit.leaky_relu;
 			break;
 		case "tanh":
-//			layer = new TanhLayer();
+			layer = new TanhLayer(preLayer);
 			preLayer.paramsInit = ParamsInit.tanh;
 			break;
+		case "silu":
+			layer = new SiLULayer(preLayer);
+			preLayer.paramsInit = ParamsInit.silu;
+			break;
+		case "none":
+			break;
+		default:
+			throw new RuntimeException("not support this active function.");
 		}
 		
 		return layer;

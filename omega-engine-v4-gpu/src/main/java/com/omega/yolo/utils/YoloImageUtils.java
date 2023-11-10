@@ -232,10 +232,93 @@ public class YoloImageUtils {
 		return null;
 	}
 	
+	public static int[][] anno2bbox(String src,String[] names){
+		
+		try {
+			
+			File file = new File(src);
+//			System.out.println(file.exists());
+			if(file.exists()) {
+
+				Document doc = XmlParser.DB().parse(file);
+				
+				Element docEle = doc.getDocumentElement();
+				
+				NodeList objList = docEle.getElementsByTagName("object");
+				
+				if(objList == null || objList.getLength() <= 0) {
+					return null;
+				}
+				
+				int[][] output = new int[objList.getLength()][5];
+				
+				for(int i = 0;i<objList.getLength();i++){
+					
+					Node node = objList.item(i); 
+					
+					if(node.getNodeType() == Node.ELEMENT_NODE) {
+						
+						Element e = (Element) node;
+						
+						NodeList nodeList = e.getElementsByTagName("name");
+						String name = nodeList.item(0).getChildNodes().item(0).getNodeValue();
+						int nidx = getIndex(name, names);
+//						System.out.println(nidx);
+						if(nidx < 0) {
+							continue;
+						}
+						
+						nodeList = e.getElementsByTagName("bndbox");
+						
+						Element boxe = (Element) nodeList.item(0);
+						
+						nodeList = boxe.getElementsByTagName("xmin");
+						int xmin = Integer.parseInt(nodeList.item(0).getChildNodes().item(0).getNodeValue());
+
+						nodeList = boxe.getElementsByTagName("ymin");
+						int ymin = Integer.parseInt(nodeList.item(0).getChildNodes().item(0).getNodeValue());
+						
+						nodeList = boxe.getElementsByTagName("xmax");
+						int xmax = Integer.parseInt(nodeList.item(0).getChildNodes().item(0).getNodeValue());
+						
+						nodeList = boxe.getElementsByTagName("ymax");
+						int ymax = Integer.parseInt(nodeList.item(0).getChildNodes().item(0).getNodeValue());
+						
+						output[i][0] = nidx;
+						output[i][1] = xmin;
+						output[i][2] = ymin;
+						output[i][3] = xmax;
+						output[i][4] = ymax;
+					}
+					
+				}
+				
+				return output;
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
 	public static int getIndex(String name) {
 		
 		for(int i = 0;i<GL_CLASSES.length;i++) {
 			if(name.equals(GL_CLASSES[i])) {
+				return i;
+			}
+		}
+		
+		return -1;
+	}
+	
+	public static int getIndex(String name,String[] names) {
+		
+		for(int i = 0;i<names.length;i++) {
+			if(name.equals(names[i])) {
 				return i;
 			}
 		}
@@ -477,6 +560,27 @@ public class YoloImageUtils {
 		return label;
 	}
 	
+	public static int[][] xml2xyxy(File file,String labelDir,String[] names) {
+		
+		int[][] label = null;
+		
+		try {
+			
+			String filename = file.getName();
+			
+			String dataName = filename.substring(0, filename.lastIndexOf("."));
+
+			String labelPath = labelDir + "\\" + dataName + ".xml";
+			
+			label = anno2bbox(labelPath, names);
+		}catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}	
+		
+		return label;
+	}
+	
 	public static YoloImage formatData(File file,String labelDir,String imgOutDir,YoloVersion version) {
 		
 		try {
@@ -638,6 +742,76 @@ public class YoloImageUtils {
 					
 					for(float val:(float[])bboxList.get(name)) {
 						text += " " + val;
+					}
+					text += "\n";
+//					System.out.println(text);
+					fos.write(text.getBytes());
+				}
+	 
+				fos.flush();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void xml2Yolo(String srcDir,String labelDir,String labelPath,String bboxPath) {
+		
+		try {
+			
+			File file = new File(srcDir);
+			
+			Map<String, Object> bboxList = new LinkedHashMap<String, Object>(); 
+			
+			if(file.exists() && file.isDirectory()) {
+
+				String[] names = new String[200];
+				try (FileInputStream fin = new FileInputStream(labelPath);
+					InputStreamReader reader = new InputStreamReader(fin);	
+				    BufferedReader buffReader = new BufferedReader(reader);){
+
+					String strTmp = "";
+					int idx = 0;
+			        while((strTmp = buffReader.readLine())!=null){
+			        	names[idx] = strTmp;
+			        	idx++;
+			        }
+					
+				} catch (Exception e) {
+					// TODO: handle exception
+					e.printStackTrace();
+				}
+				
+				for(File img:file.listFiles()) {
+					int[][] yi = xml2xyxy(img, labelDir, names);
+					String dataName = img.getName().substring(0, img.getName().lastIndexOf("."));
+					bboxList.put(dataName, yi);
+				}
+				
+			}
+			
+			File txt = new File(bboxPath);
+			
+			if(!txt.exists()) {
+				txt.createNewFile(); // 创建新文件,有同名的文件的话直接覆盖
+			}
+			
+			try (FileOutputStream fos = new FileOutputStream(txt);) {
+	 
+				for (String name : bboxList.keySet()) {
+					
+					String text = name;
+					
+					for(int[] vals:(int[][])bboxList.get(name)) {
+						for(int val:vals) {
+							text += " " + val;
+						}
 					}
 					text += "\n";
 //					System.out.println(text);
@@ -1117,14 +1291,16 @@ public class YoloImageUtils {
 //
 //		image2YoloFormCSV(imgDir, labelPath, labelSet, imgOutDir, bboxPath, YoloVersion.yolov3_xyxy);
 		
-		String rootPath = "H:\\voc\\test";
+//		String rootPath = "H:\\voc\\test";
+		String rootPath = "H:\\voc\\sm\\VOC";
 		String imgDir = rootPath + "\\JPEGImages";
 		String labelDir = rootPath + "\\Annotations";
-		String bboxPath = rootPath + "\\labels.txt";
+		String labelPath = rootPath + "\\labels.txt";
+		String bboxPath = rootPath + "\\bbox.txt";
 //		String labelPath = rootPath + "\\train_labels.csv";
 //		String[] labelSet = new String[] {"none","white","yellow","blue","red"};
 
-		xml2Yolo(imgDir, labelDir, bboxPath);
+		xml2Yolo(imgDir, labelDir, labelPath, bboxPath);
 		
 //		csv2Yolo(imgDir, labelPath, bboxPath, labelSet);
 	}

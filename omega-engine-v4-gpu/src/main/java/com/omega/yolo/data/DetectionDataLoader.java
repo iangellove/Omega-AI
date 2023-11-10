@@ -157,7 +157,7 @@ public class DetectionDataLoader extends BaseDataLoader{
 	public void showImg(String outputPath,int[] indexs,Tensor input,Tensor label) {
 		
 		if(dataType == DataType.yolov3) {
-			System.out.println(label.getDataLength());
+//			System.out.println(label.getDataLength());
 			ImageLoader.load(imgDirPath, extName, input, label, idxSet, indexs, orgLabelData, bboxNum, classNum);
 			
 			ImageLoader.showImg(input, label, classNum, outputPath);

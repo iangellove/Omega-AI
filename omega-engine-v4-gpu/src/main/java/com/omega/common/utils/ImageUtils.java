@@ -787,7 +787,11 @@ public class ImageUtils {
             g.setColor(Color.RED);
             if(bbox!=null) {
             	for(int[] box:bbox) {
-            		g.setColor(colors[box[0]]);
+            		if(box[0] >= colors.length) {
+            			g.setColor(Color.RED);
+            		}else {
+            			g.setColor(colors[box[0]]);
+            		}
                 	int w = (box[3] - box[1]);
                 	int h = (box[4] - box[2]);
                 	g.drawRect(box[1], box[2], w, h);

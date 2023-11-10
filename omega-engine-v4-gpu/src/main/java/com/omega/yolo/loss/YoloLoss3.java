@@ -1,6 +1,7 @@
 package com.omega.yolo.loss;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.loss.LossType;
@@ -259,8 +260,8 @@ public class YoloLoss3 extends LossFunction {
 	
 	private float deltaYoloClass(Tensor x, int index, int clazz, int classes, int stride, float avg_cat) {
 		if(this.diff.data[index] == 1.0f) {
-			this.diff.data[index + stride * clazz] = 1.0f - x.data[index + stride * clazz];
-//			this.diff.data[index + stride * clazz] = x.data[index + stride * clazz] - 1.0f;
+//			this.diff.data[index + stride * clazz] = 1.0f - x.data[index + stride * clazz];
+			this.diff.data[index + stride * clazz] = x.data[index + stride * clazz] - 1.0f;
 			avg_cat += x.data[index + stride * clazz];
 			return avg_cat;
 		}

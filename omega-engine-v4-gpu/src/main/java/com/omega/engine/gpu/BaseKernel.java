@@ -25,6 +25,8 @@ public class BaseKernel {
 	
 	private CUfunction fill_gpu_function;
 	
+	private CUfunction scal_add_function;
+	
 	public BaseKernel() {
 		
 		copy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "copy_kernel");
@@ -32,6 +34,8 @@ public class BaseKernel {
 		axpy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "axpy_kernel");
 		
 		fill_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "fill_kernel");
+		
+		scal_add_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "scal_add_kernel");
 		
 	}
 	
@@ -65,6 +69,35 @@ public class BaseKernel {
 			e.printStackTrace();
 		}
 		
+	}
+	
+	public void scal_add_gpu(Tensor a,int N, float ALPHA, float BETA,int OFFX, int INCX) {
+		
+		try {
+
+			/**
+			 * int N, float ALPHA, float BETA, float *X, int INCX
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{N}),
+	                Pointer.to(new float[]{ALPHA}),
+	                Pointer.to(new float[]{BETA}),
+	        		Pointer.to(a.getGpuData().withByteOffset(OFFX * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{INCX})
+	            );
+			
+			checkCUDA(cuLaunchKernel(scal_add_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
 	}
 	
 	public void axpy_gpu(Tensor a,Tensor b,int N, float ALPHA,int INCX, int INCY) {

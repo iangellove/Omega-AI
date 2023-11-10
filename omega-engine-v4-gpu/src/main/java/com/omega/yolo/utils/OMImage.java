@@ -2,7 +2,6 @@ package com.omega.yolo.utils;
 
 import java.io.Serializable;
 
-import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 
 /**

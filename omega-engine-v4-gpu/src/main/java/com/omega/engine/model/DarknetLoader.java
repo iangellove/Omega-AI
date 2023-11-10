@@ -7,6 +7,8 @@ import java.nio.ByteOrder;
 import java.util.List;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.nn.layer.CBLLayer;
+import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.network.Network;
@@ -43,7 +45,7 @@ public class DarknetLoader {
 		    }
 		    
 		    int index = 0;
-		    
+//		    System.out.println(net.layerList.size());
 		    /**
 		     * load weight by layers
 		     */
@@ -52,10 +54,14 @@ public class DarknetLoader {
 		    	Layer layer = net.layerList.get(l);
 		    	
 		    	if(index < layerCount) {
-
+//		    		System.out.println(index+":"+layerCount);
 			    	switch (layer.getLayerType()) {
 					case conv:
 						loadConvWeights(file, l, layer, net.layerList, freeze);
+						index++;
+						break;
+					case cbl:
+						loadCBLvWeights(file, l, layer, net.layerList, freeze);
 						index++;
 						break;
 					case full:
@@ -63,6 +69,9 @@ public class DarknetLoader {
 						index++;
 						break;
 					case pooling:
+						index++;
+						break;
+					case route:
 						index++;
 						break;
 					default:
@@ -154,6 +163,33 @@ public class DarknetLoader {
 		 * load conv weight
 		 */
 		readFloat(inputStream, layer.weight);
+		layer.freeze = freeze;
+	}
+	
+	public static void loadCBLvWeights(RandomAccessFile inputStream,int index,Layer layer,List<Layer> layerList,boolean freeze) throws IOException {
+		
+		CBLLayer cbl = (CBLLayer) layer;
+		
+		ConvolutionLayer conv = cbl.getConvLayer();
+		
+		/**
+		 * load biases
+		 */
+		readFloat(inputStream, conv.bias);
+		/**
+		 * load bn params
+		 */
+		BNLayer bnl = cbl.getBnLayer();
+		bnl.init();
+		readFloat(inputStream, bnl.gamma);
+		bnl.beta = conv.bias.copyGPU();
+		readFloat(inputStream, bnl.runingMean);
+		readFloat(inputStream, bnl.runingVar);
+		bnl.freeze = freeze;
+		/**
+		 * load conv weight
+		 */
+		readFloat(inputStream, conv.weight);
 		layer.freeze = freeze;
 	}
 	

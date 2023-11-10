@@ -49,3 +49,10 @@ __global__ void axpy_kernel(int N, float ALPHA, float *X, int OFFX, int INCX,  f
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < N) Y[OFFY+i*INCY] += ALPHA*X[OFFX+i*INCX];
 }
+
+extern "C"
+__global__ void scal_add_kernel(int N, float ALPHA, float BETA, float *X, int INCX)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (i < N) X[i*INCX] = X[i*INCX] * ALPHA + BETA;
+}

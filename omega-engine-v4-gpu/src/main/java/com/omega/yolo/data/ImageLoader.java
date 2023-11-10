@@ -66,9 +66,9 @@ public class ImageLoader {
 //		
 //		showImg(x, y, classes, outputPath);
 		
-//		formatImage();
+		formatImage();
 		
-		testFormatImage();
+//		testFormatImage();
 		
 	}
 	
@@ -123,10 +123,10 @@ public class ImageLoader {
 		
 		try {
 			
-			String imgDirPath = "H:\\voc\\test\\JPEGImages";
-			String labelPath = "H:\\voc\\test\\labels.txt";
-			String outputDirPath = "H:\\voc\\test\\resized\\imgs\\";
-			String labelTXTPath = "H:\\voc\\test\\resized\\rlabels.txt";
+			String imgDirPath = "H:\\voc\\sm\\VOC\\JPEGImages";
+			String labelPath = "H:\\voc\\sm\\VOC\\bbox.txt";
+			String outputDirPath = "H:\\voc\\sm\\resized\\imgs\\";
+			String labelTXTPath = "H:\\voc\\sm\\resized\\rlabels.txt";
 			
 			int width = 416;
 			int height = 416;
@@ -545,6 +545,109 @@ public class ImageLoader {
 		return result;
 	}
 	
+	public static void loadDataDetection2(Tensor x,Tensor y,int index,OMImage orig,float[] labelBoxs,
+			int w,int h,int boxes,int classes,float jitter,float resize,float letter_box,float hue, float saturation, float exposure) {
+		
+		float dw = jitter * orig.getWidth();
+        float dh = jitter * orig.getHeight();
+        
+        float resize_down = resize, resize_up = resize;
+        if (resize_down > 1.0) resize_down = 1 / resize_down;
+        int min_rdw = (int) (orig.getWidth()*(1 - (1 / resize_down)) / 2);   // < 0
+        int min_rdh = (int) (orig.getHeight()*(1 - (1 / resize_down)) / 2);   // < 0
+
+        if (resize_up < 1.0) resize_up = 1 / resize_up;
+        int max_rdw = (int) (orig.getWidth()*(1 - (1 / resize_up)) / 2);     // > 0
+        int max_rdh = (int) (orig.getHeight()*(1 - (1 / resize_up)) / 2);     // > 0
+		
+        float r1 = 0, r2 = 0, r3 = 0, r4 = 0;
+        float resize_r1 = 0, resize_r2 = 0;
+        float dhue = 0, dsat = 0, dexp = 0;
+        
+        resize_r1 = RandomUtils.randomFloat();
+        resize_r2 = RandomUtils.randomFloat();
+        
+//        if(contrastive != 1 || contrastive_jit_flip == 1) {
+        	r1 = RandomUtils.randomFloat();
+            r2 = RandomUtils.randomFloat();
+            r3 = RandomUtils.randomFloat();
+            r4 = RandomUtils.randomFloat();
+//        }
+        
+//        if(contrastive != 1 || contrastive_color == 1) {
+    		dhue = RandomUtils.randomFloat(-hue, hue);
+    		dsat = RandomUtils.randomScale(saturation);
+    		dexp = RandomUtils.randomScale(exposure);
+//        }
+        
+        int pleft = (int) randPrecalcRandom(-dw, dw, r1);
+        int pright = (int) randPrecalcRandom(-dw, dw, r2);
+        int ptop = (int) randPrecalcRandom(-dh, dh, r3);
+        int pbot = (int) randPrecalcRandom(-dh, dh, r4);
+        
+        
+        if (resize < 1) {
+            // downsize only
+            pleft += randPrecalcRandom(min_rdw, 0, resize_r1);
+            pright += randPrecalcRandom(min_rdw, 0, resize_r2);
+            ptop += randPrecalcRandom(min_rdh, 0, resize_r1);
+            pbot += randPrecalcRandom(min_rdh, 0, resize_r2);
+        }else {
+            pleft += randPrecalcRandom(min_rdw, max_rdw, resize_r1);
+            pright += randPrecalcRandom(min_rdw, max_rdw, resize_r2);
+            ptop += randPrecalcRandom(min_rdh, max_rdh, resize_r1);
+            pbot += randPrecalcRandom(min_rdh, max_rdh, resize_r2);
+        }
+        
+        if (letter_box == 1) {
+            float img_ar = orig.getWidth() / orig.getHeight();
+            float net_ar = (float)w / (float)h;
+            float result_ar = img_ar / net_ar;
+            //printf(" ow = %d, oh = %d, w = %d, h = %d, img_ar = %f, net_ar = %f, result_ar = %f \n", ow, oh, w, h, img_ar, net_ar, result_ar);
+            if (result_ar > 1)  // sheight - should be increased
+            {
+                float oh_tmp = orig.getWidth() / net_ar;
+                float delta_h = (oh_tmp - orig.getHeight())/2;
+                ptop = (int) (ptop - delta_h);
+                pbot = (int) (pbot - delta_h);
+                //printf(" result_ar = %f, oh_tmp = %f, delta_h = %d, ptop = %f, pbot = %f \n", result_ar, oh_tmp, delta_h, ptop, pbot);
+            }
+            else  // swidth - should be increased
+            {
+                float ow_tmp = orig.getHeight() * net_ar;
+                float delta_w = (ow_tmp - orig.getWidth())/2;
+                pleft = (int) (pleft - delta_w);
+                pright = (int) (pright - delta_w);
+                //printf(" result_ar = %f, ow_tmp = %f, delta_w = %d, pleft = %f, pright = %f \n", result_ar, ow_tmp, delta_w, pleft, pright);
+            }
+
+            //printf("\n pleft = %d, pright = %d, ptop = %d, pbot = %d, ow = %d, oh = %d \n", pleft, pright, ptop, pbot, ow, oh);
+        }
+        
+        int swidth = orig.getWidth() - pleft - pright;
+        int sheight = orig.getHeight() - ptop - pbot;
+
+        float sx = (float)swidth / orig.getWidth();
+        float sy = (float)sheight / orig.getHeight();
+
+        OMImage cropped = cropImage(orig, pleft, ptop, swidth, sheight);
+
+        float dx = ((float)pleft / orig.getWidth()) / sx;
+        float dy = ((float)ptop / orig.getHeight()) / sy;
+        
+        OMImage sized = resizeImage(cropped, w, h);
+        
+        int flip = Math.abs(RandomUtils.rand() % 2);
+        if(flip == 1) flipImage(sized);
+        
+        YoloDataTransform.distortImage(sized, dhue, dsat, dexp);
+        
+        setData(x, sized.getData(), index); 
+        
+        float min_w_h = fillTruthDetection(y, index, labelBoxs, boxes, classes, (int)flip, dx, dy, 1.0f/sx, 1.0f/sy, w, h);
+        
+	}
+	
 	public static void loadDataDetection(Tensor x,Tensor y,int index,OMImage orig,float[] labelBoxs,
 			int w,int h,int boxes,int classes,float jitter,float hue, float saturation, float exposure){
 		
@@ -624,6 +727,83 @@ public class ImageLoader {
 			output.data[index * num_boxes * 5 + currentC * 5 + 4] = boxes[i].clazz;
 	    }
 		
+	}
+	
+	public static float fillTruthDetection(Tensor output,int index,float[] label, int num_boxes, int classes, int flip,
+			float dx, float dy, float sx, float sy,int net_w,int net_h) {
+		
+		BoxLabel[] boxes = formatBox(label);
+		
+		int count = boxes.length;
+		int min_w_h = 0;
+	    float lowest_w = 1.0f / net_w;
+	    float lowest_h = 1.0f / net_h;
+		
+		randomizeBoxes(boxes, count);
+		
+//		System.out.println(JsonUtils.toJson(boxes));
+		
+		correctBoxes(boxes, count, dx, dy, sx, sy, flip);
+		
+//		System.out.println(JsonUtils.toJson(boxes));
+		
+		if(count > num_boxes) count = num_boxes;
+		
+		float x,y,w,h;
+	    int ignore = 0;
+
+	    for (int i = 0; i < count; ++i) {
+	        x =  boxes[i].x;
+	        y =  boxes[i].y;
+	        w =  boxes[i].w;
+	        h =  boxes[i].h;
+//	        System.out.println(x+":"+y+":"+w+":"+y);
+	        if ((w < .001 || h < .001)) {
+	            ++ignore;
+	            continue;
+	        }
+	        
+	        if ((w < lowest_w || h < lowest_h)) {
+	        	++ignore;
+		        continue;
+	        }
+	        
+	        if (x == 999999 || y == 999999) {
+	        	++ignore;
+		        continue;
+	        }
+	        
+	        if (x <= 0 || x > 1 || y <= 0 || y > 1) {
+	        	++ignore;
+		        continue;
+	        }
+	        
+	        if (w > 1) {
+	        	w = 1;
+	        }
+	        
+	        if (h > 1) {
+	        	h = 1;
+	        }
+	        
+	        if (x == 0) x += lowest_w;
+	        if (y == 0) y += lowest_h;
+
+			int currentC = i - ignore;
+	
+			output.data[index * num_boxes * 5 + currentC * 5 + 0] = x;
+			output.data[index * num_boxes * 5 + currentC * 5 + 1] = y;
+			output.data[index * num_boxes * 5 + currentC * 5 + 2] = w;
+			output.data[index * num_boxes * 5 + currentC * 5 + 3] = h;
+			output.data[index * num_boxes * 5 + currentC * 5 + 4] = boxes[i].clazz;
+			
+			if (min_w_h == 0) min_w_h = (int) (w*net_w);
+	        if (min_w_h > w*net_w) min_w_h = (int) (w*net_w);
+	        if (min_w_h > h*net_h) min_w_h = (int) (h*net_h);
+			
+	    }
+		
+	    return min_w_h;
 	}
 	
 	public static float[] fillTruth(float[] label,float dx, float dy, float sx, float sy,int tw,int th) {
@@ -746,6 +926,32 @@ public class ImageLoader {
         return labels;
 	}
 	
+	public static OMImage cropImage(OMImage orig, int dx, int dy, int w, int h){
+		OMImage cropped = createImage(w, h, orig.getChannel(), 0.5f);
+	    for(int k = 0; k < orig.getChannel(); ++k){
+	        for(int j = 0; j < h; ++j){
+	            for(int i = 0; i < w; ++i){
+	                int r = j + dy;
+	                int c = i + dx;
+	                float val = 0;
+	                r = constrain_int(r, 0, orig.getHeight()-1);
+	                c = constrain_int(c, 0, orig.getWidth()-1);
+	                if (r >= 0 && r < orig.getHeight() && c >= 0 && c < orig.getWidth()) {
+	                    val = getPixel(orig, c, r, k);
+	                }
+	                setPixel(cropped, i, j, k, val);
+	            }
+	        }
+	    }
+	    return cropped;
+	}
+	
+	public static int constrain_int(int a, int min, int max){
+	    if (a < min) return min;
+	    if (a > max) return max;
+	    return a;
+	}
+
 	public static BoxLabel[] formatBox(float[] label) {
 		
 		int count = label.length / 5;
@@ -886,6 +1092,15 @@ public class ImageLoader {
 	    if (x < 0 || y < 0 || c < 0 || x >= img.getWidth() || y >= img.getHeight() || c >= img.getChannel()) return;
 	    assert(x < img.getWidth() && y < img.getHeight() && c < img.getChannel());
 	    img.getData()[c * img.getHeight() * img.getWidth() + y * img.getWidth() + x] = val;
+	}
+	
+	public static float randPrecalcRandom(float min, float max, float random_part){
+	    if (max < min) {
+	        float swap = min;
+	        min = max;
+	        max = swap;
+	    }
+	    return (random_part * (max - min)) + min;
 	}
 	
 }

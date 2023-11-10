@@ -7,27 +7,27 @@ import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.active.gpu.TanhKernel;
+import com.omega.engine.nn.layer.active.gpu.SiLUKernel;
 import com.omega.engine.nn.network.Network;
 
 /**
- * Sigmod active function Layer
+ * SiLU active function Layer
  * @author Administrator
  *
  */
-public class TanhLayer extends ActiveFunctionLayer {
+public class SiLULayer extends ActiveFunctionLayer {
 	
-	private TanhKernel kernel;
+	private SiLUKernel kernel;
 	
-	public TanhLayer() {
+	public SiLULayer() {
 
 	}
 	
-	public TanhLayer(Layer preLayer) {
+	public SiLULayer(Layer preLayer) {
 		this.setPreLayer(preLayer);
 	}
 	
-	public TanhLayer(Network network) {
+	public SiLULayer(Network network) {
 		this.network = network;
 	}
 	
@@ -40,13 +40,14 @@ public class TanhLayer extends ActiveFunctionLayer {
 	public void init() {
 		super.init();
 		if(kernel == null) {
-			kernel = new TanhKernel();
+			kernel = new SiLUKernel();
 		}
 	}
 	
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+//		input.showDM();
 		kernel.forward(input, output);
 	}
 
@@ -59,12 +60,12 @@ public class TanhLayer extends ActiveFunctionLayer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		kernel.backward(output, delta, diff);
+		kernel.backward(input, output, delta, diff);
 	}
 	
 	public void diffTemp() {
 		// TODO Auto-generated method stub
-		kernel.backwardTemp(output, delta, diff);
+		kernel.backwardTemp(input, output, delta, diff);
 	}
 
 	@Override
@@ -82,9 +83,7 @@ public class TanhLayer extends ActiveFunctionLayer {
 		 * 计算输出
 		 */
 		this.output();
-		
-//		System.out.println(getOutput());
-		
+
 	}
 
 	@Override
@@ -99,6 +98,7 @@ public class TanhLayer extends ActiveFunctionLayer {
 		 * 计算梯度
 		 */
 		this.diff();
+
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
@@ -115,6 +115,7 @@ public class TanhLayer extends ActiveFunctionLayer {
 		 * 计算梯度
 		 */
 		this.diffTemp();
+
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
@@ -129,7 +130,7 @@ public class TanhLayer extends ActiveFunctionLayer {
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.tanh;
+		return LayerType.silu;
 	}
 
 	@Override
@@ -167,10 +168,6 @@ public class TanhLayer extends ActiveFunctionLayer {
 		
 	}
 
-	public void initBack(Tensor diff) {
-		this.diff = diff;
-	}
-
 	@Override
 	public void forward(Tensor inpnut) {
 		// TODO Auto-generated method stub
@@ -188,6 +185,10 @@ public class TanhLayer extends ActiveFunctionLayer {
 		this.output();
 	}
 
+	public void initBack(Tensor delta) {
+		this.diff = delta;
+	}
+	
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
@@ -200,6 +201,7 @@ public class TanhLayer extends ActiveFunctionLayer {
 		 * 计算梯度
 		 */
 		this.diff();
+
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}

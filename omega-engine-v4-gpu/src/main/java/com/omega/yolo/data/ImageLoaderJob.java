@@ -42,6 +42,10 @@ public class ImageLoaderJob extends RecursiveAction {
 	
 	private int boxes = 90;
 	
+	private float resized = 1.5f;
+	
+	private float letter_box = 1;
+	
 	private Map<String, float[]> orgLabelData;
 	
 	private static ImageLoaderJob job;
@@ -86,8 +90,10 @@ public class ImageLoaderJob extends RecursiveAction {
 			OMImage orig = ImageLoader.loadImage(imagePath);
 			
 			float[] labelXYWH = ImageLoader.formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
-			
+
 			ImageLoader.loadDataDetection(input, label, i, orig, labelXYWH, input.width, input.height, boxes, classes, jitter, hue, saturation, exposure);
+			
+//			ImageLoader.loadDataDetection2(input, label, i, orig, labelXYWH, input.width, input.height, boxes, classes, jitter, letter_box, resized, hue, saturation, exposure);
 			
 		}
 			

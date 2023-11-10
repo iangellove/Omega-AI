@@ -4,16 +4,16 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.lib.LibPaths;
-import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.RandomUtils;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
+import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
 
-public class LeakyReluKernel extends BaseKernel{
+public class SiLUKernel extends BaseKernel{
 	
 	private CUfunction function;
 	
@@ -27,9 +27,8 @@ public class LeakyReluKernel extends BaseKernel{
 	
 	private Pointer backwardKernelParameters;
 	
-	private float scale = 0.1f;
-	
-	public LeakyReluKernel() {
+	public SiLUKernel() {
+		
 		init();
 	}
 	
@@ -47,19 +46,19 @@ public class LeakyReluKernel extends BaseKernel{
 
 			if(function == null) {
 
-				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "leakyRelu_forward");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "silu_forward");
 				
 			}
 			
 			if(function_back == null) {
 
-				function_back = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "leakyRelu_backward");
+				function_back = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "silu_backward");
 				
 			}
 			
 			if(function_back_temp == null) {
 
-				function_back_temp = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "leakyRelu_backward_temp");
+				function_back_temp = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "silu_backward_temp");
 				
 			}
 			
@@ -72,6 +71,34 @@ public class LeakyReluKernel extends BaseKernel{
 	
 	public int CAFFE_GET_BLOCKS(int N) {
 	    return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
+	}
+	
+	public void forward(Tensor input,Tensor output,int index,int length) {
+		
+		try {
+			
+			/**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			forwardKernelParameters = Pointer.to(
+	        		Pointer.to(input.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(output.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{length})
+	            );
+			
+			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(length),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            forwardKernelParameters, null // Kernel- and extra parameters
+		        );
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public void forward(Tensor input,Tensor output) {
@@ -87,8 +114,7 @@ public class LeakyReluKernel extends BaseKernel{
 				forwardKernelParameters = Pointer.to(
 		        		Pointer.to(input.getGpuData()),
 		                Pointer.to(output.getGpuData()),
-		                Pointer.to(new int[]{output.dataLength}),
-		                Pointer.to(new float[]{scale})
+		                Pointer.to(new int[]{output.dataLength})
 		            );
 				
 				this.N = output.number;
@@ -111,35 +137,38 @@ public class LeakyReluKernel extends BaseKernel{
 		
 	}
 	
-	public void backward(Tensor input,Tensor delta,Tensor diff) {
+	public void backward(Tensor input,Tensor output,Tensor delta,Tensor diff) {
 		
 		try {
-			
+//			System.out.println(delta);
 //			if(backwardKernelParameters == null) {
 
+//			delta.showDM();
+//			output.showDM();
+//			System.out.println(JsonUtils.toJson(delta.getByNumber(0)));
 		        /**
 		         * 设置入参
 		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
 		         */ 
 				backwardKernelParameters = Pointer.to(
 						Pointer.to(input.getGpuData()),
+						Pointer.to(output.getGpuData()),
 		        		Pointer.to(delta.getGpuData()),
 		                Pointer.to(diff.getGpuData()),
-		                Pointer.to(new int[]{input.dataLength}),
-		                Pointer.to(new float[]{scale})
+		                Pointer.to(new int[]{output.dataLength})
 		            );
 		        
 //			}
 			
 			cuLaunchKernel(function_back,
-		            this.CAFFE_GET_BLOCKS(delta.dataLength),  1, 1,      // Grid dimension
+		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            backwardKernelParameters, null // Kernel- and extra parameters
 		        );
 
-//	        JCudaDriver.cuCtxSynchronize();
-
+//			diff.showDM();
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -147,34 +176,65 @@ public class LeakyReluKernel extends BaseKernel{
 		
 	}
 	
-	public void backwardTemp(Tensor input,Tensor delta,Tensor diff) {
+	public void backwardTemp(Tensor input,Tensor output,Tensor delta,Tensor diff) {
 		
 		try {
-			
+//			System.out.println(delta);
 //			if(backwardKernelParameters == null) {
 
+//			delta.showDM();
+//			output.showDM();
+//			System.out.println(JsonUtils.toJson(delta.getByNumber(0)));
 		        /**
 		         * 设置入参
 		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
 		         */ 
 				backwardKernelParameters = Pointer.to(
 						Pointer.to(input.getGpuData()),
+						Pointer.to(output.getGpuData()),
 		        		Pointer.to(delta.getGpuData()),
 		                Pointer.to(diff.getGpuData()),
-		                Pointer.to(new int[]{input.dataLength}),
-		                Pointer.to(new float[]{scale})
+		                Pointer.to(new int[]{output.dataLength})
 		            );
 		        
 //			}
 			
 			cuLaunchKernel(function_back_temp,
-		            this.CAFFE_GET_BLOCKS(delta.dataLength),  1, 1,      // Grid dimension
+		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            backwardKernelParameters, null // Kernel- and extra parameters
 		        );
 
-//	        JCudaDriver.cuCtxSynchronize();
+//			diff.showDM();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backward(Tensor output,Tensor delta,Tensor diff,int index,int length) {
+		
+		try {
+			/**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			backwardKernelParameters = Pointer.to(
+					Pointer.to(output.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	        		Pointer.to(delta.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(diff.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{length})
+	            );
+
+			cuLaunchKernel(function_back,
+		            this.CAFFE_GET_BLOCKS(length),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            backwardKernelParameters, null // Kernel- and extra parameters
+		        );
 
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -191,7 +251,7 @@ public class LeakyReluKernel extends BaseKernel{
 	    	
 	    	float[] x1 = new float[] {1,2,3,4,-5,6,-7,-8,9,10,11,-12,13,14,15,-16};
 	    	
-	    	float[] bias1 = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
+	    	float[] bias1 = MatrixUtils.one(x1.length);
 	    	
 	    	Tensor input = new Tensor(N, C, H, W, x1, true);
 	    	
@@ -201,23 +261,19 @@ public class LeakyReluKernel extends BaseKernel{
 	    	
 	    	Tensor diff = new Tensor(N, C, H, W, true);
 	    	
-	    	LeakyReluKernel k = new LeakyReluKernel();
-
-//	    	output.showDM(new float[N * C * H * W]);
+	    	SiLUKernel k = new SiLUKernel();
 
 	    	k.forward(input, output);
 	    	
-	    	k.backward(input, delta, diff);
+	    	k.backward(input ,output, delta, diff);
 
-//	    	output.showDM(new float[N * C * H * W]);
-
-	    	output.syncHost();
+	    	output.showDM();
 	    	
-	    	System.out.println(JsonUtils.toJson(output.getData()));
+	    	diff.showDM();
 	    	
-	    	diff.syncHost();
+	    	k.backward(input, output, delta, diff);
 	    	
-	    	System.out.println(JsonUtils.toJson(diff.getData()));
+	    	diff.showDM();
 	    	
 			CUDAMemoryManager.free();
 			
