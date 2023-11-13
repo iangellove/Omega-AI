@@ -703,7 +703,7 @@ public void yolov3_tiny_helmet() {
 	}
 ```
 
-#### yolov7-sm-demo智能冰柜商品识别
+#### yolov7 sm demo (智能冰柜商品识别)
 ``` java
     public void yolov7_tiny_sm() {
 		int im_w = 416;
