@@ -703,6 +703,64 @@ public void yolov3_tiny_helmet() {
 	}
 ```
 
+#### yolov3 helmet demo（安全帽佩戴识别）
+``` java
+    public void yolov7_tiny_sm() {
+		int im_w = 416;
+		int im_h = 416;
+		int batchSize = 12;
+		int class_num = 113;
+		String[] labelset = new String[113];
+		try {
+			String cfg_path = "H:\\voc\\sm\\resized\\yolov7-tiny-sm.cfg";
+			String labelPath = "H:\\voc\\\\sm\\VOC\\labels.txt";
+			String trainPath = "H:\\voc\\sm\\resized\\train";
+			String trainLabelPath = "H:\\voc\\sm\\resized\\train_label.txt";
+			String testPath = "H:\\voc\\sm\\resized\\vail";
+			String testLabelPath = "H:\\voc\\sm\\resized\\vail_label.txt";
+			String weightPath = "H:\\voc\\darknet_yolov7\\yolov7-tiny.conv.87";
+			try (FileInputStream fin = new FileInputStream(labelPath);
+				InputStreamReader reader = new InputStreamReader(fin);	
+			    BufferedReader buffReader = new BufferedReader(reader);){
+				String strTmp = "";
+				int idx = 0;
+		        while((strTmp = buffReader.readLine())!=null){
+		        	labelset[idx] = strTmp;
+		        	idx++;
+		        }	
+			} catch (Exception e) {
+				// TODO: handle exception
+				e.printStackTrace();
+			}
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+			Yolo netWork = new Yolo(LossType.yolov7, UpdaterType.adamw);
+			netWork.CUDNN = true;
+			netWork.learnRate = 0.001f;
+			ModelLoader.loadConfigToModel(netWork, cfg_path);
+			DarknetLoader.loadWeight(netWork, weightPath, 86, true);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
+			/**
+			 * 处理测试预测结果
+			 */
+			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
+			String outputPath = "H:\\voc\\sm\\test_yolov7\\";
+			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}	
+	}
+```
+
 #### gan mnist demo 生成手写数字
 ``` java
 public static void gan_anime() {
