@@ -35,6 +35,10 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093438.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093541.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093622.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093658.png)
 
+[基于yolov7智能冰柜商品识别](#yolov7-sm-demo智能冰柜商品识别)
+
+![输入图片说明](images/sm1.png)![输入图片说明](images/sm2.png)![输入图片说明](images/sm3.png)![输入图片说明](images/sm4.png)
+
 [基于GAN生成对抗神经网络实现生成手写体数字图片](#gan-mnist-demo-生成手写数字)
 
 ![输入图片说明](images/gan-3000.gif)
@@ -144,6 +148,8 @@ cifar_10 （cifar_10数据集）
 [helmet](https://pan.baidu.com/s/1pbTaDHoRzhV-kuWoXOCPqw?pwd=y8ij)
 
 [mask](https://pan.baidu.com/s/1D3zTYTiNYmtU6x7Ui9ej_A?pwd=r4o3)
+
+[自动售货机数据集sm](https://pan.baidu.com/s/10o8IZwD-WmChKtmzzg9q7w?pwd=gt8p )
 
 ### 数据集成绩
 
@@ -694,6 +700,64 @@ public void yolov3_tiny_helmet() {
 			}
 		}
 			
+	}
+```
+
+#### yolov7-sm-demo智能冰柜商品识别
+``` java
+    public void yolov7_tiny_sm() {
+		int im_w = 416;
+		int im_h = 416;
+		int batchSize = 12;
+		int class_num = 113;
+		String[] labelset = new String[113];
+		try {
+			String cfg_path = "H:\\voc\\sm\\resized\\yolov7-tiny-sm.cfg";
+			String labelPath = "H:\\voc\\\\sm\\VOC\\labels.txt";
+			String trainPath = "H:\\voc\\sm\\resized\\train";
+			String trainLabelPath = "H:\\voc\\sm\\resized\\train_label.txt";
+			String testPath = "H:\\voc\\sm\\resized\\vail";
+			String testLabelPath = "H:\\voc\\sm\\resized\\vail_label.txt";
+			String weightPath = "H:\\voc\\darknet_yolov7\\yolov7-tiny.conv.87";
+			try (FileInputStream fin = new FileInputStream(labelPath);
+				InputStreamReader reader = new InputStreamReader(fin);	
+			    BufferedReader buffReader = new BufferedReader(reader);){
+				String strTmp = "";
+				int idx = 0;
+		        while((strTmp = buffReader.readLine())!=null){
+		        	labelset[idx] = strTmp;
+		        	idx++;
+		        }	
+			} catch (Exception e) {
+				// TODO: handle exception
+				e.printStackTrace();
+			}
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+			Yolo netWork = new Yolo(LossType.yolov7, UpdaterType.adamw);
+			netWork.CUDNN = true;
+			netWork.learnRate = 0.001f;
+			ModelLoader.loadConfigToModel(netWork, cfg_path);
+			DarknetLoader.loadWeight(netWork, weightPath, 86, true);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
+			/**
+			 * 处理测试预测结果
+			 */
+			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
+			String outputPath = "H:\\voc\\sm\\test_yolov7\\";
+			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}	
 	}
 ```
 
