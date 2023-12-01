@@ -10,6 +10,7 @@ import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.network.RunModel;
 
 import jcuda.Pointer;
+import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
 import jcuda.jcudnn.JCudnn;
 import jcuda.jcudnn.cudnnBatchNormMode;
@@ -98,14 +99,10 @@ public class BNCudnnKernel extends BNBaseKernel{
 			this.N = input.number;
 			
 			if(bnType == BNType.fully_bn) {
-
 				JCudnn.cudnnSetTensor4dDescriptor(dstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, W, 1, 1);
-				
 			    JCudnn.cudnnSetTensor4dDescriptor(normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, W, 1, 1);
 			}else {
-
 				JCudnn.cudnnSetTensor4dDescriptor(dstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
-			    
 			    JCudnn.cudnnSetTensor4dDescriptor(normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, C, 1, 1);
 			}
 			
@@ -131,6 +128,26 @@ public class BNCudnnKernel extends BNBaseKernel{
 			
 //			normalize_test(input, gamma, beta, output);
 			
+		}
+
+	}
+	
+	public void forward(RunModel RUN_MODEL, Tensor gamma, Tensor beta, Tensor input, Tensor output, int batch, int step) {
+		
+		initForward(input);
+		
+		if(RUN_MODEL == RunModel.TRAIN) {
+			
+			CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationForwardTraining(CudnnHandleManager.getHandle(), mode,
+			    		alpha_P, beta_P, dstTensorDesc, input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT), dstTensorDesc, output.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT),
+			    		normTensorDesc, gamma.getGpuData(), beta.getGpuData(), momentum, runingMean.getGpuData(), runingVar.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
+
+		}else {
+			
+			CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationForwardInference(CudnnHandleManager.getHandle(), mode,
+		    		alpha_P, beta_P, dstTensorDesc, input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT), dstTensorDesc, output.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT), normTensorDesc, gamma.getGpuData(), beta.getGpuData(),
+		    		runingMean.getGpuData(), runingVar.getGpuData(), eps));
+
 		}
 
 	}
@@ -171,30 +188,19 @@ public class BNCudnnKernel extends BNBaseKernel{
 	}
 	
 	public void backward(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
-		
-//		System.out.println(delta.channel+":"+C);
-//		
-//		if(this.diff == null) {
-//			this.diff = CUDAMemoryManager.getPointer(diff.getDataLength());
-//		}
-//		
-//		CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationBackward(CudnnHandleManager.getHandle(), mode,
-//	    		alpha_P, beta_P, alpha_P, alpha_P, dstTensorDesc, input.getGpuData(), dstTensorDesc, delta.getGpuData(), dstTensorDesc, this.diff,
-//	    		normTensorDesc, gamma.getGpuData(), dgamma.getGpuData(), dbeta.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
-		
+
 		CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationBackward(CudnnHandleManager.getHandle(), mode,
 	    		alpha_P, beta_P, alpha_P, alpha_P, dstTensorDesc, input.getGpuData(), dstTensorDesc, delta.getGpuData(), dstTensorDesc, diff.getGpuData(),
 	    		normTensorDesc, gamma.getGpuData(), dgamma.getGpuData(), dbeta.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
 		
-//		float[] test = new float[diff.getDataLength()];
-//		
-//		JCuda.cudaMemcpy(Pointer.to(test), this.diff, test.length * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
-//		
-//		System.out.println(diff.getDataLength()+":"+test.length);
-//		
-//		System.out.println(CheckArrayUtils.check(test, diff.syncHost()));
-//		
-//		copy_gpu(this.diff, diff.getGpuData(), diff.getDataLength(), 1, 1);
+	}	
+	
+	public void backward(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta, int batch, int step) {
+
+		CudnnHandleManager.handle(JCudnn.cudnnBatchNormalizationBackward(CudnnHandleManager.getHandle(), mode,
+	    		alpha_P, beta_P, alpha_P, alpha_P, dstTensorDesc, input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT), dstTensorDesc,
+	    		delta.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT), dstTensorDesc, diff.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT),
+	    		normTensorDesc, gamma.getGpuData(), dgamma.getGpuData(), dbeta.getGpuData(), eps, mean.getGpuData(), var.getGpuData()));
 		
 	}	
 		

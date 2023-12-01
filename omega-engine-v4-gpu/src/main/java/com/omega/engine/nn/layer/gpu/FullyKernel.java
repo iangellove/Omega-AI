@@ -11,6 +11,7 @@ import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
+import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
 
 public class FullyKernel extends BaseKernel{
@@ -102,6 +103,36 @@ public class FullyKernel extends BaseKernel{
 		
 	}
 	
+	public void addBias(Tensor output,Tensor bias,int batch,int step) {
+		
+		try {
+
+	        /**
+	         * 设置入参
+	         * float* output, float* biases, int batch, int n, int size
+	         */ 
+	        kernelParameters = Pointer.to(
+	        		Pointer.to(output.getGpuData().withByteOffset(step * batch * output.getOnceSize() * Sizeof.FLOAT)),
+	                Pointer.to(bias.getGpuData()),
+	                Pointer.to(new int[]{batch}),
+	                Pointer.to(new int[]{output.getWidth()}),
+	                Pointer.to(new int[]{1})
+	            );
+	        
+			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(batch * output.getOnceSize()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void backwardBias(Tensor diffB,Tensor delta) {
 		
 		try {
@@ -131,6 +162,35 @@ public class FullyKernel extends BaseKernel{
 		        );
 
 //	        JCudaDriver.cuCtxSynchronize();
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backwardBias(Tensor diffB,Tensor delta,int batch,int step) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			kernelBackParameters = Pointer.to(
+	        		Pointer.to(diffB.getGpuData()),
+	                Pointer.to(delta.getGpuData().withByteOffset(step * batch * delta.getOnceSize() * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{batch}),
+	                Pointer.to(new int[]{delta.getWidth()})
+	            );
+
+			cuLaunchKernel(back_function,
+		            this.CAFFE_GET_BLOCKS(batch * delta.getWidth()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelBackParameters, null // Kernel- and extra parameters
+		        );
 
 		} catch (Exception e) {
 			// TODO: handle exception

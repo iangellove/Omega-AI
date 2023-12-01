@@ -7,6 +7,14 @@ public abstract class ActiveFunctionLayer extends Layer {
 	
 	public Layer preLayer;
 	
+	public abstract void forward(Tensor input,int batch,int step);
+	
+	public abstract void back(Tensor delta,int batch,int step);
+	
+	public abstract void output(int batch,int step);
+	
+	public abstract void diff(int batch,int step);
+	
 	@Override
 	public void init() {
 
@@ -52,5 +60,5 @@ public abstract class ActiveFunctionLayer extends Layer {
 		// TODO Auto-generated method stub
 		
 	}
-
+	
 }

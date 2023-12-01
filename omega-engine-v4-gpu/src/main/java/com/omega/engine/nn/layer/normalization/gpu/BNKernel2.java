@@ -1489,5 +1489,17 @@ public class BNKernel2 extends BNBaseKernel{
 		}
 		
 	}
+
+	@Override
+	public void forward(RunModel RUN_MODEL, Tensor gama, Tensor beta, Tensor input, Tensor output, int batch, int step) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void backward(Tensor input, Tensor delta, Tensor diff, Tensor gama, Tensor dgama, Tensor dbeta, int batch, int step) {
+		// TODO Auto-generated method stub
+		
+	}
     
 }

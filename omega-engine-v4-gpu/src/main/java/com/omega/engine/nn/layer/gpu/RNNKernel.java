@@ -269,4 +269,33 @@ public class RNNKernel extends BaseKernel{
 		
 	}
 	
+	public void backwardBias(Pointer diffB,Pointer delta,int nunmber,int width) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			kernelBackParameters = Pointer.to(
+	        		Pointer.to(diffB),
+	                Pointer.to(delta),
+	                Pointer.to(new int[]{nunmber}),
+	                Pointer.to(new int[]{width})
+	            );
+		     
+			cuLaunchKernel(back_function,
+		            this.CAFFE_GET_BLOCKS(width),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelBackParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 }

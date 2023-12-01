@@ -3,6 +3,9 @@ package com.omega.engine.active;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.engine.nn.layer.active.gpu.TanhKernel;
+
+import jcuda.Pointer;
 
 /**
  * 
@@ -20,8 +23,11 @@ import com.omega.common.utils.MatrixUtils;
  */
 public class Tanh extends ActiveFunction {
 	
+	private TanhKernel kernel;
+	
 	public Tanh(){
 		this.activeType = ActiveType.tanh;
+		kernel = new TanhKernel();
 	}
 	
 	@Override
@@ -173,6 +179,19 @@ public class Tanh extends ActiveFunction {
 	public void diff(Tensor x, Tensor diff) {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	
+	@Override
+	public void active(Pointer x, Pointer out,int length) {
+		// TODO Auto-generated method stub
+		kernel.forward(x, out, length);
+	}
+
+	@Override
+	public void diff(Pointer x, Pointer delta, Pointer diff, int length) {
+		// TODO Auto-generated method stub
+		kernel.backward(x, delta, diff, length);
 	}
 
 }

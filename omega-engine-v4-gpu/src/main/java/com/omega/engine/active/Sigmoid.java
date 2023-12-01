@@ -3,6 +3,9 @@ package com.omega.engine.active;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.engine.nn.layer.active.gpu.SigmodKernel;
+
+import jcuda.Pointer;
 
 /**
  * 
@@ -20,8 +23,11 @@ import com.omega.common.utils.MatrixUtils;
  */
 public class Sigmoid extends ActiveFunction {
 	
+	private SigmodKernel kernel;
+	
 	public Sigmoid(){
 		this.activeType = ActiveType.sigmoid;
+		kernel = new SigmodKernel();
 	}
 	
 	/**
@@ -197,5 +203,17 @@ public class Sigmoid extends ActiveFunction {
 		// TODO Auto-generated method stub
 		
 	}
+	
+	@Override
+	public void active(Pointer x, Pointer out,int length) {
+		// TODO Auto-generated method stub
+		kernel.forward(x, out, length);
+	}
 
+	@Override
+	public void diff(Pointer x, Pointer delta, Pointer diff, int length) {
+		// TODO Auto-generated method stub
+		kernel.backward(x, delta, diff, length);
+	}
+	
 }

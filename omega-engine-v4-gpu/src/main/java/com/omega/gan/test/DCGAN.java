@@ -30,7 +30,7 @@ public class DCGAN {
 
 		netWork.CUDNN = true;
 		
-		netWork.learnRate = 0.0001f;
+		netWork.learnRate = 0.001f;
 		
 		InputLayer inputLayer = new InputLayer(nz, 1, 1);
 		
@@ -78,7 +78,7 @@ public class DCGAN {
 
 		netWork.CUDNN = true;
 		
-		netWork.learnRate = 0.0001f;
+		netWork.learnRate = 0.001f;
 		
 		netWork.PROPAGATE_DOWN = true;
 		
@@ -167,7 +167,7 @@ public class DCGAN {
 			
 			CNN netD = NetD(nf, tw, th);
 			
-			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 300, d_every, g_every, 0.001f, LearnRateUpdate.CONSTANT, false);
+			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 300, d_every, g_every, 0.001f, LearnRateUpdate.POLY, false);
 			
 			optimizer.train(trainData);
 

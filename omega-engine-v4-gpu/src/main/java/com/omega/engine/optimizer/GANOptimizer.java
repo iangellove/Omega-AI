@@ -71,6 +71,9 @@ public class GANOptimizer extends Optimizer {
 			Graph gd2 = new Graph();
 			Graph gg = new Graph();
 			
+			float dlr = this.netD.learnRate;
+			float glr = this.netG.learnRate;
+			
 			Tensor inputD = new Tensor(batchSize, this.netD.channel, this.netD.height, this.netD.width, true);
 			Tensor inputG = new Tensor(batchSize, this.netG.channel, this.netG.height, this.netG.width, true);
 			
@@ -114,7 +117,7 @@ public class GANOptimizer extends Optimizer {
 					
 					d_loss = trainDG(trainingData, i, indexs[it], it, true_label, fake_label, inputG, inputD, gd1, gd2, gg, d_fake_output, d_true_output, d_loss);
 
-					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					String msg = "training["+this.trainIndex+"]{"+it+"} (glr:"+this.netG.learnRate+" dlr:"+this.netD.learnRate+") [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
 					System.out.println(msg);
 					
@@ -124,8 +127,8 @@ public class GANOptimizer extends Optimizer {
 				/**
 				 * update learning rate
 				 */
-				this.updateLR(this.lr_step);
-				this.netG.learnRate = this.network.learnRate;
+				this.netG.learnRate = this.updateLR(this.lr_step,this.netG.learnRate,glr);
+				this.netD.learnRate = this.updateLR(this.lr_step,this.netD.learnRate,dlr);
 				
 				if(this.trainIndex % 1 == 0) {
 					this.netG.RUN_MODEL = RunModel.TEST;

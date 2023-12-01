@@ -36,6 +36,7 @@ public class AdamW extends Updater {
 		}
 		
 		kernel.updateW(layer.diffW, layer.weight, layer.network, layer.learnRate);
+//		layer.diffW.clearGPU();
 //		
 //		System.out.print(layer.getLayerType().toString()+layer.index+":");
 //		layer.weight.showDM();
@@ -43,7 +44,7 @@ public class AdamW extends Updater {
 		if(layer.hasBias) {
 			
 			kernel.updateB(layer.diffB, layer.bias, layer.network, layer.learnRate);
-			
+//			layer.diffB.clearGPU();
 		}
 		
 	}
@@ -70,6 +71,9 @@ public class AdamW extends Updater {
 		
 		kernel.updateBeta(layer.diffBeta, layer.beta, layer.network, layer.learnRate);
 
+		layer.diffGamma.clearGPU();
+		layer.diffBeta.clearGPU();
+		
 //		
 //		System.out.println("==========diffBeta===========");
 //		diffW.showDM();

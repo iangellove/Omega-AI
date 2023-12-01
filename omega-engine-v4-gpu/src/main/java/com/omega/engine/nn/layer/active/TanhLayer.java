@@ -205,4 +205,50 @@ public class TanhLayer extends ActiveFunctionLayer {
 		}
 	}
 	
+	@Override
+	public void forward(Tensor input, int batch, int step) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		/**
+		 * 计算输出
+		 */
+		this.output(batch, step);
+	}
+
+	@Override
+	public void back(Tensor delta, int batch, int step) {
+		// TODO Auto-generated method stub
+		this.initBack(delta);
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff(batch, step);
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+	}
+
+	@Override
+	public void output(int batch,int step) {
+		// TODO Auto-generated method stub
+		kernel.forward(input, output, step * batch * input.getOnceSize(), batch * input.getOnceSize());
+	}
+
+	@Override
+	public void diff(int batch,int step) {
+		// TODO Auto-generated method stub
+		kernel.backward(input, delta, diff, step * batch * diff.getOnceSize(), batch * diff.getOnceSize());
+	}
+	
 }

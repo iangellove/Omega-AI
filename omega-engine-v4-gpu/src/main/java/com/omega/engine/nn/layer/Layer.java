@@ -105,7 +105,7 @@ public abstract class Layer {
 	
 	public abstract void backTemp();
 	
-	public abstract void forward(Tensor inpnut);
+	public abstract void forward(Tensor input);
 	
 	public abstract void back(Tensor delta);
 	
@@ -162,7 +162,9 @@ public abstract class Layer {
 			 * 获取上一层的输出作为当前层的输入
 			 */
 			if(this.index < this.network.layerList.size() - 1) {
-				this.delta = this.network.getNextLayer(this.index).diff;
+				if(this.network.getNextLayer(this.index).getLayerType() != LayerType.route) {
+					this.delta = this.network.getNextLayer(this.index).diff;
+				}
 			}
 		}
 		

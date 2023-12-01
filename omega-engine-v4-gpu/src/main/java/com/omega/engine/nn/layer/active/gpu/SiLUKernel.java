@@ -101,6 +101,34 @@ public class SiLUKernel extends BaseKernel{
 		
 	}
 	
+//	public void forward(Tensor input,Tensor output,int batch,int step) {
+//		
+//		try {
+//
+//			/**
+//	         * 设置入参
+//	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+//	         */ 
+//			forwardKernelParameters = Pointer.to(
+//	        		Pointer.to(input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT)),
+//	                Pointer.to(output.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT)),
+//	                Pointer.to(new int[]{batch * output.getOnceSize()})
+//	            );
+//			
+//			cuLaunchKernel(function,
+//		            this.CAFFE_GET_BLOCKS(batch * input.getOnceSize()),  1, 1,      // Grid dimension
+//		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+//		            0, null,               // Shared memory size and stream
+//		            forwardKernelParameters, null // Kernel- and extra parameters
+//		        );
+//
+//		} catch (Exception e) {
+//			// TODO: handle exception
+//			e.printStackTrace();
+//		}
+//		
+//	}
+	
 	public void forward(Tensor input,Tensor output) {
 		
 		try {
@@ -243,7 +271,36 @@ public class SiLUKernel extends BaseKernel{
 		
 	}
 	
-	 public static void main(String args[]){	
+	public void backward(Tensor input,Tensor delta,Tensor diff,int step) {
+		
+		try {
+
+			/**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			backwardKernelParameters = Pointer.to(
+					Pointer.to(input.getGpuData().withByteOffset(step * input.getOnceSize() * Sizeof.FLOAT)),
+	        		Pointer.to(delta.getGpuData().withByteOffset(step * input.getOnceSize() * Sizeof.FLOAT)),
+	                Pointer.to(diff.getGpuData().withByteOffset(step * input.getOnceSize() * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{input.getOnceSize()})
+	            );
+
+			cuLaunchKernel(function_back,
+		            this.CAFFE_GET_BLOCKS(input.getOnceSize()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            backwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void main(String args[]){	
 	    	int N = 2;
 	    	int C = 1;
 	    	int H = 1;
@@ -277,7 +334,7 @@ public class SiLUKernel extends BaseKernel{
 	    	
 			CUDAMemoryManager.free();
 			
-	    }
+	 }
 	
 	
 }

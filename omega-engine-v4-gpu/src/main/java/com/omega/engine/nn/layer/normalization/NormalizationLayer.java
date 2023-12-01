@@ -1,10 +1,19 @@
 package com.omega.engine.nn.layer.normalization;
 
+import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.Layer;
 
 public abstract class NormalizationLayer extends Layer {
 	
 	public Layer preLayer;
+	
+	public abstract void forward(Tensor input, int batch, int step);
+	
+	public abstract void back(Tensor delta, int batch, int step);
+	
+	public abstract void output(int batch, int step);
+	
+	public abstract void diff(int batch, int step);
 	
 	@Override
 	public void init() {

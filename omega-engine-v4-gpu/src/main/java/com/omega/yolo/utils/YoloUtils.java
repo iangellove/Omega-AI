@@ -134,7 +134,7 @@ public class YoloUtils {
 	    float p_db = 0;
 	    float p_dl = 0;
 	    float p_dr = 0;
-	    if (U > 0 ) {
+	    if (U > 0) {
 	       p_dt = ((U * dI_wrt_t) - (I * dU_wrt_t)) / (U * U);
 	       p_db = ((U * dI_wrt_b) - (I * dU_wrt_b)) / (U * U);
 	       p_dl = ((U * dI_wrt_l) - (I * dU_wrt_l)) / (U * U);

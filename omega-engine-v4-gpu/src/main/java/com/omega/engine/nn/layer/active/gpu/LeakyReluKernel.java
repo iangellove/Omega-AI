@@ -11,6 +11,7 @@ import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
+import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
 
 public class LeakyReluKernel extends BaseKernel{
@@ -91,8 +92,8 @@ public class LeakyReluKernel extends BaseKernel{
 		                Pointer.to(new float[]{scale})
 		            );
 				
-				this.N = output.number;
-				
+			this.N = output.number;
+
 //			}
 			
 			cuLaunchKernel(function,
@@ -111,26 +112,53 @@ public class LeakyReluKernel extends BaseKernel{
 		
 	}
 	
+	public void forward(Tensor input,Tensor output,int index,int length) {
+		
+		try {
+
+	        /**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			forwardKernelParameters = Pointer.to(
+	        		Pointer.to(input.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(output.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{length}),
+	                Pointer.to(new float[]{scale})
+	            );
+			
+			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(length),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            forwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
+//	        JCudaDriver.cuCtxSynchronize();
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void backward(Tensor input,Tensor delta,Tensor diff) {
 		
 		try {
-			
-//			if(backwardKernelParameters == null) {
 
-		        /**
-		         * 设置入参
-		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
-		         */ 
-				backwardKernelParameters = Pointer.to(
-						Pointer.to(input.getGpuData()),
-		        		Pointer.to(delta.getGpuData()),
-		                Pointer.to(diff.getGpuData()),
-		                Pointer.to(new int[]{input.dataLength}),
-		                Pointer.to(new float[]{scale})
-		            );
-		        
-//			}
-			
+	        /**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			backwardKernelParameters = Pointer.to(
+					Pointer.to(input.getGpuData()),
+	        		Pointer.to(delta.getGpuData()),
+	                Pointer.to(diff.getGpuData()),
+	                Pointer.to(new int[]{input.dataLength}),
+	                Pointer.to(new float[]{scale})
+	            );
+
 			cuLaunchKernel(function_back,
 		            this.CAFFE_GET_BLOCKS(delta.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
@@ -138,7 +166,35 @@ public class LeakyReluKernel extends BaseKernel{
 		            backwardKernelParameters, null // Kernel- and extra parameters
 		        );
 
-//	        JCudaDriver.cuCtxSynchronize();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backward(Tensor input,Tensor delta,Tensor diff,int index,int length) {
+		
+		try {
+
+	        /**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			backwardKernelParameters = Pointer.to(
+					Pointer.to(input.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	        		Pointer.to(delta.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(diff.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{length}),
+	                Pointer.to(new float[]{scale})
+	            );
+
+			cuLaunchKernel(function_back,
+		            this.CAFFE_GET_BLOCKS(length),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            backwardKernelParameters, null // Kernel- and extra parameters
+		        );
 
 		} catch (Exception e) {
 			// TODO: handle exception

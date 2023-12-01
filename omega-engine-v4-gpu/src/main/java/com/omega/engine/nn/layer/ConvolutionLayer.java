@@ -2,6 +2,7 @@ package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.active.ActiveType;
 import com.omega.engine.gpu.cudnn.ConvCudnnKernel;
 import com.omega.engine.nn.layer.gpu.BiasKernel;
 import com.omega.engine.nn.layer.gpu.ConvBaseKernel;
@@ -142,6 +143,40 @@ public class ConvolutionLayer extends Layer {
 		this.network = network;
 		this.hasParams = true;
 		this.paramsInit = paramsInit;
+		this.initParam();
+	}
+	
+	public ConvolutionLayer(int channel,int kernelNum,int width,int height,int kWidth,int kHeight,int padding,int stride,boolean hasBias,Network network,ActiveType activeType) {
+		this.kernelNum = kernelNum;
+		this.channel = channel;
+		this.width = width;
+		this.height = height;
+		this.kWidth = kWidth;
+		this.kHeight = kHeight;
+		this.padding = padding;
+		this.stride = stride;
+		this.hasBias = hasBias;
+		this.network = network;
+		this.hasParams = true;
+		switch (activeType) {
+		case sigmoid:
+			this.paramsInit = ParamsInit.sigmoid;
+			break;
+		case relu:
+			this.paramsInit = ParamsInit.relu;
+			break;
+		case leaky_relu:
+			this.paramsInit = ParamsInit.leaky_relu;
+			break;
+		case tanh:
+			this.paramsInit = ParamsInit.tanh;
+			break;
+		case silu:
+			this.paramsInit = ParamsInit.silu;
+			break;
+		default:
+			throw new RuntimeException("The paramsInit is not support the ["+activeType+"] active function.");
+		}
 		this.initParam();
 	}
 	

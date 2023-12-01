@@ -188,7 +188,7 @@ public class YoloV3Test {
 			
 //			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001f, batchSize, LearnRateUpdate.COSINE_ANNEALING, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 
 			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
 			
@@ -763,9 +763,9 @@ public class YoloV3Test {
 //			y.yolov3_show2();
 //			y.createMaskTrainTestDataSet();
 //			y.yolov3_tiny_mask();
-//			y.yolov3_tiny_helmet();
+			y.yolov3_tiny_helmet();
 //			y.yolov3_tiny_voc();
-			y.yolov3_tiny_sm();
+//			y.yolov3_tiny_sm();
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

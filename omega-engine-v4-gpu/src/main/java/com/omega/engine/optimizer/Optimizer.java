@@ -13,6 +13,7 @@ import com.omega.common.task.TaskEngine;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.LabelUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.check.BaseCheck;
 import com.omega.engine.nn.data.BaseData;
@@ -264,6 +265,85 @@ public abstract class Optimizer {
 			}
 			
 		}
+		
+	}
+	
+	public float updateLR(int[] lr_step,float learnRate,float olr) {
+		
+		if(warmUp && batchIndex < burnIn) {
+			learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+		}else {
+
+			switch (this.learnRateUpdate) {
+			case LR_DECAY:
+				learnRate = LRDecay.decayedLR(this.max_lr, learnRate, this.trainIndex, 5);
+				break;
+			case GD_GECAY:
+				learnRate = GDDecay.decayedLR(this.max_lr, this.trainIndex);
+				break;
+			case NONE:
+				break;
+			case CONSTANT:
+				break;
+			case COSINE:
+				if(this.trainIndex >= lrStartTime) {
+					learnRate = (float) (0.5d * max_lr * (Math.cos(this.trainIndex * Math.PI / trainTime) + 1.0d)) * learnRate;
+				}else {
+					learnRate = this.trainIndex * learnRate / lrStartTime;
+				}
+				break;
+			case COSINE_ANNEALING:
+				learnRate = (float) (min_lr + 0.5d * (max_lr - min_lr) * (Math.cos(this.trainIndex * Math.PI / this.trainMax) + 1.0d));
+//				System.out.println(this.trainMax);
+				break;
+			case RANDOM:
+				learnRate = (float) Math.pow(RandomUtils.getInstance().nextFloat(), power) * this.lr;
+				break;
+			case POLY:
+				float t = batchIndex * 1.0f / trainTime / dataSize * batchSize;
+				learnRate = (float) (olr * Math.pow((1.0f - t), power));
+				break;
+			case STEP:
+				learnRate = (float) (olr * Math.pow(this.scale, batchIndex / step));
+				break;
+			case EXP:
+				learnRate = (float) (olr * Math.pow(this.gama, batchIndex));
+				break;
+			case SIG:
+				learnRate = (float) (olr / (1.0f + Math.pow(Math.E, this.gama * (batchIndex - step))));
+				break;
+			case HALF:
+				if(counter % 10 == 0) {
+					learnRate = HalfDecay.decayedLR(learnRate);
+				}
+				break;
+			case SMART_HALF:
+
+				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF) {
+					
+					if(lr_step != null) {
+						
+						for(int index:lr_step) {
+							if(index == this.trainIndex) {
+								learnRate = learnRate * 0.1f;
+							}
+						}
+						
+					}else if(this.trainIndex % 200 == 0){
+						
+						learnRate = learnRate * 0.5f;
+						
+					}
+					
+				}
+				
+				break;
+			default:
+				break;
+			}
+			
+		}
+		return learnRate;
 		
 	}
 	
@@ -1195,6 +1275,29 @@ public abstract class Optimizer {
 			String predictLabel = LabelUtils.vectorTolabel(output.getByNumber(n), labelSet);
 			
 			if(label.equals(predictLabel)) {
+				trueCount++;
+			}
+			
+		}
+		
+		error = trueCount / output.number * 100;
+
+		return error;
+	}
+	
+	public float accuracy(Tensor output,Tensor labelData) {
+		
+		float error = 0.0f;
+		float trueCount = 0;
+
+		for(int n = 0;n<output.number;n++) {
+			
+			int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n));
+			
+			int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n));
+//			System.out.println(JsonUtils.toJson(output.getByNumber(n)));
+//			System.out.println(predictIndex+":"+labelIndex);
+			if(labelIndex == predictIndex) {
 				trueCount++;
 			}
 			

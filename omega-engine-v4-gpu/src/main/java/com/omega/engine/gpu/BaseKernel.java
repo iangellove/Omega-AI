@@ -27,6 +27,8 @@ public class BaseKernel {
 	
 	private CUfunction scal_add_function;
 	
+	private CUfunction constrain_function;
+	
 	public BaseKernel() {
 		
 		copy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "copy_kernel");
@@ -36,6 +38,72 @@ public class BaseKernel {
 		fill_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "fill_kernel");
 		
 		scal_add_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "scal_add_kernel");
+		
+		constrain_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "constrain_kernel");
+		
+	}
+	
+	public void constrain_gpu(int N, float ALPHA, Tensor a, int INCX) {
+		
+		try {
+
+			if(constrain_function == null) {
+				constrain_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "constrain_kernel");
+			}
+			
+			/**
+			 * int N, float ALPHA, float *X, int INCX
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{N}),
+	                Pointer.to(new float[]{ALPHA}),
+	        		Pointer.to(a.getGpuData()),
+	                Pointer.to(new int[]{INCX})
+	            );
+			
+			checkCUDA(cuLaunchKernel(constrain_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void constrain_gpu(int N, float ALPHA, Tensor a, int INCX,int offset) {
+		
+		try {
+
+			if(constrain_function == null) {
+				constrain_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BaseKernel.cu", "constrain_kernel");
+			}
+			
+			/**
+			 * int N, float ALPHA, float *X, int INCX
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{N}),
+	                Pointer.to(new float[]{ALPHA}),
+	        		Pointer.to(a.getGpuData().withByteOffset(offset * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{INCX})
+	            );
+			
+			checkCUDA(cuLaunchKernel(constrain_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
 		
 	}
 	

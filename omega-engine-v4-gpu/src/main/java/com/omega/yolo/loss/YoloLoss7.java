@@ -58,7 +58,7 @@ public class YoloLoss7 extends LossFunction {
 	
 	private float truthThresh = 1.0f;
 	
-	private float iou_normalizer = 0.07f;
+	private float iou_normalizer = 0.05f;
 	
 	private float max_delta = 2.0f;
 	
@@ -70,7 +70,7 @@ public class YoloLoss7 extends LossFunction {
 	
 	private float iou_thresh = 0.2f;
 	
-	private float focal_loss = 0f;
+	private float focal_loss = 1f;
 	
 	public YoloLoss7(int class_number,int bbox_num,int[] mask,float[] anchors,int orgH,int orgW,int maxBox,int total,float ignoreThresh,float truthThresh) {
 		this.class_number = class_number;

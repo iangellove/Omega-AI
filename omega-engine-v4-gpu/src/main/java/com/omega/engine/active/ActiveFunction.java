@@ -5,6 +5,8 @@ import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 
+import jcuda.Pointer;
+
 /**
  * base active function
  * @ClassName: ActiveFunction
@@ -41,9 +43,13 @@ public abstract class ActiveFunction {
 	
 	public abstract void active(Tensor x,Tensor out);
 	
+	public abstract void active(Pointer x,Pointer out,int length);
+	
 	public abstract float[] diff();
 	
 	public abstract void diff(Tensor x,Tensor diff);
+	
+	public abstract void diff(Pointer x,Pointer delta,Pointer diff,int length);
 	
 	public abstract float[] activeTemp(float[] x);
 	

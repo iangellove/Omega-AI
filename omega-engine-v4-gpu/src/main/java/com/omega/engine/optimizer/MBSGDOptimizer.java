@@ -13,6 +13,7 @@ import com.omega.engine.nn.network.OutputsNetwork;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Yolo;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
+import com.omega.rnn.data.RNNDataLoader;
 import com.omega.yolo.data.BaseDataLoader;
 import com.omega.yolo.data.DetectionDataLoader;
 import com.omega.yolo.utils.YoloLabelUtils;
@@ -1595,6 +1596,118 @@ public class MBSGDOptimizer extends Optimizer {
 					System.out.println("----------------testing finish---------------");
 					
 				}
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void trainRNN(RNNDataLoader trainingData) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+			
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Tensor input = new Tensor(trainingData.time * batchSize, this.network.channel, this.network.height, this.network.width, true);
+			
+			Tensor label = trainingData.initLabelTensor();
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+
+				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = trainingData.shuffle();
+				
+				float train_loss = 0.0f;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					long start = System.nanoTime();
+
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadData(indexs[it], input, label);
+					
+					/**
+					 * forward
+					 */
+					Tensor output = this.network.forward(input);
+					
+					/**
+					 * loss
+					 */
+					this.loss = this.network.loss(output, label);
+					
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label);
+					
+					/**
+					 * back
+					 */
+					this.network.back(lossDiff);
+					
+					/**
+					 * update
+					 */
+					this.network.update();
+					
+					JCudaDriver.cuCtxSynchronize();
+					
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
+					}
+
+					train_loss += this.currentError;
+					
+					output.syncHost();
+					float error = this.accuracy(output, label);
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+				}
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(this.lr_step);
 				
 			}
 			

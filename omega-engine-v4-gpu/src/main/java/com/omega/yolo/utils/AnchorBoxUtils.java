@@ -11,6 +11,162 @@ import com.omega.common.utils.RandomUtils;
 
 public class AnchorBoxUtils {
 	
+	public static Tensor sort(Tensor centers) {
+		
+		Tensor result = new Tensor(centers.number, 1, 1, centers.width);
+		
+		for(int i = 0;i<centers.number;i++) {
+			float w = centers.data[i * 2 + 0];
+			float h = centers.data[i * 2 + 1];
+			float product = w * h;
+			int j;
+			for(j = i;j > 0 && product < (centers.data[(j - 1) * 2 + 0] * centers.data[(j - 1) * 2 + 1]);j--) {
+				centers.data[j * 2 + 0] = centers.data[(j - 1) * 2 + 0];
+				centers.data[j * 2 + 1] = centers.data[(j - 1) * 2 + 1];
+			}
+			centers.data[j * 2 + 0] = w;
+			centers.data[j * 2 + 1] = h;
+		}
+
+		return result;
+	}
+	
+	public static Tensor kmeansAnchors(String trainLabelPath,int k) {
+		try {
+			
+			Tensor bbox = LabelUtils.loadBoxTXT(trainLabelPath);
+			
+			Tensor anchors = AnchorBoxUtils.calcAnchors(bbox, k);
+			
+			sort(anchors);
+			
+			return anchors;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public static Tensor calcAnchors(Tensor bboxs,int num_clusters) {
+		
+		int num_labels = bboxs.number;
+		
+		Tensor wh = new Tensor(num_labels, 1, 1, 2);
+
+		int[] assig = new int[wh.number];
+		
+		for(int n = 0;n<num_labels;n++) {
+			wh.data[n * 2 + 0] = bboxs.data[n * 4 + 2];
+			wh.data[n * 2 + 1] = bboxs.data[n * 4 + 3];
+		}
+		
+		Tensor centers = randomCenters(wh, num_clusters);
+		
+		for(int i = 0;i<1000 && kmeans_exp(wh, assig, centers) == 0;i++) {
+			kmeans_max(wh, assig, centers);
+		}
+
+		return centers;
+	}
+	
+	public static void kmeans_max(Tensor wh,int[] assig,Tensor centers) {
+		
+		float[] old_centers = new float[centers.dataLength];
+		
+		int[] counts = new int[centers.number];
+		for(int i = 0;i<centers.number;i++) {
+			for(int j = 0;j<centers.getOnceSize();j++) {
+				old_centers[i * centers.getOnceSize() + j] = centers.data[i * wh.getOnceSize() + j];
+				centers.data[i * centers.getOnceSize() + j] = 0;
+			}
+		}
+		for(int i = 0;i<wh.number;i++) {
+			counts[assig[i]]++;
+			for(int j = 0;j<wh.getOnceSize();j++) {
+				centers.data[assig[i] * centers.getOnceSize() + j] += wh.data[i * wh.getOnceSize() + j];
+			}
+		}
+		for(int i = 0;i<centers.number;i++) {
+			if(counts[i]> 0) {
+				for(int j = 0;j<centers.getOnceSize();j++) {
+					centers.data[i * centers.getOnceSize() + j] /= counts[i];
+	            }
+			}
+		}
+		for(int i = 0;i<centers.number;i++) {
+			for(int j = 0;j<centers.getOnceSize();j++) {
+				if(centers.data[i * centers.getOnceSize() + j] == 0) {
+					centers.data[i * centers.getOnceSize() + j] = old_centers[i * centers.getOnceSize() + j];
+				}
+			}
+		}
+	}
+	
+	public static int kmeans_exp(Tensor wh,int[] assig,Tensor centers) {
+		
+		int converged = 1;
+		
+		for(int i = 0;i<wh.number;i++) {
+			float[] datum = new float[2];
+			datum[0] = wh.data[i * 2 + 0];
+			datum[1] = wh.data[i * 2 + 1];
+			int closest = closest_center(datum, centers);
+			if(closest != assig[i]) {
+				converged = 0;
+			}
+			assig[i] = closest;
+		}
+		
+		return converged;
+	}
+	
+	public static int closest_center(float[] datum,Tensor centers) {
+		
+		int best = 0;
+		int cols = centers.getOnceSize();
+		float best_dist = dist(datum, centers.getByNumber(best), cols);
+		for(int i = 0;i<centers.number;i++) {
+			float new_dist = dist(datum, centers.getByNumber(i), cols);
+			if(new_dist < best_dist) {
+				best_dist = new_dist;
+				best = i;
+			}
+		}
+		
+		return best;
+	}
+	
+	public static float dist(float[] x,float[] y,int n) {
+		
+		float mw = (x[0] < y[0]) ? x[0] : y[0];
+	    float mh = (x[1] < y[1]) ? x[1] : y[1];
+	    float inter = mw*mh;
+	    float sum = x[0] * x[1] + y[0] * y[1];
+	    float un = sum - inter;
+	    float iou = inter / un;
+	    return 1 - iou;
+		
+	}
+	
+	public static Tensor randomCenters(Tensor wh,int k) {
+		
+		Tensor centers = new Tensor(k, 1, 1, 2);
+		
+		List<Integer> list = new ArrayList<Integer>(); 
+		
+		for(int i = 0;i<wh.number;i++) {
+			list.add(i);
+		}
+		
+		Collections.shuffle(list);
+		
+		for(int n = 0;n<k;n++) {
+			System.arraycopy(wh.getByNumber(list.get(n)), 0, centers.data, n * wh.getOnceSize(), wh.getOnceSize());
+		}
+
+		return centers;
+	}
 	
 	public static Tensor getAnchorBox(Tensor bboxs,int num_clusters) {
 		Tensor boxs = translateBoxes(bboxs);

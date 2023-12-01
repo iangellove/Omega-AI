@@ -944,6 +944,37 @@ public class Graph{
 		
 	}
 	
+	public static void silu() {
+		
+		int number = 1;
+		int channel  = 1;
+		int height = 1;
+		int width = 4;
+
+		Graph graph = new Graph();
+		
+		float[] b1a = new float[] {0.5f,0.02f,0.3f,0.6f};
+		
+		Tensor x = new Tensor(number, channel, height, width, b1a, true, graph);
+		x.setRequiresGrad(true);
+		Tensor s = sigmoid(x);
+		s.showDM();
+		Tensor o = x.mul(s);
+		
+		graph.clearGrad();
+		graph.backward();
+		
+		o.showDM();
+		x.getGrad().showDM();
+		
+		//output[i] * (1.0f +  x[i] * (1.0f - output[i]))
+		// out + sigmoid(x) * (1 - out)
+		Tensor d = o.add(s.mul(o.scalarSub(1)));
+
+		d.showDM();	
+				
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -998,7 +1029,9 @@ public class Graph{
 			
 //			atan();
 			
-			Lciou();
+//			Lciou();
+			
+			silu();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

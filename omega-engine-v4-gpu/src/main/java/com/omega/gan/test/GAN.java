@@ -25,7 +25,7 @@ public class GAN {
 
 		netWork.CUDNN = true;
 		
-		netWork.learnRate = 0.0001f;
+		netWork.learnRate = 0.0002f;
 		
 		InputLayer inputLayer = new InputLayer(nz, 1, 1);
 		
@@ -76,7 +76,7 @@ public class GAN {
 
 		netWork.CUDNN = true;
 		
-		netWork.learnRate = 0.0001f;
+		netWork.learnRate = 0.0002f;
 		
 		netWork.PROPAGATE_DOWN = true;
 		
@@ -129,7 +129,7 @@ public class GAN {
 		int nz = 100; //噪声维度
 		int batchSize = 512;
 		
-		int d_every = 1;
+		int d_every = 3;
 		int g_every = 1;
 		
 		try {
@@ -142,7 +142,7 @@ public class GAN {
 			
 			ImageDataLoader dataLoader = new ImageDataLoader(imgDirPath, imw, imh, batchSize);
 			
-			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 500, d_every, g_every, 0.001f, LearnRateUpdate.CONSTANT, false);
+			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 2000, d_every, g_every, 0.001f, LearnRateUpdate.SMART_HALF, false);
 			
 			optimizer.train(dataLoader);
 

@@ -41,40 +41,40 @@ __global__ void relu_backward_temp(float *x, float *delta, float *diff, int n)
 }
 
 extern "C"
-__global__ void leakyRelu_forward(float *x, float *output, int n)
+__global__ void leakyRelu_forward(float *x, float *output, int n,float s)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < n) {
     	if(x[i] > 0){
     		output[i] = x[i];
     	}else{
-    		output[i] = x[i] * 0.2f;
+    		output[i] = x[i] * s;
     	}
     }
 }
 
 extern "C"
-__global__ void leakyRelu_backward(float *x, float *delta, float *diff, int n)
+__global__ void leakyRelu_backward(float *x, float *delta, float *diff, int n,float s)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < n) {
     	if(x[i] > 0){
     		diff[i] = delta[i];
     	}else{
-    		diff[i] = delta[i] * 0.2f;
+    		diff[i] = delta[i] * s;
     	}
     }
 }
 
 extern "C"
-__global__ void leakyRelu_backward_temp(float *x, float *delta, float *diff, int n)
+__global__ void leakyRelu_backward_temp(float *x, float *delta, float *diff, int n, float s)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < n) {
     	if(x[i] > 0){
     		diff[i] += delta[i];
     	}else{
-    		diff[i] += delta[i] * 0.2f;
+    		diff[i] += delta[i] * s;
     	}
     }
 }
@@ -140,7 +140,7 @@ __global__ void silu_forward(float *x, float *output, int n)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < n) {
-    	output[i] = (float) (x[i] / (1.0f + expf(-x[i])));
+    	output[i] = x[i] / (1.0f + expf(-x[i]));
     }
 }
 
@@ -149,7 +149,7 @@ __global__ void silu_backward(float *x, float *output, float *delta, float *diff
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < n) {
-    	diff[i] = delta[i] * output[i] * (1.0f +  x[i] * (1.0f - output[i]));
+    	diff[i] = delta[i] * (output[i] + 1.0f / (1.0f + expf(-x[i])) * (1.0f - output[i]));
     }
 }
 
@@ -158,6 +158,6 @@ __global__ void silu_backward_temp(float *x, float *output, float *delta, float 
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < n) {
-    	diff[i] += delta[i] * output[i] * (1.0f +  x[i] * (1.0f - output[i]));
+    	diff[i] += delta[i] * (output[i] + 1.0f / (1.0f + expf(-x[i])) * (1.0f - output[i]));
     }
 }

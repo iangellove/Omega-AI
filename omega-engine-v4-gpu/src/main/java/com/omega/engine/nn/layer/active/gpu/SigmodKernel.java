@@ -73,6 +73,36 @@ public class SigmodKernel extends BaseKernel{
 	    return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
 	}
 	
+	public void forward(Tensor input,Tensor output,int step) {
+		
+		try {
+
+			/**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			forwardKernelParameters = Pointer.to(
+	        		Pointer.to(input.getGpuData().withByteOffset(step * input.getOnceSize() * Sizeof.FLOAT)),
+	                Pointer.to(output.getGpuData().withByteOffset(step * input.getOnceSize() * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{output.getOnceSize()})
+	            );
+			
+			this.N = output.number;
+
+			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(input.getOnceSize()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            forwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void forward(Tensor input,Tensor output,int index,int length) {
 		
 		try {
@@ -84,6 +114,63 @@ public class SigmodKernel extends BaseKernel{
 			forwardKernelParameters = Pointer.to(
 	        		Pointer.to(input.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
 	                Pointer.to(output.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{length})
+	            );
+			
+			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(length),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            forwardKernelParameters, null // Kernel- and extra parameters
+		        );
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backward(Tensor input,Tensor delta,Tensor diff,int step) {
+		
+		try {
+
+			/**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			backwardKernelParameters = Pointer.to(
+					Pointer.to(input.getGpuData().withByteOffset(step * input.getOnceSize() * Sizeof.FLOAT)),
+	        		Pointer.to(delta.getGpuData().withByteOffset(step * input.getOnceSize() * Sizeof.FLOAT)),
+	                Pointer.to(diff.getGpuData().withByteOffset(step * input.getOnceSize() * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{input.getOnceSize()})
+	            );
+
+			cuLaunchKernel(function_back,
+		            this.CAFFE_GET_BLOCKS(input.getOnceSize()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            backwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void forward(Pointer input,Pointer output,int length) {
+		
+		try {
+			
+			/**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			forwardKernelParameters = Pointer.to(
+	        		Pointer.to(input),
+	                Pointer.to(output),
 	                Pointer.to(new int[]{length})
 	            );
 			
@@ -224,6 +311,34 @@ public class SigmodKernel extends BaseKernel{
 					Pointer.to(output.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
 	        		Pointer.to(delta.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
 	                Pointer.to(diff.getGpuData().withByteOffset(index * Sizeof.FLOAT)),
+	                Pointer.to(new int[]{length})
+	            );
+
+			cuLaunchKernel(function_back,
+		            this.CAFFE_GET_BLOCKS(length),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            backwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backward(Pointer output,Pointer delta,Pointer diff,int length) {
+		
+		try {
+			/**
+	         * 设置入参
+	         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+	         */ 
+			backwardKernelParameters = Pointer.to(
+					Pointer.to(output),
+	        		Pointer.to(delta),
+	                Pointer.to(diff),
 	                Pointer.to(new int[]{length})
 	            );
 

@@ -43,7 +43,7 @@ public class MathUtils {
 	 * @return
 	 */
 	public static int[][] randomInts(int length,int batchSize) {
-		
+
 		int itc = new BigDecimal(length).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
 		
 		int[][] tmp = new int[itc][batchSize];

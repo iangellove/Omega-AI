@@ -68,7 +68,8 @@ public class CBLLayer extends Layer{
 	}
 
 	public void initLayers() {
-		convLayer = new ConvolutionLayer(channel, oChannel, width, height, kHeight, kWidth, padding, stride, false, this.network, ParamsInit.silu);
+		
+		convLayer = new ConvolutionLayer(channel, oChannel, width, height, kHeight, kWidth, padding, stride, false, this.network, activeType);
 		convLayer.setUpdater(UpdaterFactory.create(this.network.updater));
 		
 		bnLayer = new BNLayer(convLayer);

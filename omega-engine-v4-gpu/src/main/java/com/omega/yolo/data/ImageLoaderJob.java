@@ -30,7 +30,7 @@ public class ImageLoaderJob extends RecursiveAction {
 	
 	private int[] indexs;
 	
-	private float jitter = 0.3f;
+	private float jitter = 0.1f;
 	
 	private float hue = 0.1f;
 	
@@ -44,11 +44,13 @@ public class ImageLoaderJob extends RecursiveAction {
 	
 	private float resized = 1.5f;
 	
-	private float letter_box = 1;
+	private int letter_box = 1;
 	
 	private Map<String, float[]> orgLabelData;
 	
 	private static ImageLoaderJob job;
+	
+	private static LoaderMemCachePool pool = new LoaderMemCachePool();
 	
 	public static ImageLoaderJob getInstance(String path,String extName,Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,int boxes,int classes,int start, int end) {
 		if(job == null) {
@@ -86,14 +88,20 @@ public class ImageLoaderJob extends RecursiveAction {
 			float[] labelBoxs = this.orgLabelData.get(key);
 			
 			String imagePath = path + "/" + key + "." + extName;
-
+			
+//			MemeryBlock block = pool.getBlock(4096 * 4096 * 3);
+			
+//			OMImage orig = ImageLoader.loadImage(imagePath, block.getData());
+			
 			OMImage orig = ImageLoader.loadImage(imagePath);
 			
 			float[] labelXYWH = ImageLoader.formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
 
-			ImageLoader.loadDataDetection(input, label, i, orig, labelXYWH, input.width, input.height, boxes, classes, jitter, hue, saturation, exposure);
+//			ImageLoader.loadDataDetection(input, label, i, orig, labelXYWH, input.width, input.height, boxes, classes, jitter, hue, saturation, exposure);
 			
-//			ImageLoader.loadDataDetection2(input, label, i, orig, labelXYWH, input.width, input.height, boxes, classes, jitter, letter_box, resized, hue, saturation, exposure);
+			ImageLoader.loadDataDetection2(input, label, i, orig, labelXYWH, input.width, input.height, boxes, classes, jitter, hue, saturation, exposure, resized, letter_box);
+			
+//			block.free();
 			
 		}
 			

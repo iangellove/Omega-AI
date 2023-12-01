@@ -16,6 +16,8 @@ import com.omega.engine.updater.UpdaterType;
  */
 public class RNN extends Network {
 	
+	public int time = 1;
+	
 	public RNN(LossFunction lossFunction) {
 		this.lossFunction = lossFunction;
 	}
@@ -28,6 +30,12 @@ public class RNN extends Network {
 	public RNN(LossType lossType,UpdaterType updater) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.updater = updater;
+	}
+	
+	public RNN(LossType lossType,UpdaterType updater,int time) {
+		this.lossFunction = LossFactory.create(lossType);
+		this.updater = updater;
+		this.time = time;
 	}
 	
 	@Override

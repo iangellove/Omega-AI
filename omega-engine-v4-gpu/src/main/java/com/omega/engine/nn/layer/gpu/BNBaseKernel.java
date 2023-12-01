@@ -14,4 +14,8 @@ public abstract class BNBaseKernel extends BaseKernel{
 	
 	public abstract void backward(Tensor input,Tensor delta,Tensor diff,Tensor gama,Tensor dgama,Tensor dbeta);
 	
+	public abstract void forward(RunModel RUN_MODEL, Tensor gama, Tensor beta, Tensor input, Tensor output, int batch, int step);
+	
+	public abstract void backward(Tensor input,Tensor delta,Tensor diff,Tensor gama,Tensor dgama,Tensor dbeta,int batch,int step);
+	
 }
