@@ -43,7 +43,7 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ![输入图片说明](images/gan-3000.gif)
 
-[基于DCGAN生成对抗神经网络实现生成动漫头像图片](#dcgan-anime-demo-生成手写数字)
+[基于DCGAN生成对抗神经网络实现生成动漫头像图片](#dcgan-anime-demo-生成动漫头像)
 
 ![输入图片说明](images/dcgan-20.gif)
 
