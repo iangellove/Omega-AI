@@ -43,6 +43,10 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ![输入图片说明](images/gan-3000.gif)
 
+[基于DCGAN生成对抗神经网络实现生成动漫头像图片](#dcgan-anime-demo-生成手写数字)
+
+![输入图片说明](images/dcgan-20.gif)
+
 
 
 ##  功能介绍
@@ -798,6 +802,45 @@ public static void gan_anime() {
 			
 			optimizer.train(trainData);
 			
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+```
+
+#### dcgan anime demo 生成手写数字
+``` java
+	public static void dcgan_anime() {
+		
+		int imw = 64;
+		int imh = 64;
+		int ngf = 64; //生成器featrue map数
+		int ndf = 64; //判别器feature map数
+		int nz = 100; //噪声维度
+		int batchSize = 64;
+		
+		int d_every = 1;
+		int g_every = 5;
+		
+		float[] mean = new float[] {0.5f,0.5f,0.5f};
+		float[] std = new float[] {0.5f,0.5f,0.5f};
+		
+		try {
+			
+			String imgDirPath = "H:\\voc\\gan_anime\\ml2021spring-hw6\\faces\\";
+			
+			CNN netG = NetG(ngf, nz);
+			
+			CNN netD = NetD(ndf, imw, imh);
+			
+			ImageDataLoader dataLoader = new ImageDataLoader(imgDirPath, imw, imh, batchSize, true, mean, std);
+			
+			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 2000, d_every, g_every, 0.001f, LearnRateUpdate.POLY, false);
+			
+			optimizer.train(dataLoader);
 
 		} catch (Exception e) {
 			// TODO: handle exception
