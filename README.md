@@ -811,7 +811,7 @@ public static void gan_anime() {
 	}
 ```
 
-#### dcgan anime demo 生成手写数字
+#### dcgan anime demo 生成动漫头像
 ``` java
 	public static void dcgan_anime() {
 		
