@@ -43,6 +43,10 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 ![输入图片说明](images/gan-3000.gif)
 
+[基于DCGAN生成对抗神经网络实现生成动漫头像图片](#dcgan-anime-demo-生成动漫头像)
+
+![输入图片说明](images/dcgan-20.gif)
+
 
 
 ##  功能介绍
@@ -807,6 +811,45 @@ public static void gan_anime() {
 	}
 ```
 
+#### dcgan anime demo 生成动漫头像
+``` java
+	public static void dcgan_anime() {
+		
+		int imw = 64;
+		int imh = 64;
+		int ngf = 64; //生成器featrue map数
+		int ndf = 64; //判别器feature map数
+		int nz = 100; //噪声维度
+		int batchSize = 64;
+		
+		int d_every = 1;
+		int g_every = 5;
+		
+		float[] mean = new float[] {0.5f,0.5f,0.5f};
+		float[] std = new float[] {0.5f,0.5f,0.5f};
+		
+		try {
+			
+			String imgDirPath = "H:\\voc\\gan_anime\\ml2021spring-hw6\\faces\\";
+			
+			CNN netG = NetG(ngf, nz);
+			
+			CNN netD = NetD(ndf, imw, imh);
+			
+			ImageDataLoader dataLoader = new ImageDataLoader(imgDirPath, imw, imh, batchSize, true, mean, std);
+			
+			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 2000, d_every, g_every, 0.001f, LearnRateUpdate.POLY, false);
+			
+			optimizer.train(dataLoader);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+```
+
 
 ## 未来可期
 
@@ -892,6 +935,24 @@ http://119.3.123.193:8011/AICar
 5.使用自动求导功能实现MSN损失函数，代替原有的MSN loss. 
 
 6.后续版本将逐渐实现引擎对yolov5,GAN,transformer等模型支持.
+
+#### 2023-12-01
+1.新增yolov4版本实现，具体结构请查看yolov4-tiny.cfg文件.
+
+2.新增yolov7版本实现，添加yolov7 loss实现,具体理论解析请查看readme.md文件. 
+
+4.新增基于yolov7-tiny实现智能冰柜商品识别demo. 
+
+5.SiLU激活函数实现. 
+
+6.修改yoloLayer(yolo层)，根据yolov4版本实现scale缩放公式从原来exp(xy)+b修改成sigmoid(xy) * scale - 0.5 * (scale - 1)，该操作可一定程度减缓由于exp()函数带来的数值不稳定和无穷大NaN的现象. 
+
+7.新增GAN实现，详情源码请查看com.omega.gan包，里面实现了手写体数字生成与动漫头像生成的事例.
+
+8.新增RNN循环神经网络模型实现，添加RNNBlockLayer层，该层实现了RNN,LSTM,GRU三种循环神经网络基础模块.
+
+9.后续版本将逐渐实现引擎对CycleGAN风格迁移,LSTM,GRU,transformer等模型支持. 
+
 
 ## 欢迎打扰
 
