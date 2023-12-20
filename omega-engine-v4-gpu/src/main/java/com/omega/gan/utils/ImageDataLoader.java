@@ -27,6 +27,8 @@ public class ImageDataLoader extends BaseDataLoader{
 	private int img_h;
 	
 	private String extName;
+	
+	public boolean normalization = false;
 
 	public static float[] mean = new float[] {0.491f, 0.482f, 0.446f};
 	public static float[] std = new float[] {0.247f, 0.243f, 0.261f};
@@ -36,6 +38,17 @@ public class ImageDataLoader extends BaseDataLoader{
 		this.img_w = img_w;
 		this.img_h = img_h;
 		this.batchSize = batchSize;
+		init();
+	}
+	
+	public ImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize,boolean normalization,float[] mean,float[] std) {
+		this.imgDirPath = imgDirPath;
+		this.img_w = img_w;
+		this.img_h = img_h;
+		this.batchSize = batchSize;
+		this.normalization = normalization;
+		this.mean = mean;
+		this.std = std;
 		init();
 	}
 	
@@ -87,6 +100,10 @@ public class ImageDataLoader extends BaseDataLoader{
 		 */
 		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false);
 		
+		if(normalization) {
+			this.normalization(input);
+		}
+		
 		/**
 		 * copy data to gpu.
 		 */
@@ -103,6 +120,10 @@ public class ImageDataLoader extends BaseDataLoader{
 		 * 加载input数据
 		 */
 		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false);
+		
+		if(normalization) {
+			this.normalization(input);
+		}
 		
 		/**
 		 * copy data to gpu.
@@ -129,7 +150,11 @@ public class ImageDataLoader extends BaseDataLoader{
 		 * 加载input数据
 		 */
 		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, dataEnhance);
-
+		
+		if(normalization) {
+			this.normalization(input);
+		}
+		
 		/**
 		 * copy data to gpu.
 		 */

@@ -1,5 +1,7 @@
 package com.omega.engine.updater;
 
+import java.util.Map;
+
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.network.Network;
@@ -19,6 +21,8 @@ public abstract class Updater {
 	public float beta = 0.9f;
 	
 	public float lr = 0.0001f;
+	
+	public Map<String,Float> params;
 	
 	public float[] vdw;
 	

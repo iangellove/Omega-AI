@@ -2,6 +2,8 @@ package com.omega.engine.updater.gpu;
 
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
+import java.util.Map;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.RandomUtils;
@@ -56,6 +58,31 @@ public class AdamWKernel {
 		this.vb = new Tensor(1, 1, 1, biasLength, true);
 		this.weight_decay = weight_decay;
 		init();
+	}
+	
+	public AdamWKernel(int weightLength,int biasLength,float beta1,float beta2,float weight_decay) {
+		this.mw = new Tensor(1, 1, 1, weightLength, true);
+		this.vw = new Tensor(1, 1, 1, weightLength, true);
+		this.mb = new Tensor(1, 1, 1, biasLength, true);
+		this.vb = new Tensor(1, 1, 1, biasLength, true);
+		this.beta1 = beta1;
+		this.beta2 = beta2;
+		this.weight_decay = weight_decay;
+		init();
+	}
+	
+	public void setParams(Map<String,Float> params) {
+		if(params != null) {
+			if(params.get("beta1")!=null) {
+				this.beta1 = params.get("beta1");
+			}
+			if(params.get("beta2")!=null) {
+				this.beta2 = params.get("beta2");
+			}
+			if(params.get("weight_decay")!=null) {
+				this.weight_decay = params.get("weight_decay");
+			}
+		}
 	}
 	
 	public void init() {

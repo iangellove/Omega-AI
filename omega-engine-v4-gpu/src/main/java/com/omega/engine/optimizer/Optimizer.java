@@ -1289,7 +1289,7 @@ public abstract class Optimizer {
 		
 		float error = 0.0f;
 		float trueCount = 0;
-
+//		System.out.println(JsonUtils.toJson(output.getByNumber(0)));
 		for(int n = 0;n<output.number;n++) {
 			
 			int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n));

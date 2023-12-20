@@ -1,5 +1,7 @@
 package com.omega.engine.updater;
 
+import java.util.Map;
+
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.updater.gpu.AdamWKernel;
@@ -14,6 +16,10 @@ public class AdamW extends Updater {
 	private AdamWKernel kernel;
 	
 	private float weight_decay = 0.0005f;
+	
+	public AdamW(Map<String,Float> params) {
+		this.params = params;
+	}
 	
 	@Override
 	public void update(Layer layer) {
@@ -32,6 +38,8 @@ public class AdamW extends Updater {
 				kernel = new AdamWKernel(layer.weight.dataLength, weight_decay);
 				
 			}
+			
+			kernel.setParams(params);
 			
 		}
 		
@@ -66,6 +74,8 @@ public class AdamW extends Updater {
 		if(kernel == null) {
 			kernel = new AdamWKernel(layer.gamma.dataLength, layer.beta.dataLength, weight_decay);
 		}
+		
+		kernel.setParams(params);
 
 		kernel.updateGama(layer.diffGamma, layer.gamma, layer.network, layer.learnRate);
 		

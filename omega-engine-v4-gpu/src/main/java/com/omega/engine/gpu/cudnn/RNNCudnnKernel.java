@@ -30,8 +30,6 @@ public class RNNCudnnKernel extends RNNBaseKernel{
 	
 	public boolean bidirectional = false;
 	
-	public int seqLength = 1;
-	
 	public int numLinearLayers = 2;
 	
 	public int layerNum = 1;

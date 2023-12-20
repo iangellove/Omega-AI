@@ -80,7 +80,7 @@ public class LeakyReluKernel extends BaseKernel{
 		try {
 
 //			if(forwardKernelParameters == null || this.N != output.number) {
-
+			
 		        /**
 		         * 设置入参
 		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
@@ -88,7 +88,7 @@ public class LeakyReluKernel extends BaseKernel{
 				forwardKernelParameters = Pointer.to(
 		        		Pointer.to(input.getGpuData()),
 		                Pointer.to(output.getGpuData()),
-		                Pointer.to(new int[]{output.dataLength}),
+		                Pointer.to(new int[]{input.dataLength}),
 		                Pointer.to(new float[]{scale})
 		            );
 				
@@ -97,7 +97,7 @@ public class LeakyReluKernel extends BaseKernel{
 //			}
 			
 			cuLaunchKernel(function,
-		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
+		            this.CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            forwardKernelParameters, null // Kernel- and extra parameters

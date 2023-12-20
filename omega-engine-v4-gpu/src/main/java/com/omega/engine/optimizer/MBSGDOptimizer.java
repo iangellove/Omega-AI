@@ -2,12 +2,16 @@ package com.omega.engine.optimizer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.check.BaseCheck;
 import com.omega.engine.controller.TrainTask;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
+import com.omega.engine.nn.grad.GradClipping;
+import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.OutputsNetwork;
 import com.omega.engine.nn.network.RunModel;
@@ -1610,6 +1614,34 @@ public class MBSGDOptimizer extends Optimizer {
 
 	}
 	
+	public void testRNN(Tensor input) {
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+			
+			/**
+			 * forward
+			 */
+			Tensor output = this.network.forward(input);
+			
+			output.showDM();
+			
+			/**
+			 * loss diff
+			 */
+			float[] ld = MatrixUtils.one(output.dataLength);
+			this.lossDiff = new Tensor(output.number, output.channel, output.height, output.width, ld, true);
+
+			/**
+			 * back
+			 */
+			this.network.back(this.lossDiff);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
 	public void trainRNN(RNNDataLoader trainingData) {
 		// TODO Auto-generated method stub
 		try {
@@ -1637,8 +1669,6 @@ public class MBSGDOptimizer extends Optimizer {
 				this.trainIndex = i + 1;
 				
 				int[][] indexs = trainingData.shuffle();
-				
-				float train_loss = 0.0f;
 				
 				/**
 				 * 遍历整个训练集
@@ -1671,10 +1701,19 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					this.lossDiff = network.lossDiff(output, label);
 					
+//					System.out.println(JsonUtils.toJson(output.syncHost()));
+					
+//					GradClipping.gradClipping(this.lossDiff, 1e-7f);
+
 					/**
 					 * back
 					 */
-					this.network.back(lossDiff);
+					this.network.back(this.lossDiff);
+					
+					/**
+					 * grad clipping
+					 */
+//					this.gradClipping(this.network);
 					
 					/**
 					 * update
@@ -1692,9 +1731,10 @@ public class MBSGDOptimizer extends Optimizer {
 						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
 					}
 
-					train_loss += this.currentError;
+//					train_loss += this.currentError;
 					
 					output.syncHost();
+
 					float error = this.accuracy(output, label);
 					
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
@@ -1720,6 +1760,21 @@ public class MBSGDOptimizer extends Optimizer {
 			e.printStackTrace();
 		}
 
+	}
+	
+	public void gradClipping(Network network) {
+		
+		for(Layer layer:network.layerList) {
+			if(layer.diffW != null) {
+//				System.out.println(layer.getLayerType()+"-diffW");
+				GradClipping.gradClipping(layer.diffW, 1e-7f);
+			}
+			if(layer.diffB != null) {
+//				System.out.println("diffB");
+				GradClipping.gradClipping(layer.diffB, 1e-7f);
+			}
+		}
+		
 	}
 	
 	public void transforms(Tensor trainData,Tensor transData, float[] mean,float[] std){

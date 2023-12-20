@@ -18,6 +18,8 @@ public class FullyKernel extends BaseKernel{
 
 	private CUfunction function;
 	
+	private CUfunction function_bias;
+	
 	private CUfunction back_function;
 	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
@@ -45,6 +47,12 @@ public class FullyKernel extends BaseKernel{
 			if(function == null) {
 
 				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BiasKernel.cu", "add_bias");
+				
+			}
+			
+			if(function_bias == null) {
+
+				function_bias = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"BiasKernel.cu", "add_full_bias");
 				
 			}
 			
@@ -132,6 +140,36 @@ public class FullyKernel extends BaseKernel{
 		}
 		
 	}
+	
+//	public void addBias(Tensor output,Tensor bias,int batch,int step) {
+//		
+//		try {
+//
+//	        /**
+//	         * 设置入参
+//	         * float* output, float* biases, int N, int w
+//	         */ 
+//	        kernelParameters = Pointer.to(
+//	        		Pointer.to(output.getGpuData().withByteOffset(step * batch * output.getOnceSize() * Sizeof.FLOAT)),
+//	                Pointer.to(bias.getGpuData()),
+//	                Pointer.to(new int[]{batch * output.getOnceSize()}),
+//	                Pointer.to(new int[]{output.getWidth()})
+//	            );
+//	        
+//			cuLaunchKernel(function_bias,
+//		            this.CAFFE_GET_BLOCKS(batch * output.getOnceSize()),  1, 1,      // Grid dimension
+//		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+//		            0, null,               // Shared memory size and stream
+//		            kernelParameters, null // Kernel- and extra parameters
+//		        );
+//
+//		} catch (Exception e) {
+//			// TODO: handle exception
+//			e.printStackTrace();
+//		}
+//		
+//	}
+	
 	
 	public void backwardBias(Tensor diffB,Tensor delta) {
 		

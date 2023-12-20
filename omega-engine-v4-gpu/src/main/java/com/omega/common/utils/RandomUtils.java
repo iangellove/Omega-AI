@@ -1,6 +1,7 @@
 package com.omega.common.utils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -61,6 +62,19 @@ public class RandomUtils {
 	        max = swap;
 		}
 		return min + (float)(Math.random() * (max-min));
+	}
+	
+	public static float[] uniformFloat(int size,float min,float max) {
+		float[] y = new float[size];
+		if(max < min) {
+			float swap = min;
+	        min = max;
+	        max = swap;
+		}
+		for(int i = 0;i<size;i++) {
+			y[i] = min + (float)(Math.random() * (max-min));
+		}
+		return y;
 	}
 	
 	public static float randomScale(float s) {
@@ -652,6 +666,24 @@ public class RandomUtils {
 		}
 		
 		return new Tensor(k, org.channel, org.height, org.width, data);
+	}
+	
+	public static int getRandomNumber(float[] pros) {
+		
+		float rv = RandomUtils.getInstance().nextFloat();
+			
+		float sum = MatrixOperation.sum(pros);
+		
+		float cu_proy = 0;
+		
+		for(int i = 0;i<pros.length;i++) {
+			cu_proy += pros[i] / sum;
+			if(rv <= cu_proy) {
+				return i;
+			}
+		}
+		
+		return 0;
 	}
 	
 	public static void main(String[] args) {

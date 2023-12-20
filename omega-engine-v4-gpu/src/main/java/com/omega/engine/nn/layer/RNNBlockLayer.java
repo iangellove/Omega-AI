@@ -1,10 +1,10 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.cudnn.RNNCudnnKernel;
 import com.omega.engine.nn.layer.gpu.RNNBaseKernel;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.RNN;
 
 import jcuda.Sizeof;
 
@@ -41,6 +41,9 @@ public class RNNBlockLayer extends Layer{
 		this.rnnMode = rnnMode;
 		this.bidirectional = bidirectional;
 		this.dropout = dropout;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = hiddenSize;
 		this.initKernel();
 	}
 	
@@ -51,6 +54,9 @@ public class RNNBlockLayer extends Layer{
 		this.time = time;
 		this.inputSize = inputSize;
 		this.hiddenSize = hiddenSize;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = hiddenSize;
 		this.rnnMode = rnnMode;
 		this.bidirectional = bidirectional;
 		this.dropout = dropout;
@@ -69,6 +75,11 @@ public class RNNBlockLayer extends Layer{
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
+		RNN network = (RNN) this.network;
+		this.time = network.time;
+		if(this.time != kernel.seqLength) {
+			kernel.seqLength = this.time;
+		}
 		if(this.output == null || this.number != this.output.number){
 			this.output = new Tensor(number, 1, 1, hiddenSize, true);
 		}
@@ -113,6 +124,7 @@ public class RNNBlockLayer extends Layer{
 		initParam();
 
 		kernel.forward(input, weight, output);
+		
 	}
 
 	@Override
@@ -124,8 +136,11 @@ public class RNNBlockLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+//		System.out.println("in-rnn");
 		kernel.dx(delta, output, weight, diff);
+//		GradClipping.gradClipping(diff, 1e-7f);
 		kernel.dw(delta, output, input, diffW);
+		
 	}
 
 	@Override

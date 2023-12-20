@@ -3,6 +3,9 @@ package com.omega.engine.ad.op;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.ad.op.gpu.OPKernel;
+import com.omega.engine.gpu.GPUOP;
+
+import jcuda.jcublas.cublasOperation;
 
 public class TensorOP {
 	
@@ -10,6 +13,16 @@ public class TensorOP {
 		
 		if(c.isHasGPU()) {
 			OPKernel.getInstance().add_gpu(a, b, c);
+		}else {
+			c.data = MatrixOperation.add(a.data, b.data);
+		}
+		
+	}
+	
+	public static void add(Tensor a,Tensor b,Tensor c, int offset,int N) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().add_gpu(a, b, c, offset, N);
 		}else {
 			c.data = MatrixOperation.add(a.data, b.data);
 		}
@@ -309,5 +322,63 @@ public class TensorOP {
 			c.data = MatrixOperation.mean(a.data, a.number, a.channel, a.height, a.width, dim);
 		}
 	}
+	
+	/**
+	 * [M,N] dot [N,K]
+	 * @param a
+	 * @param b
+	 * @param c
+	 * @param A_OP
+	 * @param b_OP
+	 */
+	public static void dot(Tensor a,Tensor b,Tensor c) {
+		
+		if(c.isHasGPU()) {
+			/**
+			 * m = M,n = K,k = N
+			 * batch, oWidth, width
+			 */
+//			System.out.println(JsonUtils.toJson(a.shape()));
+//			System.out.println(JsonUtils.toJson(b.shape()));
+//			a.showDM();
+//			b.showDM();
+			GPUOP.getInstance().multiplyFloat(a.number, b.width, b.height, a.getGpuData(), b.getGpuData(), c.getGpuData(),
+					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
+//			c.showDM();
+//			System.out.println("----------------------");
+		}else {
+//			c.data = MatrixOperation.dot(a.data, b.data);
+		}
+		
+	}
+
+	/**
+	 * diff = delta * weightT
+	 * this.number, this.width, this.oWidth
+	 * @param a
+	 * @param b
+	 * @param c
+	 */
+	public static void dotDX(Tensor a,Tensor b,Tensor c) {
+
+		GPUOP.getInstance().multiplyFloat(a.number, b.height, b.width, a.getGpuData(), b.getGpuData(), c.getGpuData(),
+				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 1.0f);
+		
+	}
+	
+	/**
+	 * deltaW = inputT * delta
+	 * this.width, this.oWidth, this.number
+	 * @param a
+	 * @param b
+	 * @param c
+	 */
+	public static void dotDW(Tensor a,Tensor b,Tensor c) {
+		
+		GPUOP.getInstance().multiplyFloat(a.width, b.width, a.number, a.getGpuData(), b.getGpuData(), c.getGpuData(),
+				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 1.0f);
+		
+	}
+	
 	
 }

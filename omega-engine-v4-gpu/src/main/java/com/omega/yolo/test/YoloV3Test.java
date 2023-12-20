@@ -186,7 +186,7 @@ public class YoloV3Test {
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
-//			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
+			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 

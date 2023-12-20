@@ -2,6 +2,7 @@ package com.omega.engine.nn.network;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.loss.LossFunction;
@@ -29,6 +30,8 @@ public abstract class Network {
 	public UpdaterType updater = UpdaterType.none;
 	
 	public RunModel RUN_MODEL = RunModel.TRAIN;
+	
+	public Map<String,Float> updaterParams;
 	
 	public boolean GRADIENT_CHECK = false;
 	
@@ -169,7 +172,7 @@ public abstract class Network {
 	public void addLayer(Layer layer) {
 		layer.setNetwork(this);
 		layer.setIndex(this.layerList.size());
-		layer.setUpdater(UpdaterFactory.create(this.updater));
+		layer.setUpdater(UpdaterFactory.create(this.updater, updaterParams));
 		if(layer.index <= 1) {
 			layer.PROPAGATE_DOWN = false;
 		}

@@ -30,11 +30,13 @@ public class RMSPropKernel {
 	
 	private Pointer kernelParameters;
 	
-	private int clamp = 1;
+	private int clamp = 0;
 	
 	private float min = -0.01f;
 	
 	private float max = 0.01f;
+	
+	private float weight_decay = 0.0005f;
 	
 	public RMSPropKernel(int weightLength) {
 		this.rw = new Tensor(1, 1, 1, weightLength, true);
@@ -106,6 +108,7 @@ public class RMSPropKernel {
 	                Pointer.to(new float[]{mua}),
 	                Pointer.to(new float[]{eta}),
 	                Pointer.to(new float[]{lr}),
+	                Pointer.to(new float[]{weight_decay}),
 	                Pointer.to(new int[]{diffW.dataLength}),
 	                Pointer.to(new int[]{net.number}),
 	                Pointer.to(new int[]{clamp}),
@@ -142,6 +145,7 @@ public class RMSPropKernel {
 	                Pointer.to(new float[]{mua}),
 	                Pointer.to(new float[]{eta}),
 	                Pointer.to(new float[]{lr}),
+	                Pointer.to(new float[]{weight_decay}),
 	                Pointer.to(new int[]{diffBias.dataLength}),
 	                Pointer.to(new int[]{net.number}),
 	                Pointer.to(new int[]{clamp}),

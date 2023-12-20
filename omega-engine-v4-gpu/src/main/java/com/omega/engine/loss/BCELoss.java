@@ -52,40 +52,40 @@ public class BCELoss extends LossFunction {
 		}
 	}
 
-	@Override
-	public Tensor loss(Tensor x, Tensor label) {
-		// TODO Auto-generated method stub
-//		x.showDM();
-		initGraph(x, label);
-		x.setRequiresGrad(true);
-//		x.getG().start();
-		Tensor loss1 = label.scalarSub(1.0f).mul(x.scalarSub(1.0f).log());
-		Tensor loss = loss1.add(label.mul(x.log()));
-		return loss.sum(0).div(-x.number * x.width);
-	}
-	
 //	@Override
 //	public Tensor loss(Tensor x, Tensor label) {
 //		// TODO Auto-generated method stub
-//		init(x);
-//		kernel.forward(x, label, loss);
-//		return loss;
+////		x.showDM();
+//		initGraph(x, label);
+//		x.setRequiresGrad(true);
+////		x.getG().start();
+//		Tensor loss1 = label.scalarSub(1.0f).mul(x.scalarSub(1.0f).log());
+//		Tensor loss = loss1.add(label.mul(x.log()));
+//		return loss.sum(0).div(-x.number * x.width);
 //	}
-
+	
 	@Override
-	public Tensor diff(Tensor x, Tensor label) {
+	public Tensor loss(Tensor x, Tensor label) {
 		// TODO Auto-generated method stub
-		x.getG().clearGrad();
-		x.getG().backward();
-		return x.getGrad();
+		init(x);
+		kernel.forward(x, label, loss);
+		return loss;
 	}
 
 //	@Override
 //	public Tensor diff(Tensor x, Tensor label) {
 //		// TODO Auto-generated method stub
-//		kernel.backward(x, label, diff);
-//		return diff;
+//		x.getG().clearGrad();
+//		x.getG().backward();
+//		return x.getGrad();
 //	}
+
+	@Override
+	public Tensor diff(Tensor x, Tensor label) {
+		// TODO Auto-generated method stub
+		kernel.backward(x, label, diff);
+		return diff;
+	}
 	
 	@Override
 	public Tensor[] loss(Tensor[] x, Tensor label) {

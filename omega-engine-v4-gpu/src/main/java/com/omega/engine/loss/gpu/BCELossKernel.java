@@ -94,7 +94,7 @@ public class BCELossKernel extends BaseKernel {
 	public void backward(Tensor input,Tensor currentLabel,Tensor diff) {
 
 		/**
-		 * float *output, float *currentLabel, float *diff, int n, int batch
+		 * float *input, float *currentLabel, float *diff, int n, int batch
 		 */
 		backKernelParameters = Pointer.to(
                 Pointer.to(input.getGpuData()),

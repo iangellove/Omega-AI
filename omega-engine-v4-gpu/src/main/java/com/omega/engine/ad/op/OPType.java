@@ -15,6 +15,7 @@ public enum OPType {
 	exp,
 	dot,
 	get,
+	set,
 	pow,
 	sum,
 	clamp,

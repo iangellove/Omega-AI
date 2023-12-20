@@ -40,7 +40,7 @@ public class Tape implements Serializable{
 	public Tape(OP op,Tensor self,Tensor other,float scalar,float constant,int[] position,Graph g) {
 		this.setX(self);
 		this.setY(other);
-		if(position!=null) {
+		if(position!=null && !op.getOpType().equals(OPType.set)) {
 			int dims = position[0];
 			if(!op.getOpType().equals(OPType.sum)) {
 				int count = position[2];
@@ -64,7 +64,13 @@ public class Tape implements Serializable{
 			}
 			
 		}else {
-			setOutput(new Tensor(self.number, self.channel, self.height, self.width, self.isHasGPU(), g));
+			if(op.getOpType().equals(OPType.dot)) {
+				setOutput(new Tensor(self.number, self.channel, self.height, other.width, self.isHasGPU(), g));
+			}else if(op.getOpType().equals(OPType.set)){
+				this.output = self;
+			}else {
+				setOutput(new Tensor(self.number, self.channel, self.height, self.width, self.isHasGPU(), g));
+			}
 		}
 		this.setOp(op);
 		this.scalar = scalar;

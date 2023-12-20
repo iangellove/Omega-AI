@@ -17,15 +17,24 @@ __global__ void copy_kernel(int N,  float *X, int OFFX, float *Y, int OFFY)
 }
 
 extern "C"
+__global__ void axpy_kernel(int N,  float *X, int OFFX, float *Y, int OFFY)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N){
+    	Y[i + OFFY] += X[i + OFFX];
+    }
+}
+
+extern "C"
 __global__ void copy_number_kernel(int N,  float *X, float *Y, int n,int c,int h,int w,int start,int cp)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < N){
     	int size = c * h * w;
     	int tn = i / size + start;
-		int tc = (i / h / w) % c;
-		int th = (i / w) % h;
-		int tw = i % h;
+		int tc = i / h / w % c;
+		int th = i / w % h;
+		int tw = i % w;
 		int index = tn * size + tc * h * w + th * w + tw;
 		if(cp == 0){
 			Y[i] = X[index];
@@ -44,8 +53,8 @@ __global__ void copy_channel_kernel(int N,  float *X, float *Y, int n,int c,int 
 		int size = bc * h * w;
     	int tn = i / size;
 		int tc = (i / h / w) % bc + start;
-		int th = (i / w) % h;
-		int tw = i % h;
+		int th = i / w % h;
+		int tw = i % w;
 		int index = tn * c * h * w + tc * h * w + th * w + tw;
     	if(cp == 0){
 			Y[i] = X[index];
@@ -116,8 +125,8 @@ __global__ void add_number_kernel(int N,  float *X, float *Y, int n,int c,int h,
     	int size = c * h * w;
     	int tn = i / size + start;
 		int tc = (i / h / w) % c;
-		int th = (i / w) % h;
-		int tw = i % h;
+		int th = i / w % h;
+		int tw = i % w;
 		int index = tn * size + tc * h * w + th * w + tw;
     	X[index] += Y[i];
     }
@@ -132,8 +141,8 @@ __global__ void add_channel_kernel(int N,  float *X, float *Y, int n,int c,int h
 		int size = bc * h * w;
     	int tn = i / size;
 		int tc = (i / h / w) % bc + start;
-		int th = (i / w) % h;
-		int tw = i % h;
+		int th = i / w % h;
+		int tw = i % w;
 		int index = tn * c * h * w + tc * h * w + th * w + tw;
     	X[index] += Y[i];
     }

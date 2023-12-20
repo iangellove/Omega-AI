@@ -1,6 +1,7 @@
 package com.omega.engine.ad.op.data;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.ad.Tape;
 import com.omega.engine.ad.op.OP;
@@ -54,13 +55,14 @@ public class GetOP extends OP{
 	public void addByPosition(Tensor a,Tensor b,int[] position) {
 		int dims = position[0];
 		int start = position[1];
+		int count = position[2];
 		if(a.isHasGPU()) {
 			switch (dims) {
 			case 0:
-				OPKernel.getInstance().add_number_gpu(a, b, start);
+				OPKernel.getInstance().add_number_gpu(a, b, start * count);
 				break;
 			case 1:
-				OPKernel.getInstance().add_channel_gpu(a, b, start);
+				OPKernel.getInstance().add_channel_gpu(a, b, start * count);
 				break;
 			}
 		}else {
@@ -96,9 +98,9 @@ public class GetOP extends OP{
 		assert org.getNumber() >= (start + count - 1);
 		
 		if(org.isHasGPU()) {
-			OPKernel.getInstance().copy_number_gpu(org, target, start, 0);
+			OPKernel.getInstance().copy_number_gpu(org, target, start * count, 0);
 		}else {
-			System.arraycopy(org.data, start * org.channel * org.height * org.width, target.data, 0, target.dataLength);
+			System.arraycopy(org.data, start * count * org.channel * org.height * org.width, target.data, 0, target.dataLength);
 		}
 	}
 	

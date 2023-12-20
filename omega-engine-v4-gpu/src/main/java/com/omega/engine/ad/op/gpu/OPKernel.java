@@ -9,6 +9,7 @@ import com.omega.common.lib.LibPaths;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
+import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
 import jcuda.runtime.cudaError;
 
@@ -26,6 +27,8 @@ public class OPKernel implements Serializable{
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
 	private CUfunction fill_gpu_function;
+	
+	private CUfunction axpy_gpu_function;
 	
 	private CUfunction copy_gpu_function;
 	
@@ -114,6 +117,8 @@ public class OPKernel implements Serializable{
 	public OPKernel() {
 		
 		fill_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "fill_kernel");
+		
+		axpy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "axpy_kernel"); 
 		
 		copy_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "copy_kernel");
 		
@@ -262,6 +267,35 @@ public class OPKernel implements Serializable{
 		
 	}
 	
+	public void copy_gpu(Tensor a,Tensor b,int offsetX,int offsetY) {
+		
+		try {
+
+			/**
+			 * int N,  float *X, int OFFX, float *Y, int OFFY
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{a.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	                Pointer.to(new int[]{offsetX}),
+	        		Pointer.to(b.getGpuData()),
+	                Pointer.to(new int[]{offsetY})
+	            );
+			
+			checkCUDA(cuLaunchKernel(copy_gpu_function,
+	        		CAFFE_GET_BLOCKS(b.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void copy_number_gpu(Tensor a,Tensor b,int start,int cpy) {
 		
 		try {
@@ -344,6 +378,63 @@ public class OPKernel implements Serializable{
 			
 			checkCUDA(cuLaunchKernel(add_gpu_function,
 	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void add_gpu(Tensor a,Tensor b,Tensor y,int offset,int N) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float *Y, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{N}),
+	                Pointer.to(a.getGpuData().withByteOffset(offset * Sizeof.FLOAT)),
+	        		Pointer.to(b.getGpuData().withByteOffset(offset * Sizeof.FLOAT)),
+	        		Pointer.to(y.getGpuData().withByteOffset(offset * Sizeof.FLOAT))
+	            );
+			
+			checkCUDA(cuLaunchKernel(add_gpu_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void axpy_gpu(Tensor a,Tensor b,int offsetX,int offsetY) {
+		
+		try {
+
+			/**
+			 * int N,  float *X, int OFFX, float *Y, int OFFY
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{a.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	                Pointer.to(new int[]{offsetX}),
+	        		Pointer.to(b.getGpuData()),
+	                Pointer.to(new int[]{offsetY})
+	            );
+			
+			checkCUDA(cuLaunchKernel(axpy_gpu_function,
+	        		CAFFE_GET_BLOCKS(b.getDataLength()),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            kernelParameter, null // Kernel- and extra parameters

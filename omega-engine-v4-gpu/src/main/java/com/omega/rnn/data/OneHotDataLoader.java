@@ -19,13 +19,29 @@ public class OneHotDataLoader extends RNNDataLoader {
 	
 	public int characters = 1;
 	
-	private Map<Character,Integer> dictionary = new HashMap<Character, Integer>();
+	public Map<Character,Integer> dictionary = new HashMap<Character, Integer>();
 	
 	private Character[] data;
+	
+	public Character[] dictionaryData;
+	
+	public int inputType = 0;
 	
 	public OneHotDataLoader(String dataPath,int time,int batchSize) {
 		this.dataPath = dataPath;
 		this.time = time;
+		this.loadDataForTXT();
+		this.dataSize = data.length;
+		this.number = this.dataSize - time;
+		this.characters = dictionary.size();
+		System.out.println("dataSize["+dataSize+"] characters["+characters+"]");
+		this.batchSize = batchSize;
+	}
+	
+	public OneHotDataLoader(String dataPath,int time,int batchSize,int inputType) {
+		this.dataPath = dataPath;
+		this.time = time;
+		this.inputType = inputType;
 		this.loadDataForTXT();
 		this.dataSize = data.length;
 		this.number = this.dataSize - time;
@@ -51,6 +67,10 @@ public class OneHotDataLoader extends RNNDataLoader {
 	        			dic_index++;
 	        		}
 	        	}
+	        }
+	        dictionaryData = new Character[dictionary.size()];
+	        for(Character key:dictionary.keySet()) {
+	        	dictionaryData[dictionary.get(key)] = key;
 	        }
 	        data = new Character[chars.size()];
 	        data = chars.toArray(data);
@@ -91,8 +111,13 @@ public class OneHotDataLoader extends RNNDataLoader {
 	public void format(int b,int i,int t,Tensor input,Tensor label) {
 		char curr = data[i + t];
 		char next = data[i + t + 1];
-		input.data[(t * batchSize + b) * characters + dictionary.get(curr)] = 1.0f;
-		label.data[(t * batchSize + b) * characters + dictionary.get(next)] = 1.0f;
+		if(inputType == 1) {
+			input.data[(t * batchSize + b)] = dictionary.get(curr);
+			label.data[(t * batchSize + b) * characters + dictionary.get(next)] = 1.0f;
+		}else {
+			input.data[(t * batchSize + b) * characters + dictionary.get(curr)] = 1.0f;
+			label.data[(t * batchSize + b) * characters + dictionary.get(next)] = 1.0f;
+		}
 	}
 
 	@Override

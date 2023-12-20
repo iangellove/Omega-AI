@@ -1,7 +1,10 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.active.ActiveType;
+import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
 import com.omega.engine.nn.layer.active.LeakyReluLayer;
@@ -9,9 +12,8 @@ import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.active.SiLULayer;
 import com.omega.engine.nn.layer.active.SigmodLayer;
 import com.omega.engine.nn.layer.active.TanhLayer;
-import com.omega.engine.nn.layer.gpu.RNNBaseKernel;
-import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.RNN;
 
 /**
  * Recurrent Layer
@@ -26,9 +28,7 @@ public class RNNLayer extends Layer{
 	
 	private int hiddenSize;
 	
-	private int outputSize;
-	
-	private boolean batchNormal = false;
+	private boolean bias = false;
 	
 	private ActiveType activeType;
 	
@@ -36,67 +36,48 @@ public class RNNLayer extends Layer{
 	
 	private FullyLayer selfLayer;
 	
-	private FullyLayer outputLayer;
-	
-	private BNLayer inputBN;
-	
-	private BNLayer selfBN;
-	
-	private BNLayer outputBN;
-	
-	private ActiveFunctionLayer inputActive;
-	
-	private ActiveFunctionLayer selfActive;
-	
 	private ActiveFunctionLayer outputActive;
 	
 	private Tensor h;
 	
 	private BaseKernel baseKernel;
 	
-//	private RNNBaseKernel rnnKenrel;
-	
-	public RNNLayer(int inputNum,int hiddenNum,int outputNum,int time,ActiveType activeType,boolean batchNormal) {
+	public RNNLayer(int inputNum,int hiddenNum,int time,ActiveType activeType,boolean bias) {
 		this.time = time;
 		this.inputSize = inputNum;
 		this.hiddenSize = hiddenNum;
-		this.outputSize = outputNum;
 		this.activeType = activeType;
-		this.batchNormal = batchNormal;
+		this.bias = bias;
 		this.initLayers();
 	}
 	
-	public RNNLayer(int inputNum,int hiddenNum,int outputNum,int time,ActiveType activeType,boolean batchNormal,Network network) {
+	public RNNLayer(int inputNum,int hiddenNum,int time,ActiveType activeType,boolean bias,Network network) {
 		this.network = network;
 		this.time = time;
 		this.inputSize = inputNum;
 		this.hiddenSize = hiddenNum;
-		this.outputSize = outputNum;
 		this.activeType = activeType;
-		this.batchNormal = batchNormal;
+		this.bias = bias;
 		this.initLayers();
 	}
 	
 	public void initLayers() {
 		
-		this.inputLayer = new FullyLayer(inputSize, hiddenSize, !batchNormal, this.network);
-
-		this.selfLayer = new FullyLayer(hiddenSize, hiddenSize, !batchNormal, this.network);
+		float stdv = (float) (1.0f / Math.sqrt(hiddenSize));
 		
-		this.outputLayer = new FullyLayer(hiddenSize, outputSize, !batchNormal, this.network);
-
-		if (batchNormal) {
-			this.inputBN = new BNLayer(inputLayer);
-			this.selfBN = new BNLayer(selfLayer);
-			this.outputBN = new BNLayer(outputLayer);
-			this.inputActive = createActiveLayer(activeType, inputBN);
-			this.selfActive = createActiveLayer(activeType, selfBN);
-			this.outputActive = createActiveLayer(activeType, outputBN);
-		}else {
-			this.inputActive = createActiveLayer(activeType, inputLayer);
-			this.selfActive = createActiveLayer(activeType, selfLayer);
-			this.outputActive = createActiveLayer(activeType, outputLayer);
-		}
+		this.inputLayer = new FullyLayer(inputSize, hiddenSize, bias, this.network);
+		this.inputLayer.weight = new Tensor(1, 1, inputSize, hiddenSize, RandomUtils.uniformFloat(this.inputSize * this.hiddenSize, -stdv, stdv), true);
+		this.inputLayer.bias = new Tensor(1, 1, 1, hiddenSize, RandomUtils.uniformFloat(this.hiddenSize, -stdv, stdv), true);
+//		this.inputLayer.weight = new Tensor(1, 1, inputSize, hiddenSize, RandomUtils.order(this.inputSize * this.hiddenSize, 0.1f, 0.0f), true);
+//		this.inputLayer.bias = new Tensor(1, 1, 1, hiddenSize, RandomUtils.val(this.hiddenSize, 0.1f), true);
+		
+		this.selfLayer = new FullyLayer(hiddenSize, hiddenSize, bias, this.network);
+		this.selfLayer.weight = new Tensor(1, 1, hiddenSize, hiddenSize, RandomUtils.uniformFloat(this.hiddenSize * this.hiddenSize, -stdv, stdv), true);
+		this.selfLayer.bias = new Tensor(1, 1, 1, hiddenSize, RandomUtils.uniformFloat(this.hiddenSize, -stdv, stdv), true);
+//		this.selfLayer.weight = new Tensor(1, 1, hiddenSize, hiddenSize, RandomUtils.order(this.hiddenSize * this.hiddenSize, 0.2f, 0.0f), true);
+//		this.selfLayer.bias = new Tensor(1, 1, 1, hiddenSize, RandomUtils.val(this.hiddenSize, 0.2f), true);
+		
+		this.outputActive = createActiveLayer(activeType, selfLayer);
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
@@ -114,10 +95,8 @@ public class RNNLayer extends Layer{
 			return new LeakyReluLayer(preLayer);
 		case tanh:
 			return new TanhLayer(preLayer);
-		case silu:
-			return new SiLULayer(preLayer);
 		default:
-			throw new RuntimeException("The cbl layer is not support the ["+activeType+"] active function.");
+			throw new RuntimeException("The rnn layer is not support the ["+activeType+"] active function.");
 		}
 	}
 	
@@ -125,9 +104,10 @@ public class RNNLayer extends Layer{
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
-		int hSize = this.number / time * (time + 1);
-		if(this.h == null || this.h.number != hSize) {
-			this.h = new Tensor(hSize, 1, 1, hiddenSize, true);
+		RNN network = (RNN) this.network;
+		this.time = network.time;
+		if(this.h == null || this.h.number != this.number) {
+			this.h = new Tensor(this.number, 1, 1, hiddenSize, true);
 		}
 	}
 
@@ -146,47 +126,33 @@ public class RNNLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		int batch = this.number / time;
+		int batch = this.number / this.time;
 		int onceSize = batch * this.h.getOnceSize();
 		/**
-		 * ht = f(W * ht-1 + U * xt + bh)
-		 * yt = f(V * ht + by)
+		 * ht = f(W * xt + bx + U * ht-1 + bh)
 		 */
-		this.h.clearGPU();
+//		this.h.clearGPU();
 		if(this.input != null) {
 			
 			for(int t = 0;t<time;t++) {
 				
 				inputLayer.forward(this.input, batch, t);
-				Tensor o1 = inputLayer.output;
-				if(batchNormal) {
-					inputBN.forward(o1, batch, t);
-					o1 = inputBN.output;
-				}
-				inputActive.forward(o1, batch, t);
 				
-				selfLayer.forward(this.h, batch, t);
-				Tensor o2 = selfLayer.output;
-				if(batchNormal) {
-					selfBN.forward(o2, batch, t);
-					o2 = selfBN.output;
-				}
-				selfActive.forward(o2, batch, t);
+				selfLayer.forward(this.h, batch, t - 1, t);
 				
-				baseKernel.axpy_gpu(inputActive.getOutput(), this.h, onceSize, 1, t * onceSize, 1, (t + 1) * onceSize, 1);
+				TensorOP.add(inputLayer.getOutput(), selfLayer.getOutput(), this.h, t * onceSize, onceSize);
 				
-				baseKernel.axpy_gpu(selfActive.getOutput(), this.h, onceSize, 1, t * onceSize, 1, (t + 1) * onceSize, 1);
+//				baseKernel.copy_gpu(inputLayer.getOutput(), this.h, onceSize, t * onceSize, 1, t * onceSize, 1);
+//				
+//				baseKernel.axpy_gpu(selfLayer.getOutput(), this.h, onceSize, 1, t * onceSize, 1, t * onceSize, 1);
 
-				outputLayer.forward(this.h, batch, t + 1, t);
-				Tensor o3 = outputLayer.output;
-				if(batchNormal) {
-					outputBN.forward(o3, batch, t);
-					o3 = outputBN.output;
-				}
-				outputActive.forward(o3, batch, t);
-//				outputActive.getOutput().showDM();
+				outputActive.forward(this.h, batch, t);
+				
+				this.h = outputActive.output;
+				
 			}
 		}
+
 		this.output = outputActive.output;
 	}
 
@@ -200,70 +166,30 @@ public class RNNLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		int batch = this.number / time;
-		int onceSize = batch * inputLayer.input.getOnceSize();
-		/**
-		 * E = ∑et
-		 * du = ∑de/du
-		 * dv = ∑de/dv
-		 * dw = ∑de/dw
-		 * 
-		 * dv = htT * deltadarknet源码解读
-		 * dbv = delta
-		 * dhtt = vT * delta + wT * A't+1 * dht+1
-		 * if t = t end
-		 * dhtt = vT * delta
-		 * dw = A't * dhtt * ht-1T
-		 * dbu = A't * dhtt
-		 * du = A't * dhtt * xtT
-		 */
-		outputLayer.clear();
+		int onceSize = batch * selfLayer.input.getOnceSize();
+
 		selfLayer.clear();
 		inputLayer.clear();
-		if(inputLayer.diff != null) {
-			inputLayer.diff.clearGPU();
-		}
-		if(selfLayer.diff != null) {
-			selfLayer.diff.clearGPU();
-		}
-		if(outputLayer.diff != null) {
-			outputLayer.diff.clearGPU();
-		}
 		for(int t = time-1;t>=0;t--) {
+
+			if(t < time - 1) {
+				baseKernel.axpy_gpu(selfLayer.diff, this.delta, onceSize, 1, t * onceSize, 1, t * onceSize, 1);
+			}
 			
 			outputActive.back(this.delta, batch, t);
-			Tensor d3 = outputActive.diff;
-			if (batchNormal) {
-				outputBN.back(d3, batch, t);
-				d3 = outputBN.diff;
-			}
-			outputLayer.back(d3, batch, t + 1, t);
-
-			if(selfLayer.diff != null) {
-				baseKernel.axpy_gpu(selfLayer.diff, outputLayer.diff, onceSize, 1, t * onceSize, 1, t * onceSize, 1);
-			}
 			
-			if(t > 0) {
-				selfActive.back(outputLayer.diff, batch, t);
-				Tensor d2 = selfActive.diff;
-				if (batchNormal) {
-					selfBN.back(d2, batch, t);
-					d2 = selfBN.diff;
-				}
-				selfLayer.back(d2, batch, t, t, t - 1);
-//				selfLayer.diff.showDM();
-			}
+			selfLayer.back(outputActive.diff, batch, t, t, t - 1);
 
-			inputActive.back(outputLayer.diff, batch, t);
-			Tensor d1 = inputActive.diff;
-			if (batchNormal) {
-				inputBN.back(d1, batch, t);
-				d1 = inputBN.diff;
-			}
-			inputLayer.back(d1, batch, t);
+			inputLayer.back(outputActive.diff, batch, t);
+			
 		}
 		
 		this.diff = inputLayer.diff;
-//		outputLayer.diffW.showDM();
+//		this.diff.showDM();
+//		inputLayer.diffW.showDM();
+//		selfLayer.diffW.showDM();
+//		inputLayer.diffB.showDM();
+//		selfLayer.diffB.showDM();
 	}
 
 	@Override
@@ -347,12 +273,6 @@ public class RNNLayer extends Layer{
 		// TODO Auto-generated method stub
 		inputLayer.update();
 		selfLayer.update();
-		outputLayer.update();
-		if(batchNormal) {
-			inputBN.update();
-			selfBN.update();
-			outputBN.update();
-		}
 	}
 
 	@Override

@@ -556,6 +556,10 @@ public class Tensor implements Serializable{
 		return g.OP(OPType.minimum, this, y);
 	}
 	
+	public Tensor dot(Tensor y) {
+		return g.OP(OPType.dot, this, y);
+	}
+	
 	public Tensor log() {
 		return g.OP(OPType.log, this);
 	}
@@ -610,6 +614,18 @@ public class Tensor implements Serializable{
 	
 	/**
 	 * 获取指定维度数据
+	 * @param position int[dims,start,count]
+	 * dims: tensor 维度 0:number,1:channel,2:height,3:width
+	 * start: 指定维度开始脚标
+	 * count: 获取长度
+	 * @return
+	 */
+	public Tensor set(Tensor target,int[] position) {
+		return g.OP(OPType.set, this, target, position);
+	}
+	
+	/**
+	 * 获取指定维度数据
 	 * @param dim tensor 维度 0:number,1:channel,2:height,3:width
 	 * @param start 指定维度开始脚标
 	 * @param count 获取长度
@@ -617,6 +633,17 @@ public class Tensor implements Serializable{
 	public Tensor get(int dim,int start,int count) {
 		int[] position = new int[] {dim, start, count};
 		return g.OP(OPType.get, this, position);
+	}
+	
+	/**
+	 * 获取指定维度数据
+	 * @param dim tensor 维度 0:number,1:channel,2:height,3:width
+	 * @param start 指定维度开始脚标
+	 * @param count 获取长度
+	 */
+	public Tensor set(Tensor target,int dim,int start) {
+		int[] position = new int[] {dim, start};
+		return g.OP(OPType.set, this, target, position);
 	}
 	
 	public void setGradByNumber(float[] data,int start,int count) {

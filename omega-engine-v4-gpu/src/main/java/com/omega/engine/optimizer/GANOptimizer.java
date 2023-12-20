@@ -8,6 +8,7 @@ import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.ad.Graph;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.CUDAModules;
+import com.omega.engine.loss.BCELoss;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
@@ -27,6 +28,8 @@ public class GANOptimizer extends Optimizer {
 	private int g_every = 5;
 	
 	private int gif_index = 0;
+	
+	private float clamp_val = -100;
 	
 	public GANOptimizer(Network netG, Network netD, int batchSize, int trainTime, int d_every, int g_every, float error,LearnRateUpdate learnRateUpdate, boolean warmUp) throws Exception {
 		super(netD, batchSize, trainTime, error, warmUp);
@@ -56,7 +59,7 @@ public class GANOptimizer extends Optimizer {
 		netG.init();
 	}
 	
-	public void train(ImageDataLoader trainingData) {
+	public void trainByAutoGrad(ImageDataLoader trainingData) {
 		try {
 			
 			CUDAModules.initCUDAFunctions();
@@ -116,6 +119,102 @@ public class GANOptimizer extends Optimizer {
 					long start = System.nanoTime();
 					
 					d_loss = trainDG(trainingData, i, indexs[it], it, true_label, fake_label, inputG, inputD, gd1, gd2, gg, d_fake_output, d_true_output, d_loss);
+
+					String msg = "training["+this.trainIndex+"]{"+it+"} (glr:"+this.netG.learnRate+" dlr:"+this.netD.learnRate+") [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+					
+					this.batchIndex++;
+				}
+				
+				/**
+				 * update learning rate
+				 */
+				this.netG.learnRate = this.updateLR(this.lr_step,this.netG.learnRate,glr);
+				this.netD.learnRate = this.updateLR(this.lr_step,this.netD.learnRate,dlr);
+				
+				if(this.trainIndex % 1 == 0) {
+					this.netG.RUN_MODEL = RunModel.TEST;
+					inputG.random();
+					Tensor output = this.netG.forward(inputG);
+					output.syncHost();
+//					showImgs("H:\\voc\\gan_anime\\test\\", output);
+					showBigImg("H:\\voc\\gan_anime\\test\\", output, this.trainIndex);
+				}
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void train(ImageDataLoader trainingData) {
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			float dlr = this.netD.learnRate;
+			float glr = this.netG.learnRate;
+			
+			Tensor inputD = new Tensor(batchSize, this.netD.channel, this.netD.height, this.netD.width, true);
+			Tensor inputG = new Tensor(batchSize, this.netG.channel, this.netG.height, this.netG.width, true);
+			
+			float[] trueData = MatrixUtils.one(batchSize * 1);
+			
+			Tensor true_label = new Tensor(batchSize, 1, 1, 1, trueData, true);
+			Tensor fake_label = new Tensor(batchSize, 1, 1, 1, true);
+			
+			
+			Tensor d_true_output = new Tensor(batchSize, 1, 1, 1, true);
+			Tensor d_fake_output = new Tensor(batchSize, 1, 1, 1, true);
+			
+			true_label.hostToDevice();
+			fake_label.hostToDevice();
+			
+
+			BCELoss lossD = new BCELoss();
+			BCELoss lossG = new BCELoss();
+
+			float d_loss = 99f;
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+				
+				this.netG.RUN_MODEL = RunModel.TRAIN;
+				this.netD.RUN_MODEL = RunModel.TRAIN;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+					
+					d_loss = trainDG(trainingData, i, indexs[it], it, true_label, fake_label, inputG, inputD, d_fake_output, d_true_output, lossD, lossG, d_loss);
 
 					String msg = "training["+this.trainIndex+"]{"+it+"} (glr:"+this.netG.learnRate+" dlr:"+this.netD.learnRate+") [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
@@ -251,13 +350,13 @@ public class GANOptimizer extends Optimizer {
 	}
 	
 	/**
-	 * - (y * t.log(x) + (1 - y) * t.log(1 - x))
+	 * - (y * log(x) + (1 - y) * log(1 - x))
 	 * @param x
 	 * @param y
 	 * @param g
 	 * @return
 	 */
-	public Tensor BCELoss(Tensor x,Tensor y,Graph g) {
+	public Tensor BCELossFunction(Tensor x,Tensor y,Graph g) {
 		x.setRequiresGrad(true);
 		x.setG(g);
 		y.setG(g);
@@ -380,7 +479,7 @@ public class GANOptimizer extends Optimizer {
 			 */
 			d_true_output = this.netD.forward(inputD);
 			
-			Tensor real_loss = BCELoss(d_true_output, true_labels, gd1);
+			Tensor real_loss = BCELossFunction(d_true_output, true_labels, gd1);
 			
 			gd1.clearGrad();
 			gd1.backward();
@@ -400,7 +499,7 @@ public class GANOptimizer extends Optimizer {
 			inputG.random();
 			g_fake_output = this.netG.forward(inputG);
 			d_fake_output = this.netD.forward(g_fake_output);
-			Tensor fake_loss = BCELoss(d_fake_output, fake_labels, gd2);
+			Tensor fake_loss = BCELossFunction(d_fake_output, fake_labels, gd2);
 
 //			Tensor d_loss = real_loss.add(fake_loss).div(2);
 			
@@ -431,7 +530,7 @@ public class GANOptimizer extends Optimizer {
 			 */
 			d_fake_output = this.netD.forward(g_fake_output);
 
-			Tensor g_loss = BCELoss(d_fake_output, true_labels, gg);
+			Tensor g_loss = BCELossFunction(d_fake_output, true_labels, gg);
 
 			System.out.println("g_loss:"+g_loss.syncHost()[0]);
 			
@@ -468,7 +567,7 @@ public class GANOptimizer extends Optimizer {
 			 * 判别器判断真图片
 			 */
 			d_true_output = this.netD.forward(inputD);
-			Tensor real_loss = BCELoss(d_true_output, true_labels, gd1);
+			Tensor real_loss = BCELossFunction(d_true_output, true_labels, gd1);
 			
 			gd1.clearGrad();
 			gd1.backward();
@@ -480,7 +579,7 @@ public class GANOptimizer extends Optimizer {
 			 */
 			d_fake_output = this.netD.forward(g_fake_output);
 
-			Tensor fake_loss = BCELoss(d_fake_output, fake_labels, gd2);
+			Tensor fake_loss = BCELossFunction(d_fake_output, fake_labels, gd2);
 			
 			gd2.clearGrad();
 			gd2.backward();
@@ -510,7 +609,7 @@ public class GANOptimizer extends Optimizer {
 				 */
 				d_fake_output = this.netD.forward(g_fake_output);
 
-				Tensor g_loss = BCELoss(d_fake_output, true_labels, gg);
+				Tensor g_loss = BCELossFunction(d_fake_output, true_labels, gg);
 				
 				System.out.println("g_loss:"+g_loss.syncHost()[0]);
 				
@@ -518,6 +617,77 @@ public class GANOptimizer extends Optimizer {
 				gg.backward();
 
 				this.netD.back(d_fake_output.getGrad());
+				this.g_loss_diff = this.netD.getDiff();
+
+				this.netG.back(this.g_loss_diff);
+				this.netG.update();
+
+		}
+		
+		return d_loss_current;
+	}
+	
+	public float trainDG(ImageDataLoader trainingData,int index,int[] indexs,int it,Tensor true_labels,
+			Tensor fake_labels,Tensor inputG,Tensor inputD,Tensor d_fake_output,Tensor d_true_output,BCELoss lossD,BCELoss lossG,float d_loss_current) {
+
+		Tensor g_fake_output = null;
+		
+		if(it % d_every == 0) {
+			
+			trainingData.loadData(indexs, inputD, null);
+
+			/**
+			 * 生成器生成假图片
+			 */
+			inputG.random();
+			g_fake_output = this.netG.forward(inputG);
+
+			/**
+			 * 判别器判断真图片
+			 */
+			d_true_output = this.netD.forward(inputD);
+			Tensor real_loss = lossD.loss(d_true_output, true_labels);
+			Tensor real_diff = lossD.diff(d_true_output, true_labels);
+			this.netD.back(real_diff);
+			this.netD.update();
+			
+			/**
+			 * 判别器判断假图片
+			 */
+			d_fake_output = this.netD.forward(g_fake_output);
+			Tensor fake_loss = lossD.loss(d_fake_output, fake_labels);
+			Tensor fake_diff = lossD.diff(d_fake_output, fake_labels);
+			this.netD.back(fake_diff);
+			this.netD.update();
+
+			float d_loss = (real_loss.syncHost()[0] + fake_loss.syncHost()[0]) / 2;
+			
+			d_loss_current = d_loss;
+			
+			System.out.println("(d_true_loss:"+real_loss.syncHost()[0]+")(d_f_loss:"+fake_loss.syncHost()[0]+")(d_fd_loss:"+d_loss+")");
+
+		}	
+		
+		if(it % g_every == 0) {
+
+				/**
+				 * 训练生成器
+				 */
+
+				inputG.random();
+				g_fake_output = this.netG.forward(inputG);
+				
+				/**
+				 * 判别器判断假图片
+				 */
+				d_fake_output = this.netD.forward(g_fake_output);
+
+				Tensor g_loss = lossG.loss(d_fake_output, true_labels);
+				Tensor g_diff = lossG.diff(d_fake_output, true_labels);
+				
+				System.out.println("g_loss:"+g_loss.syncHost()[0]);
+				
+				this.netD.back(g_diff);
 				this.g_loss_diff = this.netD.getDiff();
 
 				this.netG.back(this.g_loss_diff);
@@ -542,14 +712,14 @@ public class GANOptimizer extends Optimizer {
 		Tensor fake_output = this.netG.forward(inputG);
 		this.netD.forward(fake_output).copy(output2);
 		
-		Tensor loss_fake = this.BCELoss(output2, fake_labels, g);
+		Tensor loss_fake = this.BCELossFunction(output2, fake_labels, g);
 
 		/**
 		 * 训练判别器学习判别真图片
 		 */
 		this.netD.forward(inputD).copy(output1);
 		
-		Tensor loss_true = this.BCELoss(output1, true_labels, g);
+		Tensor loss_true = this.BCELossFunction(output1, true_labels, g);
 		
 		Tensor loss = loss_true.add(loss_fake).div(2);
 		
@@ -664,7 +834,7 @@ public class GANOptimizer extends Optimizer {
 		this.netD.forward(fake_output).copy(output);
 		g.start();
 		
-		Tensor loss = BCELoss(output, true_labels, g);
+		Tensor loss = BCELossFunction(output, true_labels, g);
 		
 		g.clearGrad();
 		g.backward();

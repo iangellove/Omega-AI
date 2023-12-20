@@ -13,6 +13,8 @@ public abstract class LossFunction {
 	
 	public float eta = 0.00001f;
 	
+	public float[] params;
+	
 	public abstract Tensor loss(Tensor x, Tensor label);
 	
 	public abstract Tensor loss(Tensor x, Tensor label, Tensor loss);

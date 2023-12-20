@@ -59,7 +59,7 @@ public class BNLayer extends NormalizationLayer {
 	public BNLayer(Layer preLayer) {
 		this.setPreLayer(preLayer);
 		this.hasParams = true;
-		this.setUpdater(UpdaterFactory.create(this.network.updater));
+		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
 	public BNLayer(Network network) {

@@ -106,6 +106,24 @@ public class MatrixOperation {
 		return temp;
 	}
 	
+	public static boolean isNaN(float[] x) {
+		for(float v:x) {
+			if(Float.isNaN(v)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static boolean isInfinite(float[] x) {
+		for(float v:x) {
+			if(Float.isInfinite(v)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	/**
 	 * 
 	 * @Title: exp

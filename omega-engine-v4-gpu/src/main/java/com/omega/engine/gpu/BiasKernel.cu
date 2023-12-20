@@ -1,5 +1,13 @@
 #define BLOCK 1024 
 
+extern "C"
+__global__ void add_full_bias(float* output, float* biases, int N, int w)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (i >= N) return;
+    int j = i % w;
+    output[i] += biases[j];
+}
 
 extern "C"
 __global__ void add_bias(float* output, float* biases, int batch, int n, int size)

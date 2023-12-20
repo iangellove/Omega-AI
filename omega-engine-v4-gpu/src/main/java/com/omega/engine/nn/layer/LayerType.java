@@ -28,6 +28,7 @@ public enum LayerType {
 	route("route"),
 	yolo("yolo"),
 	rnn("rnn"),
+	embedding("embedding"),
 	dropout("dropout");
 	
 	private String key;

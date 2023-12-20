@@ -8,6 +8,7 @@ import static jcuda.jcublas.JCublas2.cublasGetVector;
 import static jcuda.jcublas.JCublas2.cublasSetVector;
 import static jcuda.jcublas.JCublas2.cublasSgemm;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
+import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 import static jcuda.runtime.JCuda.cudaDeviceSynchronize;
 //import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 import static jcuda.runtime.JCuda.cudaFree;
@@ -27,6 +28,7 @@ import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
 import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
+import jcuda.jcublas.JCublas;
 import jcuda.jcublas.JCublas2;
 import jcuda.jcublas.cublasHandle;
 import jcuda.jcublas.cublasOperation;
@@ -303,8 +305,6 @@ public class GPUOP {
             int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
             int ldb = CUBLAS_OP_N_B == CUBLAS_OP_N ? n : k;
             
-//            JCublas2.cublasSetStream(handle, streamId)
-            
             int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, alphaP, 
                 dB, ldb, dA, lda, betaP, dC, n);
             
@@ -315,6 +315,39 @@ public class GPUOP {
 			e.printStackTrace();
 		}
     	
+    }
+    
+    public void launchMultiply(Pointer c,Pointer a,Pointer b,int batch_size, int m, int n, int k, boolean trans_A, boolean trans_B, int scaler) {
+    	
+    	if (scaler==0){
+            float alpha = 1.0f;
+            float beta  = 0.0f;
+            Pointer alphaP = Pointer.to(new float[]{ alpha });
+            Pointer betaP = Pointer.to(new float[]{ beta });
+            if (!trans_A && !trans_B) {
+            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, alphaP, b, n, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
+            }else if (!trans_A && trans_B) {
+            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_T, CUBLAS_OP_N, n, m, k, alphaP, b, k, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
+            }else if (trans_A && !trans_B) {
+            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_T, n, m, k, alphaP, b, n, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
+            }else if (trans_A && trans_B) {
+            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_T, CUBLAS_OP_T, n, m, k, alphaP, b, k, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
+            }
+        }else{
+            float alpha = (float) Math.sqrt(1.0/scaler);
+            float beta  = 0.0f;
+            Pointer alphaP = Pointer.to(new float[]{ alpha });
+            Pointer betaP = Pointer.to(new float[]{ beta });
+            if (!trans_A && !trans_B) {
+            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, alphaP, b, n, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
+    		}else if (!trans_A && trans_B) {
+    			JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_T, CUBLAS_OP_N, n, m, k, alphaP, b, k, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
+    		}else if (trans_A && !trans_B) {
+    			JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_T, n, m, k, alphaP, b, n, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
+            }else if (trans_A && trans_B) {
+            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_T, CUBLAS_OP_T, n, m, k, alphaP, b, k, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
+        	}
+        }
     }
     
     /**

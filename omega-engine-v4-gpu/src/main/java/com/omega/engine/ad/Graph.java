@@ -11,6 +11,7 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.OP;
 import com.omega.engine.ad.op.OPType;
 import com.omega.engine.ad.op.data.GetOP;
+import com.omega.engine.ad.op.data.SetOP;
 import com.omega.engine.ad.op.functions.ATanOP;
 import com.omega.engine.ad.op.functions.ClampOP;
 import com.omega.engine.ad.op.functions.CosOP;
@@ -24,6 +25,7 @@ import com.omega.engine.ad.op.functions.SumOP;
 import com.omega.engine.ad.op.functions.TanOP;
 import com.omega.engine.ad.op.sign.AddOP;
 import com.omega.engine.ad.op.sign.DivOP;
+import com.omega.engine.ad.op.sign.DotOP;
 import com.omega.engine.ad.op.sign.MulOP;
 import com.omega.engine.ad.op.sign.ScalarDivOP;
 import com.omega.engine.ad.op.sign.ScalarSubOP;
@@ -129,6 +131,9 @@ public class Graph{
 			break;
 		case minimum:
 			op = MinimumOP.getInstance();
+			break;
+		case dot:
+			op = DotOP.getInstance();
 			break;
 		default:
 			break;	
@@ -262,6 +267,27 @@ public class Graph{
 		}
 		
 		Tape tape = getTape(op, self, null, 0, 0, position);
+		Tensor output = tape.forward();
+		output.setG(this);
+		return output;
+	}
+	
+	public Tensor OP(OPType opType,Tensor self,Tensor other,int[] position) {
+		OP op = null;
+		
+		switch (opType) {
+		case set:
+			op = SetOP.getInstance();
+			break;
+		default:
+			break;	
+		}
+		
+		if(op == null) {
+			throw new RuntimeException("the op is not support.");
+		}
+		
+		Tape tape = getTape(op, self, other, 0, 0, position);
 		Tensor output = tape.forward();
 		output.setG(this);
 		return output;
@@ -536,6 +562,13 @@ public class Graph{
 	
 	public static Tensor sigmoid(Tensor x) {
 		return x.mul(-1).exp().add(1).scalarDiv(1);
+	}
+	
+	public static Tensor tanh(Tensor x) {
+		Tensor e = x.mul(-2).exp();
+		Tensor t1 = e.scalarSub(1);
+		Tensor t2 = e.add(1);
+		return t1.div(t2);
 	}
 	
 	public static Tensor MSELoss(Tensor pred,Tensor target) {
@@ -975,10 +1008,91 @@ public class Graph{
 				
 	}
 	
+	/**
+	 * ht = f(W * ht-1 + U * xt + bh)
+	 * yt = f(V * ht + by)
+	 */
+	public static void RNN() {
+		
+		Graph graph = new Graph();
+		
+		int steps = 3;
+		int batchSize = 2;
+		int inputSize = 3;
+		int hiddenSize = 5;
+		
+		int number = steps * batchSize;
+		
+		float[] xd = MatrixUtils.order(steps * batchSize * inputSize, 0.0f, 0.1f);
+
+		Tensor x = new Tensor(number, 1, 1, inputSize, xd, true, graph);
+		x.setRequiresGrad(true);
+		
+//		float[] wd = MatrixUtils.order(inputSize * hiddenSize, 0.0f, 0.1f);
+		
+		float[] wd = MatrixUtils.val(inputSize * hiddenSize, 0.1f);
+		
+		Tensor w = new Tensor(1, 1, inputSize, hiddenSize, wd, true, graph);
+		w.setRequiresGrad(true);
+		
+//		float[] ud = MatrixUtils.order(hiddenSize * hiddenSize, 0.0f, 0.2f);
+		
+		float[] ud = MatrixUtils.val(hiddenSize * hiddenSize, 0.2f);
+		
+		Tensor u = new Tensor(1, 1, hiddenSize, hiddenSize, ud, true, graph);
+		u.setRequiresGrad(true);
+		
+		float[] vd = MatrixUtils.val(hiddenSize * hiddenSize, 0.01f);
+		
+		Tensor v = new Tensor(1, 1, hiddenSize, hiddenSize, vd, true, graph);
+		v.setRequiresGrad(true);
+		
+		Tensor out = new Tensor(number, 1, 1, hiddenSize, true, graph);
+		
+		Tensor h = null;
+		
+		for(int t = 0;t<steps;t++) {
+			
+			if(t == 0) {
+				
+				h = x.get(0, t, batchSize).dot(w);
+				
+			}else {
+				
+				h = x.get(0, t, batchSize).dot(w).add(h.dot(u));
+				
+			}
+			
+			h = tanh(h);
+
+//			Tensor o = tanh(h.dot(v));
+
+			out.set(h, 0, t * batchSize);
+			
+		}
+		
+		graph.clearGrad();
+		graph.backward();
+		
+		System.out.println("x:");
+		x.showDM();
+		System.out.println("out:");
+		out.showDM();
+		System.out.println("x-grad:");
+		x.getGrad().showDM();
+		System.out.println("w-grad:");
+		w.getGrad().showDM();
+		System.out.println("u-grad:");
+		u.getGrad().showDM();
+		System.out.println("v-grad:");
+		v.getGrad().showDM();
+		
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
-
+			
 			CUDAModules.initContext();
 
 			/**
@@ -1031,7 +1145,9 @@ public class Graph{
 			
 //			Lciou();
 			
-			silu();
+//			silu();
+			
+			RNN();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

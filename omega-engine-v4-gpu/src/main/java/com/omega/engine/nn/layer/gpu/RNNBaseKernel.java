@@ -5,6 +5,8 @@ import com.omega.engine.gpu.BaseKernel;
 
 public abstract class RNNBaseKernel extends BaseKernel{
 	
+	public int seqLength = 1;
+	
 	public abstract void init(int number);
 	
 	public abstract long weightSize();

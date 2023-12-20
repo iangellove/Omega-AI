@@ -193,7 +193,7 @@ public class SigmodKernel extends BaseKernel{
 		try {
 
 //			if(forwardKernelParameters == null || this.N != output.number) {
-
+			
 		        /**
 		         * 设置入参
 		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow

@@ -924,6 +924,35 @@ public class ImageLoader {
         return labels;
 	}
 	
+	public static float[] resizeImage(File file,int w,int h) {
+		
+        float nw = 0;
+        float nh = 0;
+        
+        OMImage orig = loadImage(file);
+        
+        OMImage sized = createImage(w, h, orig.getChannel(), 0.0f);
+        
+		float new_ar = 1;
+		
+		float scale = 1;
+		
+		if(new_ar < 1){
+            nh = scale * h;
+            nw = nh * new_ar;
+        } else {
+            nw = scale * w;
+            nh = nw / new_ar;
+        }
+		
+		float dx = (w - nw) / 2;
+        float dy = (h - nh) / 2;
+        
+        placeImage(orig, (int) nw, (int) nh, (int) dx, (int) dy, sized);
+
+        return sized.getData();
+	}
+	
 	public static OMImage cropImage(OMImage orig, int dx, int dy, int w, int h){
 		OMImage cropped = createImage(w, h, orig.getChannel(), 0.5f);
 	    for(int k = 0; k < orig.getChannel(); ++k){

@@ -1,5 +1,7 @@
 package com.omega.engine.updater;
 
+import java.util.Map;
+
 /**
  * Updater Factory
  * @author Administrator
@@ -17,7 +19,7 @@ public class UpdaterFactory {
 	 * momentum
 	 * adam
 	 */
-	public static Updater create(UpdaterType type) {
+	public static Updater create(UpdaterType type,Map<String,Float> params) {
 		
 		switch (type) {
 		case momentum:
@@ -27,7 +29,7 @@ public class UpdaterFactory {
 		case adam:
 			return new Adam();
 		case adamw:
-			return new AdamW();
+			return new AdamW(params);
 		case RMSProp:
 			return new RMSProp();
 		default:

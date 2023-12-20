@@ -4,6 +4,7 @@ import com.omega.common.data.Tensor;
 import com.omega.engine.ad.Tape;
 import com.omega.engine.ad.op.OPType;
 import com.omega.engine.ad.op.SignOP;
+import com.omega.engine.ad.op.TensorOP;
 
 public class DotOP extends SignOP {
 
@@ -28,13 +29,27 @@ public class DotOP extends SignOP {
 	@Override
 	public Tensor forward(Tape tape) {
 		// TODO Auto-generated method stub
-		return null;
+		Tensor self = tape.getX();
+		Tensor other = tape.getY();
+		Tensor y = tape.getOutput();
+		TensorOP.dot(self, other, y);
+		if(self.isRequiresGrad() || (other != null && other.isRequiresGrad())) {
+			y.setRequiresGrad(true);
+		}
+		return y;
 	}
 	
 	@Override
 	public void backward(Tensor delta, Tape tape) {
 		// TODO Auto-generated method stub
-
+		Tensor x = tape.getX();
+		Tensor y = tape.getY();
+		if(x.isRequiresGrad()) {
+			TensorOP.dotDX(delta, y, x.getGrad());
+		}
+		if(y !=null && y.isRequiresGrad()) {
+			TensorOP.dotDW(x, delta, y.getGrad());
+		}
 	}
 
 }

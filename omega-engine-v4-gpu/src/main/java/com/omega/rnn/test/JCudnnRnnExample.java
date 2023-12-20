@@ -87,7 +87,7 @@ public class JCudnnRnnExample
     public static void main(String[] args) throws Exception
     {	
     	CUDAModules.initContext();
-        mainImpl(new String[] { "20", "1", "128", "64", "64", "0" });
+        mainImpl(new String[] { "20", "1", "128", "64", "64", "2" });
     }
     public static void mainImpl(String args[]) throws Exception
     {
@@ -254,27 +254,27 @@ public class JCudnnRnnExample
         // -------------------------
         // Set up the dropout descriptor (needed for the RNN descriptor)
         // -------------------------
-//        long seed = 1337; // Pick a seed.
-//
-//        cudnnDropoutDescriptor dropoutDesc = new cudnnDropoutDescriptor();
-//        cudnnCreateDropoutDescriptor(dropoutDesc);
+        long seed = 1337; // Pick a seed.
+
+        cudnnDropoutDescriptor dropoutDesc = new cudnnDropoutDescriptor();
+        cudnnCreateDropoutDescriptor(dropoutDesc);
 
         // How much memory does dropout need for states?
         // These states are used to generate random numbers internally
         // and should not be freed until the RNN descriptor is no longer used
-//        long stateSizeArray[] = { 0 };
-//        Pointer states = new Pointer();
-//        cudnnDropoutGetStatesSize(cudnnHandle, stateSizeArray);
-//        long stateSize = stateSizeArray[0];
-//
-//        cudaMalloc(states, stateSize);
-//
-//        cudnnSetDropoutDescriptor(dropoutDesc,
-//            cudnnHandle,
-//            dropout,
-//            states,
-//            stateSize,
-//            seed);
+        long stateSizeArray[] = { 0 };
+        Pointer states = new Pointer();
+        cudnnDropoutGetStatesSize(cudnnHandle, stateSizeArray);
+        long stateSize = stateSizeArray[0];
+
+        cudaMalloc(states, stateSize);
+
+        cudnnSetDropoutDescriptor(dropoutDesc,
+            cudnnHandle,
+            dropout,
+            states,
+            stateSize,
+            seed);
 
         // -------------------------
         // Set up the RNN descriptor
@@ -298,8 +298,8 @@ public class JCudnnRnnExample
         cudnnSetRNNDescriptor_v6(cudnnHandle,
             rnnDesc,
             hiddenSize,
-            1,
-            null,
+            numLayers,
+            dropoutDesc,
             CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
             bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
                 RNNMode,
