@@ -106,7 +106,8 @@ public class BasicBlockLayer extends Layer {
 	public void init() {
 		this.number = this.network.number;
 		if(this.output == null || this.output.number != this.network.number) {
-			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		}
 	}
 	

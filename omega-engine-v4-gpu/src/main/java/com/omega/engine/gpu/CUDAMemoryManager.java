@@ -105,6 +105,14 @@ public class CUDAMemoryManager {
 
 	}
 	
+	public static void free(Pointer pointer) {
+		
+		JCuda.cudaFree(pointer);
+		
+		cu_porints.remove(pointer);
+		
+	}
+	
 	public static void freeAll() throws Exception{
 		
 		for(CUdeviceptr dec:cu_deviceptrs) {

@@ -31,7 +31,8 @@ public abstract class ActiveFunctionLayer extends Layer {
 		}
 
 		if(output == null || number != output.number) {
-			output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		}
 
 	}

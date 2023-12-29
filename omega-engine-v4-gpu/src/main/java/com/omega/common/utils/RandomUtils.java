@@ -77,6 +77,11 @@ public class RandomUtils {
 		return y;
 	}
 	
+	public static float[] uniformFloat(int size,int gain) {
+		float stdv = (float) (1.0f / Math.sqrt(gain));
+		return uniformFloat(size, -stdv, stdv);
+	}
+	
 	public static float randomScale(float s) {
 		float scale = randomFloat(1, s);
 		if(Math.random() >= 0.5d) {

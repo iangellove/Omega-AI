@@ -15,6 +15,7 @@ import jcuda.driver.CUfunction;
 import jcuda.jcudnn.JCudnn;
 import jcuda.jcudnn.cudnnBatchNormMode;
 import jcuda.jcudnn.cudnnTensorDescriptor;
+import jcuda.runtime.JCuda;
 
 /**
  * BNCudnnKernel
@@ -90,6 +91,11 @@ public class BNCudnnKernel extends BNBaseKernel{
 	    JCudnn.cudnnCreateTensorDescriptor(normTensorDesc);
 	    JCudnn.cudnnCreateTensorDescriptor(dstTensorDesc);
 	    
+	    if(bnType == BNType.fully_bn) {
+	    	JCudnn.cudnnSetTensor4dDescriptor(normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, W, 1, 1);
+	    }else {
+	    	JCudnn.cudnnSetTensor4dDescriptor(normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, C, 1, 1);
+	    }
 	}
 	
 	public void initForward(Tensor input) {
@@ -98,12 +104,13 @@ public class BNCudnnKernel extends BNBaseKernel{
 			
 			this.N = input.number;
 			
+			CudnnHandleManager.handle(JCudnn.cudnnDestroyTensorDescriptor(dstTensorDesc));
+			CudnnHandleManager.handle(JCudnn.cudnnCreateTensorDescriptor(dstTensorDesc));
+			
 			if(bnType == BNType.fully_bn) {
 				JCudnn.cudnnSetTensor4dDescriptor(dstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, W, 1, 1);
-			    JCudnn.cudnnSetTensor4dDescriptor(normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, W, 1, 1);
 			}else {
 				JCudnn.cudnnSetTensor4dDescriptor(dstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
-			    JCudnn.cudnnSetTensor4dDescriptor(normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, C, 1, 1);
 			}
 			
 		}

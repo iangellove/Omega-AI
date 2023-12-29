@@ -651,6 +651,34 @@ public class OPKernel implements Serializable{
 		
 	}
 	
+	public void mul_gpu(Tensor a,Tensor b,Tensor y,int offset,int N) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float *Y, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{N}),
+	                Pointer.to(a.getGpuData().withByteOffset(offset * Sizeof.FLOAT)),
+	        		Pointer.to(b.getGpuData().withByteOffset(offset * Sizeof.FLOAT)),
+	        		Pointer.to(y.getGpuData().withByteOffset(offset * Sizeof.FLOAT))
+	            );
+			
+			checkCUDA(cuLaunchKernel(mul_gpu_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void mul_scalar_gpu(Tensor a,float b,Tensor y) {
 		
 		try {

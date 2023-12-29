@@ -102,7 +102,8 @@ public class FileDataLoader extends RecursiveAction {
 				filePath = getPath() + "/" + getNames()[getIndexs()[i]] + "." + extName;
 			}
 			
-			YoloImageUtils.loadImgDataToOrgTensor(filePath, getInput(), i);
+//			YoloImageUtils.loadImgDataToOrgTensor(filePath, getInput(), i);
+			YoloImageUtils.loadImgDataResize(filePath, getInput(), i);
 //			System.out.println(filePath);
 		}
 		

@@ -208,6 +208,56 @@ public class Tensor implements Serializable{
 		}
 	}
 	
+	public static Tensor createTensor(Tensor t,int number,int channel,int height,int width,float[] data,boolean hasGPU) {
+		if(t == null) {
+			t = new Tensor(number, channel, height, width, data, hasGPU);
+		}else {
+			t.resize(number, channel, height, width, data);
+		}
+		return t;
+	}
+	
+	public static Tensor createTensor(Tensor t,int number,int channel,int height,int width,boolean hasGPU) {
+		if(t == null) {
+			t = new Tensor(number, channel, height, width, hasGPU);
+		}else {
+			t.resize(number, channel, height, width);
+		}
+		return t;
+	}
+	
+	public void resize(int number,int channel,int height,int width) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.data = new float[this.dataLength];
+		if(hasGPU) {
+			if(gpuData != null) {
+				CUDAMemoryManager.free(gpuData);
+			}
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+		}
+	}
+	
+	public void resize(int number,int channel,int height,int width,float[] data) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.data = data;
+		if(hasGPU) {
+			if(gpuData != null) {
+				CUDAMemoryManager.free(gpuData);
+			}
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaDeviceSynchronize();
+		}
+	}
+	
 	public void copy(int n,float[] dest) {
 		if(n < number) {
 			System.arraycopy(data, n * channel * height * width, dest, 0, channel * height * width);

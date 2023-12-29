@@ -108,6 +108,40 @@ public class SGDKernel {
 		
 	}
 	
+	public void updateW(Tensor diffW,Tensor weight,Network net,float lr,int batchSize) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float *diffW, float *v,float *weight,float momentum,float weight_decay,float learnRate, int n, int batch
+	         */ 
+			kernelParameters = Pointer.to(
+					Pointer.to(diffW.getGpuData()),
+	        		Pointer.to(vw.getGpuData()),
+	                Pointer.to(weight.getGpuData()),
+	                Pointer.to(new float[]{momentum}),
+	                Pointer.to(new float[]{weight_decay}),
+	                Pointer.to(new float[]{lr}),
+	                Pointer.to(new int[]{diffW.dataLength}),
+	                Pointer.to(new int[]{batchSize}),
+	                Pointer.to(new int[]{net.train_time})
+	            );
+
+			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(diffW.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void updateB(Tensor diffB,Tensor bias,Network net,float lr) {
 		
 		try {
@@ -125,6 +159,40 @@ public class SGDKernel {
 	                Pointer.to(new float[]{lr}),
 	                Pointer.to(new int[]{diffB.dataLength}),
 	                Pointer.to(new int[]{net.number}),
+	                Pointer.to(new int[]{net.train_time})
+	            );
+
+			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(diffB.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void updateB(Tensor diffB,Tensor bias,Network net,float lr,int batchSize) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float *diffW, float *v,float *weight,float momentum,float weight_decay,float learnRate, int n, int batch
+	         */ 
+			kernelParameters = Pointer.to(
+					Pointer.to(diffB.getGpuData()),
+	        		Pointer.to(vb.getGpuData()),
+	                Pointer.to(bias.getGpuData()),
+	                Pointer.to(new float[]{momentum}),
+	                Pointer.to(new float[]{0.0f}),
+	                Pointer.to(new float[]{lr}),
+	                Pointer.to(new int[]{diffB.dataLength}),
+	                Pointer.to(new int[]{batchSize}),
 	                Pointer.to(new int[]{net.train_time})
 	            );
 

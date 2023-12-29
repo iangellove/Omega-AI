@@ -55,7 +55,8 @@ public class RouteLayer extends Layer{
 		this.number = this.network.number;
 		
 		if(this.output == null || this.output.number != this.number) {
-			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		}
 
 		if(kernel == null) {

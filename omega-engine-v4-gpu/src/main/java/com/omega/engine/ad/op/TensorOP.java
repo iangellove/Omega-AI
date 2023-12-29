@@ -79,6 +79,16 @@ public class TensorOP {
 		
 	}
 	
+	public static void mul(Tensor a,Tensor b,Tensor c, int offset,int N) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().mul_gpu(a, b, c, offset, N);
+		}else {
+			c.data = MatrixOperation.multiplication(a.data, b.data);
+		}
+		
+	}
+	
 	public static void mul(Tensor a,float b,Tensor c) {
 		
 		if(c.isHasGPU()) {

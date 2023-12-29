@@ -21,6 +21,7 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.JsonUtils;
 import com.omega.engine.nn.data.ImageData;
+import com.omega.yolo.data.ImageLoader;
 import com.omega.yolo.model.YoloDataSet;
 import com.omega.yolo.model.YoloImage;
 
@@ -1250,6 +1251,20 @@ public class YoloImageUtils {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	public static void loadImgDataResize(String filePath,Tensor out,int idx) {
+		
+		try {
+			
+			float[] sized = ImageLoader.resized(filePath, out.height, out.width);
+			System.arraycopy(sized, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public static void main(String[] args) {

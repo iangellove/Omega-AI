@@ -4,20 +4,22 @@ import java.util.Arrays;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.active.ActiveType;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
-import com.omega.engine.nn.layer.EmbeddingIDLayer;
 import com.omega.engine.nn.layer.EmbeddingLayer;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.InputLayer;
+import com.omega.engine.nn.layer.LSTMLayer;
 import com.omega.engine.nn.layer.RNNBlockLayer;
 import com.omega.engine.nn.layer.RNNLayer;
+import com.omega.engine.nn.layer.active.LeakyReluLayer;
+import com.omega.engine.nn.layer.active.TanhLayer;
+import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.network.RNN;
+import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
@@ -29,7 +31,7 @@ public class CharRNN {
 		
 		try {
 			
-			int time = 100;
+			int time = 256;
 			
 			int batchSize = 64;
 			
@@ -37,7 +39,9 @@ public class CharRNN {
 			
 			int hiddenSize = 512;
 			
-			String trainPath = "H:\\rnn_dataset\\dpcc.txt";
+			String trainPath = "H:\\rnn_dataset\\dpcc50.txt";
+			
+//			String trainPath = "H:\\rnn_dataset\\shakespeare.txt";
 			
 			OneHotDataLoader trainData = new OneHotDataLoader(trainPath, time, batchSize);
 			
@@ -51,33 +55,49 @@ public class CharRNN {
 			
 			RNNLayer l2 = new RNNLayer(hiddenSize, hiddenSize, time, ActiveType.tanh, true, netWork);
 			
-			FullyLayer f1 = new FullyLayer(hiddenSize, trainData.characters, true);
+			RNNLayer l3 = new RNNLayer(hiddenSize, hiddenSize, time, ActiveType.tanh, true, netWork);
+			
+			FullyLayer f1 = new FullyLayer(hiddenSize, hiddenSize, false);
+			BNLayer bn = new BNLayer();
+			LeakyReluLayer a1 = new LeakyReluLayer();
+			
+			FullyLayer f2 = new FullyLayer(hiddenSize, trainData.characters, true);
 
 			netWork.addLayer(inputLayer);
 			netWork.addLayer(em);
 			netWork.addLayer(l1);
 			netWork.addLayer(l2);
+			netWork.addLayer(l3);
 			netWork.addLayer(f1);
+			netWork.addLayer(bn);
+			netWork.addLayer(a1);
+			netWork.addLayer(f2);
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.01f;
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 10, 0.001f, batchSize, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2, 0.001f, batchSize, LearnRateUpdate.POLY, false);
 
 //			long start = System.currentTimeMillis();
 			
 			optimizer.trainRNN(trainData);
 			
 			int gen_len = 1000;
-			int max_len = 100;
+			int max_len = 256;
 			
-			String pre_txt = "修炼的斗气功法等级的高低，也是决定日后成";
+			String pre_txt = "这个故事所造成的后果，便是造就了大批每天";
 			
-			Tensor input = createTxtData(pre_txt, trainData.characters, trainData.dictionary, max_len);
+//			String pre_txt = "All:";
+			
+			Tensor input = null;
 			
 			Tensor output = null;
-
+			
+			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
+			
+			netWork.RUN_MODEL = RunModel.TEST;
+			
 			for(int i = 0;i<gen_len;i++) {
 				netWork.time = input.number;
 				String txt = genTxt(input, output, netWork, trainData, max_len);
@@ -86,7 +106,7 @@ public class CharRNN {
 				}else {
 					pre_txt += txt;
 				}
-				input = createTxtData(pre_txt, trainData.characters, trainData.dictionary, max_len);
+				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
 			}
 			System.out.println(pre_txt);
 			
@@ -130,8 +150,90 @@ public class CharRNN {
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 500, 0.001f, batchSize, LearnRateUpdate.POLY, false);
 
-//			long start = System.currentTimeMillis();
+			optimizer.testRNN(x);
 			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void LSTM() {
+		
+		try {
+			
+			int time = 3;
+			
+			int batchSize = 2;
+			
+			int inputSize = 3;
+			
+			int hiddenSize = 5;
+			
+			int number = time * batchSize;
+
+			float[] xd = RandomUtils.order(time * batchSize * inputSize, 0.1f, 0.0f);
+			
+			Tensor x = new Tensor(number, 1, 1, inputSize, xd, true);
+			
+			RNN netWork = new RNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw, time);
+			
+			InputLayer inputLayer = new InputLayer(1, 1, inputSize);
+
+			LSTMLayer l1 = new LSTMLayer(inputSize, hiddenSize, time, true, netWork);
+
+			netWork.addLayer(inputLayer);
+			netWork.addLayer(l1);
+			
+			netWork.CUDNN = true;
+			
+			netWork.learnRate = 0.002f;
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 500, 0.001f, batchSize, LearnRateUpdate.POLY, false);
+
+			optimizer.testRNN(x);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void RNN_CUDNN() {
+		
+		try {
+			
+			int time = 3;
+			
+			int batchSize = 2;
+			
+			int inputSize = 3;
+			
+			int hiddenSize = 5;
+			
+			int number = time * batchSize;
+
+			float[] xd = RandomUtils.order(time * batchSize * inputSize, 0.1f, 0.0f);
+			
+			Tensor x = new Tensor(number, 1, 1, inputSize, xd, true);
+			
+			RNN netWork = new RNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw, time);
+			
+			InputLayer inputLayer = new InputLayer(1, 1, inputSize);
+			
+			RNNBlockLayer l1 = new RNNBlockLayer(time, 1, inputSize, hiddenSize, 1, false, 0.0f, netWork);
+			
+			netWork.addLayer(inputLayer);
+			netWork.addLayer(l1);
+			
+			netWork.CUDNN = true;
+			
+			netWork.learnRate = 0.002f;
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 500, 0.001f, batchSize, LearnRateUpdate.POLY, false);
+
 			optimizer.testRNN(x);
 			
 		} catch (Exception e) {
@@ -159,7 +261,7 @@ public class CharRNN {
 			
 			boolean bidirectional = false;
 			
-			int rnnMode = 2;
+			int rnnMode = 1;
 			
 			String trainPath = "H:\\rnn_dataset\\shakespeare.txt";
 			
@@ -201,10 +303,12 @@ public class CharRNN {
 
 			String pre_txt = "All:";
 			
-			Tensor input = createTxtData(pre_txt, trainData.characters, trainData.dictionary, max_len);
+			Tensor input = null;
 			
 			Tensor output = null;
-
+			
+			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
+			
 			for(int i = 0;i<gen_len;i++) {
 				netWork.time = input.number;
 				String txt = genTxt(input, output, netWork, trainData, max_len);
@@ -213,7 +317,7 @@ public class CharRNN {
 				}else {
 					pre_txt += txt;
 				}
-				input = createTxtData(pre_txt, trainData.characters, trainData.dictionary, max_len);
+				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
 			}
 			System.out.println(pre_txt);
 			
@@ -234,15 +338,15 @@ public class CharRNN {
 			
 			int embedding_dim = 256;
 			
-			int hiddenSize = 512;
+			int hiddenSize = 256;
 			
-			int rnnLayerNum = 1;
+			int rnnLayerNum = 2;
 			
 			float dropout = 0.0f;
 			
 			boolean bidirectional = false;
 			
-			int rnnMode = 3;
+			int rnnMode = 2;
 			
 			String trainPath = "H:\\rnn_dataset\\dpcc50.txt";
 			
@@ -256,22 +360,25 @@ public class CharRNN {
 			
 			RNNBlockLayer l1 = new RNNBlockLayer(time, rnnLayerNum, embedding_dim, hiddenSize, rnnMode, bidirectional, dropout, netWork);
 			
-			FullyLayer f1 = new FullyLayer(hiddenSize, trainData.characters, true);
-//			LeakyReluLayer a1 = new LeakyReluLayer();
-//			SigmodLayer a1 = new SigmodLayer();
+			FullyLayer f1 = new FullyLayer(hiddenSize, hiddenSize, false);
+			BNLayer bn = new BNLayer();
+			LeakyReluLayer a1 = new LeakyReluLayer();
 			
+			FullyLayer f2 = new FullyLayer(hiddenSize, trainData.characters, true);
+
 			netWork.addLayer(inputLayer);
 			netWork.addLayer(em);
 			netWork.addLayer(l1);
-//			netWork.addLayer(a1);
 			netWork.addLayer(f1);
-//			netWork.addLayer(a1);
+			netWork.addLayer(bn);
+			netWork.addLayer(a1);
+			netWork.addLayer(f2);
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.0002f;
+			netWork.learnRate = 0.001f;
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 5, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 			
 			optimizer.lr_step = new int[] {5, 8, 10};
 			
@@ -282,12 +389,16 @@ public class CharRNN {
 			int gen_len = 1000;
 			int max_len = 100;
 			
-			String pre_txt = "修炼的斗气功法等级的高低，也是决定日后成";
+			String pre_txt = "这个故事所造成的后果，便是造就了大批每天";
 			
-			Tensor input = createTxtData(pre_txt, trainData.characters, trainData.dictionary, max_len);
+			netWork.RUN_MODEL = RunModel.TEST;
+			
+			Tensor input = null;
 			
 			Tensor output = null;
 
+			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
+			
 			for(int i = 0;i<gen_len;i++) {
 				netWork.time = input.number;
 				String txt = genTxt(input, output, netWork, trainData, max_len);
@@ -296,7 +407,7 @@ public class CharRNN {
 				}else {
 					pre_txt += txt;
 				}
-				input = createTxtData(pre_txt, trainData.characters, trainData.dictionary, max_len);
+				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
 			}
 			System.out.println(pre_txt);
 		} catch (Exception e) {
@@ -319,7 +430,7 @@ public class CharRNN {
 		input.hostToDevice();
 	}
 	
-	public static Tensor createTxtData(String txt,int charDim,Map<Character,Integer> dictionary,int maxLenght) {
+	public static Tensor createTxtData(Tensor input,String txt,int charDim,Map<Character,Integer> dictionary,int maxLenght) {
 		int charLength = txt.length();
 		if(txt.length() > maxLenght) {
 			charLength = maxLenght;
@@ -336,8 +447,8 @@ public class CharRNN {
 		for(int i = 0;i<charLength;i++) {
 			td[i * charDim + dictionary.get(charset[i])] = 1;
 		}
-		
-		return new Tensor(charset.length, 1, 1, charDim, td, true);
+		input = Tensor.createTensor(input, charset.length, 1, 1, charDim, td, true);
+		return input;
 	}
 	
 	public static String genTxt(Tensor input,Tensor output,RNN network,OneHotDataLoader trainData,int maxLength) {
@@ -349,7 +460,7 @@ public class CharRNN {
 	public static String output2TXT(Tensor output,OneHotDataLoader trainData) {
 		String txt = "";
 		for(int i = 0;i<output.number;i++) {
-			int charIndex = pickTopN(output.getByNumber(i), 1);
+			int charIndex = pickTopN(output.getByNumber(i), 5);
 			char c = trainData.dictionaryData[charIndex];
 			txt += c;
 		}
@@ -383,9 +494,13 @@ public class CharRNN {
 			
 			CharRNN t = new CharRNN();
 			
+			t.LSTM();
+			
 //			t.RNN();
 			
-			t.charRNN();
+//			t.RNN_CUDNN();
+			
+//			t.charRNN();
 			
 //			t.charRNN2();
 			

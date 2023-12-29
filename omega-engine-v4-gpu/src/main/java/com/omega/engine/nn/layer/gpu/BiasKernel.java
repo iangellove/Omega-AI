@@ -150,7 +150,7 @@ public class BiasKernel extends BaseKernel{
 			
 			diffB.clearGPU();
 			
-			if(backKernelParameters == null) {
+			if(backKernelParameters == null || delta.number != this.N) {
 
 		        /**
 		         * 设置入参
@@ -162,6 +162,8 @@ public class BiasKernel extends BaseKernel{
 		                Pointer.to(new int[]{delta.getNumber()}),
 		                Pointer.to(new int[]{delta.getWidth()})
 		            );
+				
+				this.N = delta.number;
 		        
 			}
 			
@@ -187,7 +189,7 @@ public class BiasKernel extends BaseKernel{
 			
 			diffB.clearGPU();
 
-			if(backConvKernelParameters == null) {
+			if(backConvKernelParameters == null || delta.number != this.N) {
 
 		        /**
 		         * 设置入参
@@ -200,6 +202,8 @@ public class BiasKernel extends BaseKernel{
 		                Pointer.to(new int[]{delta.getChannel()}),
 		                Pointer.to(new int[]{delta.height * delta.width})
 		            );
+				
+				this.N = delta.number;
 		        
 			}
 			

@@ -99,5 +99,41 @@ public class AdamW extends Updater {
 		// TODO Auto-generated method stub
 		return UpdaterType.adamw;
 	}
+
+	@Override
+	public void update(Layer layer, int batchSize) {
+		// TODO Auto-generated method stub
+		/**
+		 * init
+		 */
+		if(kernel == null) {
+			
+			if(layer.hasBias) {
+
+				kernel = new AdamWKernel(layer.weight.dataLength, layer.bias.dataLength, weight_decay);
+				
+			}else {
+
+				kernel = new AdamWKernel(layer.weight.dataLength, weight_decay);
+				
+			}
+			
+			kernel.setParams(params);
+			
+		}
+		
+		kernel.updateW(layer.diffW, layer.weight, layer.network, layer.learnRate, batchSize);
+//		layer.diffW.clearGPU();
+//		
+//		System.out.print(layer.getLayerType().toString()+layer.index+":");
+//		layer.weight.showDM();
+
+		if(layer.hasBias) {
+			
+			kernel.updateB(layer.diffB, layer.bias, layer.network, layer.learnRate, batchSize);
+//			layer.diffB.clearGPU();
+		}
+		
+	}
 	
 }

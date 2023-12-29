@@ -96,7 +96,8 @@ public class YoloLayer extends Layer {
 		}
 		
 		if(output == null || number != output.number) {
-			output = new Tensor(number, oChannel, oHeight, oWidth, true);
+//			output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 		
 		this.outputs = bbox_num*(class_number + 4 + 1) * this.height*this.width;

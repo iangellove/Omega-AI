@@ -22,7 +22,7 @@ public class RMSPropKernel {
 	
 	private float mua = 0.9f;
 	
-	private float eta = 1e-6f;
+	private float eta = 1e-12f;
 	
 	private CUfunction function;
 	
@@ -130,6 +130,43 @@ public class RMSPropKernel {
 		
 	}
 	
+	public void updateW(Tensor diffW,Tensor weight,Network net,float lr,int batchSize) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float *diffW, float *rw, float *weight, float mul, float eta, float learnRate, int n, int batch, int clamp, float min, float max
+	         */ 
+			kernelParameters = Pointer.to(
+					Pointer.to(diffW.getGpuData()),
+	        		Pointer.to(rw.getGpuData()),
+	                Pointer.to(weight.getGpuData()),
+	                Pointer.to(new float[]{mua}),
+	                Pointer.to(new float[]{eta}),
+	                Pointer.to(new float[]{lr}),
+	                Pointer.to(new float[]{weight_decay}),
+	                Pointer.to(new int[]{diffW.dataLength}),
+	                Pointer.to(new int[]{batchSize}),
+	                Pointer.to(new int[]{clamp}),
+	                Pointer.to(new float[]{min}),
+	                Pointer.to(new float[]{max})
+	            );
+
+			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(diffW.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void updateB(Tensor diffBias,Tensor bias,Network net,float lr) {
 		
 		try {
@@ -148,6 +185,43 @@ public class RMSPropKernel {
 	                Pointer.to(new float[]{weight_decay}),
 	                Pointer.to(new int[]{diffBias.dataLength}),
 	                Pointer.to(new int[]{net.number}),
+	                Pointer.to(new int[]{clamp}),
+	                Pointer.to(new float[]{min}),
+	                Pointer.to(new float[]{max})
+	            );
+
+			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(diffBias.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void updateB(Tensor diffBias,Tensor bias,Network net,float lr,int batchSize) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float *diffW, float *rw, float *weight, float mul, float eta, float learnRate, int n, int batch, int clamp, float min, float max
+	         */ 
+			kernelParameters = Pointer.to(
+					Pointer.to(diffBias.getGpuData()),
+	        		Pointer.to(rb.getGpuData()),
+	                Pointer.to(bias.getGpuData()),
+	                Pointer.to(new float[]{mua}),
+	                Pointer.to(new float[]{eta}),
+	                Pointer.to(new float[]{lr}),
+	                Pointer.to(new float[]{weight_decay}),
+	                Pointer.to(new int[]{diffBias.dataLength}),
+	                Pointer.to(new int[]{batchSize}),
 	                Pointer.to(new int[]{clamp}),
 	                Pointer.to(new float[]{min}),
 	                Pointer.to(new float[]{max})

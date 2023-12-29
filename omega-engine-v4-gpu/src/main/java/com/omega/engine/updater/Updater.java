@@ -36,6 +36,8 @@ public abstract class Updater {
 	
 	public abstract void update(Layer layer);
 	
+	public abstract void update(Layer layer, int batchSize);
+	
 	public abstract void updateForMatrix(Layer layer);
 	
 	public abstract void updateForBN(BNLayer layer);

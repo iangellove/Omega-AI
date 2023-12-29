@@ -574,6 +574,24 @@ public class MatrixUtils {
 	 *
 	 * @throws
 	 */
+	public static void fill(int[] x,int start,int end,int val) {
+		for(int i = start;i<end;i++) {
+			x[i] = val;
+		}
+	}
+	
+	/**
+	 * 
+	 * @Title: zero
+	 *
+	 * @param size
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static float[][] clear(float[][] x) {
 		if(x != null) {
 			x = MatrixUtils.zero(x.length,x[0].length);

@@ -37,7 +37,8 @@ public class UPSampleLayer extends Layer {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		if(this.output == null || this.output.number != number) {
-			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 
 		if(kernel == null) {

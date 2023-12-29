@@ -1,6 +1,8 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.FullyKernel;
@@ -59,6 +61,24 @@ public class FullyLayer extends Layer{
 		initKernel();
 	}
 	
+	public FullyLayer(int inputNum,int outputNum,int time,boolean hasBias,Network network) {
+		this.network = network;
+		this.channel = 1;
+		this.height = 1;
+		this.width = inputNum;
+		this.oChannel = channel;
+		this.oHeight = height;
+		this.oWidth = outputNum;
+		this.hasBias = hasBias;
+		this.hasParams = true;
+		this.initParamRNNCell();
+		initKernel();
+	}
+	
+	public static FullyLayer createRNNCell(int inputNum,int outputNum,int time,boolean hasBias,Network network) {
+		return new FullyLayer(inputNum, outputNum, time, hasBias, network);
+	}
+	
 	public void initKernel() {
 		kernel = new FullyKernel();
 	}
@@ -76,7 +96,8 @@ public class FullyLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		if(this.output == null || this.number != this.output.number){
-			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		}
 	}
 	
@@ -96,7 +117,16 @@ public class FullyLayer extends Layer{
 //		this.bias = new Tensor(1, 1, 1, oWidth, RandomUtils.kaimingUniformBias(x, n), true);
 		this.diffB = new Tensor(1, 1, 1, oWidth, true);
 		this.diffW = new Tensor(1, 1, width, oWidth, true);
-		
+	}
+	
+	public void initParamRNNCell() {
+		// TODO Auto-generated method stub
+		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.uniformFloat(this.width * this.oWidth, this.oWidth), true);
+		this.diffW = new Tensor(1, 1, width, oWidth, true);
+		if(hasBias) {
+			this.bias = new Tensor(1, 1, 1, oWidth, RandomUtils.uniformFloat(oWidth, this.oWidth), true);
+			this.diffB = new Tensor(1, 1, 1, oWidth, true);
+		}
 	}
 	
 	@Override
@@ -105,14 +135,14 @@ public class FullyLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		if(this.input != null) {
-
+//			input.showDMByNumber(0);
 			GPUOP.getInstance().multiplyFloat(number, oWidth, width, input.getGpuData(), weight.getGpuData(), output.getGpuData(),
 					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 
 			if(hasBias) {
 				kernel.addBias(output, bias);
 			}
-			
+//			output.showDMByNumber(0);
 		}
 		
 	}
@@ -378,6 +408,22 @@ public class FullyLayer extends Layer{
 		if(!this.freeze) {
 			if(this.updater != null){
 				this.updater.update(this);
+			}else{
+				for(int i = 0;i<this.weight.getDataLength();i++) {
+					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
+				}
+				for(int i = 0;i<this.bias.getDataLength();i++) {
+					this.bias.data[i] -= this.learnRate * this.diffB.data[i];
+				}
+			}
+		}
+	}
+	
+	public void update(int batchSize) {
+		// TODO Auto-generated method stub
+		if(!this.freeze) {
+			if(this.updater != null){
+				this.updater.update(this, batchSize);
 			}else{
 				for(int i = 0;i<this.weight.getDataLength();i++) {
 					this.weight.data[i] -= this.learnRate * this.diffW.data[i];

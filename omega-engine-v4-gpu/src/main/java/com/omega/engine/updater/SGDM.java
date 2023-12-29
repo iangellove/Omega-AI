@@ -67,4 +67,33 @@ public class SGDM extends Updater {
 		return UpdaterType.sgd;
 	}
 
+	@Override
+	public void update(Layer layer, int batchSize) {
+		// TODO Auto-generated method stub
+		/**
+		 * init
+		 */
+		if(kernel == null) {
+			
+			if(layer.hasBias) {
+
+				kernel = new SGDKernel(layer.weight.dataLength, layer.bias.dataLength);
+				
+			}else {
+
+				kernel = new SGDKernel(layer.weight.dataLength);
+				
+			}
+			
+		}
+		
+		kernel.updateW(layer.diffW, layer.weight, layer.network, layer.learnRate, batchSize);
+
+		if(layer.hasBias) {
+			
+			kernel.updateB(layer.diffB, layer.bias, layer.network, layer.learnRate, batchSize);
+			
+		}
+	}
+
 }

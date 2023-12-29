@@ -630,18 +630,17 @@ public class GANOptimizer extends Optimizer {
 	public float trainDG(ImageDataLoader trainingData,int index,int[] indexs,int it,Tensor true_labels,
 			Tensor fake_labels,Tensor inputG,Tensor inputD,Tensor d_fake_output,Tensor d_true_output,BCELoss lossD,BCELoss lossG,float d_loss_current) {
 
-		Tensor g_fake_output = null;
+		/**
+		 * 生成器生成假图片
+		 */
+		inputG.random();
+		Tensor g_fake_output = this.netG.forward(inputG);
+
 		
 		if(it % d_every == 0) {
 			
 			trainingData.loadData(indexs, inputD, null);
-
-			/**
-			 * 生成器生成假图片
-			 */
-			inputG.random();
-			g_fake_output = this.netG.forward(inputG);
-
+			
 			/**
 			 * 判别器判断真图片
 			 */
@@ -651,6 +650,8 @@ public class GANOptimizer extends Optimizer {
 			this.netD.back(real_diff);
 			this.netD.update();
 			
+			float dt_loss = real_loss.syncHost()[0];
+			
 			/**
 			 * 判别器判断假图片
 			 */
@@ -659,39 +660,39 @@ public class GANOptimizer extends Optimizer {
 			Tensor fake_diff = lossD.diff(d_fake_output, fake_labels);
 			this.netD.back(fake_diff);
 			this.netD.update();
-
-			float d_loss = (real_loss.syncHost()[0] + fake_loss.syncHost()[0]) / 2;
+			
+			float df_loss = fake_loss.syncHost()[0];
+			
+			float d_loss = (dt_loss + df_loss) / 2;
 			
 			d_loss_current = d_loss;
 			
-			System.out.println("(d_true_loss:"+real_loss.syncHost()[0]+")(d_f_loss:"+fake_loss.syncHost()[0]+")(d_fd_loss:"+d_loss+")");
+			System.out.println("(d_true_loss:"+dt_loss+")(d_f_loss:"+df_loss+")(d_fd_loss:"+d_loss+")");
 
 		}	
 		
+		/**
+		 * 训练生成器
+		 */
 		if(it % g_every == 0) {
 
-				/**
-				 * 训练生成器
-				 */
+			/**
+			 * 判别器判断假图片
+			 */
+			d_fake_output = this.netD.forward(g_fake_output);
 
-				inputG.random();
-				g_fake_output = this.netG.forward(inputG);
-				
-				/**
-				 * 判别器判断假图片
-				 */
-				d_fake_output = this.netD.forward(g_fake_output);
+			Tensor g_loss = lossG.loss(d_fake_output, true_labels);
+			Tensor g_diff = lossG.diff(d_fake_output, true_labels);
+			
+			System.out.println("g_loss:"+g_loss.syncHost()[0]);
+			
+//			g_diff.showDMByNumber(0);
+			
+			this.netD.back(g_diff);
+			this.g_loss_diff = this.netD.getDiff();
 
-				Tensor g_loss = lossG.loss(d_fake_output, true_labels);
-				Tensor g_diff = lossG.diff(d_fake_output, true_labels);
-				
-				System.out.println("g_loss:"+g_loss.syncHost()[0]);
-				
-				this.netD.back(g_diff);
-				this.g_loss_diff = this.netD.getDiff();
-
-				this.netG.back(this.g_loss_diff);
-				this.netG.update();
+			this.netG.back(this.g_loss_diff);
+			this.netG.update();
 
 		}
 		

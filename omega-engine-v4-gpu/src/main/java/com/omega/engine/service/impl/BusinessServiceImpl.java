@@ -140,7 +140,7 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		DataSet testData = DataLoader.loadDataByUByte(mnist_test_data, mnist_test_label, labelSet, 1, 1 ,784, true);
 
-		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
+		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adamw);
 		
 		netWork.learnRate = 0.001f;
 		
@@ -372,7 +372,7 @@ public class BusinessServiceImpl implements BusinessService {
 			
 			int width = 28;
 			
-			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
+			CNN netWork = new CNN(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adamw);
 			
 			netWork.learnRate = 0.001f;
 			
@@ -3127,10 +3127,10 @@ public class BusinessServiceImpl implements BusinessService {
 //			bs.bpNetwork_iris();
 //			bs.bpNetwork_mnist();
 //			bs.cnnNetwork_mnist_demo();
-//			bs.cnnNetwork_mnist();
+			bs.cnnNetwork_mnist();
 //			bs.cnnNetwork_cifar10();
 
-			bs.resnet18_cifar10();
+//			bs.resnet18_cifar10();
 //			bs.resnet1_cifar10();
 //			bs.resnet18_mnist();
 //			bs.vgg16_cifar10();

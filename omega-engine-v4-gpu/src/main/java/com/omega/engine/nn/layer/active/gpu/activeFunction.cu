@@ -111,6 +111,8 @@ __global__ void tanh_forward(float *x, float *output, int n)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < n) {
+    	//float e = expf(-2 * x[i]);
+    	//output[i] = (1 - e) / (1 + e);
     	float x1 = expf(x[i]);
     	float x2 = expf(-x[i]);
     	output[i] = (x1 - x2) / (x1 + x2);

@@ -24,7 +24,7 @@ public class DCGAN {
 	
 public static CNN NetG(int ngf,int nz) {
 		
-		CNN netWork = new CNN(LossType.BCE, UpdaterType.RMSProp);
+		CNN netWork = new CNN(LossType.BCE, UpdaterType.adamw);
 
 		netWork.CUDNN = true;
 		
@@ -72,7 +72,7 @@ public static CNN NetG(int ngf,int nz) {
 	
 	public static CNN NetD(int ndf,int imw,int imh) {
 		
-		CNN netWork = new CNN(LossType.BCE, UpdaterType.RMSProp);
+		CNN netWork = new CNN(LossType.BCE, UpdaterType.adamw);
 
 		netWork.updaterParams = new HashMap<String, Float>(){};
 		
@@ -85,7 +85,7 @@ public static CNN NetG(int ngf,int nz) {
 		InputLayer inputLayer = new InputLayer(3, imh, imw);
 		
 		ConvolutionLayer conv1 = new ConvolutionLayer(3, ndf, imw, imh, 5, 5, 2, 2, true);
-//		BNLayer bn1 = new BNLayer();
+		BNLayer bn1 = new BNLayer();
 		LeakyReluLayer active1 = new LeakyReluLayer();
 		
 		ConvolutionLayer conv2 = new ConvolutionLayer(conv1.oChannel, ndf * 2, conv1.oWidth, conv1.oHeight, 5, 5, 2, 2, false);
@@ -105,7 +105,7 @@ public static CNN NetG(int ngf,int nz) {
 		
 		netWork.addLayer(inputLayer);
 		netWork.addLayer(conv1);
-//		netWork.addLayer(bn1);
+		netWork.addLayer(bn1);
 		netWork.addLayer(active1);
 		netWork.addLayer(conv2);
 		netWork.addLayer(bn2);
@@ -132,7 +132,7 @@ public static CNN NetG(int ngf,int nz) {
 		int batchSize = 64;
 		
 		int d_every = 1;
-		int g_every = 5;
+		int g_every = 1;
 		
 		float[] mean = new float[] {0.5f,0.5f,0.5f};
 		float[] std = new float[] {0.5f,0.5f,0.5f};
@@ -147,7 +147,7 @@ public static CNN NetG(int ngf,int nz) {
 			
 			ImageDataLoader dataLoader = new ImageDataLoader(imgDirPath, imw, imh, batchSize, true, mean, std);
 			
-			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 2000, d_every, g_every, 0.001f, LearnRateUpdate.POLY, false);
+			GANOptimizer optimizer = new GANOptimizer(netG, netD, batchSize, 100, d_every, g_every, 0.001f, LearnRateUpdate.POLY, false);
 			
 			optimizer.train(dataLoader);
 

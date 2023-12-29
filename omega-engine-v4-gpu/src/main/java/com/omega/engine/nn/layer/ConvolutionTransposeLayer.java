@@ -149,7 +149,8 @@ public class ConvolutionTransposeLayer extends Layer {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		if(this.output == null || this.number != this.output.number){
-			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 		if(kernel == null){
 			if(this.network.CUDNN) {

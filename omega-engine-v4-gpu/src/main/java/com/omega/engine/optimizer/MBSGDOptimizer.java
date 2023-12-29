@@ -1737,6 +1737,10 @@ public class MBSGDOptimizer extends Optimizer {
 
 					float error = this.accuracy(output, label);
 					
+//					if(error > 99) {
+//						break;
+//					}
+					
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
 					System.out.println(msg);

@@ -83,5 +83,35 @@ public class Adam extends Updater {
 		// TODO Auto-generated method stub
 		return UpdaterType.adam;
 	}
+
+	@Override
+	public void update(Layer layer, int batchSize) {
+		// TODO Auto-generated method stub
+		/**
+		 * init
+		 */
+		if(kernel == null) {
+			
+			if(layer.hasBias) {
+
+				kernel = new AdamKernel(layer.weight.dataLength, layer.bias.dataLength);
+				
+			}else {
+
+				kernel = new AdamKernel(layer.weight.dataLength);
+				
+			}
+			
+		}
+		
+		kernel.updateW(layer.diffW, layer.weight, layer.network, layer.learnRate, batchSize);
+
+		if(layer.hasBias) {
+			
+			kernel.updateB(layer.diffB, layer.bias, layer.network, layer.learnRate, batchSize);
+			
+		}
+		
+	}
 	
 }

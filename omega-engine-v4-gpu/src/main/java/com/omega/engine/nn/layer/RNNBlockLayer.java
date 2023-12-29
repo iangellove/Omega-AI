@@ -2,6 +2,7 @@ package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.gpu.cudnn.RNNCudnnKernel;
+import com.omega.engine.gpu.cudnn.RNNCudnnKernelV8;
 import com.omega.engine.nn.layer.gpu.RNNBaseKernel;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RNN;
@@ -66,7 +67,8 @@ public class RNNBlockLayer extends Layer{
 	public void initKernel() {
 		
 		if(kernel == null) {
-			kernel = new RNNCudnnKernel(time, layerNum, inputSize, hiddenSize, bidirectional, rnnMode, dropout);
+			kernel = new RNNCudnnKernelV8(time, layerNum, inputSize, hiddenSize, bidirectional, rnnMode, dropout);
+//			kernel = new RNNCudnnKernel(time, layerNum, inputSize, hiddenSize, bidirectional, rnnMode, dropout);
 		}
 
 	}
@@ -81,7 +83,8 @@ public class RNNBlockLayer extends Layer{
 			kernel.seqLength = this.time;
 		}
 		if(this.output == null || this.number != this.output.number){
-			this.output = new Tensor(number, 1, 1, hiddenSize, true);
+//			this.output = new Tensor(number, 1, 1, hiddenSize, true);
+			this.output = Tensor.createTensor(this.output, number, 1, 1, hiddenSize, true);
 		}
 	}
 
@@ -101,8 +104,6 @@ public class RNNBlockLayer extends Layer{
 
 			int weightSize = (int) (kernel.weightSize() / Sizeof.FLOAT);
 
-//			this.weight = new Tensor(1, 1, 1, weightSize, RandomUtils.kaiming_uniform(weightSize, inputSize, this.paramsInit), true);
-			
 			this.weight = new Tensor(1, 1, 1, weightSize, true);
 			
 			this.diffW = new Tensor(1, 1, 1, weightSize, true);
@@ -123,7 +124,7 @@ public class RNNBlockLayer extends Layer{
 		
 		initParam();
 
-		kernel.forward(input, weight, output);
+		kernel.forward(this.network.RUN_MODEL, input, weight, output);
 		
 	}
 

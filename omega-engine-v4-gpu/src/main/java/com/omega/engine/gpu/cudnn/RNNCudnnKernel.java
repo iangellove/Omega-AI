@@ -10,7 +10,10 @@ import static jcuda.jcudnn.cudnnTensorFormat.CUDNN_TENSOR_NCHW;
 import java.util.Arrays;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.layer.gpu.RNNBaseKernel;
+import com.omega.engine.nn.network.RunModel;
 
 import jcuda.Pointer;
 import jcuda.Sizeof;
@@ -20,6 +23,9 @@ import jcuda.jcudnn.cudnnFilterDescriptor;
 import jcuda.jcudnn.cudnnRNNDescriptor;
 import jcuda.jcudnn.cudnnRNNMode;
 import jcuda.jcudnn.cudnnTensorDescriptor;
+import jcuda.jcurand.JCurand;
+import jcuda.jcurand.curandGenerator;
+import jcuda.jcurand.curandRngType;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaMemcpyKind;
 
@@ -96,16 +102,16 @@ public class RNNCudnnKernel extends RNNBaseKernel{
 		this.layerNum = layerNum;
 		switch (rnnMode) {
 		case 0:
-			rnnMode = cudnnRNNMode.CUDNN_RNN_RELU;
+			this.rnnMode = cudnnRNNMode.CUDNN_RNN_RELU;
 			break;
 		case 1:
-			rnnMode = cudnnRNNMode.CUDNN_RNN_TANH;
+			this.rnnMode = cudnnRNNMode.CUDNN_RNN_TANH;
 			break;
 		case 2:
-			rnnMode = cudnnRNNMode.CUDNN_LSTM;
+			this.rnnMode = cudnnRNNMode.CUDNN_LSTM;
 			break;
 		case 3:
-			rnnMode = cudnnRNNMode.CUDNN_GRU;
+			this.rnnMode = cudnnRNNMode.CUDNN_GRU;
 			break;
 		default:
 			throw new RuntimeException("RNN mode is only support 0:rnn_relu,1:rnn_tanh,1:lstm,2:gru");
@@ -113,7 +119,7 @@ public class RNNCudnnKernel extends RNNBaseKernel{
 		if(bidirectional) {
 			this.bidLength = 2;
 		}
-
+		System.out.println(this.rnnMode);
 	}
 	
 	public void init(int number) {
@@ -303,6 +309,8 @@ public class RNNCudnnKernel extends RNNBaseKernel{
 
 	        JCuda.cudaMalloc(workspace, workSize);
 	        JCuda.cudaMalloc(reserveSpace, reserveSize);
+	        
+//	        System.out.println(workSize+":"+reserveSize);
 
 	        JCuda.cudaDeviceSynchronize();
 		}
@@ -313,6 +321,7 @@ public class RNNCudnnKernel extends RNNBaseKernel{
 		long weightsSizeArray[] = { 0 };
 		JCudnn.cudnnGetRNNParamsSize(CudnnHandleManager.getHandle(), rnnDesc, xDesc[0], weightsSizeArray, CUDNN_DATA_FLOAT);
         long weightsSize = weightsSizeArray[0];
+//        System.out.println(weightsSize);
         return weightsSize;
 	}
 	
@@ -357,8 +366,10 @@ public class RNNCudnnKernel extends RNNBaseKernel{
                    nbDimsArray,
                    filterDimA));
 
-               initGPUData(linLayerMat, filterDimA[0] * filterDimA[1] * filterDimA[2], 1.f / (float)(filterDimA[0] * filterDimA[1] * filterDimA[2]));
+//               initGPUData(linLayerMat, filterDimA[0] * filterDimA[1] * filterDimA[2], 1.f / (float)(filterDimA[0] * filterDimA[1] * filterDimA[2]));
 
+               initGPUData(linLayerMat, filterDimA[0] * filterDimA[1] * filterDimA[2], (linLayerID + 1) * 0.1f, 0);
+               
                JCudnn.cudnnDestroyFilterDescriptor(linLayerMatDesc);
 
                cudnnFilterDescriptor linLayerBiasDesc = new cudnnFilterDescriptor();
@@ -382,18 +393,29 @@ public class RNNCudnnKernel extends RNNBaseKernel{
                    nbDimsArray,
                    filterDimA));
 
-               initGPUData(linLayerBias, filterDimA[0] * filterDimA[1] * filterDimA[2], 1.f);
+               initGPUData(linLayerBias, filterDimA[0] * filterDimA[1] * filterDimA[2], (linLayerID + 1) * 0.1f);
 
                JCudnn.cudnnDestroyFilterDescriptor(linLayerBiasDesc);
            }
        }
 		
+//		float stddev = (float) Math.sqrt(2.0d / (inputSize + hiddenSize)); // glorot_uniform like tensorflow    
+//		 
+//		curandGenerator generator = new curandGenerator();
+//		 
+//		JCurand.curandCreateGenerator(generator, curandRngType.CURAND_RNG_PSEUDO_DEFAULT);
+//		JCurand.curandSetPseudoRandomGeneratorSeed(generator, 1L);
+//		
+//		JCurand.curandGenerateNormal(generator, w.getGpuData(), w.getDataLength(), 0, stddev);
+		 
+		System.out.println( JsonUtils.toJson(w.syncHost()));
+		
 	}
 
 	@Override
-	public void forward(Tensor input, Tensor weight, Tensor output) {
+	public void forward(RunModel RUN_MODEL,Tensor input, Tensor weight, Tensor output) {
 		// TODO Auto-generated method stub
-		
+	
 		handle(JCudnn.cudnnRNNForwardTraining(CudnnHandleManager.getHandle(),
 	            rnnDesc,
 	            seqLength,
@@ -424,7 +446,9 @@ public class RNNCudnnKernel extends RNNBaseKernel{
 		
 		// cudnnRNNBackwardWeights adds to the data in dw.
 		dw.clearGPU();
-
+		
+//		JCudnn.cudnnRNNBackwardWeights_v8(handle, rnnDesc, addGrad, devSeqLengths, xDesc, x, hDesc, dhx, yDesc, y, weightSpaceSize, dweightSpace, workSpaceSize, workSpace, reserveSpaceSize, reserveSpace)
+		
 		handle(JCudnn.cudnnRNNBackwardWeights(CudnnHandleManager.getHandle(),
 	            rnnDesc,
 	            seqLength,
@@ -496,8 +520,7 @@ public class RNNCudnnKernel extends RNNBaseKernel{
 	    }
 	}
 	
-	private static void initGPUData(Pointer data, int numElements, float value)
-    {
+	private static void initGPUData(Pointer data, int numElements, float value){
         // Note: The original sample used a kernel to initialize the memory.
         // Using a host array to fill the memory is less efficient, but does
         // not require any custom kernels, and is done here for brevity.
@@ -506,4 +529,14 @@ public class RNNCudnnKernel extends RNNBaseKernel{
         JCuda.cudaMemcpy(data, Pointer.to(array), 
             numElements * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
     }
+	
+	private static void initGPUData(Pointer data, int numElements, float a, float b){
+        // Note: The original sample used a kernel to initialize the memory.
+        // Using a host array to fill the memory is less efficient, but does
+        // not require any custom kernels, and is done here for brevity.
+        float array[] = RandomUtils.order(numElements, a, b);
+        JCuda.cudaMemcpy(data, Pointer.to(array), 
+            numElements * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+    }
+	
 }

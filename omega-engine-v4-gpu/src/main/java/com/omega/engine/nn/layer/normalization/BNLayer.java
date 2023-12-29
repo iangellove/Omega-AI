@@ -105,10 +105,7 @@ public class BNLayer extends NormalizationLayer {
 		}
 
 		if(this.output == null || this.number != this.output.number) {
-//			this.diff = new Tensor(number, channel, height, width, true);
-//			this.diff = this.network.getNextLayer(this.index).diff;
-			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
-//			this.output2 = new Tensor(number, oChannel, oHeight, oWidth);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 		
 		if(kernel == null) {

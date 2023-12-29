@@ -45,9 +45,7 @@ public class RMSProp extends Updater {
 //		layer.weight.showDM();
 
 		if(layer.hasBias) {
-			
 			kernel.updateB(layer.diffB, layer.bias, layer.network, layer.learnRate);
-			
 		}
 		
 	}
@@ -80,6 +78,39 @@ public class RMSProp extends Updater {
 	public UpdaterType getUpdaterType() {
 		// TODO Auto-generated method stub
 		return UpdaterType.RMSProp;
+	}
+
+	@Override
+	public void update(Layer layer, int batchSize) {
+		// TODO Auto-generated method stub
+		/**
+		 * init
+		 */
+		if(kernel == null) {
+			
+			if(layer.hasBias) {
+
+				kernel = new RMSPropKernel(layer.weight.dataLength, layer.bias.dataLength);
+				
+			}else {
+
+				kernel = new RMSPropKernel(layer.weight.dataLength);
+				
+			}
+			
+		}
+		
+		kernel.updateW(layer.diffW, layer.weight, layer.network, layer.learnRate, batchSize);
+//		
+//		System.out.print(layer.getLayerType().toString()+layer.index+":");
+//		layer.weight.showDM();
+
+		if(layer.hasBias) {
+			
+			kernel.updateB(layer.diffB, layer.bias, layer.network, layer.learnRate, batchSize);
+			
+		}
+		
 	}
 	
 }

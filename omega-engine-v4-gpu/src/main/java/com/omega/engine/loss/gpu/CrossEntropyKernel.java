@@ -142,7 +142,8 @@ public class CrossEntropyKernel extends BaseKernel {
 	            0, null,               // Shared memory size and stream
 	            log_softmax_nl_loss_kernelParameters, null // Kernel- and extra parameters
 	        );
-		
+
+//		output.showDM();
 //		JCudaDriver.cuCtxSynchronize();
 		
 	}
@@ -199,6 +200,12 @@ public class CrossEntropyKernel extends BaseKernel {
 	            0, null,               // Shared memory size and stream
 	            backKernelParameters, null // Kernel- and extra parameters
 	        );
+		
+
+		if(MatrixOperation.isNaN(diff.syncHost())){
+			input.showDMByNumber(0);
+		}
+
 		
 //		JCudaDriver.cuCtxSynchronize();
 		

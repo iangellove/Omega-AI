@@ -149,4 +149,10 @@ public class Momentum extends Updater {
 		return UpdaterType.momentum;
 	}
 
+	@Override
+	public void update(Layer layer, int batchSize) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }
