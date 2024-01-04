@@ -156,10 +156,6 @@ public class RNNLayer extends Layer{
 				
 				TensorOP.add(inputLayer.getOutput(), selfLayer.getOutput(), this.h, t * onceSize, onceSize);
 				
-//				baseKernel.copy_gpu(inputLayer.getOutput(), this.h, onceSize, t * onceSize, 1, t * onceSize, 1);
-//				
-//				baseKernel.axpy_gpu(selfLayer.getOutput(), this.h, onceSize, 1, t * onceSize, 1, t * onceSize, 1);
-
 				outputActive.forward(this.h, batch, t);
 				
 				baseKernel.copy_gpu(outputActive.getOutput(), this.h, onceSize, t * onceSize, 1, t * onceSize, 1);

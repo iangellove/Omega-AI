@@ -28,6 +28,7 @@ public enum LayerType {
 	route("route"),
 	yolo("yolo"),
 	rnn("rnn"),
+	lstm("lstm"),
 	embedding("embedding"),
 	dropout("dropout");
 	

@@ -1,7 +1,6 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.RandomUtils;
 import com.omega.engine.active.ActiveType;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
@@ -13,6 +12,22 @@ import com.omega.engine.nn.layer.active.TanhLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RNN;
 
+/**
+ * LSTM
+ * @author Administrator
+ * forgot gate
+ * ft = sigmoid(Wf * ht-1 + bhf + Uf * xt + bxf)
+ * input gate
+ * it = sigmoid(Wi * ht-1 + bhi + Ui * xt + bxi)
+ * candidate memory
+ * gt = tanh(Wg * ht-1 + bhg + Ug * xt + bxg)
+ * cell status
+ * ct = ct-1 ⊙ ft + it ⊙ gt
+ * output gate
+ * ot = sigmoid(Wo * ht-1 + bho + Uo * xt + bxo)
+ * hidden status
+ * ht = ot ⊙ tanh(ct)
+ */
 public class LSTMLayer extends Layer{
 	
 	private int time = 0;
@@ -87,6 +102,14 @@ public class LSTMLayer extends Layer{
 	
 	private Tensor temp;
 	
+	private Tensor h_diff;
+	
+	private Tensor c_diff;
+	
+	private Tensor detlaXo;
+	
+	private Tensor d_tanhc;
+	
 	private BaseKernel baseKernel;
 	
 	public LSTMLayer(int inputNum,int hiddenNum,int time,boolean bias) {
@@ -113,10 +136,10 @@ public class LSTMLayer extends Layer{
 		this.gxl = FullyLayer.createRNNCell(inputSize, hiddenSize, time, bias, network);
 		this.oxl = FullyLayer.createRNNCell(inputSize, hiddenSize, time, bias, network);
 		
-		this.fhl = FullyLayer.createRNNCell(hiddenSize, hiddenSize, time, bias, network);
-		this.ihl = FullyLayer.createRNNCell(hiddenSize, hiddenSize, time, bias, network);
-		this.ghl = FullyLayer.createRNNCell(hiddenSize, hiddenSize, time, bias, network);
-		this.ohl = FullyLayer.createRNNCell(hiddenSize, hiddenSize, time, bias, network);
+		this.fhl = FullyLayer.createRNNCell(hiddenSize, hiddenSize, time, false, network);
+		this.ihl = FullyLayer.createRNNCell(hiddenSize, hiddenSize, time, false, network);
+		this.ghl = FullyLayer.createRNNCell(hiddenSize, hiddenSize, time, false, network);
+		this.ohl = FullyLayer.createRNNCell(hiddenSize, hiddenSize, time, false, network);
 		
 		this.fa = createActiveLayer(ActiveType.sigmoid, fhl);
 		this.ia = createActiveLayer(ActiveType.sigmoid, ihl);
@@ -152,12 +175,12 @@ public class LSTMLayer extends Layer{
 		RNN network = (RNN) this.network;
 		this.time = network.time;
 		if(this.h == null || this.h.number != this.number) {
-			this.f = Tensor.createTensor(this.h, number, 1, 1, hiddenSize, true);
-			this.i = Tensor.createTensor(this.h, number, 1, 1, hiddenSize, true);
-			this.g = Tensor.createTensor(this.h, number, 1, 1, hiddenSize, true);
-			this.c = Tensor.createTensor(this.h, number, 1, 1, hiddenSize, true);
-			this.o = Tensor.createTensor(this.h, number, 1, 1, hiddenSize, true);
-			this.temp = Tensor.createTensor(this.h, number, 1, 1, hiddenSize, true);
+			this.f = Tensor.createTensor(this.f, number, 1, 1, hiddenSize, true);
+			this.i = Tensor.createTensor(this.i, number, 1, 1, hiddenSize, true);
+			this.g = Tensor.createTensor(this.g, number, 1, 1, hiddenSize, true);
+			this.c = Tensor.createTensor(this.c, number, 1, 1, hiddenSize, true);
+			this.o = Tensor.createTensor(this.o, number, 1, 1, hiddenSize, true);
+			this.temp = Tensor.createTensor(this.temp, number, 1, 1, hiddenSize, true);
 			this.h = Tensor.createTensor(this.h, number, 1, 1, hiddenSize, true);
 		}
 	}
@@ -165,7 +188,18 @@ public class LSTMLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		
+		int batch = this.number / this.time;
+		if(this.detlaXo == null || this.detlaXo.number != batch) {
+			this.detlaXo = Tensor.createTensor(this.detlaXo, batch, 1, 1, hiddenSize, true);
+			this.d_tanhc = Tensor.createTensor(this.d_tanhc, batch, 1, 1, hiddenSize, true);
+		}
+		if(this.h_diff == null || this.h_diff.number != this.number) {
+			this.h_diff = Tensor.createTensor(this.h_diff, this.number, 1, 1, hiddenSize, true);
+			this.c_diff = Tensor.createTensor(this.c_diff, this.number, 1, 1, hiddenSize, true);
+		}
+		if(this.diff == null || this.diff.number != this.number) {
+			this.diff = Tensor.createTensor(this.diff, this.number, 1, 1, inputSize, true);
+		}
 	}
 
 	@Override
@@ -185,6 +219,9 @@ public class LSTMLayer extends Layer{
 		 */
 		if(this.input != null) {
 			
+			c.clear();
+			h.clear();
+			
 			for(int t = 0;t<time;t++) {
 				
 				fxl.forward(this.input, batch, t);
@@ -192,39 +229,38 @@ public class LSTMLayer extends Layer{
 				gxl.forward(this.input, batch, t);
 				oxl.forward(this.input, batch, t);
 				
-				fhl.forward(this.f, batch, t - 1, t);
-				ihl.forward(this.i, batch, t - 1, t);
-				ghl.forward(this.g, batch, t - 1, t);
-				ohl.forward(this.o, batch, t - 1, t);
+				fhl.forward(this.h, batch, t - 1, t);
+				ihl.forward(this.h, batch, t - 1, t);
+				ghl.forward(this.h, batch, t - 1, t);
+				ohl.forward(this.h, batch, t - 1, t);
 				
 				/**
-				 * ft = sigmoid(Wf * ht-1 + bhf + Uf * xt + bxf)
-				 * it = sigmoid(Wi * ht-1 + bhi + Ui * xt + bxi)
-				 * gt = tanh(Wg * ht-1 + bhg + Ug * xt + bxg)
-				 * ot = sigmoid(Wo * ht-1 + bho + Uo * xt + bxo)
+				 * ft = sigmoid(Wf * ht-1 + Uf * xt + bf)
+				 * it = sigmoid(Wi * ht-1 + Ui * xt + bi)
+				 * gt = tanh(Wg * ht-1 + Ug * xt + bg)
+				 * ot = sigmoid(Wo * ht-1 + Uo * xt + bo)
 				 */
 				TensorOP.add(fxl.getOutput(), fhl.getOutput(), this.f, t * onceSize, onceSize);
 				TensorOP.add(ixl.getOutput(), ihl.getOutput(), this.i, t * onceSize, onceSize);
 				TensorOP.add(gxl.getOutput(), ghl.getOutput(), this.g, t * onceSize, onceSize);
 				TensorOP.add(oxl.getOutput(), ohl.getOutput(), this.o, t * onceSize, onceSize);
-				
 				fa.forward(this.f, batch, t);
 				ia.forward(this.i, batch, t);
 				ga.forward(this.g, batch, t);
 				oa.forward(this.o, batch, t);
 
 				/**
-				 * ct-1 ⊙ ft + it ⊙ gt
+				 * ct = ct-1 ⊙ ft + it ⊙ gt
 				 */
-				TensorOP.mul(i, g, temp, t * onceSize, onceSize);
-				TensorOP.mul(f, c, c, t * onceSize, onceSize);
+				TensorOP.mul(ia.getOutput(), ga.getOutput(), temp, t * onceSize, onceSize);
+				TensorOP.mul(fa.getOutput(), c, c, t * onceSize, (t - 1) * onceSize, t * onceSize, onceSize);
 				TensorOP.add(temp, c, c, t * onceSize, onceSize);
 				
 				/**
-				 * ht = ot ⊙ tanh(ct)
+				 * ht = ot ⊙  tanh(ct)
 				 */
 				ha.forward(c, batch, t);
-				TensorOP.mul(o, ha.getOutput(), this.h, t * onceSize, onceSize);
+				TensorOP.mul(oa.getOutput(), ha.getOutput(), this.h, t * onceSize, onceSize);
 				
 //				baseKernel.copy_gpu(ha.getOutput(), this.h, onceSize, t * onceSize, 1, t * onceSize, 1);
 	
@@ -244,7 +280,7 @@ public class LSTMLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		int batch = this.number / time;
-		int onceSize = batch * fhl.input.getOnceSize();
+		int onceSize = batch * hiddenSize;
 
 		fxl.clear();
 		ixl.clear();
@@ -256,26 +292,76 @@ public class LSTMLayer extends Layer{
 		ghl.clear();
 		ohl.clear();
 		
-//		for(int t = time-1;t>=0;t--) {
-//
-//			if(t < time - 1) {
-//				baseKernel.axpy_gpu(selfLayer.diff, this.delta, onceSize, 1, t * onceSize, 1, t * onceSize, 1);
-//			}
-//			
-//			outputActive.back(this.delta, batch, t);
-//			
-//			selfLayer.back(outputActive.diff, batch, t, t, t - 1);
-//
-//			inputLayer.back(outputActive.diff, batch, t);
-//			
-//		}
-//		
-//		this.diff = inputLayer.diff;
-//		this.diff.showDM(0);
-//		inputLayer.diffW.showDM(0);
-//		selfLayer.diffW.showDM(0);
-//		inputLayer.diffB.showDM(0);
-//		selfLayer.diffB.showDM(0);
+		this.h_diff.clear();
+		this.c_diff.clear();
+
+		for(int t = time-1;t>=0;t--) {
+
+			if(t < time - 1) {
+				baseKernel.axpy_gpu(this.h_diff, this.delta, onceSize, 1, t * onceSize, 1, t * onceSize, 1);
+			}
+
+			// detlaXo = delta_t * o_t 
+			TensorOP.mul(delta, oa.getOutput(), this.detlaXo, t * onceSize, t * onceSize, 0, onceSize);
+			// d_tanh(ct) = 1 - tanh_c * tanh_c
+			TensorOP.mul(ha.getOutput(), ha.getOutput(), d_tanhc, t * onceSize, t * onceSize, 0, onceSize);
+			TensorOP.sub(1.0f, d_tanhc, d_tanhc, 0, onceSize);
+			TensorOP.mul(this.detlaXo, d_tanhc, this.detlaXo, 0, onceSize);
+			
+			/**
+			 * delta_ct = delta_ct + delta_t * o_t * d_tanh(ct)
+			 */
+			if(t < time - 1) {
+				/**
+				 * delta_ct-1 = delta_t * o_t * d_tanh(ct) * ft
+				 */
+				TensorOP.mul(detlaXo, fa.getOutput(), this.c_diff, 0, t * onceSize, (t - 1) * onceSize, onceSize);
+				TensorOP.add(this.detlaXo, this.c_diff, this.detlaXo, 0, t * onceSize, 0, onceSize);
+			}
+			
+			/**
+			 * delta_o = delta_t * tanh_c * d_sigmoid(o)
+			 */
+			TensorOP.mul(delta, ha.getOutput(), temp, t * onceSize, onceSize);
+			oa.back(temp, batch, t);
+			
+			/**
+			 * delta_f = delta_t * o_t * d_tanh(ct) * c_t-1 * d_sigmoid(f)
+			 */
+			TensorOP.mul(detlaXo, c, temp, 0, (t - 1) * onceSize, t * onceSize, onceSize);
+			fa.back(temp, batch, t);
+			
+			/**
+			 * delta_i = delta_t * o_t * d_tanh(ct) * c_t * d_sigmoid(i)
+			 */
+			TensorOP.mul(detlaXo, c, temp, 0, t * onceSize, t * onceSize, onceSize);
+			ia.back(temp, batch, t);
+			
+			/**
+			 * delta_g = delta_t * o_t * d_tanh(ct) * i_t * d_sigmoid(g)
+			 */
+			TensorOP.mul(detlaXo, ia.getOutput(), temp, 0, t * onceSize, t * onceSize, onceSize);
+			ga.back(temp, batch, t);
+			
+			fxl.back(fa.diff, batch, t);
+			ixl.back(ia.diff, batch, t);
+			gxl.back(ga.diff, batch, t);
+			oxl.back(oa.diff, batch, t);
+			
+			fhl.back(fa.diff, batch, t, t, t - 1);
+			ihl.back(ia.diff, batch, t, t, t - 1);
+			ghl.back(ga.diff, batch, t, t, t - 1);
+			ohl.back(oa.diff, batch, t, t, t - 1);
+			
+			TensorOP.add(fhl.diff, ihl.diff, h_diff, (t - 1) * onceSize, onceSize);
+			TensorOP.add(h_diff, ghl.diff, h_diff, (t - 1) * onceSize, onceSize);
+			TensorOP.add(h_diff, ohl.diff, h_diff, (t - 1) * onceSize, onceSize);
+			
+			TensorOP.add(fxl.diff, ixl.diff, this.diff, t * onceSize, onceSize);
+			TensorOP.add(this.diff, gxl.diff, this.diff, t * onceSize, onceSize);
+			TensorOP.add(this.diff, oxl.diff, this.diff, t * onceSize, onceSize);
+		}
+
 	}
 
 	@Override
@@ -357,8 +443,15 @@ public class LSTMLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-//		inputLayer.update(number / time);
-//		selfLayer.update(number / time);
+		fxl.update(number / time);
+		ixl.update(number / time);
+		gxl.update(number / time);
+		oxl.update(number / time);
+		
+		fhl.update(number / time);
+		ihl.update(number / time);
+		ghl.update(number / time);
+		ohl.update(number / time);
 	}
 
 	@Override

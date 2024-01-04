@@ -227,15 +227,14 @@ public class RNNBlockLayer extends Layer{
 			if(this.updater != null){
 				this.updater.update(this);
 			}else{
-				
 				for(int i = 0;i<this.weight.getDataLength();i++) {
 					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
 				}
-				
-				for(int i = 0;i<this.bias.getDataLength();i++) {
-					this.bias.data[i] -= this.learnRate * this.diffB.data[i];
+				if(hasBias) {
+					for(int i = 0;i<this.bias.getDataLength();i++) {
+						this.bias.data[i] -= this.learnRate * this.diffB.data[i];
+					}
 				}
-				
 			}
 		}
 	}

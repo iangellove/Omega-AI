@@ -29,6 +29,16 @@ public class TensorOP {
 		
 	}
 	
+	public static void add(Tensor a,Tensor b,Tensor c, int offsetA,int offsetB,int offsetC,int N) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().add_gpu(a, b, c, offsetA, offsetB, offsetC, N);
+		}else {
+			c.data = MatrixOperation.add(a.data, b.data);
+		}
+		
+	}
+	
 	public static void add(Tensor a,float b,Tensor c) {
 		
 		if(c.isHasGPU()) {
@@ -40,6 +50,16 @@ public class TensorOP {
 	}
 	
 	public static void sub(Tensor a,Tensor b,Tensor c) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().sub_gpu(a, b, c);
+		}else {
+			c.data = MatrixOperation.subtraction(a.data, b.data);
+		}
+		
+	}
+	
+	public static void sub(Tensor a,Tensor b,Tensor c,int offset,int N) {
 		
 		if(c.isHasGPU()) {
 			OPKernel.getInstance().sub_gpu(a, b, c);
@@ -68,6 +88,16 @@ public class TensorOP {
 		}
 		
 	}
+	
+	public static void sub(float a,Tensor b,Tensor c,int offset,int N) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().scalar_sub_gpu(a, b, c, offset, N);
+		}else {
+			c.data = MatrixOperation.subtraction(a, b.data);
+		}
+		
+	}
 
 	public static void mul(Tensor a,Tensor b,Tensor c) {
 		
@@ -83,6 +113,16 @@ public class TensorOP {
 		
 		if(c.isHasGPU()) {
 			OPKernel.getInstance().mul_gpu(a, b, c, offset, N);
+		}else {
+			c.data = MatrixOperation.multiplication(a.data, b.data);
+		}
+		
+	}
+	
+	public static void mul(Tensor a,Tensor b,Tensor c, int offsetA,int offsetB,int offsetY,int N) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().mul_gpu(a, b, c, offsetA, offsetB, offsetY, N);
 		}else {
 			c.data = MatrixOperation.multiplication(a.data, b.data);
 		}

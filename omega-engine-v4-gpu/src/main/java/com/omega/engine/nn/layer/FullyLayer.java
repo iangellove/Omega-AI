@@ -1,12 +1,11 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MatrixOperation;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.FullyKernel;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 import jcuda.Sizeof;
 import jcuda.jcublas.cublasOperation;
@@ -59,6 +58,7 @@ public class FullyLayer extends Layer{
 		this.hasParams = true;
 		this.initParam();
 		initKernel();
+		this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
 	}
 	
 	public FullyLayer(int inputNum,int outputNum,int time,boolean hasBias,Network network) {
@@ -73,6 +73,7 @@ public class FullyLayer extends Layer{
 		this.hasParams = true;
 		this.initParamRNNCell();
 		initKernel();
+		this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
 	}
 	
 	public static FullyLayer createRNNCell(int inputNum,int outputNum,int time,boolean hasBias,Network network) {
@@ -412,8 +413,10 @@ public class FullyLayer extends Layer{
 				for(int i = 0;i<this.weight.getDataLength();i++) {
 					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
 				}
-				for(int i = 0;i<this.bias.getDataLength();i++) {
-					this.bias.data[i] -= this.learnRate * this.diffB.data[i];
+				if(hasBias) {
+					for(int i = 0;i<this.bias.getDataLength();i++) {
+						this.bias.data[i] -= this.learnRate * this.diffB.data[i];
+					}
 				}
 			}
 		}
@@ -428,8 +431,10 @@ public class FullyLayer extends Layer{
 				for(int i = 0;i<this.weight.getDataLength();i++) {
 					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
 				}
-				for(int i = 0;i<this.bias.getDataLength();i++) {
-					this.bias.data[i] -= this.learnRate * this.diffB.data[i];
+				if(hasBias) {
+					for(int i = 0;i<this.bias.getDataLength();i++) {
+						this.bias.data[i] -= this.learnRate * this.diffB.data[i];
+					}
 				}
 			}
 		}
@@ -593,7 +598,9 @@ public class FullyLayer extends Layer{
 	}
 	
 	public void clear() {
-		this.diffB.clearGPU();
+		if(hasBias) {
+			this.diffB.clearGPU();
+		}
 		this.diffW.clearGPU();
 	}
 

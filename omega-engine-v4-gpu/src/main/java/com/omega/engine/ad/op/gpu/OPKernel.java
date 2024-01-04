@@ -418,6 +418,34 @@ public class OPKernel implements Serializable{
 		
 	}
 	
+	public void add_gpu(Tensor a,Tensor b,Tensor y,int offsetA,int offsetB,int offsetY,int N) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float *Y, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{N}),
+	                Pointer.to(a.getGpuData().withByteOffset(offsetA * Sizeof.FLOAT)),
+	        		Pointer.to(b.getGpuData().withByteOffset(offsetB * Sizeof.FLOAT)),
+	        		Pointer.to(y.getGpuData().withByteOffset(offsetY * Sizeof.FLOAT))
+	            );
+			
+			checkCUDA(cuLaunchKernel(add_gpu_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void axpy_gpu(Tensor a,Tensor b,int offsetX,int offsetY) {
 		
 		try {
@@ -567,6 +595,34 @@ public class OPKernel implements Serializable{
 		
 	}
 	
+	public void sub_gpu(Tensor a,Tensor b,Tensor y,int offset,int N) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float *Y, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{N}),
+	                Pointer.to(a.getGpuData().withByteOffset(offset * Sizeof.FLOAT)),
+	        		Pointer.to(b.getGpuData().withByteOffset(offset * Sizeof.FLOAT)),
+	        		Pointer.to(y.getGpuData().withByteOffset(offset * Sizeof.FLOAT))
+	            );
+			
+			checkCUDA(cuLaunchKernel(sub_gpu_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void sub_scalar_gpu(Tensor a,float b,Tensor y) {
 		
 		try {
@@ -623,6 +679,34 @@ public class OPKernel implements Serializable{
 		
 	}
 	
+	public void scalar_sub_gpu(float a,Tensor b,Tensor y,int offset,int N) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float ALPHA, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{N}),
+	        		Pointer.to(new float[] {a}),
+	                Pointer.to(b.getGpuData().withByteOffset(offset * Sizeof.FLOAT)),
+	        		Pointer.to(y.getGpuData().withByteOffset(offset * Sizeof.FLOAT))
+	            );
+			
+			checkCUDA(cuLaunchKernel(scalar_sub_gpu_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void mul_gpu(Tensor a,Tensor b,Tensor y) {
 		
 		try {
@@ -663,6 +747,34 @@ public class OPKernel implements Serializable{
 	                Pointer.to(a.getGpuData().withByteOffset(offset * Sizeof.FLOAT)),
 	        		Pointer.to(b.getGpuData().withByteOffset(offset * Sizeof.FLOAT)),
 	        		Pointer.to(y.getGpuData().withByteOffset(offset * Sizeof.FLOAT))
+	            );
+			
+			checkCUDA(cuLaunchKernel(mul_gpu_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void mul_gpu(Tensor a,Tensor b,Tensor y,int offsetA,int offsetB,int offsetY,int N) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float *Y, float *R
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{N}),
+	                Pointer.to(a.getGpuData().withByteOffset(offsetA * Sizeof.FLOAT)),
+	        		Pointer.to(b.getGpuData().withByteOffset(offsetB * Sizeof.FLOAT)),
+	        		Pointer.to(y.getGpuData().withByteOffset(offsetY * Sizeof.FLOAT))
 	            );
 			
 			checkCUDA(cuLaunchKernel(mul_gpu_function,

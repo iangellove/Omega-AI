@@ -1,11 +1,14 @@
 package com.omega.engine.optimizer;
 
+import java.util.Arrays;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.check.BaseCheck;
 import com.omega.engine.controller.TrainTask;
 import com.omega.engine.gpu.CUDAModules;
@@ -17,6 +20,7 @@ import com.omega.engine.nn.network.OutputsNetwork;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Yolo;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
+import com.omega.rnn.data.OneHotDataLoader;
 import com.omega.rnn.data.RNNDataLoader;
 import com.omega.yolo.data.BaseDataLoader;
 import com.omega.yolo.data.DetectionDataLoader;
@@ -1685,6 +1689,8 @@ public class MBSGDOptimizer extends Optimizer {
 					 * 读取训练数据
 					 */
 					trainingData.loadData(indexs[it], input, label);
+
+//					System.out.println(output2TXT(input, trainingData));
 					
 					/**
 					 * forward
@@ -1734,7 +1740,7 @@ public class MBSGDOptimizer extends Optimizer {
 //					train_loss += this.currentError;
 					
 					output.syncHost();
-
+					
 					float error = this.accuracy(output, label);
 					
 //					if(error > 99) {
@@ -1764,6 +1770,37 @@ public class MBSGDOptimizer extends Optimizer {
 			e.printStackTrace();
 		}
 
+	}
+	
+	public static String output2TXT(Tensor output,RNNDataLoader trainData) {
+		String txt = "";
+//		output.showDMByNumber(0);
+		OneHotDataLoader tr = (OneHotDataLoader) trainData;
+		for(int i = 0;i<output.number;i++) {
+			int charIndex = pickTopN(output.getByNumber(i), 1);
+			char c = tr.dictionaryData[charIndex];
+			txt += c;
+		}
+		return txt;
+	}
+	
+	public static int pickTopN(float[] x,int n) {
+
+		float[] sort = Arrays.copyOf(x, x.length);
+		
+		Arrays.sort(sort);
+
+		float[] topN = Arrays.copyOfRange(sort, sort.length - n, sort.length);
+
+		float v = topN[RandomUtils.getRandomNumber(topN)];
+		
+		for(int i = 0;i<x.length;i++) {
+			if(v == x[i]) {
+				return i;
+			}
+		}
+		
+		return 0;
 	}
 	
 	public void gradClipping(Network network) {
