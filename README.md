@@ -1,52 +1,80 @@
 
 # 自己打造一个深度学习框架 for java
 
-###  前言
+##  前言
 从16年开始利用空余时间研究深度学习的方面，由于工作的原因，最熟悉的编程语言就是java，所以框架的编程语言自然而然就使用了java。自己打造框架的初衷就是为了更加深入了解各个算法、模型、实现的原理和思路。
 ## 框架介绍
 Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经网络，实现训练或测试模型，支持多线程运算，框架目前支持BP神经网络、卷积神经网络、vgg16、resnet、yolo等模型的构建，目前引擎最新版本支持CUDA和CUDNN两种GPU加速方式，关于GPU加速的环境配置与jcuda版本jar包的对应依赖，欢迎添加QQ群([119593195]())进行技术讨论和交流，别忘了给Omega-AI项目点个star，项目需要你们的支持。
-### 源码地址：
+## 源码地址：
 
 [https://gitee.com/iangellove/omega-ai](https://gitee.com/iangellove/omega-ai)
 
 [https://github.com/iangellove/Omega-AI](https://github.com/iangellove/Omega-AI)
 
-### 依赖
+## 依赖
 由于omega-engine-1.0.3加入了jcuda支持，所以1.0.3需要安装与jcuda版本对应的cuda，我在该项目中使用的是jcuda-11.2.0版本的包，那么我cuda需要安装11.2.x版本
 
-### 系统参数
+## 系统参数
 由于训练vgg16模型的参数比较庞大，所以在部署项目的时候需要对jvm内存进行调整.
 调整事例如：-Xmx20480m -Xms20480m -Xmn10240m
 
-### Demo展示
-[基于卷积神经网络mnist手写数字识别](http://120.237.148.121:8011/mnist)
+## Demo展示
+
+### 卷积神经网络系列
+#### [基于卷积神经网络mnist手写数字识别](http://120.237.148.121:8011/mnist)
 
 ![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230413155027.png)
 
-[基于yolo算法目标识别](#yolo-banana-detection-demo)
+### yolo目标识别算法系列
+#### [基于yolo算法目标识别](#yolo-banana-detection-demo)
 
 ![输入图片说明](images/11.png)![输入图片说明](images/49.png)![输入图片说明](images/32.png)![输入图片说明](images/41.png)
 
-[基于yolov3口罩佩戴识别](#yolov3-mask-demo口罩佩戴识别)
+#### [基于yolov3口罩佩戴识别](#yolov3-mask-demo口罩佩戴识别)
 
 ![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093228.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093408.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901094543.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901095142.png)
 
-[基于yolov3安全帽佩戴识别](#yolov3-helmet-demo安全帽佩戴识别)
+#### [基于yolov3安全帽佩戴识别](#yolov3-helmet-demo安全帽佩戴识别)
 
 ![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093438.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093541.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093622.png)![输入图片说明](images/QQ%E6%88%AA%E5%9B%BE20230901093658.png)
 
-[基于yolov7智能冰柜商品识别](#yolov7-sm-demo智能冰柜商品识别)
+#### [基于yolov7智能冰柜商品识别](#yolov7-sm-demo智能冰柜商品识别)
 
 ![输入图片说明](images/sm1.png)![输入图片说明](images/sm2.png)![输入图片说明](images/sm3.png)![输入图片说明](images/sm4.png)
 
-[基于GAN生成对抗神经网络实现生成手写体数字图片](#gan-mnist-demo-生成手写数字)
+### GAN对抗生成神经网络系列
+#### [基于GAN生成对抗神经网络实现生成手写体数字图片](#gan-mnist-demo-生成手写数字)
 
 ![输入图片说明](images/gan-3000.gif)
 
-[基于DCGAN生成对抗神经网络实现生成动漫头像图片](#dcgan-anime-demo-生成动漫头像)
+#### [基于DCGAN生成对抗神经网络实现生成动漫头像图片](#dcgan-anime-demo-生成动漫头像)
 
 ![输入图片说明](images/dcgan-20.gif)
 
+### 时序模型系列
+#### [基于RNN循环神经网络实现小说生成器](#RNN中文小说生成器)
+##### 斗破苍穹前50章原文
+```txt
+    月如银盘，漫天繁星。
+山崖之颠，萧炎斜躺在草地之上，嘴中叼中一根青草，微微嚼动，任由那淡淡的苦涩在嘴中弥漫开来
+举起有些白皙的手掌，挡在眼前，目光透过手指缝隙，遥望着天空上那轮巨大的银月。
+唉想起下午的测试，萧炎轻叹了一口气，懒懒的抽回手掌，双手枕着脑袋，眼神有些恍惚
+十五年了呢低低的自喃声，忽然毫无边际的从少年嘴中轻吐了出来。
+在萧炎的心中，有一个仅有他自己知道的秘密：他并不是这个世界的人，或者说，萧炎的灵魂，并不属于这个世界，他来自一个名叫地球的蔚蓝星球，至于为什么会来到这里，这种离奇经过，他也无法解释，不过在生活了一段时间之后，他还是后知后觉的明白了过来：他穿越了！
+随着年龄的增长，对这块大陆，萧炎也是有了些模糊的了解
+大陆名为斗气大陆，大陆上并没有小说中常见的各系魔法，而斗气，才是大陆的唯一主调！
+在这片大陆上，斗气的修炼，几乎已经在无数代人的努力之下，发展到了巅峰地步，而且由于斗气的不断繁衍，最后甚至扩散到了民间之中，这也导致，斗气，与人类的日常生活，变得息息相关，如此，斗气在大陆中的重要性，更是变得无可替代！
+因为斗气的极端繁衍，同时也导致从这条主线中分化出了无数条斗气修炼之法，所谓手有长短，分化出来的斗气修炼之法，自然也是有强有弱。
+经过归纳统计，斗气大陆将斗气功法的等级，由高到低分为四阶十二级：天.地.玄.黄！
+而每一阶，又分初，中，高三级....................
+```
+##### 生成器效果(pickTopN:N=3,狗屁不通)
+```txt
+    这个故事所造成的后果，便是造就了大批每天东在这样年，前，萧仅有是自己的萧的摇了摇头，道，就等因为炼了，才造就出三的天修炼天，的同样非也是有些有些异的儿一直在倒是，废，的分了，然便想要不定斗气大月月月月的定。透明的，方价脸有多中为不可是。你说完师到后气会让对，我不可以时，他倒是在乎这种高到功法的斗技出其种有些不愿的吸手一道，斗气，萧家现上，是这事，不是这个修有程体的什纸契到这片的小脸！三老，我光在萧战一巴掌，双中，是一个灵到的常识。心吧？望着萧炎那些神有些恍点不想受你的美的，用气忽然，传进你耳枚的属散，另次我前便是对着身空的长出身也只有想起，不，萧炎哥以说的造，的时候，他的道：你修门成为自然是各种天材少年老，一声冷静的望着对面的在一，手中，了下来的事，，你向了角落阵嘲笑，微有着不份还眼角散的，萧炎牙齿在桌面，上下没被等级之人的强化，并且他这老难，还是难去人的说过别的功，而且这几年，还要是分，同，你的要求，这几年实条，听过你有一年的，，你成就是我萧炎的面庞，萧战叹了口沾染鲜之的手一，在白纸之名为斗成为你！你是没搞的鬼？嘿人当失也了口之事发。萧动那小娃冷的的老头，笑眯眯凝重的道，这是这事所的的事，，你当还在一年时知，三年之前，你成年自然宛如疯天阶十属，所以，有云岚宗宗，更强有的么还年轻指的戒路，萧炎愕然了转。萧叔之时，萧炎却才有一星大者，在真真切切的。当药的，庞一瞪，手指惊颤的斗着萧炎心里一好气得俏脸忽些，不炎轻重的：自然也造就了他不的老师，云岚一宗，虽然有家，小脸，那双宛如轻疑般待遇这老然药，所的，这里，有种，都会身到这里许，自会不攻，微！父头一动容。丹有一种条件。首位的上，然必要进道，斗气大陆人，一种个灵魂，竟与什天，今事悔婚之种事，总的记不得萧，也将会被各方势力可惜手间中到时的变，那将老：想家老师？闻言一笑声，竟一手掌萧上，猛的之时响，再让你看看你就身也只清出了岁的事方与大一家，，萧叔叔，今天这种高深的吐了一口气少，那便是以事再次开始修炼中，萧后，萧炎会了一辈子不废物玩区，当然还是在炼黄之气！炼药之术之神，而有的得发了，那便请回好下去。药时，需前说自身属性的灵魂重却，火焰属于他便是一种发愣到斗者更让修！一老人手中有聚药老成年自己这几年，看来到，你以为了天他在云月上片刻下，也并不少在纳低嫣道对明公你，纳兰上然了起着些白老的魔此，你这本我还年轻间，还今的你我已经知为，至九品的先是，萧炎那些回成，无奈的身视了可
+```
+
+#### [基于SEQ2SEQ模型实现英文翻译器](#SEQ2SEQ 英文翻译器)
+![输入图片说明](images/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20240118130345.png)
 
 
 ##  功能介绍
@@ -56,9 +84,23 @@ Fullylayer 全连接层
 
 ConvolutionLayer 卷积层
 
+ConvolutionTransposeLayer 反卷积层
+
 PoolingLayer 池化层(maxpooling,meanpooling)
 
 AVGPooingLayer 全局平均池化层
+
+EmbeddingLayer 向量映射层(将高维度词向量映射成低维度向量)
+
+RNNLayer 循环神经网络层
+
+LSTMLayer 长短记忆网络层
+
+RouteLayer 路由层
+
+UPSampleLayer 上采样层
+
+YoloLayer yolo层
 
 #### 激活函数层
 
@@ -71,6 +113,8 @@ LeakyReluLayer
 TanhLayer
 
 SigmodLayer
+
+SiLULayer
 
 #### 归一化层
 
@@ -87,6 +131,8 @@ Adam
 Adamw
 
 Sgd (sgd with momentum)
+
+RMSProp
 
 #### 训练器
 
@@ -144,7 +190,7 @@ mnist（手写数字数据集）
 
 cifar_10 （cifar_10数据集）
 
-### 附加数据集
+## 附加数据集
 [banana-detection](https://pan.baidu.com/s/1mUr12FJm9OGbsObqfjZ81Q?pwd=jish)
 
 [vailCode](https://pan.baidu.com/s/11wZY9gQQ9OuoViw11IW6BQ?pwd=2rdt)
@@ -155,7 +201,7 @@ cifar_10 （cifar_10数据集）
 
 [自动售货机数据集sm](https://pan.baidu.com/s/10o8IZwD-WmChKtmzzg9q7w?pwd=gt8p )
 
-### 数据集成绩
+## 数据集成绩
 
 iris epoch:5 bp神经网络[3层全连接层]  测试数据集准确率100%
 
@@ -850,6 +896,111 @@ public static void gan_anime() {
 	}
 ```
 
+#### RNN中文小说生成器
+```java
+    public void charRNN() {
+		try {
+			int time = 256;
+			int batchSize = 64;
+			int embedding_dim = 256;
+			int hiddenSize = 512;
+
+			String trainPath = "H:\\rnn_dataset\\dpcc.txt";
+			OneHotDataLoader trainData = new OneHotDataLoader(trainPath, time, batchSize);
+			
+			RNN netWork = new RNN(LossType.softmax_with_cross_entropy, UpdaterType.adamw, time);
+
+			InputLayer inputLayer = new InputLayer(1, 1, trainData.characters);
+			EmbeddingLayer em = new EmbeddingLayer(trainData.characters, embedding_dim);
+			RNNLayer l1 = new RNNLayer(embedding_dim, hiddenSize, time, ActiveType.tanh, false, netWork);
+			RNNLayer l2 = new RNNLayer(hiddenSize, hiddenSize, time, ActiveType.tanh, false, netWork);
+			RNNLayer l3 = new RNNLayer(hiddenSize, hiddenSize, time, ActiveType.tanh, false, netWork);
+			FullyLayer f1 = new FullyLayer(hiddenSize, hiddenSize, false);
+			BNLayer bn = new BNLayer();
+			LeakyReluLayer a1 = new LeakyReluLayer();
+			FullyLayer f2 = new FullyLayer(hiddenSize, trainData.characters, true);
+			netWork.addLayer(inputLayer);
+			netWork.addLayer(em);
+			netWork.addLayer(l1);
+			netWork.addLayer(l2);
+			netWork.addLayer(l3);
+			netWork.addLayer(f1);
+			netWork.addLayer(bn);
+			netWork.addLayer(a1);
+			netWork.addLayer(f2);
+			
+			netWork.CUDNN = true;
+			netWork.learnRate = 0.01f;
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2, 0.001f, batchSize, LearnRateUpdate.POLY, false);
+			optimizer.trainRNN(trainData);
+			
+			int gen_len = 1000;
+			int max_len = 256;
+			String pre_txt = "这个故事所造成的后果，便是造就了大批每天";
+			Tensor input = null;
+			Tensor output = null;
+			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
+			netWork.RUN_MODEL = RunModel.TEST;
+			for(int i = 0;i<gen_len;i++) {
+				netWork.time = input.number;
+				String txt = genTxt(input, output, netWork, trainData, max_len);
+				if(netWork.time > 1) {
+					pre_txt += txt.substring(input.number - 1, input.number);
+				}else {
+					pre_txt += txt;
+				}
+				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
+			}
+			System.out.println(pre_txt);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+```
+
+#### SEQ2SEQ 英文翻译器
+```java
+    public void seq2seq() {
+		try {
+			int batchSize = 128;
+			int en_em = 64;
+			int de_em = 128;
+			int en_hidden = 256;
+			int de_hidden = 256;
+			
+			String trainPath = "H:\\rnn_dataset\\translate1000.csv";
+			IndexDataLoader trainData = new IndexDataLoader(trainPath, batchSize);
+			
+			Seq2Seq network = new Seq2Seq(LossType.softmax_with_cross_entropy, UpdaterType.adamw,
+					trainData.max_en, trainData.max_ch - 1, en_em, en_hidden, trainData.en_characters, de_em, de_hidden, trainData.ch_characters);
+			network.CUDNN = true;
+			network.learnRate = 0.01f;
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 100, 0.001f, LearnRateUpdate.SMART_HALF, false);
+			optimizer.lr_step = new int[] {100,200};
+			optimizer.trainRNN(trainData);
+
+			Scanner scanner = new Scanner(System.in);
+			while (true) {
+				
+				System.out.println("请输入英文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase();
+				System.out.println(input_txt);
+				optimizer.predict(trainData, input_txt);	
+			}
+			scanner.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+```
 
 ## 未来可期
 
@@ -860,9 +1011,9 @@ public static void gan_anime() {
 支持动态调参，可视化训练
 
 
-### 彩蛋
+## 彩蛋
 
-## 基于神经网络+遗传算法实现AI赛车游戏
+### 基于神经网络+遗传算法实现AI赛车游戏
 
 http://119.3.123.193:8011/AICar
 
