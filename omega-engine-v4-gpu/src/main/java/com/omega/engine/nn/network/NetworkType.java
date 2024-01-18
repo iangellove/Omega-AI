@@ -11,6 +11,7 @@ public enum NetworkType {
 	CNN("CNN"),
 	ANN("ANN"),
 	RNN("RNN"),
+	SEQ2SEQ("SEQ2SEQ"),
 	YOLO("YOLO");
 	
 	NetworkType(String key){

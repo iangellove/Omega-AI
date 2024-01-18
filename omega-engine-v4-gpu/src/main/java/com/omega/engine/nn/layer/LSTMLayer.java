@@ -16,15 +16,15 @@ import com.omega.engine.nn.network.RNN;
  * LSTM
  * @author Administrator
  * forgot gate
- * ft = sigmoid(Wf * ht-1 + bhf + Uf * xt + bxf)
+ * ft = sigmoid(Wf * ht-1 + Uf * xt + bf)
  * input gate
- * it = sigmoid(Wi * ht-1 + bhi + Ui * xt + bxi)
+ * it = sigmoid(Wi * ht-1 + Ui * xt + bi)
  * candidate memory
- * gt = tanh(Wg * ht-1 + bhg + Ug * xt + bxg)
+ * gt = tanh(Wg * ht-1 + Ug * xt + bg)
  * cell status
  * ct = ct-1 ⊙ ft + it ⊙ gt
  * output gate
- * ot = sigmoid(Wo * ht-1 + bho + Uo * xt + bxo)
+ * ot = sigmoid(Wo * ht-1 + Uo * xt + bo)
  * hidden status
  * ht = ot ⊙ tanh(ct)
  */
@@ -66,19 +66,19 @@ public class LSTMLayer extends Layer{
 
 	/**
 	 * forgot gate
-	 * ft = sigmoid(Wf * ht-1 + bhf + Uf * xt + bxf)
+	 * ft = sigmoid(Wf * ht-1 + Uf * xt + bf)
 	 */
 	private Tensor f;
 	
 	/**
 	 * input gate
-	 * it = sigmoid(Wi * ht-1 + bhi + Ui * xt + bxi)
+	 * it = sigmoid(Wi * ht-1 + Ui * xt + bi)
 	 */
 	private Tensor i;
 	
 	/**
 	 * candidate memory
-	 * gt = tanh(Wg * ht-1 + bhg + Ug * xt + bxg)
+	 * gt = tanh(Wg * ht-1 + Ug * xt + bg)
 	 */
 	private Tensor g;
 
@@ -90,7 +90,7 @@ public class LSTMLayer extends Layer{
 	
 	/**
 	 * output gate
-	 * ot = sigmoid(Wo * ht-1 + bho + Uo * xt + bxo)
+	 * ot = sigmoid(Wo * ht-1 + Uo * xt + bo)
 	 */
 	private Tensor o;
 
@@ -180,8 +180,8 @@ public class LSTMLayer extends Layer{
 			this.g = Tensor.createTensor(this.g, number, 1, 1, hiddenSize, true);
 			this.c = Tensor.createTensor(this.c, number, 1, 1, hiddenSize, true);
 			this.o = Tensor.createTensor(this.o, number, 1, 1, hiddenSize, true);
-			this.temp = Tensor.createTensor(this.temp, number, 1, 1, hiddenSize, true);
 			this.h = Tensor.createTensor(this.h, number, 1, 1, hiddenSize, true);
+			this.temp = Tensor.createTensor(this.temp, number, 1, 1, hiddenSize, true);
 		}
 	}
 
@@ -213,14 +213,11 @@ public class LSTMLayer extends Layer{
 		// TODO Auto-generated method stub
 		int batch = this.number / this.time;
 		int onceSize = batch * this.h.getOnceSize();
-		/**
-		 * ft = f(W * xt + bx + U * fht-1 + bh)
-		 * 
-		 */
+
 		if(this.input != null) {
 			
-			c.clear();
-			h.clear();
+			c.clearGPU();
+//			h.clearGPU();
 			
 			for(int t = 0;t<time;t++) {
 				
@@ -253,7 +250,9 @@ public class LSTMLayer extends Layer{
 				 * ct = ct-1 ⊙ ft + it ⊙ gt
 				 */
 				TensorOP.mul(ia.getOutput(), ga.getOutput(), temp, t * onceSize, onceSize);
-				TensorOP.mul(fa.getOutput(), c, c, t * onceSize, (t - 1) * onceSize, t * onceSize, onceSize);
+				if(t > 0) {
+					TensorOP.mul(c, fa.getOutput(), c, (t - 1) * onceSize, t * onceSize, t * onceSize, onceSize);
+				}
 				TensorOP.add(temp, c, c, t * onceSize, onceSize);
 				
 				/**
@@ -268,6 +267,10 @@ public class LSTMLayer extends Layer{
 		}
 
 		this.output = this.h;
+		
+//		this.input.showDMByNumber(0);
+//		this.output.showDMByNumber(0);
+		
 	}
 
 	@Override
@@ -292,8 +295,8 @@ public class LSTMLayer extends Layer{
 		ghl.clear();
 		ohl.clear();
 		
-		this.h_diff.clear();
-		this.c_diff.clear();
+		this.h_diff.clearGPU();
+		this.c_diff.clearGPU();
 
 		for(int t = time-1;t>=0;t--) {
 

@@ -270,6 +270,10 @@ public class Tensor implements Serializable{
 		return new int[] {this.number,this.channel,this.height,this.width};
 	}
 	
+	public void showShape() {
+		System.out.println(JsonUtils.toJson(shape()));
+	}
+	
 	public int getNumber() {
 		return number;
 	}

@@ -1308,6 +1308,29 @@ public abstract class Optimizer {
 		return error;
 	}
 	
+	public float accuracy(Tensor output,Tensor labelData,int time,int batchSize) {
+		
+		float error = 0.0f;
+		float trueCount = 0;
+		for(int n = 0;n<batchSize;n++) {
+			boolean allRight = true;
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(t * batchSize + n));
+				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(t * batchSize + n));
+				if(labelIndex != predictIndex) {
+					allRight = false;
+				}
+			}
+			if(allRight) {
+				trueCount++;
+			}
+		}
+		
+		error = trueCount / batchSize * 100;
+
+		return error;
+	}
+	
 	public float testLoss(Tensor output,Tensor labelData) {
 		
 		float[] data = new float[output.number];

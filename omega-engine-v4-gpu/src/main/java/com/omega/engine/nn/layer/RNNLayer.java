@@ -2,7 +2,6 @@ package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.active.ActiveType;
 import com.omega.engine.ad.op.TensorOP;
@@ -10,11 +9,11 @@ import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
 import com.omega.engine.nn.layer.active.LeakyReluLayer;
 import com.omega.engine.nn.layer.active.ReluLayer;
-import com.omega.engine.nn.layer.active.SiLULayer;
 import com.omega.engine.nn.layer.active.SigmodLayer;
 import com.omega.engine.nn.layer.active.TanhLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RNN;
+import com.omega.engine.nn.network.Seq2Seq;
 
 /**
  * Recurrent Layer
@@ -40,6 +39,8 @@ public class RNNLayer extends Layer{
 	private ActiveFunctionLayer outputActive;
 	
 	private Tensor h;
+	
+	private Tensor h_0;
 	
 	private BaseKernel baseKernel;
 	
@@ -119,9 +120,18 @@ public class RNNLayer extends Layer{
 		RNN network = (RNN) this.network;
 		this.time = network.time;
 		if(this.h == null || this.h.number != this.number) {
-//			this.h = new Tensor(this.number, 1, 1, hiddenSize, true);
 			this.h = Tensor.createTensor(this.h, this.number, 1, 1, hiddenSize, true);
 		}
+	}
+	
+	public void init(int time,int number) {
+		// TODO Auto-generated method stub
+		this.number = number;
+		this.time = time;
+		if(this.h == null || this.h.number != this.number) {
+			this.h = Tensor.createTensor(this.h, this.number, 1, 1, hiddenSize, true);
+		}
+		
 	}
 
 	@Override
@@ -152,8 +162,12 @@ public class RNNLayer extends Layer{
 				
 				inputLayer.forward(this.input, batch, t);
 				
-				selfLayer.forward(this.h, batch, t - 1, t);
-				
+				if(t == 0 && h_0 != null) {
+					selfLayer.forward(h_0, batch);
+				}else {
+					selfLayer.forward(this.h, batch, t - 1, t);
+				}
+
 				TensorOP.add(inputLayer.getOutput(), selfLayer.getOutput(), this.h, t * onceSize, onceSize);
 				
 				outputActive.forward(this.h, batch, t);
@@ -183,14 +197,18 @@ public class RNNLayer extends Layer{
 		inputLayer.clear();
 		selfLayer.clear();
 		for(int t = time-1;t>=0;t--) {
-
+			
 			if(t < time - 1) {
 				baseKernel.axpy_gpu(selfLayer.diff, this.delta, onceSize, 1, t * onceSize, 1, t * onceSize, 1);
 			}
 			
 			outputActive.back(this.delta, batch, t);
 			
-			selfLayer.back(outputActive.diff, batch, t, t, t - 1);
+			if(t == 0 && h_0 != null) {
+				selfLayer.back(outputActive.diff, h_0, h_0.getGrad(), batch, t);
+			}else {
+				selfLayer.back(outputActive.diff, batch, t, t, t - 1);
+			}
 
 			inputLayer.back(outputActive.diff, batch, t);
 			
@@ -211,6 +229,22 @@ public class RNNLayer extends Layer{
 		 * 参数初始化
 		 */
 		this.init();
+		/**
+		 * 设置输入
+		 */
+		this.setInput();
+		/**
+		 * 计算输出
+		 */
+		this.output();
+	}
+	
+	public void forward(int time,int number) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init(time, number);
 		/**
 		 * 设置输入
 		 */
@@ -253,6 +287,42 @@ public class RNNLayer extends Layer{
 		 * 设置输入
 		 */
 		this.setInput(inpnut);
+		/**
+		 * 计算输出
+		 */
+		this.output();
+		
+	}
+	
+	public void forward(Tensor input,Tensor hidden,int time) {
+		// TODO Auto-generated method stub
+		this.h_0 = hidden;
+		/**
+		 * 参数初始化
+		 */
+		this.init(time, input.number);
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		/**
+		 * 计算输出
+		 */
+		this.output();
+		
+	}
+	
+	public void forwardHidden(Tensor hidden) {
+		// TODO Auto-generated method stub
+		this.h = hidden;
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+		/**
+		 * 设置输入
+		 */
+		this.setInput();
 		/**
 		 * 计算输出
 		 */
@@ -315,6 +385,10 @@ public class RNNLayer extends Layer{
 	public void backTemp() {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public Tensor getH() {
+		return h_0;
 	}
 
 }

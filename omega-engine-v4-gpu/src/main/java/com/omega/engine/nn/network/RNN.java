@@ -102,7 +102,7 @@ public class RNN extends Network {
 		
 		return this.getOuput();
 	}
-
+	
 	@Override
 	public void back(Tensor lossDiff) {
 		// TODO Auto-generated method stub

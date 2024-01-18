@@ -39,7 +39,7 @@ public class CharRNN {
 			
 			int hiddenSize = 512;
 			
-			String trainPath = "H:\\rnn_dataset\\dpcc50.txt";
+			String trainPath = "H:\\rnn_dataset\\dpcc.txt";
 			
 //			String trainPath = "H:\\rnn_dataset\\shakespeare.txt";
 			
@@ -129,7 +129,7 @@ public class CharRNN {
 			
 			int hiddenSize = 512;
 			
-			String trainPath = "H:\\rnn_dataset\\dpcc.txt";
+			String trainPath = "H:\\rnn_dataset\\dpcc50.txt";
 			
 //			String trainPath = "H:\\rnn_dataset\\shakespeare.txt";
 			
@@ -141,7 +141,7 @@ public class CharRNN {
 			
 			EmbeddingLayer em = new EmbeddingLayer(trainData.characters, embedding_dim);
 
-			LSTMLayer l1 = new LSTMLayer(embedding_dim, hiddenSize, time, false, netWork);
+			LSTMLayer l1 = new LSTMLayer(embedding_dim, hiddenSize, time, true, netWork);
 			
 			FullyLayer f1 = new FullyLayer(hiddenSize, hiddenSize, false);
 			BNLayer bn = new BNLayer();
@@ -159,9 +159,9 @@ public class CharRNN {
 			
 			netWork.CUDNN = true;
 			
-			netWork.learnRate = 0.001f;
+			netWork.learnRate = 0.01f;
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2, 0.001f, batchSize, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 5, 0.001f, batchSize, LearnRateUpdate.CONSTANT, false);
 
 //			long start = System.currentTimeMillis();
 			
@@ -170,7 +170,7 @@ public class CharRNN {
 			int gen_len = 1000;
 			int max_len = 100;
 			
-			String pre_txt = "这个故事所造成的后果，便是造就了大批";
+			String pre_txt = "萧";
 			
 //			String pre_txt = "All:";
 			
@@ -185,13 +185,13 @@ public class CharRNN {
 			for(int i = 0;i<gen_len;i++) {
 				netWork.time = input.number;
 				String txt = genTxt(input, output, netWork, trainData, max_len);
-//				System.out.println(txt);
 				if(netWork.time > 1) {
 					pre_txt += txt.substring(input.number - 1, input.number);
 				}else {
 					pre_txt += txt;
 				}
 				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
+//				System.out.println(pre_txt);
 			}
 			System.out.println(pre_txt);
 			
@@ -427,13 +427,13 @@ public class CharRNN {
 			
 			int rnnLayerNum = 1;
 			
-			float dropout = 0.0f;
+			float dropout = 0.5f;
 			
 			boolean bidirectional = false;
 			
 			int rnnMode = 2;
 			
-			String trainPath = "H:\\rnn_dataset\\dpcc.txt";
+			String trainPath = "H:\\rnn_dataset\\dpcc50.txt";
 			
 			OneHotDataLoader trainData = new OneHotDataLoader(trainPath, time, batchSize);
 			
@@ -463,7 +463,7 @@ public class CharRNN {
 			
 			netWork.learnRate = 0.001f;
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 			
 			optimizer.lr_step = new int[] {5, 8, 10};
 			
@@ -474,7 +474,7 @@ public class CharRNN {
 			int gen_len = 1000;
 			int max_len = 100;
 			
-			String pre_txt = "这个故事所造成的后果，便是造就了大批每天";
+			String pre_txt = "萧";
 			
 			netWork.RUN_MODEL = RunModel.TEST;
 			
@@ -539,6 +539,7 @@ public class CharRNN {
 	public static String genTxt(Tensor input,Tensor output,RNN network,OneHotDataLoader trainData,int maxLength) {
 		output = network.forward(input);
 		output.syncHost();
+//		output.showDMByNumber(0);
 		return output2TXT(output, trainData);
 	}
 	
@@ -587,11 +588,11 @@ public class CharRNN {
 			
 //			t.RNN_CUDNN();
 			
-//			t.charRNN();
+			t.charRNN();
 			
 //			t.charRNN2();
 			
-			t.charRNN3();
+//			t.charRNN3();
 			
 //			t.createTxtData("这废物真是把家族的脸都给丢光了");
 			

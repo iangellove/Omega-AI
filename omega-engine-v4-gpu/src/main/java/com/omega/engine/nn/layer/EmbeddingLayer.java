@@ -60,6 +60,15 @@ public class EmbeddingLayer extends Layer{
 		}
 	}
 	
+	public void init(Tensor input) {
+		// TODO Auto-generated method stub
+		this.number = input.number;
+		if(this.output == null || this.number != this.output.number){
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+		}
+	}
+	
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub
@@ -196,7 +205,7 @@ public class EmbeddingLayer extends Layer{
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(inpnut);
 		/**
 		 * 设置输入
 		 */

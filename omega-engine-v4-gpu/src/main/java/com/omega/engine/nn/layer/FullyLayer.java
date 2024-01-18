@@ -98,7 +98,14 @@ public class FullyLayer extends Layer{
 		this.number = this.network.number;
 		if(this.output == null || this.number != this.output.number){
 			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
-//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+		}
+	}
+	
+	public void init(Tensor input) {
+		// TODO Auto-generated method stub
+		this.number = input.number;
+		if(this.output == null || this.number != this.output.number){
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 	}
 	
@@ -167,6 +174,28 @@ public class FullyLayer extends Layer{
 	}
 	
 	public void output(int batch,int inputStep,int step) {
+		
+		// TODO Auto-generated method stub
+		
+		if(this.input != null) {
+			
+			if(inputStep >= 0) {
+
+				GPUOP.getInstance().multiplyFloat(batch, oWidth, width, input.getGpuData().withByteOffset(inputStep * batch * input.getOnceSize() * Sizeof.FLOAT),
+						weight.getGpuData(), output.getGpuData().withByteOffset(step * batch * output.getOnceSize() * Sizeof.FLOAT),
+						cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
+
+			}
+			
+			if(hasBias) {
+				kernel.addBias(output, bias, batch, step);
+			}
+			
+		}
+		
+	}
+	
+	public void output(Tensor input,int batch,int inputStep,int step) {
 		
 		// TODO Auto-generated method stub
 		
@@ -292,13 +321,12 @@ public class FullyLayer extends Layer{
 			GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, batch, input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT),
 					delta.getGpuData().withByteOffset(inputStep * batch * delta.getOnceSize() * Sizeof.FLOAT), diffW.getGpuData(),
 					cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 1.0f);
-		}
+		
 
-		if(hasBias) {
-			kernel.backwardBias(diffB, delta, batch, inputStep);
-		}
+			if(hasBias) {
+				kernel.backwardBias(diffB, delta, batch, inputStep);
+			}
 
-		if(step >= 0) {
 			/**
 			 * diff = delta * weightT
 			 * number * ow
@@ -309,6 +337,36 @@ public class FullyLayer extends Layer{
 					weight.getGpuData(), diff.getGpuData().withByteOffset(step * batch * diff.getOnceSize() * Sizeof.FLOAT),
 					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
 		}
+
+	}
+	
+	public void diff(Tensor input,Tensor diff,int batch,int deltaStep) {
+		// TODO Auto-generated method stub
+		
+		/**
+		 * deltaW = inputT * delta
+		 * int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta
+		 * number * w
+		 * number * ow
+		 * m = w,k = number,n = ow
+		 */
+		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, batch, input.getGpuData(),
+				delta.getGpuData().withByteOffset(deltaStep * batch * delta.getOnceSize() * Sizeof.FLOAT), diffW.getGpuData(),
+				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 1.0f);
+
+		if(hasBias) {
+			kernel.backwardBias(diffB, delta, batch, deltaStep);
+		}
+
+		/**
+		 * diff = delta * weightT
+		 * number * ow
+		 * w * ow
+		 * m = number,k = ow,n = w
+		 */
+		GPUOP.getInstance().multiplyFloat(batch, this.width, this.oWidth, delta.getGpuData().withByteOffset(deltaStep * batch * delta.getOnceSize() * Sizeof.FLOAT),
+				weight.getGpuData(), diff.getGpuData(),
+				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
 
 	}
 	
@@ -477,7 +535,7 @@ public class FullyLayer extends Layer{
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(inpnut);
 		/**
 		 * 设置输入
 		 */
@@ -493,7 +551,7 @@ public class FullyLayer extends Layer{
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 设置输入
 		 */
@@ -518,6 +576,19 @@ public class FullyLayer extends Layer{
 		 * 计算输出
 		 */
 		this.output(batch, inputStep, step);
+	}
+	
+	public void forward(Tensor input,int batch) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+
+		/**
+		 * 计算输出
+		 */
+		this.output(input, batch, 0, 0);
 	}
 
 	@Override
@@ -590,6 +661,25 @@ public class FullyLayer extends Layer{
 		 * 计算梯度
 		 */
 		this.diff(batch, inputStep, outputStep, step);
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+
+	}
+	
+	public void back(Tensor delta,Tensor input,Tensor diff,int batch,int deltaStep) {
+		// TODO Auto-generated method stub
+
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff(input, diff, batch, deltaStep);
 		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();

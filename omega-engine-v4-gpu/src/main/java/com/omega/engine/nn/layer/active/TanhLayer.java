@@ -44,6 +44,13 @@ public class TanhLayer extends ActiveFunctionLayer {
 		}
 	}
 	
+	public void init(Tensor input) {
+		super.init(input);
+		if(kernel == null) {
+			kernel = new TanhKernel();
+		}
+	}
+	
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
@@ -172,16 +179,16 @@ public class TanhLayer extends ActiveFunctionLayer {
 	}
 
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 设置输入
 		 */
-		this.setInput(inpnut);
+		this.setInput(input);
 		/**
 		 * 计算输出
 		 */
@@ -211,7 +218,7 @@ public class TanhLayer extends ActiveFunctionLayer {
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 设置输入
 		 */

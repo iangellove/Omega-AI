@@ -22,7 +22,7 @@ import com.omega.gan.utils.ImageDataLoader;
 
 public class DCGAN {
 	
-public static CNN NetG(int ngf,int nz) {
+	public static CNN NetG(int ngf,int nz) {
 		
 		CNN netWork = new CNN(LossType.BCE, UpdaterType.adamw);
 

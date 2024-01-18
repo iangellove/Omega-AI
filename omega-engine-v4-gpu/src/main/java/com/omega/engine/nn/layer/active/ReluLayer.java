@@ -7,6 +7,7 @@ import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
+import com.omega.engine.nn.layer.active.gpu.LeakyReluKernel;
 import com.omega.engine.nn.layer.active.gpu.ReluKernel;
 import com.omega.engine.nn.network.Network;
 
@@ -33,6 +34,13 @@ public class ReluLayer extends ActiveFunctionLayer {
 	
 	public void init() {
 		super.init();
+		if(kernel == null) {
+			kernel = new ReluKernel();
+		}
+	}
+	
+	public void init(Tensor input) {
+		super.init(input);
 		if(kernel == null) {
 			kernel = new ReluKernel();
 		}
@@ -179,7 +187,7 @@ public class ReluLayer extends ActiveFunctionLayer {
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 设置输入
 		 */
@@ -213,7 +221,7 @@ public class ReluLayer extends ActiveFunctionLayer {
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 设置输入
 		 */

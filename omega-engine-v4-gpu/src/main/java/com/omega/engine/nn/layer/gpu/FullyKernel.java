@@ -224,7 +224,7 @@ public class FullyKernel extends BaseKernel{
 	            );
 
 			cuLaunchKernel(back_function,
-		            this.CAFFE_GET_BLOCKS(delta.getWidth()),  1, 1,      // Grid dimension
+		            this.CAFFE_GET_BLOCKS(batch * delta.getWidth()),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            kernelBackParameters, null // Kernel- and extra parameters
