@@ -897,7 +897,7 @@ public static void gan_anime() {
 	}
 ```
 
-#### RNN中文小说生成器
+#### RNN 中文小说生成器
 ```java
     public void charRNN() {
 		try {
