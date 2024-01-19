@@ -110,8 +110,9 @@ SiLULayer
 
 BNLayer (Batch Normalization)
 
-DropoutLayer
+#### 正则化
 
+DropoutLayer
 #### 优化器
 
 Momentum
