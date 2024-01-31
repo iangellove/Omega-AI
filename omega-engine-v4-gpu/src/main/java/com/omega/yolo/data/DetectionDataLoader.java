@@ -114,7 +114,29 @@ public class DetectionDataLoader extends BaseDataLoader{
 	
 	public void init() {
 		loadFileCount();
-		loadLabelData();
+		if(this.labelPath != null) {
+			loadLabelData();
+		}else {
+			loadFileName();
+		}
+	}
+	
+	public void loadFileName() {
+		try {
+			
+			File file = new File(imgDirPath);
+			
+			if(file.exists() && file.isDirectory()) {
+				String[] filenames = file.list();
+				for(int i = 0;i<idxSet.length;i++) {
+					this.idxSet[i] = filenames[i].split("\\.")[0];
+				}
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
 	}
 	
 	public void loadFileCount() {

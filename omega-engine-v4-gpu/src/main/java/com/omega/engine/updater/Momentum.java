@@ -5,7 +5,7 @@ import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.normalization.BNLayer;
+import com.omega.engine.nn.layer.normalization.NormalizationLayer;
 
 /**
  * Momentum
@@ -112,7 +112,7 @@ public class Momentum extends Updater {
 	}
 
 	@Override
-	public void updateForBN(BNLayer layer) {
+	public void updateForBN(NormalizationLayer layer) {
 //		// TODO Auto-generated method stub
 //		/**
 //		 * init

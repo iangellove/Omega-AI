@@ -2,11 +2,10 @@ package com.omega.engine.nn.layer.normalization;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
-import com.omega.engine.gpu.cudnn.BNCudnnKernel;
+import com.omega.engine.gpu.cudnn.InstanceNormalizationCudnnKernel;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.BNBaseKernel;
-import com.omega.engine.nn.layer.normalization.gpu.BNKernel3;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
@@ -22,7 +21,7 @@ import com.omega.engine.updater.UpdaterFactory;
  * zi = (xi - mean) / std
  * yi = gama * zi + beta
  */
-public class BNLayer extends NormalizationLayer {
+public class InstanceNormaliztionLayer extends NormalizationLayer {
 	
 	public BNType bnType = null;
 
@@ -33,24 +32,21 @@ public class BNLayer extends NormalizationLayer {
 	private int meanNum = 0;
 	
 	public BNBaseKernel kernel;
-	
-//	private BNCudnnKernel kernel;
 
-	
 	public boolean hasRuning = true;
 	
-	public BNLayer() {
+	public InstanceNormaliztionLayer() {
 //		initParam();
 		this.hasParams = true;
 	}
 	
-	public BNLayer(Layer preLayer) {
+	public InstanceNormaliztionLayer(Layer preLayer) {
 		this.setPreLayer(preLayer);
 		this.hasParams = true;
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
-	public BNLayer(Network network) {
+	public InstanceNormaliztionLayer(Network network) {
 		this.network = network;
 	}
 	
@@ -70,17 +66,7 @@ public class BNLayer extends NormalizationLayer {
 			this.oChannel = this.channel;
 			this.oHeight = this.height;
 			this.oWidth = this.width;
-			if(this.preLayer.getLayerType() == LayerType.conv) {
-				this.setBnType(BNType.conv_bn);
-				this.meanNum = this.channel;
-			}else if(this.preLayer.getLayerType() == LayerType.full){
-				this.setBnType(BNType.fully_bn);
-				this.meanNum = this.channel * this.height * this.width;
-			}else if(this.preLayer.getLayerType() == LayerType.conv_transpose) {
-				this.setBnType(BNType.conv_bn);
-				this.meanNum = this.channel;
-			}
-			
+			this.meanNum = this.channel;
 		}
 		
 		if(this.gamma == null || this.beta == null) {
@@ -88,8 +74,6 @@ public class BNLayer extends NormalizationLayer {
 			this.beta = new Tensor(1, 1, 1, meanNum, true);
 			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
 			this.diffBeta = new Tensor(1, 1, 1, meanNum, true);
-			this.runingMean = new Tensor(1, 1, 1, this.meanNum, true);
-			this.runingVar = new Tensor(1, 1, 1, this.meanNum, true);
 		}
 
 		if(this.output == null || this.number != this.output.number) {
@@ -98,13 +82,7 @@ public class BNLayer extends NormalizationLayer {
 		
 		if(kernel == null) {
 			if(this.network.CUDNN) {
-				kernel = new BNCudnnKernel(this.getBnType(), channel, height, width, this.runingMean, this.runingVar);
-			}else {
-				if(this.getBnType() == BNType.fully_bn) {
-					kernel = new BNKernel3(width, 1, 1, this.runingMean, this.runingVar);
-				}else {
-					kernel = new BNKernel3(channel, height, width, this.runingMean, this.runingVar);
-				}
+				kernel = new InstanceNormalizationCudnnKernel(channel, height, width);
 			}
 		}
 		
@@ -123,7 +101,7 @@ public class BNLayer extends NormalizationLayer {
 	}
 	
 	public void initBack(Tensor diff) {
-		this.diff = diff;
+		this.diff = new Tensor(number, channel, height, width, true);
 	}
 
 	@Override
@@ -133,7 +111,7 @@ public class BNLayer extends NormalizationLayer {
 //		System.out.println(this.index+":"+output.number+":"+output.channel+":"+output.height+":"+output.width);
 //		System.out.println(JsonUtils.toJson(gamma.shape()));
 //		System.out.println(JsonUtils.toJson(beta.shape()));
-		kernel.forward(this.network.RUN_MODEL, gamma, beta, input, output);
+		kernel.forward(null, gamma, beta, input, output);
 //		
 //		System.out.println("bn-output:");
 //		output.showDM();
@@ -233,7 +211,7 @@ public class BNLayer extends NormalizationLayer {
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.bn;
+		return LayerType.instance_normal;
 	}
 
 	@Override
@@ -269,7 +247,7 @@ public class BNLayer extends NormalizationLayer {
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 
 		/**
 		 * 设置输入
@@ -295,9 +273,9 @@ public class BNLayer extends NormalizationLayer {
 		 */
 		this.diff();
 		
-		if(this.network.GRADIENT_CHECK) {
+//		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
-		}
+//		}
 	}
 
 	@Override
@@ -305,5 +283,68 @@ public class BNLayer extends NormalizationLayer {
 		// TODO Auto-generated method stub
 		
 	}
+	
+	public void init(Tensor input) {
 
+		this.number = input.number;
+		
+		if(this.bnType == null) {
+			this.channel = input.channel;
+			this.height = input.height;
+			this.width = input.width;
+			this.oChannel = this.channel;
+			this.oHeight = this.height;
+			this.oWidth = this.width;
+			this.meanNum = number * this.channel;
+		}
+		
+		if(this.gamma == null || this.beta == null) {
+			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
+			this.beta = new Tensor(1, 1, 1, meanNum, true);
+			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+			this.diffBeta = new Tensor(1, 1, 1, meanNum, true);
+		}
+
+		if(this.output == null || this.number != this.output.number) {
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+		}
+		
+		if(kernel == null) {
+//			if(this.network.CUDNN) {
+				kernel = new InstanceNormalizationCudnnKernel(channel, height, width);
+//			}
+		}
+		
+	}
+	
+	public static void main(String[] args) {
+		
+		int number = 2;
+		int channel = 3;
+		int height = 4;
+		int width = 4;
+		int inputSize = number * channel * height * width;
+
+		float[] input_data = MatrixUtils.order(inputSize, 0.0f, 0.1f);
+		Tensor input = new Tensor(number, channel, height, width, input_data, true);
+		
+		float[] delta_data = MatrixUtils.order(inputSize, 0.0f, 0.1f);
+		Tensor delta = new Tensor(number, channel, height, width, delta_data, true);
+		
+		InstanceNormaliztionLayer inl = new InstanceNormaliztionLayer();
+		input.showDM();
+		inl.forward(input);
+		input.showShape();
+		System.out.println(input.dataLength);
+		System.out.println(inl.getOutput().dataLength);
+		inl.getOutput().showShape();
+		inl.getOutput().showDM();
+		
+		inl.back(delta);
+		inl.diff.showDM();
+		inl.diffBeta.showDM();
+		inl.diffGamma.showDM();
+		
+	}
+	
 }

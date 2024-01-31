@@ -3,6 +3,7 @@ package com.omega.yolo.utils;
 import java.util.List;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.yolo.model.YoloDetection;
 
 public class YoloUtils {
@@ -260,8 +261,7 @@ public class YoloUtils {
 		if(output.isHasGPU()) {
 			output.syncHost();
 		}
-//		System.out.println(JsonUtils.toJson(output.getByNumber(0)));
-		
+	
 		int count = 0;
 
 		for(int b = 0;b<output.number;b++) {

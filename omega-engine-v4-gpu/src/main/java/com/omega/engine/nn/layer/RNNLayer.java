@@ -1,7 +1,6 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.active.ActiveType;
 import com.omega.engine.ad.op.TensorOP;
@@ -13,7 +12,6 @@ import com.omega.engine.nn.layer.active.SigmodLayer;
 import com.omega.engine.nn.layer.active.TanhLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RNN;
-import com.omega.engine.nn.network.Seq2Seq;
 
 /**
  * Recurrent Layer

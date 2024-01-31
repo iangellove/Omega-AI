@@ -14,6 +14,7 @@ import java.util.Map;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -1267,6 +1268,44 @@ public class YoloImageUtils {
 		
 	}
 	
+	public static void testXML(String path) {
+		
+		try {
+			
+			File file = new File(path);
+//			System.out.println(file.exists());
+			if(file.exists()) {
+
+				Document doc = XmlParser.DB().parse(file);
+				
+				Element docEle = doc.getDocumentElement();
+				NamedNodeMap am = docEle.getAttributes();
+				System.out.println(am.getLength());
+				for(int i = 0;i<am.getLength();i++) {
+					System.out.println(am.item(i).getNodeName());
+				}
+//				NodeList objList = docEle.getElementsByTagName("saml2:AttributeStatement");
+//				for(int i = 0;i<objList.getLength();i++) {
+//					Element a = (Element) objList.item(i);
+//					System.out.println(a.getAttributeNode("Name").getChildNodes().getLength());
+////					System.out.println(a.getAttributeNode("Name").getChildNodes().item(0).getTextContent());
+//				}
+				
+//				docEle.getElementsByTagNameNS(namespaceURI, localName);
+//				
+//				for(int i = 0;i<objList.getLength();i++) {
+//					System.out.println(objList.item(i).getChildNodes().item(0).getChildNodes().item(0).getNodeValue());
+//				}
+				
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public static void main(String[] args) {
 		
 //		String testPath = "I:\\000005.jpg";
@@ -1307,17 +1346,21 @@ public class YoloImageUtils {
 //		image2YoloFormCSV(imgDir, labelPath, labelSet, imgOutDir, bboxPath, YoloVersion.yolov3_xyxy);
 		
 //		String rootPath = "H:\\voc\\test";
-		String rootPath = "H:\\voc\\sm\\VOC";
-		String imgDir = rootPath + "\\JPEGImages";
-		String labelDir = rootPath + "\\Annotations";
-		String labelPath = rootPath + "\\labels.txt";
-		String bboxPath = rootPath + "\\bbox.txt";
+//		String rootPath = "H:\\voc\\yz\\seal";
+//		String imgDir = rootPath + "\\Images";
+//		String labelDir = rootPath + "\\Annotations";
+//		String labelPath = rootPath + "\\labels.txt";
+//		String bboxPath = rootPath + "\\bbox.txt";
 //		String labelPath = rootPath + "\\train_labels.csv";
 //		String[] labelSet = new String[] {"none","white","yellow","blue","red"};
 
-		xml2Yolo(imgDir, labelDir, labelPath, bboxPath);
+//		xml2Yolo(imgDir, labelDir, labelPath, bboxPath);
 		
 //		csv2Yolo(imgDir, labelPath, bboxPath, labelSet);
+		
+		String xmlPath = "D:\\1.xml";
+		testXML(xmlPath);
+		
 	}
 	
 }

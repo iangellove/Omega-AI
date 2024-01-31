@@ -1,30 +1,24 @@
 package com.omega.engine.nn.network;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.active.ActiveType;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
-import com.omega.engine.nn.layer.BaseRNNLayer;
 import com.omega.engine.nn.layer.EmbeddingLayer;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.RNNBlockLayer;
+import com.omega.engine.nn.layer.RNNLayer;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
-import com.omega.engine.nn.model.RNNCellType;
 import com.omega.engine.updater.UpdaterType;
-
-import jcuda.Sizeof;
-import jcuda.runtime.JCuda;
 
 /**
  * Recurrent Neural Networks
  * @author Administrator
  *
  */
-public class Seq2Seq extends Network {
-	
-	private RNNCellType cellType;
+public class Seq2SeqRNN extends Network {
 	
 	public int en_time = 1;
 	
@@ -41,23 +35,24 @@ public class Seq2Seq extends Network {
 	
 	private EmbeddingLayer en_emLayer;
 	
-	private BaseRNNLayer en_rnnLayer;
+	private RNNLayer en_rnnLayer;
 	
 	/**
 	 * decoder
 	 */
 	private EmbeddingLayer de_emLayer;
 	
-	private BaseRNNLayer de_rnnLayer;
+	private RNNLayer de_rnnLayer;
 	
 	private FullyLayer fullyLayer;
+	
+	private Tensor c;
 	
 	private Tensor en_delta;
 	
 	private BaseKernel baseKernel;
 
-	public Seq2Seq(RNNCellType cellType,LossType lossType,UpdaterType updater,int en_time,int de_time,int en_em,int en_hidden,int en_len,int de_em,int de_hidden,int de_len) {
-		this.cellType = cellType;
+	public Seq2SeqRNN(LossType lossType,UpdaterType updater,int en_time,int de_time,int en_em,int en_hidden,int en_len,int de_em,int de_hidden,int de_len) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.updater = updater;
 		this.en_time = en_time;
@@ -66,24 +61,10 @@ public class Seq2Seq extends Network {
 		this.de_len = de_len;
 		this.inputLayer = new InputLayer(1, 1, en_len);
 		this.en_emLayer = new EmbeddingLayer(en_len, en_em, this);
+		this.en_rnnLayer = new RNNLayer(en_em, en_hidden, en_time, ActiveType.tanh, false, this);
 		this.de_emLayer = new EmbeddingLayer(de_len, de_em, this);
+		this.de_rnnLayer = new RNNLayer(de_em, de_hidden, de_time, ActiveType.tanh, false, this);
 		this.fullyLayer = new FullyLayer(de_hidden, de_len, true, this);
-		
-		switch (this.cellType) {
-		case RNN:
-			this.en_rnnLayer = new RNNBlockLayer(en_time, en_em, en_hidden, 1, false, false, 0.0f);
-			this.de_rnnLayer = new RNNBlockLayer(de_time, de_em, de_hidden, 1, false, false, 0.0f);
-			break;
-		case LSTM:
-			this.en_rnnLayer = new RNNBlockLayer(en_time, en_em, en_hidden, 2, false, false, 0.0f);
-			this.de_rnnLayer = new RNNBlockLayer(de_time, de_em, de_hidden, 2, false, false, 0.0f);
-			break;
-		case GRU:
-			this.en_rnnLayer = new RNNBlockLayer(en_time, en_em, en_hidden, 3, false, false, 0.0f);
-			this.de_rnnLayer = new RNNBlockLayer(de_time, de_em, de_hidden, 3, false, false, 0.0f);
-			break;
-		}
-
 		this.addLayer(inputLayer);
 		this.addLayer(en_emLayer);
 		this.addLayer(en_rnnLayer);
@@ -127,7 +108,7 @@ public class Seq2Seq extends Network {
 	@Override
 	public NetworkType getNetworkType() {
 		// TODO Auto-generated method stub
-		return NetworkType.SEQ2SEQ;
+		return NetworkType.SEQ2SEQ_RNN;
 	}
 
 	@Override
@@ -145,8 +126,35 @@ public class Seq2Seq extends Network {
 		return this.getOuput();
 	}
 	
+	public void initHidden(int number,int hiddenSize) {
+		int batch = number / en_time;
+		if(this.c == null || this.c.number != batch) {
+			this.c = Tensor.createTensor(this.c, batch, 1, 1, hiddenSize, true);
+		}
+		baseKernel.copy_gpu(en_rnnLayer.getOutput(), this.c, this.c.getDataLength(), (en_time - 1) * this.c.getDataLength(), 1, 0, 1);
+	}
+	
+	public void initHidden(Tensor h,int number,int hiddenSize) {
+		int batch = number / en_time;
+		if(this.c == null || this.c.number != batch) {
+			this.c = Tensor.createTensor(this.c, batch, 1, 1, hiddenSize, true);
+		}
+		baseKernel.copy_gpu(h, this.c, this.c.getDataLength(), (en_time - 1) * this.c.getDataLength(), 1, 0, 1);
+	}
+	
+	public void initEnRNNLayerDelta(Tensor delta) {
+		if(this.en_delta == null || this.en_delta.number != this.en_rnnLayer.getOutput().number) {
+			this.en_delta = Tensor.createTensor(this.en_delta, this.en_rnnLayer.getOutput().number, this.en_rnnLayer.getOutput().channel, this.en_rnnLayer.getOutput().height, this.en_rnnLayer.getOutput().width, true);
+		}
+		this.en_delta.clearGPU();
+//		en_delta.showShape();
+//		delta.showShape();
+//		System.out.println(delta.getDataLength());
+		baseKernel.copy_gpu(delta, this.en_delta, delta.getDataLength(), 0, 1, (en_time - 1) * delta.getDataLength(), 1);
+	}
+	
 	public Tensor forward(Tensor en_input,Tensor de_input) {
-//		System.out.println("en_time:"+en_time+",de_time:"+de_time);
+		
 		/**
 		 * 设置输入数据
 		 */
@@ -159,36 +167,20 @@ public class Seq2Seq extends Network {
 		
 		this.en_emLayer.forward();
 		
-		this.en_rnnLayer.forward(this.en_time, this.en_emLayer.output.number);
-
-//		this.en_rnnLayer.getOutput().showDMByNumber((en_time - 1) * en_rnnLayer.getOutput().number / en_time);
-//		this.en_rnnLayer.getHy().showDMByNumber(0);
+		this.en_rnnLayer.forward(en_time, this.en_emLayer.output.number);
 		
 		/**
 		 * 解码器
 		 */
 		this.de_emLayer.forward(de_input);
+
+		this.initHidden(en_rnnLayer.getOutput().number, en_rnnLayer.getOutput().width);
 		
-		this.de_rnnLayer.forward(this.de_emLayer.getOutput(), this.en_rnnLayer.getHy(), this.en_rnnLayer.getCy(), this.de_time);
+		this.de_rnnLayer.forward(this.de_emLayer.getOutput(), this.c, de_time);
 
 		this.fullyLayer.forward(this.de_rnnLayer.getOutput());
 
 		return this.getOuput();
-	}
-	
-	public void initEnRNNLayerDelta(Tensor delta) {
-		if(this.en_delta == null || this.en_delta.number != this.en_rnnLayer.getOutput().number) {
-			this.en_delta = Tensor.createTensor(this.en_delta, this.en_rnnLayer.getOutput().number, this.en_rnnLayer.getOutput().channel, this.en_rnnLayer.getOutput().height, this.en_rnnLayer.getOutput().width, true);
-		}
-		this.en_delta.clearGPU();
-//		en_delta.showShape();
-//		delta.showShape();
-		/**
-		 * rnn mode
-		 */
-//		if(this.en_rnnLayer.rnnMode == 0 || this.en_rnnLayer.rnnMode == 1){
-		baseKernel.copy_gpu(delta, this.en_delta, delta.getDataLength(), 0, 1, (en_time - 1) * delta.getDataLength(), 1);
-//		}
 	}
 	
 	@Override
@@ -200,18 +192,23 @@ public class Seq2Seq extends Network {
 		 * 将误差值输入到最后一层
 		 */
 		this.setLossDiff(lossDiff);
-
+		
+//		lossDiff.showDMByNumber(0);
+		
 		this.fullyLayer.back();
 		
 		this.de_rnnLayer.back();
 		
 		this.de_emLayer.back();
 		
-		initEnRNNLayerDelta(this.de_rnnLayer.getDhx());
+//		this.c.getGrad().showDM();
+		
+		this.initEnRNNLayerDelta(this.c.getGrad());
+//		this.en_delta.showDM();
 
-		this.en_rnnLayer.back(this.en_delta, this.en_rnnLayer.getHy(), this.en_rnnLayer.getCy(), null, this.de_rnnLayer.getDcx());
-
-		this.en_emLayer.back(this.en_rnnLayer.diff);
+		this.en_rnnLayer.back(this.en_delta);
+		
+		this.en_emLayer.back(en_rnnLayer.diff);
 		
 	}
 
@@ -275,22 +272,21 @@ public class Seq2Seq extends Network {
 		
 		this.en_emLayer.forward();
 		
-		this.en_rnnLayer.forward(this.en_time, this.en_emLayer.getOutput().number);
+		this.en_rnnLayer.forward(en_time, this.en_emLayer.getOutput().number);
 
 		return en_rnnLayer.getOutput();
 	}
 	
-	public Tensor decoder(Tensor hx,Tensor cx,Tensor start,int timeIndex) {
+	public Tensor decoder(Tensor h,Tensor start) {
 		
 		/**
 		 * 解码器
 		 */
 		this.de_emLayer.forward(start);
 //		h.showDM();
-		this.de_rnnLayer.forward(this.de_emLayer.getOutput(), hx, cx, 1);
+		this.de_rnnLayer.forward(this.de_emLayer.getOutput(), h, 1);
 		
-		baseKernel.copy_gpu(this.de_rnnLayer.getHy(), hx, hx.getDataLength(), 0, 1, 0, 1);
-		baseKernel.copy_gpu(this.de_rnnLayer.getCy(), cx, cx.getDataLength(), 0, 1, 0, 1);
+		baseKernel.copy_gpu(this.de_rnnLayer.getOutput(), h, h.getDataLength(), 0, 1, 0, 1);
 
 		this.fullyLayer.forward(this.de_rnnLayer.getOutput());
 //		this.fullyLayer.getOutput().showDM();
@@ -298,3 +294,4 @@ public class Seq2Seq extends Network {
 	}
 	
 }
+

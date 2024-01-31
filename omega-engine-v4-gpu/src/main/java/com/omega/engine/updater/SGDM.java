@@ -1,7 +1,7 @@
 package com.omega.engine.updater;
 
 import com.omega.engine.nn.layer.Layer;
-import com.omega.engine.nn.layer.normalization.BNLayer;
+import com.omega.engine.nn.layer.normalization.NormalizationLayer;
 import com.omega.engine.updater.gpu.SGDKernel;
 
 public class SGDM extends Updater {
@@ -44,7 +44,7 @@ public class SGDM extends Updater {
 	}
 
 	@Override
-	public void updateForBN(BNLayer layer) {
+	public void updateForBN(NormalizationLayer layer) {
 		// TODO Auto-generated method stub
 		
 		/**

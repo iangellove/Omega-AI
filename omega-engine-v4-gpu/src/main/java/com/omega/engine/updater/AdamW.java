@@ -3,7 +3,7 @@ package com.omega.engine.updater;
 import java.util.Map;
 
 import com.omega.engine.nn.layer.Layer;
-import com.omega.engine.nn.layer.normalization.BNLayer;
+import com.omega.engine.nn.layer.normalization.NormalizationLayer;
 import com.omega.engine.updater.gpu.AdamWKernel;
 
 /**
@@ -64,7 +64,7 @@ public class AdamW extends Updater {
 	}
 
 	@Override
-	public void updateForBN(BNLayer layer) {
+	public void updateForBN(NormalizationLayer layer) {
 		// TODO Auto-generated method stub
 		
 //		System.out.println(layer.learnRate);

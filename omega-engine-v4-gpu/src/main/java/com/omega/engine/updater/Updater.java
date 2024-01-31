@@ -4,6 +4,7 @@ import java.util.Map;
 
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
+import com.omega.engine.nn.layer.normalization.NormalizationLayer;
 import com.omega.engine.nn.network.Network;
 
 /**
@@ -40,7 +41,7 @@ public abstract class Updater {
 	
 	public abstract void updateForMatrix(Layer layer);
 	
-	public abstract void updateForBN(BNLayer layer);
+	public abstract void updateForBN(NormalizationLayer layer);
 	
 	public abstract UpdaterType getUpdaterType();
 	

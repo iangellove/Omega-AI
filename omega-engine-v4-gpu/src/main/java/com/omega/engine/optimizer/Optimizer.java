@@ -878,6 +878,40 @@ public abstract class Optimizer {
 		return 0.0f;
 	}
 	
+	public List<Tensor> predictObjectRecognitionOutputs(DetectionDataLoader testData,Tensor input,int batchSize) {
+		// TODO Auto-generated method stub
+		
+		List<Tensor> results = new ArrayList<Tensor>();
+		
+		long startTime = System.nanoTime();
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
+		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		Yolo network = (Yolo) this.network;
+		
+		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
+
+			testData.loadData(pageIndex, batchSize, input);
+
+			if(network.outputNum > 1) {
+				Tensor[] outputs = network.predicts(input);
+				for(Tensor output:outputs) {
+					results.add(output);
+				}
+			}else{
+				Tensor output = network.predict(input);
+				results.add(output);
+			}
+			
+		}
+		
+		System.out.println("test["+this.trainIndex+"] [costTime:"+(System.nanoTime()-startTime)/1e6+"ms.]");
+		
+		return results;
+	}
+	
 	public float testObjectRecognitionOutputs(BaseData testData,int batchSize) {
 		// TODO Auto-generated method stub
 		
@@ -1040,7 +1074,7 @@ public abstract class Optimizer {
 			for(int i = 0;i<net.outputLayers.size();i++){
 				
 				YoloLayer layer = (YoloLayer) net.outputLayers.get(i);
-				
+
 				YoloDetection[][] dets = YoloUtils.getYoloDetections(output[i], layer.anchors, layer.mask, layer.bbox_num, layer.outputs, layer.class_number, this.network.height, this.network.width, 0.5f);
 				
 				for(int j = 0;j<dets.length;j++) {

@@ -1466,15 +1466,9 @@ public class BNKernel2 extends BNBaseKernel{
 		}
 		
 		System.out.println(JsonUtils.toJson(MatrixUtils.transform(xhat)));
-		
-		
-		System.out.println(CheckArrayUtils.check(tmp1, MatrixUtils.transform(xhat)));
-		
 
-//		System.out.println("dxhatSum:"+JsonUtils.toJson(dxhatSum));
-//		
-//		System.out.println("dxhat_Sum:"+JsonUtils.toJson(dxhat_Sum));
-		
+		System.out.println(CheckArrayUtils.check(tmp1, MatrixUtils.transform(xhat)));
+
 		for(int c = 0;c<C;c++) {
 			float m1 = dxhatSum[c] / sn;
 			float m2 = dxhat_Sum[c] / sn;
@@ -1490,16 +1484,4 @@ public class BNKernel2 extends BNBaseKernel{
 		
 	}
 
-	@Override
-	public void forward(RunModel RUN_MODEL, Tensor gama, Tensor beta, Tensor input, Tensor output, int batch, int step) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void backward(Tensor input, Tensor delta, Tensor diff, Tensor gama, Tensor dgama, Tensor dbeta, int batch, int step) {
-		// TODO Auto-generated method stub
-		
-	}
-    
 }

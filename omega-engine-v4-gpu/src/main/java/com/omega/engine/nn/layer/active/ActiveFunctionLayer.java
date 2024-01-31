@@ -28,8 +28,31 @@ public abstract class ActiveFunctionLayer extends Layer {
 			this.oChannel = this.channel;
 			this.oHeight = this.height;
 			this.oWidth = this.width;
+		}else {
+			this.number = preLayer.number;
+		}
+		
+		if(output == null || number != output.number) {
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		}
 
+	}
+	
+	public void init(Tensor input) {
+
+		this.number = input.number;
+		
+		if(this.preLayer == null) {
+			this.preLayer = this.network.getPreLayer(this.index);
+			this.channel = preLayer.oChannel;
+			this.height = preLayer.oHeight;
+			this.width = preLayer.oWidth;
+			this.oChannel = this.channel;
+			this.oHeight = this.height;
+			this.oWidth = this.width;
+		}
+		
 		if(output == null || number != output.number) {
 			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
 //			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);

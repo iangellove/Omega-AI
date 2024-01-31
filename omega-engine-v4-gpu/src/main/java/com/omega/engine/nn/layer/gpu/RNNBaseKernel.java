@@ -8,15 +8,15 @@ public abstract class RNNBaseKernel extends BaseKernel{
 	
 	public int seqLength = 1;
 	
-	public abstract void init(int number);
+	public abstract void init(int number,int time);
 	
 	public abstract long weightSize();
 	
-	public abstract void forward(RunModel RUN_MODEL,Tensor input,Tensor weight,Tensor output);
+	public abstract void forward(RunModel RUN_MODEL,Tensor input, Tensor hx, Tensor cx, Tensor weight, Tensor output, Tensor hy, Tensor cy);
 	
-	public abstract void dw(Tensor delta,Tensor output,Tensor input,Tensor dw);
+	public abstract void dw(Tensor delta, Tensor output, Tensor input, Tensor hx, Tensor dw);
 	
-	public abstract void dx(Tensor delta,Tensor output,Tensor weight,Tensor diff);
+	public abstract void dx(Tensor delta,Tensor dhy,Tensor dcy, Tensor output, Tensor hx, Tensor cx, Tensor weight, Tensor diff, Tensor dhx,Tensor dcx);
 	
 	public abstract void initWeights(Tensor w);
 	

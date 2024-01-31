@@ -67,9 +67,40 @@ public class ImageLoader {
 //		
 //		showImg(x, y, classes, outputPath);
 		
-		formatImage();
+//		formatImage();
+		
+		resizeFormatImage();
 		
 //		testFormatImage();
+		
+	}
+	
+	public static void resizeFormatImage() {
+		
+		try {
+
+			String imgDirPath = "H:\\voc\\yz\\seal\\test";
+			String outputDirPath = "H:\\voc\\yz\\seal\\resized\\test\\";
+			
+			int width = 416;
+			int height = 416;
+			
+			File file = new File(imgDirPath);
+			
+			if(file.exists() && file.isDirectory()) {
+
+				for(File img:file.listFiles()) {
+
+					resizeImage(img, width, height, outputDirPath + img.getName());
+					
+				}
+				
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
 		
 	}
 	
@@ -124,10 +155,15 @@ public class ImageLoader {
 		
 		try {
 			
-			String imgDirPath = "H:\\voc\\sm\\VOC\\JPEGImages";
-			String labelPath = "H:\\voc\\sm\\VOC\\bbox.txt";
-			String outputDirPath = "H:\\voc\\sm\\resized\\imgs\\";
-			String labelTXTPath = "H:\\voc\\sm\\resized\\rlabels.txt";
+//			String imgDirPath = "H:\\voc\\sm\\VOC\\JPEGImages";
+//			String labelPath = "H:\\voc\\sm\\VOC\\bbox.txt";
+//			String outputDirPath = "H:\\voc\\sm\\resized\\imgs\\";
+//			String labelTXTPath = "H:\\voc\\sm\\resized\\rlabels.txt";
+			
+			String imgDirPath = "H:\\voc\\yz\\seal\\Images";
+			String labelPath = "H:\\voc\\yz\\seal\\bbox.txt";
+			String outputDirPath = "H:\\voc\\yz\\seal\\resized\\imgs\\";
+			String labelTXTPath = "H:\\voc\\yz\\seal\\resized\\rlabels.txt";
 			
 			int width = 416;
 			int height = 416;
@@ -924,6 +960,38 @@ public class ImageLoader {
         return labels;
 	}
 	
+	public static void resizeImage(File file,int w,int h,String outputPath) {
+		
+		float dw = 0;
+        float dh = 0;
+        float nw = 0;
+        float nh = 0;
+        
+        OMImage orig = loadImage(file);
+        
+        OMImage sized = createImage(w, h, orig.getChannel(), 0.5f);
+        
+		float new_ar = (orig.getWidth() + RandomUtils.uniformFloat(-dw, dw)) / (orig.getHeight() + RandomUtils.uniformFloat(-dh, dh));
+		
+		float scale = 1;
+		
+		if(new_ar < 1){
+            nh = scale * h;
+            nw = nh * new_ar;
+        } else {
+            nw = scale * w;
+            nh = nw / new_ar;
+        }
+		
+		float dx = (w - nw) / 2;
+        float dy = (h - nh) / 2;
+        
+        placeImage(orig, (int) nw, (int) nh, (int) dx, (int) dy, sized);
+		
+        showImg(sized, outputPath);
+
+	}
+	
 	public static float[] resizeImage(File file,int w,int h) {
 		
         float nw = 0;
@@ -1034,7 +1102,7 @@ public class ImageLoader {
 		try {
 			
 			File file = new File(filePath);
-			
+
 			if(file.exists()) {
 				image =  YoloImageUtils.IU().loadOMImage(file);
 			}

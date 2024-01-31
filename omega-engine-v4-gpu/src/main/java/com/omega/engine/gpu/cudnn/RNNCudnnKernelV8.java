@@ -1,14 +1,10 @@
 package com.omega.engine.gpu.cudnn;
 
 import static jcuda.jcudnn.cudnnDataType.CUDNN_DATA_FLOAT;
-import static jcuda.jcudnn.cudnnDirectionMode.CUDNN_UNIDIRECTIONAL;
 import static jcuda.jcudnn.cudnnMathType.CUDNN_DEFAULT_MATH;
-import static jcuda.jcudnn.cudnnRNNAlgo.CUDNN_RNN_ALGO_STANDARD;
-import static jcuda.jcudnn.cudnnRNNInputMode.CUDNN_LINEAR_INPUT;
 import static jcuda.jcudnn.cudnnWgradMode.CUDNN_WGRAD_MODE_ADD;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
@@ -21,7 +17,6 @@ import jcuda.jcudnn.JCudnn;
 import jcuda.jcudnn.cudnnDataType;
 import jcuda.jcudnn.cudnnDirectionMode;
 import jcuda.jcudnn.cudnnDropoutDescriptor;
-import jcuda.jcudnn.cudnnFilterDescriptor;
 import jcuda.jcudnn.cudnnForwardMode;
 import jcuda.jcudnn.cudnnMathType;
 import jcuda.jcudnn.cudnnRNNAlgo;
@@ -43,8 +38,6 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 	
 	public int persistent = 0;
 	
-	public int numLinearLayers = 2;
-	
 	public int layerNum = 1;
 	
 	public int rnnMode;
@@ -56,18 +49,6 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 	public int N;
 	
 	private boolean bidirectional;
-	
-	private Pointer hx;
-	private Pointer cx;
-	
-	private Pointer hy;
-	private Pointer cy;
-	
-	private Pointer dhx;
-	private Pointer dcx;
-	
-	private Pointer dhy;
-	private Pointer dcy;
 	
 	private Pointer workspace;
 	private Pointer reserveSpace;
@@ -92,6 +73,8 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 	
 	private Pointer seqP = null;
 	
+	private boolean hasBias = true;
+	
 	private long[] weightSpaceSize = { 0 };
 	
 	private int dataType;
@@ -104,7 +87,10 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 	
 	private int bidmod = cudnnDirectionMode.CUDNN_UNIDIRECTIONAL;
 	
-	public RNNCudnnKernelV8(int time,int layerNum,int inputSize,int hiddenSize,boolean bidirectional,int rnnMode,float dropout) {
+	private int hidTensorSz;
+	
+	public RNNCudnnKernelV8(int time,int layerNum,int inputSize,int hiddenSize,boolean bidirectional,int rnnMode,float dropout,boolean hasBias) {
+		this.hasBias = hasBias;
 		this.seqLength = time;
 		this.dropout = dropout;
 		this.inputSize = inputSize;
@@ -135,19 +121,7 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 	}
 	
 	public void init() {
-
-		hx = new Pointer();
-		cx = new Pointer();
 		
-		dhx = new Pointer();
-		dcx = new Pointer();
-		
-		hy = new Pointer();
-		cy = new Pointer();
-		
-		dhy = new Pointer();
-		dcy = new Pointer();
-
 		xDesc = new cudnnRNNDataDescriptor();
 		yDesc = new cudnnRNNDataDescriptor();
 
@@ -162,25 +136,17 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
         reserveSpace = new Pointer();
 	}
 	
-	public void init(int number) {
+	public void init(int number,int time) {
 		
 		if(this.N != number) {
 			
 			this.N = number;
 			
+			this.seqLength = time;
+			
 			int batchSize = this.N / seqLength;
 			
-			int hidTensorSz = layerNum * batchSize * hiddenSize * bidirectionalScale;
-			
-			JCuda.cudaMalloc(hx, hidTensorSz * Sizeof.FLOAT);
-			JCuda.cudaMalloc(cx, hidTensorSz * Sizeof.FLOAT);
-			JCuda.cudaMalloc(hy, hidTensorSz * Sizeof.FLOAT);
-			JCuda.cudaMalloc(cy, hidTensorSz * Sizeof.FLOAT);
-			
-			JCuda.cudaMalloc(dhx, hidTensorSz * Sizeof.FLOAT);
-			JCuda.cudaMalloc(dcx, hidTensorSz * Sizeof.FLOAT);
-			JCuda.cudaMalloc(dhy, hidTensorSz * Sizeof.FLOAT);
-			JCuda.cudaMalloc(dcy, hidTensorSz * Sizeof.FLOAT);
+			hidTensorSz = layerNum * batchSize * hiddenSize * bidirectionalScale;
 			
 			JCudnn.cudnnCreateRNNDataDescriptor(xDesc);
 			JCudnn.cudnnCreateRNNDataDescriptor(yDesc);
@@ -253,10 +219,16 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 	        	System.err.println("[ERROR] Inconsistent parameter: dataType does not match mathType!");
 	        }
 	        
+	        int biasMode = cudnnRNNBiasMode.CUDNN_RNN_DOUBLE_BIAS;
+	        		
+	        if(!hasBias) {
+	        	biasMode = cudnnRNNBiasMode.CUDNN_RNN_NO_BIAS;
+	        }		
+
 	        handle(JCudnn.cudnnSetRNNDescriptor_v8(rnnDesc,
 	        						 CUDARNNAlgo,
 	        						 rnnMode,
-	        						 cudnnRNNBiasMode.CUDNN_RNN_DOUBLE_BIAS,
+	        						 biasMode,
 	        						 bidmod,
 	        						 cudnnRNNInputMode.CUDNN_LINEAR_INPUT,
 	                                 dataType,
@@ -332,9 +304,8 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 		 
 		JCurand.curandGenerateNormal(generator, w.getGpuData(), w.getDataLength(), 0, stddev);
 	}
-
-	@Override
-	public void forward(RunModel RUN_MODEL,Tensor input, Tensor weight, Tensor output) {
+	
+	public void forward(RunModel RUN_MODEL,Tensor input, Tensor hx, Tensor cx, Tensor weight, Tensor output, Tensor hy, Tensor cy) {
 		// TODO Auto-generated method stub
 
 		if(RUN_MODEL == RunModel.TRAIN) {
@@ -351,11 +322,11 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 					yDesc,
 					output.getGpuData(),
 					hDesc,
-					hx,
-					hy,
+					hx.getGpuData(), //hx
+					hy.getGpuData(), //hy
 					cDesc,
-					cx,
-					cy,
+					cx.getGpuData(), //cx
+					cy.getGpuData(), //cy
 					getWeightSpaceSize()[0],
 					weight.getGpuData(),
 					workSize,
@@ -373,11 +344,11 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 					yDesc,
 					output.getGpuData(),
 					hDesc,
-					hx,
-					hy,
+					hx.getGpuData(), //hx
+					hy.getGpuData(), //hy
 					cDesc,
-					cx,
-					cy,
+					cx.getGpuData(), //cx
+					cy.getGpuData(), //cy
 					getWeightSpaceSize()[0],
 					weight.getGpuData(),
 					workSize,
@@ -387,9 +358,8 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 		}
 		
 	}
-
-	@Override
-	public void dw(Tensor delta, Tensor output, Tensor input, Tensor dw) {
+	
+	public void dw(Tensor delta, Tensor output, Tensor input, Tensor hx, Tensor dw) {
 		// TODO Auto-generated method stub
 		
 		// cudnnRNNBackwardWeights adds to the data in dw.
@@ -402,7 +372,7 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 				xDesc,
 				input.getGpuData(),
 				hDesc,
-				hx,
+				hx.getGpuData(), //hx
 				yDesc,
 				output.getGpuData(),
 				dw.getDataLength() * Sizeof.FLOAT,
@@ -414,9 +384,15 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 
 	}
 
-	@Override
-	public void dx(Tensor delta, Tensor output, Tensor weight, Tensor diff) {
+	public void dx(Tensor delta,Tensor dhy,Tensor dcy, Tensor output, Tensor hx, Tensor cx, Tensor weight, Tensor diff, Tensor dhx,Tensor dcx) {
 		// TODO Auto-generated method stub
+		
+		Pointer dhy_p = null;
+		
+		if(dhy != null) {
+			dhy_p = dhy.getGpuData();
+		}
+
 		handle(JCudnn.cudnnRNNBackwardData_v8(CudnnHandleManager.getHandle(),
 				rnnDesc,
 				seqP,
@@ -426,20 +402,20 @@ public class RNNCudnnKernelV8 extends RNNBaseKernel{
 				xDesc,
 				diff.getGpuData(),
 				hDesc,
-				hx,
-				dhy,
-				dhx,
+				hx.getGpuData(), //hx
+				dhy_p,  //dhy
+				dhx.getGpuData(),  //dhx
 				cDesc,
-				cx,
-				dcy,
-				dcx,
+				cx.getGpuData(), //cx
+				dcy.getGpuData(),  //dcy
+				dcx.getGpuData(),  //dcx
 				weight.getDataLength() * Sizeof.FLOAT,
 				weight.getGpuData(),
 				workSize,
 				workspace,
 				reserveSize,
 				reserveSpace));
-
+		
 	}
 	
 	/**

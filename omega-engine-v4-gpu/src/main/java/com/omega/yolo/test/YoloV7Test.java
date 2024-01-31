@@ -524,6 +524,97 @@ public class YoloV7Test {
 			
 	}
 	
+	public void yolov7_tiny_yz() {
+		
+		int im_w = 416;
+		int im_h = 416;
+		int batchSize = 12;
+		int class_num = 1;
+		
+		String[] labelset = new String[1];
+		
+		try {
+			
+			String cfg_path = "H:\\voc\\yz\\seal\\resized\\yolov7-tiny-yz.cfg";
+			
+			String labelPath = "H:\\voc\\yz\\seal\\labels.txt";
+			
+			String trainPath = "H:\\voc\\yz\\seal\\resized\\train";
+			String trainLabelPath = "H:\\voc\\yz\\seal\\resized\\train_label.txt";
+			
+			String vailPath = "H:\\voc\\yz\\seal\\resized\\vail";
+			String vailLabelPath = "H:\\voc\\yz\\seal\\resized\\vail_label.txt";
+
+			try (FileInputStream fin = new FileInputStream(labelPath);
+				InputStreamReader reader = new InputStreamReader(fin);	
+			    BufferedReader buffReader = new BufferedReader(reader);){
+
+				String strTmp = "";
+				int idx = 0;
+		        while((strTmp = buffReader.readLine())!=null){
+		        	labelset[idx] = strTmp;
+		        	idx++;
+		        }
+				
+			} catch (Exception e) {
+				// TODO: handle exception
+				e.printStackTrace();
+			}
+			
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+			
+			DetectionDataLoader vailData = new DetectionDataLoader(vailPath, vailLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+
+			Yolo netWork = new Yolo(LossType.yolov7, UpdaterType.adamw);
+			
+			netWork.CUDNN = true;
+			
+			netWork.learnRate = 0.001f;
+
+			ModelLoader.loadConfigToModel(netWork, cfg_path);
+			
+//			DarknetLoader.loadWeight(netWork, weightPath, 86, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 2000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+			
+			optimizer.lr_step = new int[] {500, 1000, 1500};
+			
+			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
+			
+			/**
+			 * 处理验证集预测结果
+			 */
+			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
+			String outputPath = "H:\\voc\\yz\\seal\\resized\\test_yolov7\\";
+//			System.out.println(JsonUtils.toJson(draw_bbox.get(0)));
+			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
+			
+			System.out.println("vail finish.");
+			
+			/**
+			 * 处理测试集预测结果
+			 */
+			String testPath = "H:\\voc\\yz\\seal\\resized\\test";
+			DetectionDataLoader testData = new DetectionDataLoader(testPath, null, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+			List<YoloBox> test_draw_bbox = optimizer.showObjectRecognitionYoloV3(testData, batchSize);
+//			System.out.println(JsonUtils.toJson(test_draw_bbox.get(0)));
+			String testOutputPath = "H:\\voc\\yz\\seal\\resized\\test_v7_result\\";
+			showImg(testOutputPath, testData, class_num, test_draw_bbox, batchSize, false, im_w, im_h, labelset);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+			
+	}
+	
 	public void createMaskTrainTestDataSet() {
 		
 		try {
@@ -703,7 +794,6 @@ public class YoloV7Test {
 		}
 		
 	}
-	
 
 	public static void copyFileUsingStream(File source, File dest) throws IOException {
 	    InputStream is = null;
@@ -772,8 +862,9 @@ public class YoloV7Test {
 //			y.yolov3_show2();
 //			y.createMaskTrainTestDataSet();
 //			y.yolov7_tiny_mask();
-//			y.yolov7_tiny_helmet();
-			y.yolov7_tiny_sm();
+			y.yolov7_tiny_helmet();
+//			y.yolov7_tiny_sm();
+//			y.yolov7_tiny_yz();
 //			y.yolov3_tiny_voc();
 //			y.getAnchors();
 		} catch (Exception e) {

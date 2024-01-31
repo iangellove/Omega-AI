@@ -308,7 +308,7 @@ public class CharRNN {
 			
 			InputLayer inputLayer = new InputLayer(1, 1, inputSize);
 			
-			RNNBlockLayer l1 = new RNNBlockLayer(time, 1, inputSize, hiddenSize, 1, false, 0.0f, netWork);
+			RNNBlockLayer l1 = new RNNBlockLayer(time, 1, inputSize, hiddenSize, 1, false, false, 0.0f, netWork);
 			
 			netWork.addLayer(inputLayer);
 			netWork.addLayer(l1);
@@ -358,7 +358,7 @@ public class CharRNN {
 			
 //			EmbeddingLayer em = new EmbeddingLayer(trainData.characters, embedding_dim);
 			
-			RNNBlockLayer l1 = new RNNBlockLayer(time, rnnLayerNum, trainData.characters, hiddenSize, rnnMode, bidirectional, dropout, netWork);
+			RNNBlockLayer l1 = new RNNBlockLayer(time, rnnLayerNum, trainData.characters, hiddenSize, rnnMode, bidirectional, false, dropout, netWork);
 			
 //			TanhLayer a1 = new TanhLayer();
 			
@@ -443,7 +443,7 @@ public class CharRNN {
 			
 			EmbeddingLayer em = new EmbeddingLayer(trainData.characters, embedding_dim);
 			
-			RNNBlockLayer l1 = new RNNBlockLayer(time, rnnLayerNum, embedding_dim, hiddenSize, rnnMode, bidirectional, dropout, netWork);
+			RNNBlockLayer l1 = new RNNBlockLayer(time, rnnLayerNum, embedding_dim, hiddenSize, rnnMode, bidirectional, false, dropout, netWork);
 			
 			FullyLayer f1 = new FullyLayer(hiddenSize, hiddenSize, false);
 			BNLayer bn = new BNLayer();
@@ -501,6 +501,7 @@ public class CharRNN {
 		}
 		
 	}
+	
 	public static void createTxtData(String txt,int charDim,Map<Character,Integer> dictionary,Tensor input) {
 		char[] charset = new char[txt.length()];
 		txt.getChars(0, txt.length(), charset, 0);
@@ -546,7 +547,7 @@ public class CharRNN {
 	public static String output2TXT(Tensor output,OneHotDataLoader trainData) {
 		String txt = "";
 		for(int i = 0;i<output.number;i++) {
-			int charIndex = pickTopN(output.getByNumber(i), 1);
+			int charIndex = pickTopN(output.getByNumber(i), 3);
 			char c = trainData.dictionaryData[charIndex];
 			txt += c;
 		}
@@ -588,11 +589,11 @@ public class CharRNN {
 			
 //			t.RNN_CUDNN();
 			
-			t.charRNN();
+//			t.charRNN();
 			
 //			t.charRNN2();
 			
-//			t.charRNN3();
+			t.charRNN3();
 			
 //			t.createTxtData("这废物真是把家族的脸都给丢光了");
 			

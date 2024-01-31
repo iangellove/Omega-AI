@@ -7,14 +7,19 @@ public abstract class NormalizationLayer extends Layer {
 	
 	public Layer preLayer;
 	
-	public abstract void forward(Tensor input, int batch, int step);
+	public Tensor gamma;
 	
-	public abstract void back(Tensor delta, int batch, int step);
+	public Tensor beta;
 	
-	public abstract void output(int batch, int step);
+	public Tensor runingMean;
 	
-	public abstract void diff(int batch, int step);
+	public Tensor runingVar;
 	
+	public Tensor diffGamma;
+	
+	public Tensor diffBeta;
+	
+
 	@Override
 	public void init() {
 		if(preLayer == null) {

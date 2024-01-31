@@ -198,6 +198,84 @@ public class YoloV4Test {
 			
 	}
 	
+	public void yolov4_tiny_yz() {
+		
+		int im_w = 416;
+		int im_h = 416;
+		int batchSize = 16;
+		int class_num = 1;
+		
+		String[] labelset = new String[1];
+		
+		try {
+			
+			String cfg_path = "H:\\voc\\yz\\seal\\resized\\yolov4-tiny-yz.cfg";
+			
+			String labelPath = "H:\\voc\\yz\\seal\\labels.txt";
+			
+			String trainPath = "H:\\voc\\yz\\seal\\resized\\train";
+			String trainLabelPath = "H:\\voc\\yz\\seal\\resized\\train_label.txt";
+			
+			String testPath = "H:\\voc\\yz\\seal\\resized\\vail";
+			String testLabelPath = "H:\\voc\\yz\\seal\\resized\\vail_label.txt";
+			
+//			String weightPath = "H:\\voc\\darknet_yolov7\\yolov7-tiny.conv.87";
+
+			try (FileInputStream fin = new FileInputStream(labelPath);
+				InputStreamReader reader = new InputStreamReader(fin);	
+			    BufferedReader buffReader = new BufferedReader(reader);){
+
+				String strTmp = "";
+				int idx = 0;
+		        while((strTmp = buffReader.readLine())!=null){
+		        	labelset[idx] = strTmp;
+		        	idx++;
+		        }
+				
+			} catch (Exception e) {
+				// TODO: handle exception
+				e.printStackTrace();
+			}
+			
+			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+			
+			DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
+
+			Yolo netWork = new Yolo(LossType.yolov7, UpdaterType.adamw);
+			
+			netWork.CUDNN = true;
+			
+			netWork.learnRate = 0.0001f;
+
+			ModelLoader.loadConfigToModel(netWork, cfg_path);
+			
+//			DarknetLoader.loadWeight(netWork, weightPath, 86, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+
+			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
+			
+			/**
+			 * 处理测试预测结果
+			 */
+			List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
+			String outputPath = "H:\\voc\\yz\\seal\\resized\\test_yolov4\\";
+			showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, labelset);
+		
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}finally {
+			try {
+				CUDAMemoryManager.freeAll();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+			
+	}
+	
 	public void createMaskTrainTestDataSet() {
 		
 		try {
@@ -306,18 +384,27 @@ public class YoloV4Test {
 
 			int im_w = 416;
 			int im_h = 416;
-			int classNum = 5;
+			int classNum = 1;
 			int batchSize = 64;
 			float trainRatio = 0.8f;
 			
-			String orgPath = "H:\\voc\\helmet\\resized\\imgs\\";
-			String orgLabelPath = "H:\\voc\\helmet\\resized\\rlabels.txt";
+//			String orgPath = "H:\\voc\\helmet\\resized\\imgs\\";
+//			String orgLabelPath = "H:\\voc\\helmet\\resized\\rlabels.txt";
+//			
+//			String trainPath = "H:\\voc\\helmet\\resized\\train\\";
+//			String vailPath = "H:\\voc\\helmet\\resized\\vail\\";
+//			
+//			String trainLabelPath = "H:\\voc\\helmet\\resized\\train_label.txt";
+//			String vailLabelPath = "H:\\voc\\helmet\\resized\\vail_label.txt";
 			
-			String trainPath = "H:\\voc\\helmet\\resized\\train\\";
-			String vailPath = "H:\\voc\\helmet\\resized\\vail\\";
+			String orgPath = "H:\\voc\\yz\\seal\\resized\\imgs\\";
+			String orgLabelPath = "H:\\voc\\yz\\seal\\resized\\rlabels.txt";
 			
-			String trainLabelPath = "H:\\voc\\helmet\\resized\\train_label.txt";
-			String vailLabelPath = "H:\\voc\\helmet\\resized\\vail_label.txt";
+			String trainPath = "H:\\voc\\yz\\seal\\resized\\train\\";
+			String vailPath = "H:\\voc\\yz\\seal\\resized\\vail\\";
+			
+			String trainLabelPath = "H:\\voc\\yz\\seal\\resized\\train_label.txt";
+			String vailLabelPath = "H:\\voc\\yz\\seal\\resized\\vail_label.txt";
 			
 			DetectionDataLoader orgData = new DetectionDataLoader(orgPath, orgLabelPath, LabelFileType.txt, im_w, im_h, classNum, batchSize, DataType.yolov3);
 			
@@ -438,8 +525,12 @@ public class YoloV4Test {
 
 			YoloV4Test y = new YoloV4Test();
 
-			y.yolov4_tiny_sm();
+//			y.yolov4_tiny_sm();
 
+//			y.createTrainTestDataSet();
+			
+			y.yolov4_tiny_yz();
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

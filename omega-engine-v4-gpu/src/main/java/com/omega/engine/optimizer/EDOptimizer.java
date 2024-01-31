@@ -3,7 +3,6 @@ package com.omega.engine.optimizer;
 import java.util.Arrays;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
@@ -13,9 +12,9 @@ import com.omega.engine.nn.grad.GradClipping;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Seq2Seq;
+import com.omega.engine.nn.network.Seq2SeqRNN;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.rnn.data.IndexDataLoader;
-import com.omega.rnn.data.OneHotDataLoader;
 
 import jcuda.driver.JCudaDriver;
 
@@ -43,7 +42,145 @@ public class EDOptimizer extends Optimizer {
 		
 	}
 	
-	public void trainRNN(IndexDataLoader trainingData) {
+	public void trainSeq2SeqRNN(IndexDataLoader trainingData) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Seq2SeqRNN network = (Seq2SeqRNN) this.network;
+			
+			Tensor inputEncoder = new Tensor(network.en_time * batchSize, 1, 1, network.en_len, true);
+
+			Tensor inputDecoder = new Tensor(network.de_time * batchSize, 1, 1, network.de_len, true);
+			
+			Tensor label = new Tensor(network.de_time * batchSize, 1, 1, network.de_len, true);
+
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+				
+				Tensor output = null;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+					
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadData(indexs[it], inputEncoder, inputDecoder, label);
+					
+					/**
+					 * forward
+					 */
+					output = network.forward(inputEncoder, inputDecoder);
+					
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, label);
+					
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label);
+					
+//					System.out.println(JsonUtils.toJson(output.syncHost()));
+					
+//					GradClipping.gradClipping(this.lossDiff, 1e-7f);
+
+					/**
+					 * back
+					 */
+					this.network.back(this.lossDiff);
+					
+//					/**
+//					 * grad clipping
+//					 */
+//					this.gradClipping(this.network);
+					
+					/**
+					 * update
+					 */
+					this.network.update();
+					
+					JCudaDriver.cuCtxSynchronize();
+					
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / inputDecoder.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / inputDecoder.number;
+					}
+
+//					train_loss += this.currentError;
+					
+					output.syncHost();
+					
+//					System.out.println(JsonUtils.toJson(inputEncoder.shape()));
+//					System.out.println(JsonUtils.toJson(output.shape()));
+//					System.out.println(JsonUtils.toJson(label.shape()));
+					int time = output.number / batchSize;
+					float error = this.accuracy(output, label, time, batchSize);
+					
+//					if(error > 99) {
+//						break;
+//					}
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+				}
+//				output.showDMByNumber(0);
+//				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(this.lr_step);
+
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void trainSeq2Seq(IndexDataLoader trainingData) {
 		// TODO Auto-generated method stub
 		try {
 			
@@ -289,7 +426,8 @@ public class EDOptimizer extends Optimizer {
 		
 		Tensor en_hidden = network.encoder(input);
 		en_hidden.syncHost();
-		Tensor de_hidden = new Tensor(1, 1, 1, en_hidden.width, en_hidden.getByNumber(en_hidden.number - 1), true);
+		Tensor de_hx = new Tensor(1, 1, 1, en_hidden.width, en_hidden.getByNumber(en_hidden.number - 1), true);
+		Tensor de_cx = new Tensor(1, 1, 1, en_hidden.width, en_hidden.getByNumber(en_hidden.number - 1), true);
 		
 		float[] data = new float[trainingData.ch_characters];
 		data[trainingData.ch_dictionary.get("<BOS>")] = 1.0f;
@@ -299,7 +437,7 @@ public class EDOptimizer extends Optimizer {
 		
 		for(int t = 0;t<network.de_time;t++) {
 			
-			Tensor output = network.decoder(de_hidden, startInput);
+			Tensor output = network.decoder(de_hx, de_cx, startInput, t);
 			output.syncHost();
 			String[] txts = output2TXT(output, trainingData, 1, 1);
 			

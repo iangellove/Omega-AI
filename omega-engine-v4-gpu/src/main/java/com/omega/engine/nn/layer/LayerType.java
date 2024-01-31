@@ -21,6 +21,7 @@ public enum LayerType {
 	tanh("tanh"),
 	silu("silu"),
 	bn("bn"),
+	instance_normal("instance_normal"),
 	block("block"),
 	shortcut("shortcut"),
 	avgpooling("avgpooling"),

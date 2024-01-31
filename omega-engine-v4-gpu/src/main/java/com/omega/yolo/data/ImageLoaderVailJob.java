@@ -42,6 +42,9 @@ public class ImageLoaderVailJob extends RecursiveAction {
 		if(job == null) {
 			job = new ImageLoaderVailJob(path, extName, input, label, idxSet, indexs, orgLabelData, boxes, classes, start, end);
 		}else {
+			job.setPath(path);
+			job.setExtName(extName);
+			job.setIdxSet(idxSet);
 			job.setIndexs(indexs);
 			job.setInput(input);
 			job.setLabel(label);
@@ -53,11 +56,11 @@ public class ImageLoaderVailJob extends RecursiveAction {
 	}
 	
 	public ImageLoaderVailJob(String path,String extName,Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,int boxes,int classes,int start, int end) {
-		this.path = path;
-		this.extName = extName;
+		this.setPath(path);
+		this.setExtName(extName);
 		this.setInput(input);
 		this.setLabel(label);
-		this.idxSet = idxSet;
+		this.setIdxSet(idxSet);
 		this.setIndexs(indexs);
 		this.orgLabelData = orgLabelData;
 		this.boxes = boxes;
@@ -69,14 +72,18 @@ public class ImageLoaderVailJob extends RecursiveAction {
 	private void load() {
 		
 		for (int i = getStart(); i <= getEnd(); i++) {
-			String key = idxSet[indexs[i]];
-			float[] labelBoxs = this.orgLabelData.get(key);
-			
-			String imagePath = path + "/" + key + "." + extName;
+			String key = getIdxSet()[indexs[i]];
+			String imagePath = getPath() + "/" + key + "." + getExtName();
 			
 			OMImage orig = ImageLoader.loadImage(imagePath);
 			
-			float[] labelXYWH = ImageLoader.formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
+			float[] labelBoxs = this.orgLabelData.get(key);
+			
+			float[] labelXYWH = null;
+			
+			if(labelBoxs != null) {
+				labelXYWH = ImageLoader.formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
+			}
 
 			ImageLoader.loadVailDataDetection(input, label, i, orig, labelXYWH, input.width, input.height, boxes, classes);
 			
@@ -96,8 +103,8 @@ public class ImageLoaderVailJob extends RecursiveAction {
 		} else {
 
 			int mid = (getStart() + getEnd() + 1) >>> 1;
-			ImageLoaderVailJob left = new ImageLoaderVailJob(path, extName, input, label, idxSet, indexs, orgLabelData, boxes, classes, getStart(), mid - 1);
-			ImageLoaderVailJob right = new ImageLoaderVailJob(path, extName, input, label, idxSet, indexs, orgLabelData, boxes, classes, mid, getEnd());
+			ImageLoaderVailJob left = new ImageLoaderVailJob(getPath(), getExtName(), input, label, getIdxSet(), indexs, orgLabelData, boxes, classes, getStart(), mid - 1);
+			ImageLoaderVailJob right = new ImageLoaderVailJob(getPath(), getExtName(), input, label, getIdxSet(), indexs, orgLabelData, boxes, classes, mid, getEnd());
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -134,6 +141,30 @@ public class ImageLoaderVailJob extends RecursiveAction {
 
 	public void setLabel(Tensor label) {
 		this.label = label;
+	}
+
+	public String getPath() {
+		return path;
+	}
+
+	public void setPath(String path) {
+		this.path = path;
+	}
+
+	public String getExtName() {
+		return extName;
+	}
+
+	public void setExtName(String extName) {
+		this.extName = extName;
+	}
+
+	public String[] getIdxSet() {
+		return idxSet;
+	}
+
+	public void setIdxSet(String[] idxSet) {
+		this.idxSet = idxSet;
 	}
 	
 }

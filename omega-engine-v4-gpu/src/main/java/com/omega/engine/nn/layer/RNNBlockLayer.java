@@ -1,7 +1,6 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.gpu.cudnn.RNNCudnnKernel;
 import com.omega.engine.gpu.cudnn.RNNCudnnKernelV8;
 import com.omega.engine.nn.layer.gpu.RNNBaseKernel;
 import com.omega.engine.nn.network.Network;
@@ -14,7 +13,7 @@ import jcuda.Sizeof;
  * @author Administrator
  *
  */
-public class RNNBlockLayer extends Layer{
+public class RNNBlockLayer extends BaseRNNLayer{
 	
 	private int time = 0;
 	
@@ -32,10 +31,25 @@ public class RNNBlockLayer extends Layer{
 	
 	private float dropout = 0;
 	
+	private Tensor hx;
+	private Tensor cx;
+	
+	private Tensor hy;
+	private Tensor cy;
+	
+	private Tensor dhx;
+	private Tensor dcx;
+	
+	private Tensor dhy;
+	
+	private Tensor dcy;
+	
+	private int hidden_len = 0;
+	
 //	private int numLinearLayers = 2;
 	
-	public RNNBlockLayer(int time,int inputSize,int hiddenSize,int rnnMode,boolean bidirectional,float dropout) {
-		this.hasBias = false;
+	public RNNBlockLayer(int time,int inputSize,int hiddenSize,int rnnMode,boolean bidirectional,boolean hasBias,float dropout) {
+		this.hasBias = hasBias;
 		this.time = time;
 		this.inputSize = inputSize;
 		this.hiddenSize = hiddenSize;
@@ -48,8 +62,23 @@ public class RNNBlockLayer extends Layer{
 		this.initKernel();
 	}
 	
-	public RNNBlockLayer(int time,int layerNum,int inputSize,int hiddenSize,int rnnMode,boolean bidirectional,float dropout,Network network) {
-		this.hasBias = false;
+	public RNNBlockLayer(int time,int layerNum,int inputSize,int hiddenSize,int rnnMode,boolean bidirectional,boolean hasBias,float dropout) {
+		this.hasBias = hasBias;
+		this.layerNum = layerNum;
+		this.time = time;
+		this.inputSize = inputSize;
+		this.hiddenSize = hiddenSize;
+		this.rnnMode = rnnMode;
+		this.bidirectional = bidirectional;
+		this.dropout = dropout;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = hiddenSize;
+		this.initKernel();
+	}
+	
+	public RNNBlockLayer(int time,int layerNum,int inputSize,int hiddenSize,int rnnMode,boolean bidirectional,boolean hasBias,float dropout,Network network) {
+		this.hasBias = hasBias;
 		this.layerNum = layerNum;
 		this.network = network;
 		this.time = time;
@@ -67,7 +96,7 @@ public class RNNBlockLayer extends Layer{
 	public void initKernel() {
 		
 		if(kernel == null) {
-			kernel = new RNNCudnnKernelV8(time, layerNum, inputSize, hiddenSize, bidirectional, rnnMode, dropout);
+			kernel = new RNNCudnnKernelV8(time, layerNum, inputSize, hiddenSize, bidirectional, rnnMode, dropout, hasBias);
 //			kernel = new RNNCudnnKernel(time, layerNum, inputSize, hiddenSize, bidirectional, rnnMode, dropout);
 		}
 
@@ -82,8 +111,46 @@ public class RNNBlockLayer extends Layer{
 		if(this.time != kernel.seqLength) {
 			kernel.seqLength = this.time;
 		}
+		//h,c * layernum
+		hidden_len = number / time * layerNum;
+		if(this.getHx() == null || this.getHx().number != hidden_len) {
+			this.setHx(Tensor.createTensor(this.getHx(), hidden_len, 1, 1, hiddenSize, true));
+		}
+		if(this.getCx() == null || this.getCx().number != hidden_len) {
+			this.setCx(Tensor.createTensor(this.getCx(), hidden_len, 1, 1, hiddenSize, true));
+		}
+		if(this.getHy() == null || this.getHy().number != hidden_len) {
+			this.setHy(Tensor.createTensor(this.getHy(), hidden_len, 1, 1, hiddenSize, true));
+		}
+		if(this.getCy() == null || this.getCy().number != hidden_len) {
+			this.setCy(Tensor.createTensor(this.getCy(), hidden_len, 1, 1, hiddenSize, true));
+		}
 		if(this.output == null || this.number != this.output.number){
-//			this.output = new Tensor(number, 1, 1, hiddenSize, true);
+			this.output = Tensor.createTensor(this.output, number, 1, 1, hiddenSize, true);
+		}
+	}
+	
+	public void init(int time,int number) {
+		// TODO Auto-generated method stub
+		this.number = number;
+		this.time = time;
+		if(this.time != kernel.seqLength) {
+			kernel.seqLength = this.time;
+		}
+		hidden_len = number / time * layerNum;
+		if(this.getHx() == null || this.getHx().number != hidden_len) {
+			this.setHx(Tensor.createTensor(this.getHx(), hidden_len, 1, 1, hiddenSize, true));
+		}
+		if(this.getCx() == null || this.getCx().number != hidden_len) {
+			this.setCx(Tensor.createTensor(this.getCx(), hidden_len, 1, 1, hiddenSize, true));
+		}
+		if(this.getHy() == null || this.getHy().number != hidden_len) {
+			this.setHy(Tensor.createTensor(this.getHy(), hidden_len, 1, 1, hiddenSize, true));
+		}
+		if(this.getCy() == null || this.getCy().number != hidden_len) {
+			this.setCy(Tensor.createTensor(this.getCy(), hidden_len, 1, 1, hiddenSize, true));
+		}
+		if(this.output == null || this.number != this.output.number){
 			this.output = Tensor.createTensor(this.output, number, 1, 1, hiddenSize, true);
 		}
 	}
@@ -91,6 +158,18 @@ public class RNNBlockLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
+		if(this.dhx == null || this.dhx.number != hidden_len) {
+			this.dhx = Tensor.createTensor(this.dhx, hidden_len, 1, 1, hiddenSize, true);
+		}
+		if(this.dhy == null || this.dhy.number != hidden_len) {
+			this.dhy = Tensor.createTensor(this.dhy, hidden_len, 1, 1, hiddenSize, true);
+		}
+		if(this.dcx == null || this.dcx.number != hidden_len) {
+			this.dcx = Tensor.createTensor(this.dcx, hidden_len, 1, 1, hiddenSize, true);
+		}
+		if(this.dcy == null || this.dcy.number != hidden_len) {
+			this.dcy = Tensor.createTensor(this.dcy, hidden_len, 1, 1, hiddenSize, true);
+		}
 		if(this.diff == null || this.number != this.diff.number){
 			this.diff = new Tensor(number, 1, 1, inputSize, true);
 		}
@@ -107,6 +186,8 @@ public class RNNBlockLayer extends Layer{
 			this.weight = new Tensor(1, 1, 1, weightSize, true);
 			
 			this.diffW = new Tensor(1, 1, 1, weightSize, true);
+//			System.out.println(weightSize+":"+this.inputSize * this.hiddenSize);
+//			this.weight = new Tensor(1, 1, 1, weightSize, RandomUtils.uniformFloat(weightSize, inputSize), true);
 			
 			kernel.initWeights(weight);
 			
@@ -120,11 +201,22 @@ public class RNNBlockLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		kernel.init(input.number);
+		kernel.init(input.number, time);
+		
+		initParam();
+		
+		kernel.forward(this.network.RUN_MODEL, input, getHx(), getCx(), weight, output, getHy(), getCy());
+		
+	}
+	
+	public void output(Tensor hx,Tensor cx) {
+		// TODO Auto-generated method stub
+		
+		kernel.init(input.number, time);
 		
 		initParam();
 
-		kernel.forward(this.network.RUN_MODEL, input, weight, output);
+		kernel.forward(this.network.RUN_MODEL, input, hx, cx, weight, output, getHy(), getCy());
 		
 	}
 
@@ -138,9 +230,17 @@ public class RNNBlockLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 //		System.out.println("in-rnn");
-		kernel.dx(delta, output, weight, diff);
+		kernel.dx(delta, dhy, dcy, output, hx, cx, weight, diff, dhx, dcx);
 //		GradClipping.gradClipping(diff, 1e-7f);
-		kernel.dw(delta, output, input, diffW);
+		kernel.dw(delta, output, input, hx, diffW);
+	}
+	
+	public void diff(Tensor hx,Tensor cx,Tensor dhy,Tensor dcy) {
+		// TODO Auto-generated method stub
+//		System.out.println("in-rnn");
+		kernel.dx(delta, dhy, dcy, output, hx, cx, weight, diff, dhx, dcx);
+//		GradClipping.gradClipping(diff, 1e-7f);
+		kernel.dw(delta, output, input, hx, diffW);
 		
 	}
 
@@ -219,7 +319,26 @@ public class RNNBlockLayer extends Layer{
 		}
 
 	}
+	
+	public void back(Tensor delta,Tensor hx,Tensor cx,Tensor dhy,Tensor dcy) {
+		// TODO Auto-generated method stub
 
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff(hx, cx, dhy, dcy);
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+
+	}
+	
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
@@ -267,6 +386,88 @@ public class RNNBlockLayer extends Layer{
 	public void backTemp() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public void forward(int time, int number) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init(time, number);
+		/**
+		 * 设置输入
+		 */
+		this.setInput();
+		/**
+		 * 计算输出
+		 */
+		this.output();
+	}
+
+	@Override
+	public void forward(Tensor input, Tensor hx,Tensor cx, int time) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init(time, input.number);
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		/**
+		 * 计算输出
+		 */
+		this.output(hx, cx);
+	}
+
+	public Tensor getHx() {
+		return hx;
+	}
+
+	public void setHx(Tensor hx) {
+		this.hx = hx;
+	}
+
+	public Tensor getCx() {
+		return cx;
+	}
+
+	public void setCx(Tensor cx) {
+		this.cx = cx;
+	}
+
+	public Tensor getHy() {
+		return hy;
+	}
+
+	public void setHy(Tensor hy) {
+		this.hy = hy;
+	}
+
+	public Tensor getCy() {
+		return cy;
+	}
+
+	public void setCy(Tensor cy) {
+		this.cy = cy;
+	}
+
+	public Tensor getDhx() {
+		return dhx;
+	}
+
+	public Tensor getDcx() {
+		return dcx;
+	}
+
+	public Tensor getDhy() {
+		return dhy;
+	}
+
+	public Tensor getDcy() {
+		return dcy;
 	}
 
 }
