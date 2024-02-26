@@ -17,12 +17,14 @@ import com.omega.engine.ad.op.functions.ClampOP;
 import com.omega.engine.ad.op.functions.CosOP;
 import com.omega.engine.ad.op.functions.ExpOP;
 import com.omega.engine.ad.op.functions.LogOP;
+import com.omega.engine.ad.op.functions.MaxOP;
 import com.omega.engine.ad.op.functions.MaximumOP;
 import com.omega.engine.ad.op.functions.MinimumOP;
 import com.omega.engine.ad.op.functions.PowOP;
 import com.omega.engine.ad.op.functions.SinOP;
 import com.omega.engine.ad.op.functions.SumOP;
 import com.omega.engine.ad.op.functions.TanOP;
+import com.omega.engine.ad.op.functions.TransposeOP;
 import com.omega.engine.ad.op.sign.AddOP;
 import com.omega.engine.ad.op.sign.DivOP;
 import com.omega.engine.ad.op.sign.DotOP;
@@ -234,6 +236,9 @@ public class Graph{
 		case exp:
 			op = ExpOP.getInstance();
 			break;
+		case transpose:
+			op = TransposeOP.getInstance();
+			break;
 		default:
 			break;	
 		}
@@ -257,6 +262,9 @@ public class Graph{
 			break;
 		case sum:
 			op = SumOP.getInstance();
+			break;
+		case max:
+			op = MaxOP.getInstance();
 			break;
 		default:
 			break;	
@@ -1089,6 +1097,124 @@ public class Graph{
 		
 	}
 	
+	public static void selfAttention() {
+		
+		Graph graph = new Graph();
+		
+		int number = 2;
+		int inputSize = 5;
+		int hiddenSize = 5;
+		
+		float dk =  (float) Math.sqrt(inputSize * 2);
+		
+		float[] xd = MatrixUtils.order(number * inputSize, 0.0f, 0.1f);
+		Tensor x = new Tensor(number, 1, 1, inputSize, xd, true, graph);
+		x.setRequiresGrad(true);
+		
+		float[] qwd = MatrixUtils.val(inputSize * hiddenSize, 0.1f);
+		Tensor qw = new Tensor(1, 1, inputSize, hiddenSize, qwd, true, graph);
+		qw.setRequiresGrad(true);
+
+		float[] kwd = MatrixUtils.val(inputSize * hiddenSize, 0.2f);
+		Tensor kw = new Tensor(1, 1, inputSize, hiddenSize, kwd, true, graph);
+		kw.setRequiresGrad(true);
+		
+		float[] vwd = MatrixUtils.val(inputSize * hiddenSize, 0.01f);
+		Tensor vw = new Tensor(1, 1, inputSize, hiddenSize, vwd, true, graph);
+		vw.setRequiresGrad(true);
+		
+		Tensor q = linear(x, qw);
+		
+		Tensor k = linear(x, kw);
+		
+		Tensor v = linear(x, vw);
+		
+//		Tensor aw = q.dot(k.transpose()).div(dk);
+		
+		Tensor aw = q.dot(k.transpose());
+		
+		Tensor sf = softmax(aw);
+
+		System.out.println("sf:");
+		sf.showDM();
+		
+		System.out.println("v:");
+		v.showDM();
+		
+		Tensor output = sf.dot(v);
+		
+		System.out.println("output:");
+		output.showDM();
+		
+		graph.clearGrad();
+		graph.backward();
+		
+//		System.out.println("sf-grad:");
+//		sf.getGrad().showDM();
+		
+		System.out.println("x-grad:");
+		x.getGrad().showDM();
+		
+		System.out.println("qw-grad:");
+		qw.getGrad().showDM();
+		
+		System.out.println("kw-grad:");
+		kw.getGrad().showDM();
+		
+		System.out.println("vw-grad:");
+		vw.getGrad().showDM();
+		
+	}
+	
+	public static Tensor linear(Tensor x,Tensor w) {
+		return x.dot(w);
+	}
+	
+	public static Tensor softmax(Tensor x) {
+		Tensor max = x.max(1);
+//		System.out.println("x:");
+//		x.showDM();
+//		x.showShape();
+//		System.out.println("max:");
+//		max.showDM();
+//		max.showShape();
+//		System.out.println("sub:");
+//		x.sub(max).showDM();
+		Tensor e = x.sub(max).exp();
+//		System.out.println("e:");
+//		e.showDM();
+		Tensor sum = e.sum(1);
+//		System.out.println("sum:");
+//		sum.showShape();
+//		sum.showDM();
+		return e.div(sum);
+	}
+	
+	public static void softmax_test() {
+		
+
+		Graph graph = new Graph();
+		
+		int number = 2;
+		int inputSize = 10;
+		
+		float[] xd = MatrixUtils.order(number * inputSize, 0.0f, 0.1f);
+		Tensor x = new Tensor(number, 1, 1, inputSize, xd, true, graph);
+		x.setRequiresGrad(true);
+		
+		Tensor output = softmax(x);
+		
+		graph.clearGrad();
+		float[] dd = MatrixUtils.order(number * inputSize, 0.0f, 0.1f);
+		Tensor delta = new Tensor(number, 1, 1, inputSize, dd, true);
+		graph.backward(delta);
+		
+		output.showDM();
+		
+		output.getGrad().showDM();
+		
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -1147,7 +1273,11 @@ public class Graph{
 			
 //			silu();
 			
-			RNN();
+//			RNN();
+			
+//			selfAttention();
+			
+			softmax_test();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

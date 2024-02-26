@@ -29,7 +29,7 @@ public class Seq2seq {
 			
 			int de_hidden = 512;
 			
-			String trainPath = "H:\\rnn_dataset\\translate4000.csv";
+			String trainPath = "H:\\rnn_dataset\\translate.csv";
 
 			IndexDataLoader trainData = new IndexDataLoader(trainPath, batchSize);
 			
@@ -101,7 +101,7 @@ public class Seq2seq {
 				}
 				input_txt = input_txt.toLowerCase();
 				System.out.println(input_txt);
-				optimizer.predict(trainData, input_txt);
+				optimizer.predictRNN(trainData, input_txt);
 			}
 			scanner.close();
 		} catch (Exception e) {

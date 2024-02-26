@@ -30,11 +30,16 @@ import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
 import jcuda.jcublas.JCublas;
 import jcuda.jcublas.JCublas2;
+import jcuda.jcublas.cublasComputeType;
+import jcuda.jcublas.cublasDataType;
+import jcuda.jcublas.cublasGemmAlgo;
 import jcuda.jcublas.cublasHandle;
 import jcuda.jcublas.cublasOperation;
+import jcuda.jcublas.cublasPointerMode;
 import jcuda.jcublas.cublasStatus;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaMemcpyKind;
+import jcuda.cudaDataType;
 
 public class GPUOP {
     
@@ -317,7 +322,7 @@ public class GPUOP {
     	
     }
     
-    public void launchMultiply(Pointer c,Pointer a,Pointer b,int batch_size, int m, int n, int k, boolean trans_A, boolean trans_B, int scaler) {
+    public void launchMultiply(Pointer a,Pointer b,Pointer c,int batch_size, int m, int n, int k, boolean trans_A, boolean trans_B, int scaler) {
     	
     	if (scaler==0){
             float alpha = 1.0f;
@@ -348,6 +353,34 @@ public class GPUOP {
             	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_T, CUBLAS_OP_T, n, m, k, alphaP, b, k, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
         	}
         }
+    }
+    
+    public void bmm(Pointer dA,Pointer dB,Pointer dC,int batch_size, int m, int n, int k, int CUBLAS_OP_A, int CUBLAS_OP_B) {
+    	
+    	float alpha = 1.0f;
+        float beta  = 0.0f;
+        Pointer alphaP = Pointer.to(new float[]{ alpha });
+        Pointer betaP = Pointer.to(new float[]{ beta });
+        
+        int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
+        int ldb = CUBLAS_OP_B == CUBLAS_OP_N ? n : k;
+
+        int status = JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, dB, ldb,
+        		n * k, dA, lda, m * k, betaP, dC, n, m * n, batch_size);
+
+    }
+    
+    public void bmm(Pointer dA,Pointer dB,Pointer dC,int batch_size, int m, int n, int k, int CUBLAS_OP_A, int CUBLAS_OP_B,float alpha,float beta) {
+
+        Pointer alphaP = Pointer.to(new float[]{ alpha });
+        Pointer betaP = Pointer.to(new float[]{ beta });
+        
+        int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
+        int ldb = CUBLAS_OP_B == CUBLAS_OP_N ? n : k;
+
+        int status = JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, dB, ldb,
+        		n * k, dA, lda, m * k, betaP, dC, n, m * n, batch_size);
+
     }
     
     /**
@@ -617,7 +650,9 @@ public class GPUOP {
 //        	System.out.println((System.nanoTime() - start)/1e6 + "ms");
 //    	}
 
-    	test();
+//    	test();
+    	
+    	testBatch();
     	
     }
     
@@ -649,6 +684,35 @@ public class GPUOP {
         	PrintUtils.printImage(ct.syncHost());
         	System.out.println("");
     	}
+    	
+    }
+    
+    public static void testBatch() {
+    	
+    	int batch = 2;
+    	int m = 5;
+    	int n = 3;
+    	int k = 4;
+    	
+    	float[] a = RandomUtils.order(batch * m * k, 1, 0);
+    	
+    	float[] b = RandomUtils.order(batch * n * k, 1, 0);
+    	
+    	Tensor at = new Tensor(batch, 1, m, k, a, true);
+    	
+    	Tensor bt = new Tensor(batch, 1, n, k, b, true);
+    	
+    	Tensor ct = new Tensor(batch, 1, m, n, true);
+    	
+
+//    	GPUOP.getInstance().launchMultiply(at.getGpuData(), bt.getGpuData(), ct.getGpuData(), batch, m, n, k, true, false, 0);
+    	
+    	GPUOP.getInstance().bmm(at.getGpuData(), bt.getGpuData(), ct.getGpuData(), batch, m, n, k, CUBLAS_OP_N, CUBLAS_OP_T);
+    	
+    	at.showDM();
+    	
+    	ct.showDM();
+    	System.out.println("");
     	
     }
     

@@ -261,7 +261,9 @@ public class Seq2Seq extends Network {
 		return this.lossFunction.diff(output, label, diff);
 	}
 	
-	public Tensor encoder(Tensor input) {
+	public Tensor[] encoder(Tensor input) {
+		
+		Tensor[] outputs = new Tensor[3];
 		
 		/**
 		 * 设置输入数据
@@ -276,11 +278,15 @@ public class Seq2Seq extends Network {
 		this.en_emLayer.forward();
 		
 		this.en_rnnLayer.forward(this.en_time, this.en_emLayer.getOutput().number);
-
-		return en_rnnLayer.getOutput();
+		
+		outputs[0] = en_rnnLayer.getOutput();
+		outputs[1] = en_rnnLayer.getHy();
+		outputs[2] = en_rnnLayer.getCy();
+		
+		return outputs;
 	}
 	
-	public Tensor decoder(Tensor hx,Tensor cx,Tensor start,int timeIndex) {
+	public Tensor decoder(Tensor hx,Tensor cx,Tensor start) {
 		
 		/**
 		 * 解码器

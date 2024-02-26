@@ -5,7 +5,6 @@ import java.io.Serializable;
 import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.OP;
 import com.omega.engine.ad.op.OPType;
-import com.omega.engine.ad.op.data.GetOP;
 
 /**
  * 计算图节点
@@ -42,7 +41,7 @@ public class Tape implements Serializable{
 		this.setY(other);
 		if(position!=null && !op.getOpType().equals(OPType.set)) {
 			int dims = position[0];
-			if(!op.getOpType().equals(OPType.sum)) {
+			if(!op.getOpType().equals(OPType.sum) && !op.getOpType().equals(OPType.max)) {
 				int count = position[2];
 				switch (dims) {
 				case 0:
@@ -68,6 +67,8 @@ public class Tape implements Serializable{
 				setOutput(new Tensor(self.number, self.channel, self.height, other.width, self.isHasGPU(), g));
 			}else if(op.getOpType().equals(OPType.set)){
 				this.output = self;
+			}else if(op.getOpType().equals(OPType.transpose)){
+				setOutput(new Tensor(self.width, self.channel, self.height, self.number, self.isHasGPU(), g));
 			}else {
 				setOutput(new Tensor(self.number, self.channel, self.height, self.width, self.isHasGPU(), g));
 			}

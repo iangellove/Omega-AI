@@ -19,6 +19,16 @@ public class TensorOP {
 		
 	}
 	
+	public static void add(Tensor a,Tensor b,Tensor c,int axis) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().add_gpu(a, b, c);
+		}else {
+			c.data = MatrixOperation.add(a.data, b.data);
+		}
+		
+	}
+	
 	public static void add(Tensor a,Tensor b,Tensor c, int offset,int N) {
 		
 		if(c.isHasGPU()) {
@@ -51,10 +61,32 @@ public class TensorOP {
 	
 	public static void sub(Tensor a,Tensor b,Tensor c) {
 		
-		if(c.isHasGPU()) {
-			OPKernel.getInstance().sub_gpu(a, b, c);
+		int axis = getAxis(a, b);
+		
+		if(axis >= 0) {
+			sub(a, b, c, axis);
 		}else {
-			c.data = MatrixOperation.subtraction(a.data, b.data);
+			if(c.isHasGPU()) {
+				OPKernel.getInstance().sub_gpu(a, b, c);
+			}else {
+				c.data = MatrixOperation.subtraction(a.data, b.data);
+			}
+		}
+	}
+	
+	public static int getAxis(Tensor a,Tensor b) {
+		if(a.getDataLength() == b.getDataLength()) {
+			return -1;
+		}
+		return 0;
+	}
+	
+	public static void sub(Tensor a,Tensor b,Tensor c,int axis) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().sub_gpu(a, b, c, axis);
+		}else {
+			c.data = MatrixOperation.subtraction(a.data, b.data, axis);
 		}
 		
 	}
@@ -151,20 +183,51 @@ public class TensorOP {
 	
 	public static void mulPlus(Tensor a,float b,Tensor c) {
 		
-		if(c.isHasGPU()) {
-			OPKernel.getInstance().mul_plus_scalar_gpu(a, b, c);
+		int axis = getAxis(a, c);
+		
+		if(axis >= 0) {
+			mulPlus(a, b, c, axis);
 		}else {
-			MatrixOperation.plus(c.data, MatrixOperation.multiplication(a.data, b));
+
+			if(c.isHasGPU()) {
+				OPKernel.getInstance().mul_plus_scalar_gpu(a, b, c);
+			}else {
+				MatrixOperation.plus(c.data, MatrixOperation.multiplication(a.data, b));
+			}
+		
+		}
+		
+	}
+	
+	public static void mulPlus(Tensor a,float b,Tensor c,int axis) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().mul_plus_scalar_gpu(a, b, c, axis);
+		}else {
+			MatrixOperation.plus(c.data, MatrixOperation.multiplication(a.data, b), axis);
 		}
 		
 	}
 	
 	public static void div(Tensor a,Tensor b,Tensor c) {
+		int axis = getAxis(a, b);
+		if(axis >= 0) {
+			div(a, b, c, axis);
+		}else {
+			if(c.isHasGPU()) {
+				OPKernel.getInstance().div_gpu(a, b, c);
+			}else {
+				c.data = MatrixOperation.division(a.data, b.data);
+			}
+		}
+	}
+	
+	public static void div(Tensor a,Tensor b,Tensor c,int axis) {
 		
 		if(c.isHasGPU()) {
-			OPKernel.getInstance().div_gpu(a, b, c);
+			OPKernel.getInstance().div_gpu(a, b, c, axis);
 		}else {
-			c.data = MatrixOperation.division(a.data, b.data);
+			c.data = MatrixOperation.division(a.data, b.data, axis);
 		}
 		
 	}
@@ -191,10 +254,27 @@ public class TensorOP {
 	
 	public static void divPlus(Tensor a,Tensor b,Tensor c) {
 		
-		if(c.isHasGPU()) {
-			OPKernel.getInstance().div_plus_gpu(a, b, c);
+		int axis = getAxis(a, b);
+
+		if(axis >= 0) {
+			
+			divPlus(a, b, c, axis);
 		}else {
-			MatrixOperation.plus(c.data, MatrixOperation.division(a.data, b.data));
+			if(c.isHasGPU()) {
+				OPKernel.getInstance().div_plus_gpu(a, b, c);
+			}else {
+				MatrixOperation.plus(c.data, MatrixOperation.division(a.data, b.data));
+			}
+		}
+		
+	}
+	
+	public static void divPlus(Tensor a,Tensor b,Tensor c,int axis) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().div_plus_gpu(a, b, c, axis);
+		}else {
+			MatrixOperation.plus(c.data, MatrixOperation.division(a.data, b.data, axis));
 		}
 		
 	}
@@ -219,12 +299,42 @@ public class TensorOP {
 		
 	}
 	
+	public static void transpose(Tensor a,Tensor b) {
+		
+		if(b.isHasGPU()) {
+			OPKernel.getInstance().transpose_gpu(a, b);
+		}else {
+//			b.data = MatrixOperation.exp(a.data);
+		}
+		
+	}
+	
 	public static void sum(Tensor a,Tensor b,int axis) {
 		
 		if(b.isHasGPU()) {
 			OPKernel.getInstance().sum_gpu(a, b, axis);
 		}else {
 			b.data = MatrixOperation.sum(a.data, a.number, a.channel, a.height, a.width, axis);
+		}
+		
+	}
+	
+	public static void max(Tensor a,Tensor b,int axis) {
+		
+		if(b.isHasGPU()) {
+			OPKernel.getInstance().max_gpu(a, b, axis);
+		}else {
+			b.data = MatrixOperation.max(a.data, a.number, a.channel, a.height, a.width, axis);
+		}
+		
+	}
+	
+	public static void max_backward(Tensor d,Tensor a,Tensor b,int axis) {
+		
+		if(b.isHasGPU()) {
+			OPKernel.getInstance().max_backward_gpu(d, a, b, axis);
+		}else {
+			b.data = MatrixOperation.max(a.data, a.number, a.channel, a.height, a.width, axis);
 		}
 		
 	}
@@ -311,9 +421,9 @@ public class TensorOP {
 	
 	public static void broadcast(Tensor a,Tensor c,int axis) {
 		if(c.isHasGPU()) {
-			OPKernel.getInstance().broadcast_gpu(a, c, axis);
+			OPKernel.getInstance().broadcast_plus_gpu(a, c, axis);
 		}else {
-			MatrixOperation.broadcast(a.data, c.data, c.number, c.channel, c.height, c.width, axis);
+			MatrixOperation.broadcast_plus(a.data, c.data, c.number, c.channel, c.height, c.width, axis);
 		}
 	}
 	
@@ -392,7 +502,11 @@ public class TensorOP {
 //			System.out.println(JsonUtils.toJson(b.shape()));
 //			a.showDM();
 //			b.showDM();
-			GPUOP.getInstance().multiplyFloat(a.number, b.width, b.height, a.getGpuData(), b.getGpuData(), c.getGpuData(),
+			int k = b.number;
+			if(b.number == 1) {
+				k = b.height;
+			}
+			GPUOP.getInstance().multiplyFloat(a.number, b.width, k, a.getGpuData(), b.getGpuData(), c.getGpuData(),
 					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 //			c.showDM();
 //			System.out.println("----------------------");
@@ -410,8 +524,12 @@ public class TensorOP {
 	 * @param c
 	 */
 	public static void dotDX(Tensor a,Tensor b,Tensor c) {
-
-		GPUOP.getInstance().multiplyFloat(a.number, b.height, b.width, a.getGpuData(), b.getGpuData(), c.getGpuData(),
+		
+		int k = b.number;
+		if(b.number == 1) {
+			k = b.height;
+		}
+		GPUOP.getInstance().multiplyFloat(a.number, k, b.width, a.getGpuData(), b.getGpuData(), c.getGpuData(),
 				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 1.0f);
 		
 	}
@@ -430,5 +548,14 @@ public class TensorOP {
 		
 	}
 	
+	public static void permute(Tensor a,Tensor b,int[] permutes) {
+		
+		if(a.isHasGPU()) {
+			OPKernel.getInstance().permute_gpu(a, b, permutes);
+		}else {
+//			c.data = MatrixOperation.add(a.data, b.data);
+		}
+		
+	}
 	
 }

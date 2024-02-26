@@ -424,10 +424,10 @@ public class EDOptimizer extends Optimizer {
 		
 		Tensor input = trainingData.loadByTxt(input_txt);
 		
-		Tensor en_hidden = network.encoder(input);
-		en_hidden.syncHost();
-		Tensor de_hx = new Tensor(1, 1, 1, en_hidden.width, en_hidden.getByNumber(en_hidden.number - 1), true);
-		Tensor de_cx = new Tensor(1, 1, 1, en_hidden.width, en_hidden.getByNumber(en_hidden.number - 1), true);
+		Tensor[] outputs = network.encoder(input);
+		
+		Tensor de_hx = outputs[1];
+		Tensor de_cx = outputs[2];
 		
 		float[] data = new float[trainingData.ch_characters];
 		data[trainingData.ch_dictionary.get("<BOS>")] = 1.0f;
@@ -437,7 +437,7 @@ public class EDOptimizer extends Optimizer {
 		
 		for(int t = 0;t<network.de_time;t++) {
 			
-			Tensor output = network.decoder(de_hx, de_cx, startInput, t);
+			Tensor output = network.decoder(de_hx, de_cx, startInput);
 			output.syncHost();
 			String[] txts = output2TXT(output, trainingData, 1, 1);
 			
@@ -452,6 +452,37 @@ public class EDOptimizer extends Optimizer {
 		return txt;
 	}
 	
-	
+	public String predictRNN(IndexDataLoader trainingData,String input_txt) {
+		
+		Seq2SeqRNN network = (Seq2SeqRNN) this.network;
+		
+		Tensor input = trainingData.loadByTxt(input_txt);
+		
+		Tensor en_hidden = network.encoder(input);
+		en_hidden.syncHost();
+		Tensor de_hidden = new Tensor(1, 1, 1, en_hidden.width, en_hidden.getByNumber(en_hidden.number - 1), true);
+		
+		float[] data = new float[trainingData.ch_characters];
+		data[trainingData.ch_dictionary.get("<BOS>")] = 1.0f;
+		Tensor startInput = new Tensor(1, 1, 1, trainingData.ch_characters, data, true);
+		
+		String txt = "";
+		
+		for(int t = 0;t<network.de_time;t++) {
+			
+			Tensor output = network.decoder(de_hidden, startInput);
+			output.syncHost();
+			String[] txts = output2TXT(output, trainingData, 1, 1);
+			
+			txt += txts[0];
+			
+			startInput.clear();
+			startInput.data[trainingData.ch_dictionary.get(txts[0])] = 1.0f;
+			startInput.hostToDevice();
+			
+		}
+		System.out.println(txt);
+		return txt;
+	}
 	
 }

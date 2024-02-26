@@ -266,6 +266,14 @@ public class Tensor implements Serializable{
 		}
 	}
 	
+	public Tensor view(int number,int channel,int height,int width) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		return this;
+	}
+	
 	public int[] shape() {
 		return new int[] {this.number,this.channel,this.height,this.width};
 	}
@@ -622,6 +630,10 @@ public class Tensor implements Serializable{
 	public Tensor log() {
 		return g.OP(OPType.log, this);
 	}
+
+	public Tensor transpose() {
+		return g.OP(OPType.transpose, this);
+	}
 	
 	public Tensor pow() {
 		return g.OP(OPType.pow, this, 2.0f);
@@ -653,6 +665,10 @@ public class Tensor implements Serializable{
 	
 	public Tensor sum(int axis) {
 		return g.OP(OPType.sum, this, new int[] {axis});
+	}
+	
+	public Tensor max(int axis) {
+		return g.OP(OPType.max, this, new int[] {axis});
 	}
 	
 	public Tensor clamp(float min,float max) {

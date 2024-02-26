@@ -378,7 +378,7 @@ public class YoloLoss7 extends LossFunction {
 		fix_nan_inf(dx);
 		
 		clip(dx, this.max_delta);
-		
+
 	    this.diff.data[index + 0 * stride] -= dx[0];
 	    this.diff.data[index + 1 * stride] -= dx[1];
 	    this.diff.data[index + 2 * stride] -= dx[2];

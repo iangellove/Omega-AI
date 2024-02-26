@@ -18,7 +18,9 @@ public enum OPType {
 	set,
 	pow,
 	sum,
+	max,
 	clamp,
 	maximum,
-	minimum
+	minimum,
+	transpose
 }

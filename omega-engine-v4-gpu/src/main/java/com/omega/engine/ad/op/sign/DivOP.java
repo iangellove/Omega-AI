@@ -54,6 +54,7 @@ public class DivOP extends SignOP{
 		// TODO Auto-generated method stub
 		Tensor x = tape.getX();
 		Tensor y = tape.getY();
+		
 		if(x.isRequiresGrad()) {
 			if(y!=null) {
 				TensorOP.divPlus(delta, y, x.getGrad());

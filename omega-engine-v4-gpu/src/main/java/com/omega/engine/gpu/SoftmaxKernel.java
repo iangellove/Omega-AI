@@ -6,8 +6,10 @@ import com.omega.common.data.Tensor;
 import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
-
+import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
+import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 import jcuda.Pointer;
 import jcuda.driver.CUfunction;
 import jcuda.runtime.cudaError;
@@ -20,7 +22,9 @@ public class SoftmaxKernel extends BaseKernel{
 	
 	private CUfunction softmax_backward_function;
 	
-	private CUfunction softmax_backward_function2;
+	private CUfunction log_softmax_backward_function;
+	
+	private CUfunction log_softmax_backward_function2;
 	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
@@ -56,9 +60,15 @@ public class SoftmaxKernel extends BaseKernel{
         
 			}
 			
-			if(softmax_backward_function2 == null) {
+			if(log_softmax_backward_function == null) {
 				
-				softmax_backward_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"SoftmaxKernel.cu", "softmax_back2");
+				log_softmax_backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"SoftmaxKernel.cu", "log_softmax_back");
+        
+			}
+			
+			if(log_softmax_backward_function2 == null) {
+				
+				log_softmax_backward_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"SoftmaxKernel.cu", "log_softmax_back2");
         
 			}
 			
@@ -137,6 +147,34 @@ public class SoftmaxKernel extends BaseKernel{
 		
 	}
 	
+	public void backward_noloss(Tensor output,Tensor delta,Tensor diff) {
+
+		if(backKernelParameters == null) {
+
+			/**
+			 * float *output, float *delta, float *diff, int batch, int n
+			 */
+			backKernelParameters = Pointer.to(
+	                Pointer.to(output.getGpuData()),
+	                Pointer.to(delta.getGpuData()),
+	                Pointer.to(diff.getGpuData()),
+	                Pointer.to(new int[] {output.number}),
+	                Pointer.to(new int[] {output.width})
+	            );
+
+		}
+		
+		cuLaunchKernel(softmax_backward_function,
+				output.number,  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            backKernelParameters, null // Kernel- and extra parameters
+	        );
+		
+//		JCudaDriver.cuCtxSynchronize();
+		
+	}
+	
 	public void backward(Tensor output,Tensor currentLabel,Tensor diff) {
 
 		if(backKernelParameters == null) {
@@ -153,7 +191,7 @@ public class SoftmaxKernel extends BaseKernel{
 
 		}
 		
-		cuLaunchKernel(softmax_backward_function,
+		cuLaunchKernel(log_softmax_backward_function,
 				this.CAFFE_GET_BLOCKS(diff.dataLength),  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
@@ -181,7 +219,7 @@ public class SoftmaxKernel extends BaseKernel{
 
 		}
 		
-		cuLaunchKernel(softmax_backward_function2,
+		cuLaunchKernel(log_softmax_backward_function2,
 				this.CAFFE_GET_BLOCKS(diff.dataLength),  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
@@ -227,7 +265,7 @@ public class SoftmaxKernel extends BaseKernel{
 				}
 			}
 			for(int i = 0;i<input.width;i++){
-		        float e = (float) input.data[id * input.width + i] - max;
+		        float e = (float) Math.exp(input.data[id * input.width + i] - max);
 		        sum += e;
 		        output.data[id * input.width + i] = e;
 		    }
@@ -248,6 +286,46 @@ public class SoftmaxKernel extends BaseKernel{
 
 	}
 	
+	/**
+	 * bottom_diff = top_diff * (top_data - top_data * top_data)
+	 * @param output
+	 * @param delta
+	 * @param diff
+	 */
+	public static void cpuBackwardNoLoss(Tensor output,Tensor delta,Tensor diff) {
+		// TODO Auto-generated method stub
+		
+//		GPUOP.getInstance().bmm(delta.getGpuData(), output.getGpuData(), diff.getGpuData(), delta.number * delta.channel, delta.height, output.height, delta.width, CUBLAS_OP_N, CUBLAS_OP_T, 1.0f, 0.0f);
+		
+//		Tensor tmp = new Tensor(delta.number, 1, 1, diff.width, true);
+//		
+//		GPUOP.getInstance().multiplyFloat(delta.number, output.width, delta.width, delta.getGpuData(), output.getGpuData(), tmp.getGpuData(), CUBLAS_OP_N, CUBLAS_OP_T, 1.0f, 0.0f);
+//		
+//		tmp.showDM();
+//		
+//		tmp.syncHost();
+//
+//		for(int i = 0;i<output.getDataLength();i++) {
+//			int n = i / output.width;
+//		    int s = i % output.width;
+//			diff.data[i] = (delta.data[i] - tmp.data[n * output.width + s]) * output.data[i];
+//		}
+//		diff.hostToDevice();
+//		System.out.println(JsonUtils.toJson(diff.data));
+		
+		for(int n = 0;n<output.number;n++) {
+			float sum = 0.0f;
+			for(int w = 0;w<output.width;w++) {
+				sum += output.data[n * output.width + w] * delta.data[n * output.width + w];
+			}
+			for(int w = 0;w<output.width;w++) {
+				diff.data[n * output.width + w] = (delta.data[n * output.width + w] - sum) * output.data[n * output.width + w];
+			}
+		}
+		diff.hostToDevice();
+		
+	}
+	
 	public static void main(String[] args) {
 		
 		int N = 2;
@@ -255,7 +333,7 @@ public class SoftmaxKernel extends BaseKernel{
 		int H = 1;
 		int W = 10;
 		
-		float[] x = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
+		float[] x = RandomUtils.order(N * C * H * W, 0.1f, 0);
 		
 		Tensor input = new Tensor(N, C, H, W, x, true);
 		
@@ -271,6 +349,16 @@ public class SoftmaxKernel extends BaseKernel{
 		k.cpuForward2(input, output2);
 		
 		System.out.println(JsonUtils.toJson(output2.data));
+		
+		Tensor delta = new Tensor(N, C, H, W, RandomUtils.order(N * C * H * W, 0.1f, 0), true);
+		
+		Tensor diff = new Tensor(N, C, H, W, true);
+
+		k.backward_noloss(output, delta, diff);
+		
+//		cpuBackwardNoLoss(output, delta, diff);
+		
+		diff.showDM();
 		
 	}
 	

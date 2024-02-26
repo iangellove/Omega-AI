@@ -68,7 +68,21 @@ __global__ void log_softmax(float *input, float *output, int batch, int n)
 }
 
 extern "C"
-__global__ void softmax_back(float *output, float *currentLabel, float *diff, int n)
+__global__ void softmax_back(float *output, float *delta, float *diff, int batch, int n)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (id >= batch) return;
+    float sum = 0.0f;
+	for(int i = 0;i<n;i++){
+		sum += output[id * n + i] * delta[id * n + i];
+    }
+    for(int i = 0;i<n;i++){
+    	diff[id * n + i] = (delta[id * n + i] - sum) * output[id * n + i];
+    }
+}
+
+extern "C"
+__global__ void log_softmax_back(float *output, float *currentLabel, float *diff, int n)
 {
     int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if (id >= n) return;
@@ -78,7 +92,7 @@ __global__ void softmax_back(float *output, float *currentLabel, float *diff, in
 }
 
 extern "C"
-__global__ void softmax_back2(float *output, float *currentLabel, float *diff, int n, int batch)
+__global__ void log_softmax_back2(float *output, float *currentLabel, float *diff, int n, int batch)
 {
     int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if (id >= n) return;

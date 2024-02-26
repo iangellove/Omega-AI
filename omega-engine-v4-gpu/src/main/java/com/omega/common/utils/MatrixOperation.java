@@ -352,7 +352,27 @@ public class MatrixOperation {
 	 */
 	public static void plus(float[] x,float[] b) {
 		for(int i = 0;i<x.length;i++) {
-			x[i] = x[i] + b[i];
+			x[i] += b[i];
+		}
+	}
+	
+	/**
+	 * 
+	 * @Title: add
+	 *
+	 * @param x
+	 * @param b
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static void plus(float[] x,float[] b,int axis) {
+		for(int i = 0;i<x.length;i++) {
+			int xi = i / axis;
+			x[xi] += b[i];
 		}
 	}
 	
@@ -816,6 +836,15 @@ public class MatrixOperation {
 		float[] temp = MatrixUtils.zero(x.length);
 		for(int i = 0;i<x.length;i++) {
 			temp[i] = x[i] - b[i];
+		}
+		return temp;
+	}
+	
+	public static float[] subtraction(float[] x,float[] b,int axis) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			int bi = i / axis;
+			temp[i] = x[i] - b[bi];
 		}
 		return temp;
 	}
@@ -1526,6 +1555,15 @@ public class MatrixOperation {
 		return temp;
 	}
 	
+	public static float[] division(float[] x,float[] b,int axis) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			int bi = i / axis;
+			temp[i] = x[i] / b[bi];
+		}
+		return temp;
+	}
+	
 	/**
 	 * 
 	 * @Title: division
@@ -1891,6 +1929,101 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
+	public static float[] max(float[] x,int n,int c,int h,int w,int axis) {
+		
+		int count = 1;
+
+		switch (axis) {
+		case 0:
+			count = 1;
+			break;
+		case 1:
+			count = n;
+			break;
+		}
+		
+		float[] temp = new float[count];
+		
+		switch (axis) {
+		case 0:
+			temp[0] += max(x);
+			break;
+		case 1:
+			for(int i = 0;i<n;i++) {
+				float max = -3.402823466e+38F;
+				for(int j = 0;j<c*h*w;j++) {
+					if(max <= x[i * c*h*w + j]) {
+						max = x[i * c*h*w + j];
+					}
+				}
+				temp[i] += max;
+			}
+			break;
+		}
+
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: count
+	 *
+	 * @param x
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
+	public static float[] max_backward(float[] d,float[] x,int n,int c,int h,int w,int axis) {
+		
+		
+		float[] temp = new float[x.length];
+		
+		float max = -3.402823466e+38F;
+		int max_idx = -1;
+		
+		switch (axis) {
+		case 0:
+			max = -3.402823466e+38F;
+			for(int j = 0;j<n*c*h*w;j++) {
+				if(max <= x[j]) {
+					max = x[j];
+					max_idx = j;
+				}
+			}
+			temp[max_idx] = d[0];
+			break;
+		case 1:
+			for(int i = 0;i<n;i++) {
+				max = -3.402823466e+38F;
+				for(int j = 0;j<c*h*w;j++) {
+					if(max <= x[i * c*h*w + j]) {
+						max = x[i * c*h*w + j];
+						max_idx = i * c*h*w + j;
+					}
+				}
+				temp[max_idx] = d[i];
+			}
+			break;
+		}
+
+		return temp;
+	}
+	
+	/**
+	 * 
+	 * @Title: count
+	 *
+	 * @param x
+	 * @return
+	 *
+	 * @Description:
+	 * TODO(这里用一句话描述这个方法的作用)
+	 *
+	 * @throws
+	 */
 	public static float sum(float[][] x) {
 		float temp = 0.0f;
 		for(int i = 0;i<x.length;i++) {
@@ -2023,6 +2156,30 @@ public class MatrixOperation {
 			for(int i = 0;i<b.length;i++) {
 				int n = i / C / H / W;
 				b[i] = a[n];
+			}
+			break;
+		}
+		
+	}
+	
+	/**
+	 * broadcast
+	 * @param a
+	 * @param b
+	 * @param axis
+	 */
+	public static void broadcast_plus(float[] a,float[] b,int N,int C,int H,int W,int axis) {
+		
+		switch (axis) {
+		case 0:
+			for(int i = 0;i<b.length;i++) {
+				b[i] += a[0];
+			}
+			break;
+		case 1:
+			for(int i = 0;i<b.length;i++) {
+				int n = i / C / H / W;
+				b[i] += a[n];
 			}
 			break;
 		}
