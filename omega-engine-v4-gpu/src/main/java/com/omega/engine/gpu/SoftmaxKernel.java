@@ -100,7 +100,7 @@ public class SoftmaxKernel extends BaseKernel{
 			kernelParameters = Pointer.to(
 	                Pointer.to(input.getGpuData()),
 	                Pointer.to(output.getGpuData()),
-	                Pointer.to(new int[] {input.number}),
+	                Pointer.to(new int[] {input.number * input.channel * input.height}),
 	                Pointer.to(new int[] {input.width})
 	            );
 			
@@ -109,7 +109,7 @@ public class SoftmaxKernel extends BaseKernel{
 		}
 		
 		cuLaunchKernel(softmax_function,
-				input.number,  1, 1,      // Grid dimension
+				input.number * input.channel * input.height,  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
 	            kernelParameters, null // Kernel- and extra parameters
@@ -158,14 +158,14 @@ public class SoftmaxKernel extends BaseKernel{
 	                Pointer.to(output.getGpuData()),
 	                Pointer.to(delta.getGpuData()),
 	                Pointer.to(diff.getGpuData()),
-	                Pointer.to(new int[] {output.number}),
+	                Pointer.to(new int[] {output.number * output.channel * output.height}),
 	                Pointer.to(new int[] {output.width})
 	            );
 
 		}
 		
 		cuLaunchKernel(softmax_backward_function,
-				output.number,  1, 1,      // Grid dimension
+				output.number * output.channel * output.height,  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
 	            backKernelParameters, null // Kernel- and extra parameters

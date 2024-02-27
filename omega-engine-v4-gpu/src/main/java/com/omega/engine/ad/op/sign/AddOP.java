@@ -36,10 +36,14 @@ public class AddOP extends SignOP{
 		Tensor self = tape.getX();
 		Tensor other = tape.getY();
 		Tensor y = tape.getOutput();
-		if(other != null) {
-			TensorOP.add(self, other, y);
+		if(tape.getPosition() != null) {
+			
 		}else {
-			TensorOP.add(self, tape.getScalar(), y);
+			if(other != null) {
+				TensorOP.add(self, other, y);
+			}else {
+				TensorOP.add(self, tape.getScalar(), y);
+			}
 		}
 		if(self.isRequiresGrad() || other.isRequiresGrad()) {
 			y.setRequiresGrad(true);
