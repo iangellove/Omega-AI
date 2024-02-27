@@ -246,6 +246,34 @@ public class FullyLayer extends Layer{
 		
 	}
 	
+	public void diff(Tensor diff) {
+		// TODO Auto-generated method stub
+
+		/**
+		 * deltaW = inputT * delta
+		 * int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta
+		 * number * w
+		 * number * ow
+		 * m = w,k = number,n = ow
+		 */
+		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, input.getGpuData(), delta.getGpuData(), diffW.getGpuData(),
+				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
+
+		if(hasBias) {
+			kernel.backwardBias(diffB, delta);
+		}
+
+		/**
+		 * diff = delta * weightT
+		 * number * ow
+		 * w * ow
+		 * m = number,k = ow,n = w
+		 */
+		GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData(), weight.getGpuData(), diff.getGpuData(),
+				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
+		
+	}
+	
 	public void diff(int batch,int step) {
 		// TODO Auto-generated method stub
 
@@ -604,6 +632,25 @@ public class FullyLayer extends Layer{
 		 * 计算梯度
 		 */
 		this.diff();
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+
+	}
+	
+	public void back(Tensor delta,Tensor diff) {
+		// TODO Auto-generated method stub
+
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff(diff);
 		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();

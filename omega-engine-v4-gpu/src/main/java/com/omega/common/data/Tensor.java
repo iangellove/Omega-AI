@@ -49,11 +49,11 @@ public class Tensor implements Serializable{
 	
 	private boolean requiresGrad = false;
 	
-	private boolean shareWorkspace = false;
-	
 	private Tensor grad;
 	
 	private Graph g;
+	
+	private int[] orgShape;
 	
 	public String getId() {
 		if(this.id == null) {
@@ -99,6 +99,7 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = new float[this.dataLength];
+		this.orgShape = new int[] {number, channel, height, width};
 		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
@@ -120,24 +121,6 @@ public class Tensor implements Serializable{
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
 			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
-		}
-	}
-	
-	public Tensor(int number,int channel,int height,int width,boolean hasGPU,boolean shareWorkspace) {
-		this.number = number;
-		this.channel = channel;
-		this.height = height;
-		this.width = width;
-		this.dataLength = number * channel * height * width;
-		this.data = new float[this.dataLength];
-		this.shareWorkspace = shareWorkspace;
-		this.setHasGPU(hasGPU);
-		if(hasGPU) {
-//			gpuData = CUDAMemoryManager.getPointer(dataLength);
-			gpuData = CUDAMemoryManager.getWorkspace(this.dataLength);
-//			System.out.println(gpuData);
-//			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
-//			JCuda.cudaDeviceSynchronize();
 		}
 	}
 	
@@ -271,6 +254,22 @@ public class Tensor implements Serializable{
 		this.channel = channel;
 		this.height = height;
 		this.width = width;
+		return this;
+	}
+	
+	public Tensor view(int[] shape) {
+		this.number = shape[0];
+		this.channel = shape[1];
+		this.height = shape[2];
+		this.width = shape[3];
+		return this;
+	}
+	
+	public Tensor viewOrg() {
+		this.number = orgShape[0];
+		this.channel = orgShape[1];
+		this.height = orgShape[2];
+		this.width = orgShape[3];
 		return this;
 	}
 	

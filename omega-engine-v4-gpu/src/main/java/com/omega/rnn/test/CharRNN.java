@@ -593,7 +593,7 @@ public class CharRNN {
 			
 //			t.charRNN2();
 			
-			t.charRNN3();
+//			t.charRNN3();
 			
 //			t.createTxtData("这废物真是把家族的脸都给丢光了");
 			

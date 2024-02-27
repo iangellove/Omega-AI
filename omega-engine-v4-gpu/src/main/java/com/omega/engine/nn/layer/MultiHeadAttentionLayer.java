@@ -6,18 +6,11 @@ import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.active.ActiveType;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.gpu.SoftmaxKernel;
-import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
-import com.omega.engine.nn.layer.active.LeakyReluLayer;
-import com.omega.engine.nn.layer.active.ReluLayer;
-import com.omega.engine.nn.layer.active.SigmodLayer;
-import com.omega.engine.nn.layer.active.TanhLayer;
 import com.omega.engine.nn.network.Network;
-import com.omega.engine.nn.network.RNN;
 import com.omega.engine.nn.network.Transformers;
 
 /**
@@ -33,21 +26,7 @@ public class MultiHeadAttentionLayer extends Layer{
 	
 	private int embedDim = 0;
 	
-	private int qDim = 0;
-	private int kDim = 0;
-	private int vDim = 0;
-	
-	private int qProjDim = 0;
-	private int kProjDim = 0;
-	private int vProjDim = 0;
-	private int oProjDim = 0;
-	
-	private int tgtLen;
-	private int srcLen;
-	
 	private int dk = 0;
-	
-	private float droupout = 0.0f;
 	
 	private boolean bias = false;
 	
@@ -75,50 +54,60 @@ public class MultiHeadAttentionLayer extends Layer{
 	
 	private int batchSize = 1;
 	
-	private Tensor vt_d;
-	
-	
-	public MultiHeadAttentionLayer(int embedDim,int headNum,int time,float droupout,boolean bias) {
+	public MultiHeadAttentionLayer(int embedDim,int headNum,int time,boolean bias) {
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
 		this.bias = bias;
-		this.droupout = droupout;
 		this.initLayers();
 	}
 	
-	public MultiHeadAttentionLayer(int embedDim,int headNum,int time,float droupout,boolean bias,Network network) {
+	public MultiHeadAttentionLayer(int embedDim,int headNum,int time,boolean bias,Network network) {
 		this.network = network;
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
 		this.bias = bias;
-		this.droupout = droupout;
 		this.bias = bias;
 		this.initLayers();
 	}
 	
 	public void initLayers() {
 		
-//		float stdv = (float) (1.0f / Math.sqrt(hiddenSize));
-//		float stdv = (float) (2.0f / Math.sqrt(hiddenSize + inputSize));
+//		float stdv = (float) (1.0f / Math.sqrt(embedDim));
+//		float stdv = (float) (2.0f / Math.sqrt(embedDim + embedDim));
 		
 		this.qLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-//		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.01f, 0.0f), true);
-//		this.qLinerLayer.bias = new Tensor(1, 1, 1, embedDim, RandomUtils.uniform(this.hiddenSize, 0, stdv), true);
-		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.1f), true);
+		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.1f, 0.0f), true);
+		Tensor qwt = new Tensor(1, 1, embedDim, embedDim, true);
+		TensorOP.permute(this.qLinerLayer.weight, qwt, new int[] {0, 1, 3, 2});
+		this.qLinerLayer.weight = qwt;
+//		this.qLinerLayer.bias = new Tensor(1, 1, 1, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0, stdv), true);
+//		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0, stdv), true);
+//		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.1f), true);
 		
 		this.kLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-//		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.02f, 0.0f), true);
+		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.02f, 0.0f), true);
+		Tensor kwt = new Tensor(1, 1, embedDim, embedDim, true);
+		TensorOP.permute(this.kLinerLayer.weight, kwt, new int[] {0, 1, 3, 2});
+		this.kLinerLayer.weight = kwt;
 //		this.kLinerLayer.weight = new Tensor(1, 1, hiddenSize, hiddenSize, RandomUtils.uniform(this.hiddenSize * this.hiddenSize, 0, stdv), true);
 //		this.selfLayer.bias = new Tensor(1, 1, 1, hiddenSize, RandomUtils.uniform(this.hiddenSize, 0, stdv), true);
-		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.2f), true);
+//		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.2f), true);
 
 		this.vLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.01f), true);
+		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.03f, 0.0f), true);
+		Tensor vwt = new Tensor(1, 1, embedDim, embedDim, true);
+		TensorOP.permute(this.vLinerLayer.weight, vwt, new int[] {0, 1, 3, 2});
+		this.vLinerLayer.weight = vwt;
+//		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.01f), true);
 		
 		this.oLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.02f), true);
+		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.04f, 0.0f), true);
+		Tensor owt = new Tensor(1, 1, embedDim, embedDim, true);
+		TensorOP.permute(this.oLinerLayer.weight, owt, new int[] {0, 1, 3, 2});
+		this.oLinerLayer.weight = owt;
+//		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.02f), true);
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
@@ -154,9 +143,25 @@ public class MultiHeadAttentionLayer extends Layer{
 			// [batch_size, n_heads, len_q, dim_v]
 			this.attn_outputs = Tensor.createTensor(this.attn_outputs, batchSize, headNum, time, dk, true);
 			// [batch_size, len_q, n_heads * dim_v]
-			this.ot = Tensor.createTensor(this.ot, batchSize, time, 1, headNum * dk, true);
+			this.ot = Tensor.createTensor(this.ot, batchSize, time, headNum, dk, true);
 		}
 		
+		resize();
+	}
+	
+	public void resize() {
+		this.qt.viewOrg();
+		this.kt.viewOrg();
+		this.vt.viewOrg();
+		this.scores.viewOrg();
+		this.weights.viewOrg();
+		this.attn_outputs.viewOrg();
+		this.ot.viewOrg();
+		if(this.qLinerLayer.getOutput() != null) {
+			this.qLinerLayer.getOutput().viewOrg();
+			this.kLinerLayer.getOutput().viewOrg();
+			this.vLinerLayer.getOutput().viewOrg();
+		}
 	}
 	
 	public void init(int time,int number) {
@@ -168,10 +173,7 @@ public class MultiHeadAttentionLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		if(this.vt_d == null || this.vt_d.number != this.batchSize) {
-			// [batch_size，time，head_num，d_k]
-			this.vt_d = Tensor.createTensor(this.vt_d, batchSize, headNum, time, dk, true);
-		}
+		
 	}
 
 	@Override
@@ -184,12 +186,10 @@ public class MultiHeadAttentionLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 
-//		input.showDM();
-
 		this.qLinerLayer.forward(this.input);
 		this.kLinerLayer.forward(this.input);
 		this.vLinerLayer.forward(this.input);
-		
+
 		Tensor query = this.qLinerLayer.getOutput().view(batchSize, time, headNum, dk);
 		Tensor key = this.kLinerLayer.getOutput().view(batchSize, time, headNum, dk);
 		Tensor value = this.vLinerLayer.getOutput().view(batchSize, time, headNum, dk);
@@ -197,13 +197,13 @@ public class MultiHeadAttentionLayer extends Layer{
 		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
-		
+
 		scaledDotProductAttention(qt, kt, vt);
-		
+
 		TensorOP.permute(attn_outputs, ot, new int[] {0, 2, 1, 3});
-		
+
 		ot.view(batchSize * time, 1, 1, headNum * dk);
-		
+
 		this.oLinerLayer.forward(ot);
 		
 		this.output = this.oLinerLayer.getOutput();
@@ -215,50 +215,71 @@ public class MultiHeadAttentionLayer extends Layer{
 
 		GPUOP.getInstance().bmm(query.getGpuData(), key.getGpuData(), scores.getGpuData(), query.number * query.channel, query.height, key.height, query.width,
 				CUBLAS_OP_N, CUBLAS_OP_T, d_k, 0.0f);
-		
-//		query.showDM();
-//		
-//		scores.showDM();
-		
-//		scores.showShape();
 
 		softmax.softmax(scores, weights);
-		
-//		weights.showShape();
-//		value.showShape();
-//		value.showDM();
-		
+	
 		GPUOP.getInstance().bmm(weights.getGpuData(), value.getGpuData(), attn_outputs.getGpuData(), weights.number * weights.channel, weights.height, value.width, weights.width,
 				CUBLAS_OP_N, CUBLAS_OP_N, 1.0f, 0.0f);
 		
-//		attn_outputs.showDM();
-		
 	}
 	
-	public void scaledDotProductAttentionBackward(Tensor query,Tensor key,Tensor value,Tensor delta) {
+	public void scaledDotProductAttentionBackward(Tensor query,Tensor key,Tensor value,Tensor delta,Tensor diffQ,Tensor diffK,Tensor diffV) {
 		
 		// vt_diff = weightsT * delta
-		GPUOP.getInstance().bmm(weights.getGpuData(), delta.getGpuData(), this.vt.getGrad().getGpuData(), weights.number * weights.channel, weights.width, delta.width, weights.height,
+		diffV.view(value.shape());
+		GPUOP.getInstance().bmm(weights.getGpuData(), delta.getGpuData(), diffV.getGpuData(), weights.number * weights.channel, weights.width, delta.width, weights.height,
 				CUBLAS_OP_T, CUBLAS_OP_N, 1.0f, 0.0f);
 
 		// weights_diff = delta * vt
-		GPUOP.getInstance().bmm(delta.getGpuData(), value.getGpuData(), this.weights.getGrad().getGpuData(), delta.number * delta.channel, delta.height, weights.width, delta.width,
+		GPUOP.getInstance().bmm(delta.getGpuData(), value.getGpuData(), scores.getGpuData(), delta.number * delta.channel, delta.height, value.height, value.width,
 				CUBLAS_OP_N, CUBLAS_OP_T, 1.0f, 0.0f);
+		
 		// scores_diff = softmax_backward
-
-//		weights.view(weights.number * weights.channel, 1, 1, weights.height * weights.width);
-		softmax.backward_noloss(weights, this.weights.getGrad(), scores);
+		softmax.backward_noloss(weights, scores, scores);
 		
 		float d_k = (float) (1.0f / Math.sqrt(dk));
 		
 //		TensorOP.mul(scores, d_k, scores);
 
 		// kt_diff = deltaT / sqrt(dk) * qt
-		GPUOP.getInstance().bmm(scores.getGpuData(), query.getGpuData(), this.kt.getGrad().getGpuData(), scores.number * scores.channel, scores.width, query.width, scores.height,
+		diffK.view(key.shape());
+		GPUOP.getInstance().bmm(scores.getGpuData(), query.getGpuData(), diffK.getGpuData(), scores.number * scores.channel, scores.width, query.width, scores.height,
 				CUBLAS_OP_T, CUBLAS_OP_N, d_k, 0.0f);
 		
 		// qt_diff = delta / sqrt(dk) * kt
-		GPUOP.getInstance().bmm(scores.getGpuData(), key.getGpuData(), this.qt.getGrad().getGpuData(), scores.number * scores.channel, scores.height, key.width, scores.width,
+		diffQ.view(query.shape());
+		GPUOP.getInstance().bmm(scores.getGpuData(), key.getGpuData(), diffQ.getGpuData(), scores.number * scores.channel, scores.height, key.width, scores.width,
+				CUBLAS_OP_N, CUBLAS_OP_N, d_k, 0.0f);
+//		
+//		System.out.println("");
+//		diffV.showDM();
+//		diffK.showDM();
+//		diffQ.showDM();
+	}
+	
+	public void scaledDotProductAttentionBackward(Tensor query,Tensor key,Tensor value,Tensor delta) {
+		
+		// vt_diff = weightsT * delta
+		GPUOP.getInstance().bmm(weights.getGpuData(), delta.getGpuData(), value.getGrad().getGpuData(), weights.number * weights.channel, weights.width, delta.width, weights.height,
+				CUBLAS_OP_T, CUBLAS_OP_N, 1.0f, 0.0f);
+
+		// weights_diff = delta * vt
+		GPUOP.getInstance().bmm(delta.getGpuData(), value.getGpuData(), scores.getGpuData(), delta.number * delta.channel, delta.height, weights.width, delta.width,
+				CUBLAS_OP_N, CUBLAS_OP_T, 1.0f, 0.0f);
+		
+		// scores_diff = softmax_backward
+		softmax.backward_noloss(weights, scores, scores);
+		
+		float d_k = (float) (1.0f / Math.sqrt(dk));
+		
+//		TensorOP.mul(scores, d_k, scores);
+
+		// kt_diff = deltaT / sqrt(dk) * qt
+		GPUOP.getInstance().bmm(scores.getGpuData(), query.getGpuData(), key.getGrad().getGpuData(), scores.number * scores.channel, scores.width, query.width, scores.height,
+				CUBLAS_OP_T, CUBLAS_OP_N, d_k, 0.0f);
+		
+		// qt_diff = delta / sqrt(dk) * kt
+		GPUOP.getInstance().bmm(scores.getGpuData(), key.getGpuData(), query.getGrad().getGpuData(), scores.number * scores.channel, scores.height, key.width, scores.width,
 				CUBLAS_OP_N, CUBLAS_OP_T, d_k, 0.0f);
 		
 	}
@@ -273,27 +294,37 @@ public class MultiHeadAttentionLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		
-		this.oLinerLayer.back(delta);
+		this.oLinerLayer.back(delta, ot);
 		
 //		this.oLinerLayer.diffW.showDM();
 //		
 //		this.oLinerLayer.diff.showDM();
 		
-		this.oLinerLayer.diff.view(batchSize, time, headNum, dk);
+		ot.view(batchSize, time, headNum, dk);
 		
-		TensorOP.permute(this.oLinerLayer.diff, attn_outputs, new int[] {0, 2, 1, 3});
+		TensorOP.permute(ot, attn_outputs, new int[] {0, 2, 1, 3});
 		
 //		attn_outputs.getGrad().showDM();
+
+//		scaledDotProductAttentionBackward(qt, kt, vt, attn_outputs);
+//		TensorOP.permute(qt.getGrad(), this.qLinerLayer.getOutput(), new int[] {0, 2, 1, 3});
+//		TensorOP.permute(kt.getGrad(), this.kLinerLayer.getOutput(), new int[] {0, 2, 1, 3});
+//		TensorOP.permute(vt.getGrad(), this.vLinerLayer.getOutput(), new int[] {0, 2, 1, 3});
+
+		int[] qo_shape = this.qLinerLayer.getOutput().shape();
+		int[] ko_shape = this.kLinerLayer.getOutput().shape();
+		int[] vo_shape = this.vLinerLayer.getOutput().shape();	
+		scaledDotProductAttentionBackward(qt, kt, vt, attn_outputs, this.qLinerLayer.getOutput(), this.kLinerLayer.getOutput(), this.vLinerLayer.getOutput());
+		qt.view(qo_shape);
+		kt.view(ko_shape);
+		vt.view(vo_shape);
+		TensorOP.permute(this.qLinerLayer.getOutput(), qt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(this.kLinerLayer.getOutput(), kt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(this.vLinerLayer.getOutput(), vt, new int[] {0, 2, 1, 3});
 		
-		scaledDotProductAttentionBackward(qt, kt, vt, attn_outputs);
-		
-		TensorOP.permute(qt.getGrad(), this.qLinerLayer.getOutput(), new int[] {0, 2, 1, 3});
-		TensorOP.permute(kt.getGrad(), this.kLinerLayer.getOutput(), new int[] {0, 2, 1, 3});
-		TensorOP.permute(vt.getGrad(), this.vLinerLayer.getOutput(), new int[] {0, 2, 1, 3});
-		
-		Tensor queryDelta = this.qLinerLayer.getOutput().view(batchSize * time, 1, 1, headNum * dk);
-		Tensor keyDelta = this.kLinerLayer.getOutput().view(batchSize * time, 1, 1, headNum * dk);
-		Tensor valueDelta = this.vLinerLayer.getOutput().view(batchSize * time, 1, 1, headNum * dk);
+		Tensor queryDelta = qt.view(batchSize * time, 1, 1, headNum * dk);
+		Tensor keyDelta = kt.view(batchSize * time, 1, 1, headNum * dk);
+		Tensor valueDelta = vt.view(batchSize * time, 1, 1, headNum * dk);
 		
 		this.qLinerLayer.back(queryDelta);
 		this.kLinerLayer.back(keyDelta);
@@ -425,10 +456,10 @@ public class MultiHeadAttentionLayer extends Layer{
 	
 	public static void main(String[] args) {
 		
-		int embedDim = 512;
-		int headNum = 8;
-		int batchSize = 64;
-		int time = 128;
+		int embedDim = 4;
+		int headNum = 2;
+		int batchSize = 3;
+		int time = 3;
 		
 		Transformers tf = new Transformers();
 		tf.number = batchSize * time;
@@ -437,11 +468,11 @@ public class MultiHeadAttentionLayer extends Layer{
 		
 		Tensor input = new Tensor(batchSize * time, 1, 1, embedDim, data, true);
 		
-		float[] delta_data = MatrixUtils.one(batchSize * time * embedDim);
+		float[] delta_data = MatrixUtils.val(batchSize * time * embedDim, 1.0f);
 		
 		Tensor delta = new Tensor(batchSize * time, 1, 1, embedDim, delta_data, true);
 		
-		MultiHeadAttentionLayer mal = new MultiHeadAttentionLayer(embedDim, headNum, time, 0.0f, false, tf);
+		MultiHeadAttentionLayer mal = new MultiHeadAttentionLayer(embedDim, headNum, time, false, tf);
 		
 		mal.forward(input);
 		
@@ -451,11 +482,11 @@ public class MultiHeadAttentionLayer extends Layer{
 		
 		mal.getOutput().showShape();
 		
-//		mal.getOutput().showDM();
+		mal.getOutput().showDM();
 		
 		mal.back(delta);
-//		
-//		mal.diff.showDM();
+		
+		mal.diff.showDM();
 		
 	}
 
