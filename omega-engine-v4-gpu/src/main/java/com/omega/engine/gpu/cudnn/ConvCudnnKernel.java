@@ -128,7 +128,6 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 	
 		handle(JCudnn.cudnnConvolutionBackwardFilter(CudnnHandleManager.getHandle(), alpha_P, xDesc, input.getGpuData(), yDesc, delta.getGpuData(), convDesc, bkf_algo,
 				this.network.workspace, this.network.workspaceSize, beta_P, kernelDesc, dKernel.getGpuData()));
-
 	}
 	
 	public void dx(Tensor delta,Tensor kernel,Tensor diff) {

@@ -182,7 +182,7 @@ public class ReluLayer extends ActiveFunctionLayer {
 	}
 	
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 参数初始化
@@ -191,7 +191,7 @@ public class ReluLayer extends ActiveFunctionLayer {
 		/**
 		 * 设置输入
 		 */
-		this.setInput(inpnut);
+		this.setInput(input);
 		/**
 		 * 计算输出
 		 */

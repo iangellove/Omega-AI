@@ -16,6 +16,8 @@ import jcuda.driver.CUcontext;
 import jcuda.driver.CUdevice;
 import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
+import jcuda.runtime.JCuda;
+import jcuda.runtime.cudaDeviceProp;
 
 public class CUDAModules {
 	
@@ -30,6 +32,8 @@ public class CUDAModules {
 	public static int maxThreads;
 	
 	public static int threadsPerDimension;
+	
+	public static cudaDeviceProp props;
 	
 	public static Map<String,String> functions = new HashMap<String, String>(){
 		/**
@@ -63,7 +67,7 @@ public class CUDAModules {
 			put("fast_variance_delta_kernel", LibPaths.LIB_PATH+"BNKernel.cu");
 			put("dx_kernel", LibPaths.LIB_PATH+"BNKernel.cu");
 			put("dx_kernel_full", LibPaths.LIB_PATH+"BNKernel.cu");
-			
+
 			put("copy_kernel", LibPaths.LIB_PATH+"OPKernel.cu");
 			put("copy_number_kernel", LibPaths.LIB_PATH+"OPKernel.cu");
 			put("copy_channel_kernel", LibPaths.LIB_PATH+"OPKernel.cu");
@@ -270,6 +274,10 @@ public class CUDAModules {
         	device = instance.getDevice(0);
         	
         	context = instance.getContext(device);
+        	
+        	props = new cudaDeviceProp();
+        	
+        	JCuda.cudaGetDeviceProperties(props, 0);
 			
         	System.out.println("CUDA context init finish.");
         	

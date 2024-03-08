@@ -33,6 +33,7 @@ import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
 import com.omega.engine.nn.layer.active.LeakyReluLayer;
 import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
+import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.model.NetworkInit;
 import com.omega.engine.nn.network.BPNetwork;
 import com.omega.engine.nn.network.CNN;
@@ -67,16 +68,16 @@ public class BusinessServiceImpl implements BusinessService {
 
 		System.out.println("train_data:"+JsonUtils.toJson(trainData));
 		
-		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adam);
+		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adamw);
 		
 		InputLayer inputLayer = new InputLayer(1,1,4);
 		
 		FullyLayer hidden1 = new FullyLayer(4, 40);
-		
+//		LNLayer ln1 = new LNLayer();
 		ReluLayer active1 = new ReluLayer();
 		
 		FullyLayer hidden2 = new FullyLayer(40, 20);
-		
+//		LNLayer ln2 = new LNLayer();
 		ReluLayer active2 = new ReluLayer();
 		
 		FullyLayer hidden3 = new FullyLayer(20, 2);
@@ -85,8 +86,10 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		netWork.addLayer(inputLayer);
 		netWork.addLayer(hidden1);
+//		netWork.addLayer(ln1);
 		netWork.addLayer(active1);
 		netWork.addLayer(hidden2);
+//		netWork.addLayer(ln2);
 		netWork.addLayer(active2);
 		netWork.addLayer(hidden3);
 		netWork.addLayer(hidden4);
@@ -3124,10 +3127,10 @@ public class BusinessServiceImpl implements BusinessService {
 	    	CUDAModules.initContext();
 	    	
 //			bs.showImage();
-//			bs.bpNetwork_iris();
+			bs.bpNetwork_iris();
 //			bs.bpNetwork_mnist();
 //			bs.cnnNetwork_mnist_demo();
-			bs.cnnNetwork_mnist();
+//			bs.cnnNetwork_mnist();
 //			bs.cnnNetwork_cifar10();
 
 //			bs.resnet18_cifar10();

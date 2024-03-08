@@ -21,6 +21,7 @@ public enum LayerType {
 	tanh("tanh"),
 	silu("silu"),
 	bn("bn"),
+	layer_norm("layer_norm"),
 	instance_normal("instance_normal"),
 	block("block"),
 	shortcut("shortcut"),
@@ -30,6 +31,7 @@ public enum LayerType {
 	yolo("yolo"),
 	rnn("rnn"),
 	mutli_head_attention("mutli_head_attention"),
+	poswise_feed_forward("poswise_feed_forward"),
 	lstm("lstm"),
 	embedding("embedding"),
 	dropout("dropout");

@@ -18,6 +18,7 @@ import com.omega.engine.nn.layer.RNNLayer;
 import com.omega.engine.nn.layer.active.LeakyReluLayer;
 import com.omega.engine.nn.layer.active.TanhLayer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
+import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.RNN;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.MBSGDOptimizer;
@@ -59,6 +60,9 @@ public class CharRNN {
 			
 			FullyLayer f1 = new FullyLayer(hiddenSize, hiddenSize, false);
 			BNLayer bn = new BNLayer();
+			
+//			LNLayer ln4 = new LNLayer();
+			
 			LeakyReluLayer a1 = new LeakyReluLayer();
 			
 			FullyLayer f2 = new FullyLayer(hiddenSize, trainData.characters, true);
@@ -69,6 +73,7 @@ public class CharRNN {
 			netWork.addLayer(l2);
 			netWork.addLayer(l3);
 			netWork.addLayer(f1);
+//			netWork.addLayer(ln4);
 			netWork.addLayer(bn);
 			netWork.addLayer(a1);
 			netWork.addLayer(f2);
@@ -144,7 +149,8 @@ public class CharRNN {
 			LSTMLayer l1 = new LSTMLayer(embedding_dim, hiddenSize, time, true, netWork);
 			
 			FullyLayer f1 = new FullyLayer(hiddenSize, hiddenSize, false);
-			BNLayer bn = new BNLayer();
+//			BNLayer bn = new BNLayer();
+			LNLayer ln4 = new LNLayer();
 			LeakyReluLayer a1 = new LeakyReluLayer();
 			
 			FullyLayer f2 = new FullyLayer(hiddenSize, trainData.characters, true);
@@ -153,7 +159,8 @@ public class CharRNN {
 			netWork.addLayer(em);
 			netWork.addLayer(l1);
 			netWork.addLayer(f1);
-			netWork.addLayer(bn);
+			netWork.addLayer(ln4);
+//			netWork.addLayer(bn);
 			netWork.addLayer(a1);
 			netWork.addLayer(f2);
 			
@@ -583,7 +590,7 @@ public class CharRNN {
 			
 //			t.LSTM();
 			
-//			t.charLSTM();
+			t.charLSTM();
 			
 //			t.RNN();
 			

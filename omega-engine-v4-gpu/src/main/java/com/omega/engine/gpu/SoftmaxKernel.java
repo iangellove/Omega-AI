@@ -6,10 +6,8 @@ import com.omega.common.data.Tensor;
 import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
-import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
-import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
+
 import jcuda.Pointer;
 import jcuda.driver.CUfunction;
 import jcuda.runtime.cudaError;
@@ -18,9 +16,13 @@ public class SoftmaxKernel extends BaseKernel{
 	
 	private CUfunction softmax_function;
 	
+	private CUfunction softmax_mask_function;
+	
 	private CUfunction log_softmax_function;
 	
 	private CUfunction softmax_backward_function;
+	
+	private CUfunction softmax_mask_backward_function;
 	
 	private CUfunction log_softmax_backward_function;
 	
@@ -45,6 +47,12 @@ public class SoftmaxKernel extends BaseKernel{
 			if(softmax_function == null) {
 				
 				softmax_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"SoftmaxKernel.cu", "softmax");
+        
+			}
+			
+			if(softmax_mask_function == null) {
+				
+				softmax_mask_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"SoftmaxKernel.cu", "softmax_mask");
         
 			}
 			
@@ -109,6 +117,37 @@ public class SoftmaxKernel extends BaseKernel{
 		}
 		
 		cuLaunchKernel(softmax_function,
+				input.number * input.channel * input.height,  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            kernelParameters, null // Kernel- and extra parameters
+	        );
+		
+//		JCudaDriver.cuCtxSynchronize();
+		
+	}
+	
+	public void softmaxMask(Tensor input,Tensor mask,Tensor output,float tmp) {
+		
+		if(kernelParameters == null || this.N != output.number) {
+			/**
+			 * float *input, float *output, float *mask, int batch, int n, int channel, float tmp
+			 */
+			kernelParameters = Pointer.to(
+	                Pointer.to(input.getGpuData()),
+	                Pointer.to(output.getGpuData()),
+	                Pointer.to(mask.getGpuData()),
+	                Pointer.to(new int[] {input.number * input.channel * input.height}),
+	                Pointer.to(new int[] {input.width}),
+	                Pointer.to(new int[] {input.channel * input.height}),
+	                Pointer.to(new float[] {tmp})
+	            );
+			
+			this.N = output.number;
+			
+		}
+		
+		cuLaunchKernel(softmax_mask_function,
 				input.number * input.channel * input.height,  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
@@ -275,6 +314,36 @@ public class SoftmaxKernel extends BaseKernel{
 		}
 	}
 	
+	public void cpuForwardMask(Tensor input,Tensor output,Tensor mask,float tmp){
+		
+		for(int id = 0;id<input.number * input.channel * input.height;id++) {
+			float max = -3.402823466e+38F;
+			float sum = 0;
+			int b = id / input.channel * input.height;
+			for(int i = 0;i<input.width;i++) {
+				float val = input.data[id * input.width + i];
+				if(mask.data[b * input.width + i] == 0) {
+					val = tmp;
+				}
+				if(max <= val) {
+					max = val;
+				}
+			}
+			for(int i = 0;i<input.width;i++){
+				float val = input.data[id * input.width + i];
+				if(mask.data[b * input.width + i] == 0) {
+					val = tmp;
+				}
+		        float e = (float) Math.exp(val - max);
+		        sum += e;
+		        output.data[id * input.width + i] = e;
+		    }
+			for(int i = 0;i<input.width;i++){
+		        output.data[id * input.width + i] /= sum;
+		    }
+		}
+	}
+	
 	public void cpuBackward(Tensor output,Tensor currentLabel,Tensor diff) {
 		// TODO Auto-generated method stub
 		
@@ -329,11 +398,15 @@ public class SoftmaxKernel extends BaseKernel{
 	public static void main(String[] args) {
 		
 		int N = 2;
-		int C = 1;
+		int C = 5;
 		int H = 1;
-		int W = 10;
+		int W = 4;
 		
 		float[] x = RandomUtils.order(N * C * H * W, 0.1f, 0);
+		
+		float[] maskd = new float[] {1,1,1,0,1,1,0,0};
+		
+		Tensor mask = new Tensor(N, 1, 1, W, maskd, true);
 		
 		Tensor input = new Tensor(N, C, H, W, x, true);
 		
@@ -342,11 +415,15 @@ public class SoftmaxKernel extends BaseKernel{
 		Tensor output2 = new Tensor(N, C, H, W);
 		
 		SoftmaxKernel k = new SoftmaxKernel();
-		k.softmax(input, output);
+//		k.softmax(input, output);
+		
+		k.softmaxMask(input, mask, output, -1e9f);
 		
 		output.showDM();
 		
-		k.cpuForward2(input, output2);
+//		k.cpuForward2(input, output2);
+		
+		k.cpuForwardMask(input, output2, mask, -1e9f);
 		
 		System.out.println(JsonUtils.toJson(output2.data));
 		

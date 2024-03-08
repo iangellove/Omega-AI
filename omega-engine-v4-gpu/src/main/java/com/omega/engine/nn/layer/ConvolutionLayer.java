@@ -1,14 +1,17 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.active.ActiveType;
+import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.cudnn.ConvCudnnKernel;
 import com.omega.engine.nn.layer.gpu.BiasKernel;
 import com.omega.engine.nn.layer.gpu.ConvBaseKernel;
 import com.omega.engine.nn.layer.gpu.ConvKernel;
 import com.omega.engine.nn.model.ConvLayerInit;
 import com.omega.engine.nn.model.LayerInit;
+import com.omega.engine.nn.network.CNN;
 import com.omega.engine.nn.network.Network;
 
 /**
@@ -269,7 +272,8 @@ public class ConvolutionLayer extends Layer {
 		 * im2col(input)T[oh * ow * C * kh * kw]
 		 */
 		kernel.dw(input, delta, diffW);
-
+//		diffW.showDM();
+//		System.out.println("===========");
 		/**
 		 * 计算deltaB
 		 */
@@ -402,7 +406,7 @@ public class ConvolutionLayer extends Layer {
 	}
 	
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 
 		/**
@@ -413,7 +417,7 @@ public class ConvolutionLayer extends Layer {
 		/**
 		 * 设置输入
 		 */
-		this.setInput(inpnut);
+		this.setInput(input);
 		
 		/**
 		 * 计算输出
@@ -444,6 +448,56 @@ public class ConvolutionLayer extends Layer {
 	@Override
 	public void backTemp() {
 		// TODO Auto-generated method stub
+		
+	}
+	
+	public static void main(String[] args) {
+		
+		int N = 5;
+		int T = 10;
+		int E = 8;
+		
+		int NC = 4;
+		
+		float[] data = RandomUtils.order(N * T * E, 0.1f, 0.1f);
+		
+		Tensor input = new Tensor(N, T, 1, E, data, true);
+		Tensor it = new Tensor(N, E, 1, T, true);
+		TensorOP.permute(input, it, new int[] {0, 3, 2, 1});
+		input = it;
+		input.showDM();
+		
+		float[] delta_data = MatrixUtils.val(N * NC * T, 1.0f);
+		
+		Tensor delta = new Tensor(N, NC, 1, T, delta_data, true);
+		
+		CNN nn = new CNN(null);
+		nn.CUDNN = true;
+		nn.number = N;
+		ConvolutionLayer conv1 = new ConvolutionLayer(E, NC, T, 1, 1, 1, 0, 1, true, nn);
+		
+		conv1.weight = new Tensor(NC, E, 1, 1, RandomUtils.order(NC * E, 0.1f, 0.1f), true);
+		conv1.bias = new Tensor(1, 1, 1, NC, RandomUtils.order(NC, 0.1f, 0.0f), true);
+//		mal.forward(input);
+		
+		conv1.forward(input);
+		
+//		input.showDM();
+		
+//		mal.getWeights().showDM();
+		
+		conv1.getOutput().showShape();
+		
+		conv1.getOutput().showDM();
+		
+		conv1.back(delta);
+		
+		conv1.diff.showDM();
+		
+		Tensor difft = new Tensor(N, T, 1, E, true);
+		TensorOP.permute(conv1.diff, difft, new int[] {0, 3, 2, 1});
+		conv1.diff = difft;
+		conv1.diff.showDM();
 		
 	}
 	
