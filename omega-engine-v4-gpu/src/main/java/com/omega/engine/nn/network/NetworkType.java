@@ -13,6 +13,8 @@ public enum NetworkType {
 	RNN("RNN"),
 	SEQ2SEQ_RNN("SEQ2SEQ_RNN"),
 	SEQ2SEQ("SEQ2SEQ"),
+	TTANSFORMER("TTANSFORMER"),
+	GPT("GPT"),
 	YOLO("YOLO");
 	
 	NetworkType(String key){

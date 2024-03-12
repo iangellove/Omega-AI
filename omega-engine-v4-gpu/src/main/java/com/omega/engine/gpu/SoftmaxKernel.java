@@ -7,6 +7,7 @@ import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
+import com.omega.transformer.utils.ENTokenizer;
 
 import jcuda.Pointer;
 import jcuda.driver.CUfunction;
@@ -131,15 +132,14 @@ public class SoftmaxKernel extends BaseKernel{
 		
 		if(kernelParameters == null || this.N != output.number) {
 			/**
-			 * float *input, float *output, float *mask, int batch, int n, int channel, float tmp
+			 * float *input, float *output, float *mask, int batch, int n, float tmp
 			 */
 			kernelParameters = Pointer.to(
 	                Pointer.to(input.getGpuData()),
 	                Pointer.to(output.getGpuData()),
 	                Pointer.to(mask.getGpuData()),
-	                Pointer.to(new int[] {input.number * input.channel * input.height}),
+	                Pointer.to(new int[] {input.number * input.channel * output.height}),
 	                Pointer.to(new int[] {input.width}),
-	                Pointer.to(new int[] {input.channel * input.height}),
 	                Pointer.to(new float[] {tmp})
 	            );
 			
@@ -148,7 +148,7 @@ public class SoftmaxKernel extends BaseKernel{
 		}
 		
 		cuLaunchKernel(softmax_mask_function,
-				input.number * input.channel * input.height,  1, 1,      // Grid dimension
+				input.number * input.channel * output.height,  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
 	            kernelParameters, null // Kernel- and extra parameters
@@ -315,31 +315,33 @@ public class SoftmaxKernel extends BaseKernel{
 	}
 	
 	public void cpuForwardMask(Tensor input,Tensor output,Tensor mask,float tmp){
-		
-		for(int id = 0;id<input.number * input.channel * input.height;id++) {
+		int n = input.height * input.width;
+		for(int id = 0;id<input.number * input.channel;id++) {
 			float max = -3.402823466e+38F;
 			float sum = 0;
-			int b = id / input.channel * input.height;
-			for(int i = 0;i<input.width;i++) {
-				float val = input.data[id * input.width + i];
-				if(mask.data[b * input.width + i] == 0) {
+			int b = id / input.channel;
+//			System.out.println(id+":"+b);
+			for(int i = 0;i<n;i++) {
+				float val = input.data[id * n + i];
+//				System.out.println(b * n + i+":"+mask.data[b * n + i]);
+				if(mask.data[b * n + i] == 1) {
 					val = tmp;
 				}
 				if(max <= val) {
 					max = val;
 				}
 			}
-			for(int i = 0;i<input.width;i++){
-				float val = input.data[id * input.width + i];
-				if(mask.data[b * input.width + i] == 0) {
+			for(int i = 0;i<n;i++){
+				float val = input.data[id * n + i];
+				if(mask.data[b * n + i] == 1) {
 					val = tmp;
 				}
 		        float e = (float) Math.exp(val - max);
 		        sum += e;
-		        output.data[id * input.width + i] = e;
+		        output.data[id * n + i] = e;
 		    }
-			for(int i = 0;i<input.width;i++){
-		        output.data[id * input.width + i] /= sum;
+			for(int i = 0;i<n;i++){
+		        output.data[id * n + i] /= sum;
 		    }
 		}
 	}
@@ -399,14 +401,13 @@ public class SoftmaxKernel extends BaseKernel{
 		
 		int N = 2;
 		int C = 5;
-		int H = 1;
+		int H = 4;
 		int W = 4;
 		
-		float[] x = RandomUtils.order(N * C * H * W, 0.1f, 0);
-		
-		float[] maskd = new float[] {1,1,1,0,1,1,0,0};
-		
-		Tensor mask = new Tensor(N, 1, 1, W, maskd, true);
+		float[] x = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
+
+		Tensor mask = ENTokenizer.triu(N, C, H, W, 1);
+		mask.showDM();
 		
 		Tensor input = new Tensor(N, C, H, W, x, true);
 		
@@ -425,7 +426,7 @@ public class SoftmaxKernel extends BaseKernel{
 		
 		k.cpuForwardMask(input, output2, mask, -1e9f);
 		
-		System.out.println(JsonUtils.toJson(output2.data));
+		System.out.println("output2:"+JsonUtils.toJson(output2.data));
 		
 		Tensor delta = new Tensor(N, C, H, W, RandomUtils.order(N * C * H * W, 0.1f, 0), true);
 		

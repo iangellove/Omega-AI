@@ -1,27 +1,51 @@
 package com.omega.engine.nn.network;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
+import com.omega.engine.nn.layer.FullyLayer;
+import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
+import com.omega.engine.nn.layer.TransformerDecoder;
+import com.omega.engine.updater.UpdaterType;
 
 /**
  * Recurrent Neural Networks
  * @author Administrator
  *
  */
-public class Transformers extends Network {
+public class GPT extends Network {
 
-	public int en_time = 1;
+	public int time = 1;
 	
-	public int de_time = 1;
+	public int vocab_size;
 	
-	public int en_len;
+	public int embedDim;
 	
-	public int de_len;
+	public int nChannel;
 	
-	public Transformers() {
-
+	public int head_num = 8;
+	
+	private InputLayer inputLayer;
+	
+	private TransformerDecoder decoder;
+	
+	private FullyLayer fullyLayer;
+	
+	public GPT(LossType lossType,UpdaterType updater,int vocab_size,int time,int embedDim,int nChannel) {
+		this.lossFunction = LossFactory.create(lossType);
+		this.updater = updater;
+		this.time = time;
+		this.vocab_size = vocab_size;
+		this.embedDim = embedDim;
+		this.nChannel = nChannel;
+		this.inputLayer = new InputLayer(1, 1, vocab_size);
+		this.decoder = new TransformerDecoder(vocab_size, time, embedDim, nChannel, false, true, this);
+		this.fullyLayer = new FullyLayer(embedDim, vocab_size, true, this);
+		this.addLayer(inputLayer);
+		this.addLayer(decoder);
+		this.addLayer(fullyLayer);
 	}
 	
 	@Override
@@ -55,7 +79,7 @@ public class Transformers extends Network {
 	@Override
 	public NetworkType getNetworkType() {
 		// TODO Auto-generated method stub
-		return NetworkType.SEQ2SEQ;
+		return NetworkType.GPT;
 	}
 
 	@Override
@@ -73,12 +97,18 @@ public class Transformers extends Network {
 		return this.getOuput();
 	}
 	
-	public Tensor forward(Tensor en_input,Tensor de_input) {
+	public Tensor forward(Tensor input,Tensor positions,Tensor mask) {
 //		System.out.println("en_time:"+en_time+",de_time:"+de_time);
 		/**
 		 * 设置输入数据
 		 */
-		this.setInputData(en_input);
+		this.setInputData(input);
+		
+		inputLayer.forward();
+		
+		decoder.forward(input, mask, positions);
+//		decoder.getOutput().showShape();
+		fullyLayer.forward(decoder.getOutput());
 		
 		return this.getOuput();
 	}
@@ -86,13 +116,17 @@ public class Transformers extends Network {
 	@Override
 	public void back(Tensor lossDiff) {
 		// TODO Auto-generated method stub
-
+//		lossDiff.showDMByNumber(0);
 		/**
 		 * 设置误差
 		 * 将误差值输入到最后一层
 		 */
 		this.setLossDiff(lossDiff);
-
+		
+		this.fullyLayer.back(lossDiff);
+		
+		this.decoder.back(this.fullyLayer.diff);
+		
 	}
 
 	@Override

@@ -198,7 +198,7 @@ public abstract class Network {
 			Layer layer = layerList.get(i);
 			
 			layer.learnRate = this.learnRate;
-
+//			System.out.println(layer.getLayerType());
 			layer.update();
 			
 		}	

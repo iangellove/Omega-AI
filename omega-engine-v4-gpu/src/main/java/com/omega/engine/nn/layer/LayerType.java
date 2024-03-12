@@ -32,6 +32,7 @@ public enum LayerType {
 	rnn("rnn"),
 	mutli_head_attention("mutli_head_attention"),
 	poswise_feed_forward("poswise_feed_forward"),
+	transformer_decoder("transformer_decoder"),
 	lstm("lstm"),
 	embedding("embedding"),
 	dropout("dropout");

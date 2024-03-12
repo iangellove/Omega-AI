@@ -1,13 +1,10 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MatrixUtils;
-import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.normalization.LNLayer;
-import com.omega.engine.nn.network.CNN;
 import com.omega.engine.nn.network.Network;
 
 /**
@@ -15,9 +12,7 @@ import com.omega.engine.nn.network.Network;
  * @author Administrator
  *
  */
-public class PoswiseFeedForwardLayer extends Layer{
-	
-	private int time;
+public class PoswiseFeedForwardLinearLayer extends Layer{
 	
 	private int embedDim = 0;
 	
@@ -27,20 +22,17 @@ public class PoswiseFeedForwardLayer extends Layer{
 	
 	private boolean layer_norm = false;
 	
-	private ConvolutionLayer conv1;
+	private FullyLayer linear1;
 	private ReluLayer relu1;
-	private ConvolutionLayer conv2;
+	private FullyLayer linear2;
 
 	private LNLayer lnLayer;
 	
 	private BaseKernel baseKernel;
 	
-	private Tensor it;
-	
 	private Tensor ro;
 
-	public PoswiseFeedForwardLayer(int time,int embedDim,int nChannel,boolean bias,boolean layer_norm) {
-		this.time = time;
+	public PoswiseFeedForwardLinearLayer(int embedDim,int nChannel,boolean bias,boolean layer_norm) {
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
 		this.bias = bias;
@@ -48,9 +40,8 @@ public class PoswiseFeedForwardLayer extends Layer{
 		this.initLayers();
 	}
 	
-	public PoswiseFeedForwardLayer(int time,int embedDim,int nChannel,boolean bias,boolean layer_norm,Network network) {
+	public PoswiseFeedForwardLinearLayer(int embedDim,int nChannel,boolean bias,boolean layer_norm,Network network) {
 		this.network = network;
-		this.time = time;
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
 		this.bias = bias;
@@ -60,18 +51,14 @@ public class PoswiseFeedForwardLayer extends Layer{
 	
 	public void initLayers() {
 		
-		this.conv1 = new ConvolutionLayer(embedDim, nChannel, time, 1, 1, 1, 0, 1, bias, this.network);
-//		this.conv1.weight = new Tensor(nChannel, embedDim, 1, 1, RandomUtils.order(this.nChannel * this.embedDim, 0.1f, 0.1f), true);
-//		this.conv1.bias = new Tensor(1, 1, 1, nChannel, RandomUtils.order(this.nChannel, 0.1f, 0.0f), true);
+		this.linear1 = new FullyLayer(embedDim, nChannel, bias, network);
 
-		this.relu1 = new ReluLayer(conv1);
+		this.relu1 = new ReluLayer(linear1);
 		
-		this.conv2 = new ConvolutionLayer(nChannel, embedDim, time, 1, 1, 1, 0, 1, bias, this.network);
-//		this.conv2.weight = new Tensor(embedDim, nChannel, 1, 1, RandomUtils.order(this.nChannel * this.embedDim, 0.1f, 0.1f), true);
-//		this.conv2.bias = new Tensor(1, 1, 1, embedDim, RandomUtils.order(this.embedDim, 0.1f, 0.0f), true);
+		this.linear2 = new FullyLayer(nChannel, embedDim, bias, network);
 
 		if(this.layer_norm) {
-			this.lnLayer = new LNLayer(this.conv2);
+			this.lnLayer = new LNLayer(this.linear2);
 		}
 		
 		if(baseKernel == null) {
@@ -85,9 +72,7 @@ public class PoswiseFeedForwardLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
 		if(this.ro == null || this.ro.number != this.number) {
-			System.out.println(number);
-			this.it = Tensor.createTensor(this.it, number, embedDim, 1, time, true);
-			this.ro = Tensor.createTensor(this.ro, number, time, 1, embedDim, true);
+			this.ro = Tensor.createTensor(this.ro, number, 1, 1, embedDim, true);
 		}
 		resize();
 	}
@@ -99,7 +84,9 @@ public class PoswiseFeedForwardLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		
+		if(this.cache_delta == null || output.number != cache_delta.number){
+			this.cache_delta = new Tensor(number, output.channel, output.height, output.width, true);
+		}
 	}
 
 	@Override
@@ -112,17 +99,13 @@ public class PoswiseFeedForwardLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		TensorOP.permute(input, it, new int[] {0, 3, 2, 1});
+		linear1.forward(input);
 		
-		conv1.forward(it);
-		
-		relu1.forward(conv1.getOutput());
+		relu1.forward(linear1.getOutput());
 
-		conv2.forward(relu1.getOutput());
+		linear2.forward(relu1.getOutput());
 		
-		TensorOP.permute(conv2.getOutput(), this.ro, new int[] {0, 3, 2, 1});
-		
-		TensorOP.add(this.ro, this.input, this.ro);
+		TensorOP.add(linear2.getOutput(), this.input, this.ro);
 		
 		if(this.layer_norm) {
 			this.lnLayer.forward(ro);
@@ -142,25 +125,19 @@ public class PoswiseFeedForwardLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-
-		this.ro.view(number, embedDim, 1, time);
 		if(this.layer_norm) {
-			this.lnLayer.back(delta);
-			TensorOP.permute(this.lnLayer.diff, this.ro, new int[] {0, 3, 2, 1});
+			baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
+			this.lnLayer.back(cache_delta);
+			this.linear2.back(this.lnLayer.diff);
 		}else {
-			TensorOP.permute(delta, this.ro, new int[] {0, 3, 2, 1});
+			this.linear2.back(this.delta);
 		}
 
-		this.conv2.back(this.ro);
+		relu1.back(this.linear2.diff);
 		
-		relu1.back(this.conv2.diff);
+		linear1.back(relu1.diff);
 		
-		conv1.back(relu1.diff);
-		
-		this.ro.view(number, time, 1, embedDim);
-		TensorOP.permute(conv1.diff, this.ro, new int[] {0, 3, 2, 1});
-		
-		TensorOP.add(this.ro, delta, this.ro);
+		TensorOP.add(this.linear1.diff, delta, this.ro);
 
 		this.diff = this.ro;
 		
@@ -244,8 +221,8 @@ public class PoswiseFeedForwardLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		conv1.update();
-		conv2.update();
+		linear1.update();
+		linear2.update();
 		lnLayer.update();
 	}
 
@@ -280,43 +257,6 @@ public class PoswiseFeedForwardLayer extends Layer{
 	}
 	
 	public static void main(String[] args) {
-		
-		int batchSize = 5;
-		int time = 10;
-		int embedDim = 8;
-
-		int nChannel = 4;
-		
-		CNN tf = new CNN(null);
-		tf.CUDNN = true;
-		tf.number = batchSize;
-		
-		float[] data = RandomUtils.order(batchSize * time * embedDim, 0.1f, 0.1f);
-		
-		Tensor input = new Tensor(batchSize , time, 1, embedDim, data, true);
-		
-		input.showShape();
-		input.showDM();
-		
-		float[] delta_data = MatrixUtils.val(batchSize * time * embedDim, 1.0f);
-		
-		Tensor delta = new Tensor(batchSize, time, 1, embedDim, delta_data, true);
-		
-		PoswiseFeedForwardLayer mal = new PoswiseFeedForwardLayer(time, embedDim, nChannel, false, true, tf);
-		
-//		mal.forward(input);
-		
-		mal.forward(input);
-		
-//		input.showDM();
-//		mal.getWeights().showDM();
-//		mal.getOutput().showShape();
-		
-		mal.getOutput().showDM();
-		
-		mal.back(delta);
-//		mal.diff.showShape();
-		mal.diff.showDM();
 		
 	}
 

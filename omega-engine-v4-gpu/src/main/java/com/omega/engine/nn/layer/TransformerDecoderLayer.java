@@ -3,19 +3,15 @@ package com.omega.engine.nn.layer;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.ad.op.TensorOP;
-import com.omega.engine.gpu.BaseKernel;
-import com.omega.engine.nn.layer.active.ReluLayer;
-import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.CNN;
 import com.omega.engine.nn.network.Network;
 
 /**
- * PoswiseFeedForward Layer
+ * Transformer Decoder Layer
  * @author Administrator
  *
  */
-public class PoswiseFeedForwardLayer extends Layer{
+public class TransformerDecoderLayer extends Layer{
 	
 	private int time;
 	
@@ -27,19 +23,14 @@ public class PoswiseFeedForwardLayer extends Layer{
 	
 	private boolean layer_norm = false;
 	
-	private ConvolutionLayer conv1;
-	private ReluLayer relu1;
-	private ConvolutionLayer conv2;
+	private int headNum = 8;
+	
+	private MultiHeadAttentionLayer attn;
+	private PoswiseFeedForwardLinearLayer feed_forward;
+//	private LNLayer norm1;
+//	private LNLayer norm2;
 
-	private LNLayer lnLayer;
-	
-	private BaseKernel baseKernel;
-	
-	private Tensor it;
-	
-	private Tensor ro;
-
-	public PoswiseFeedForwardLayer(int time,int embedDim,int nChannel,boolean bias,boolean layer_norm) {
+	public TransformerDecoderLayer(int time,int embedDim,int nChannel,boolean bias,boolean layer_norm) {
 		this.time = time;
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
@@ -48,7 +39,7 @@ public class PoswiseFeedForwardLayer extends Layer{
 		this.initLayers();
 	}
 	
-	public PoswiseFeedForwardLayer(int time,int embedDim,int nChannel,boolean bias,boolean layer_norm,Network network) {
+	public TransformerDecoderLayer(int time,int embedDim,int nChannel,boolean bias,boolean layer_norm,Network network) {
 		this.network = network;
 		this.time = time;
 		this.embedDim = embedDim;
@@ -60,23 +51,14 @@ public class PoswiseFeedForwardLayer extends Layer{
 	
 	public void initLayers() {
 		
-		this.conv1 = new ConvolutionLayer(embedDim, nChannel, time, 1, 1, 1, 0, 1, bias, this.network);
-//		this.conv1.weight = new Tensor(nChannel, embedDim, 1, 1, RandomUtils.order(this.nChannel * this.embedDim, 0.1f, 0.1f), true);
-//		this.conv1.bias = new Tensor(1, 1, 1, nChannel, RandomUtils.order(this.nChannel, 0.1f, 0.0f), true);
-
-		this.relu1 = new ReluLayer(conv1);
-		
-		this.conv2 = new ConvolutionLayer(nChannel, embedDim, time, 1, 1, 1, 0, 1, bias, this.network);
-//		this.conv2.weight = new Tensor(embedDim, nChannel, 1, 1, RandomUtils.order(this.nChannel * this.embedDim, 0.1f, 0.1f), true);
-//		this.conv2.bias = new Tensor(1, 1, 1, embedDim, RandomUtils.order(this.embedDim, 0.1f, 0.0f), true);
-
-		if(this.layer_norm) {
-			this.lnLayer = new LNLayer(this.conv2);
-		}
-		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
-		}
+		this.attn = new MultiHeadAttentionLayer(embedDim, headNum, time, bias, layer_norm, network);
+		this.feed_forward = new PoswiseFeedForwardLinearLayer(embedDim, nChannel, bias, layer_norm, network);
+//		this.norm1 = new LNLayer(this.attn);
+//		this.norm2 = new LNLayer(this.feed_forward);
+//		
+//		if(baseKernel == null) {
+//			baseKernel = new BaseKernel();
+//		}
 		
 	}
 	
@@ -84,16 +66,6 @@ public class PoswiseFeedForwardLayer extends Layer{
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
-		if(this.ro == null || this.ro.number != this.number) {
-			System.out.println(number);
-			this.it = Tensor.createTensor(this.it, number, embedDim, 1, time, true);
-			this.ro = Tensor.createTensor(this.ro, number, time, 1, embedDim, true);
-		}
-		resize();
-	}
-	
-	public void resize() {
-		this.ro.viewOrg();
 	}
 	
 	@Override
@@ -112,25 +84,23 @@ public class PoswiseFeedForwardLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		TensorOP.permute(input, it, new int[] {0, 3, 2, 1});
+		this.attn.forward(input);
 		
-		conv1.forward(it);
+		this.feed_forward.forward(this.attn.getOutput());
 		
-		relu1.forward(conv1.getOutput());
-
-		conv2.forward(relu1.getOutput());
+		this.output = this.feed_forward.getOutput();
 		
-		TensorOP.permute(conv2.getOutput(), this.ro, new int[] {0, 3, 2, 1});
+	}
+	
+	public void output(Tensor mask) {
+		// TODO Auto-generated method stub
 		
-		TensorOP.add(this.ro, this.input, this.ro);
+		this.attn.forward(input, mask);
 		
-		if(this.layer_norm) {
-			this.lnLayer.forward(ro);
-			this.output = this.lnLayer.getOutput();
-		}else {
-			this.output = ro;
-		}
-
+		this.feed_forward.forward(this.attn.getOutput());
+		
+		this.output = this.feed_forward.getOutput();
+		
 	}
 	
 	@Override
@@ -142,27 +112,12 @@ public class PoswiseFeedForwardLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+		
+		this.feed_forward.back(delta);
+		
+		this.attn.back(feed_forward.diff);
 
-		this.ro.view(number, embedDim, 1, time);
-		if(this.layer_norm) {
-			this.lnLayer.back(delta);
-			TensorOP.permute(this.lnLayer.diff, this.ro, new int[] {0, 3, 2, 1});
-		}else {
-			TensorOP.permute(delta, this.ro, new int[] {0, 3, 2, 1});
-		}
-
-		this.conv2.back(this.ro);
-		
-		relu1.back(this.conv2.diff);
-		
-		conv1.back(relu1.diff);
-		
-		this.ro.view(number, time, 1, embedDim);
-		TensorOP.permute(conv1.diff, this.ro, new int[] {0, 3, 2, 1});
-		
-		TensorOP.add(this.ro, delta, this.ro);
-
-		this.diff = this.ro;
+		this.diff = this.attn.diff;
 		
 	}
 
@@ -221,6 +176,23 @@ public class PoswiseFeedForwardLayer extends Layer{
 		
 	}
 	
+	public void forward(Tensor input,Tensor mask) {
+		// TODO Auto-generated method stub
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+		/**
+		 * 计算输出
+		 */
+		this.output(mask);
+		
+	}
+	
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
@@ -244,9 +216,8 @@ public class PoswiseFeedForwardLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		conv1.update();
-		conv2.update();
-		lnLayer.update();
+		attn.update();
+		feed_forward.update();
 	}
 
 	@Override
@@ -258,7 +229,7 @@ public class PoswiseFeedForwardLayer extends Layer{
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.poswise_feed_forward;
+		return LayerType.transformer_decoder;
 	}
 
 	@Override
@@ -302,7 +273,7 @@ public class PoswiseFeedForwardLayer extends Layer{
 		
 		Tensor delta = new Tensor(batchSize, time, 1, embedDim, delta_data, true);
 		
-		PoswiseFeedForwardLayer mal = new PoswiseFeedForwardLayer(time, embedDim, nChannel, false, true, tf);
+		TransformerDecoderLayer mal = new TransformerDecoderLayer(time, embedDim, nChannel, false, true, tf);
 		
 //		mal.forward(input);
 		

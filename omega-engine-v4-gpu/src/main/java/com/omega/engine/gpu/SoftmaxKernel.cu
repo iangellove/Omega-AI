@@ -24,16 +24,15 @@ __global__ void softmax(float *input, float *output, int batch, int n)
 }
 
 extern "C"
-__global__ void softmax_mask(float *input, float *output, float *mask, int batch, int n,int channel, float tmp)
+__global__ void softmax_mask(float *input, float *output, float *mask, int batch, int n, float tmp)
 {
     int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if (id >= batch) return;
 	float max = -FLT_MAX;
 	float sum = 0;
-	int b = id / channel;
 	for(int i = 0;i<n;i++) {
 		float val = input[id * n + i];
-		if(mask[b * n + i] == 0){
+		if(mask[id * n + i] == 1){
 			val = tmp;
 		}
 		if(max <= val) {
@@ -42,7 +41,7 @@ __global__ void softmax_mask(float *input, float *output, float *mask, int batch
 	}
 	for(int i = 0;i<n;i++){
 		float val = input[id * n + i];
-		if(mask[b * n + i] == 0){
+		if(mask[id * n + i] == 1){
 			val = tmp;
 		}
         float e = expf(val - max);

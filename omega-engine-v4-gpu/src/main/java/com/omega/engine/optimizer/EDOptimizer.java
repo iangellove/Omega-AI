@@ -10,11 +10,13 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.grad.GradClipping;
 import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.network.GPT;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Seq2Seq;
 import com.omega.engine.nn.network.Seq2SeqRNN;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.rnn.data.IndexDataLoader;
+import com.omega.transformer.utils.ENTokenizer;
 
 import jcuda.driver.JCudaDriver;
 
@@ -275,6 +277,147 @@ public class EDOptimizer extends Optimizer {
 						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / inputDecoder.number;
 					}else {
 						this.currentError = MatrixOperation.sum(this.loss.data) / inputDecoder.number;
+					}
+
+//					train_loss += this.currentError;
+					
+					output.syncHost();
+					
+//					System.out.println(JsonUtils.toJson(inputEncoder.shape()));
+//					System.out.println(JsonUtils.toJson(output.shape()));
+//					System.out.println(JsonUtils.toJson(label.shape()));
+					int time = output.number / batchSize;
+					float error = this.accuracy(output, label, time, batchSize);
+					
+//					if(error > 99) {
+//						break;
+//					}
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+				}
+//				output.showDMByNumber(0);
+//				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(this.lr_step);
+
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void trainGPT(ENTokenizer trainingData) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			GPT network = (GPT) this.network;
+			
+			Tensor input = new Tensor(batchSize * network.time, 1, 1, network.vocab_size, true);
+
+			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocab_size, true);
+			
+			Tensor mask = ENTokenizer.triu(batchSize, network.head_num, network.time, network.time, 1);
+			
+			Tensor positions = ENTokenizer.getPositions(batchSize, network.time);
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+				
+				Tensor output = null;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+					
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadData(indexs[it], input, label);
+					
+					/**
+					 * forward
+					 */
+					output = network.forward(input, positions, mask);
+//					output.showDM();
+//					label.showDM();
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, label);
+					
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label);
+					
+//					System.out.println(JsonUtils.toJson(output.syncHost()));
+					
+//					GradClipping.gradClipping(this.lossDiff, 1e-7f);
+
+					/**
+					 * back
+					 */
+					this.network.back(this.lossDiff);
+					
+//					/**
+//					 * grad clipping
+//					 */
+//					this.gradClipping(this.network);
+					
+					/**
+					 * update
+					 */
+					this.network.update();
+					
+					JCudaDriver.cuCtxSynchronize();
+					
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
 					}
 
 //					train_loss += this.currentError;

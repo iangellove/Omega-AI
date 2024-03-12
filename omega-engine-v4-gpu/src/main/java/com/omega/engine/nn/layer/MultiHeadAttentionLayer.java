@@ -4,7 +4,6 @@ import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
@@ -13,7 +12,8 @@ import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.gpu.SoftmaxKernel;
 import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
-import com.omega.engine.nn.network.Transformers;
+import com.omega.engine.nn.network.Transformer;
+import com.omega.transformer.utils.ENTokenizer;
 
 /**
  * Multi-Head AttentionLayer
@@ -31,8 +31,6 @@ public class MultiHeadAttentionLayer extends Layer{
 	private int dk = 0;
 	
 	private boolean bias = false;
-	
-	private boolean residual = false;
 	
 	private boolean layer_norm = false;
 	
@@ -64,22 +62,21 @@ public class MultiHeadAttentionLayer extends Layer{
 	
 	private int batchSize = 1;
 	
-	public MultiHeadAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean residual) {
+	public MultiHeadAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean layer_norm) {
 		this.time = time;
+		this.layer_norm = layer_norm;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
 		this.bias = bias;
-		this.residual = residual;
 		this.initLayers();
 	}
 	
-	public MultiHeadAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean residual,boolean layer_norm,Network network) {
+	public MultiHeadAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean layer_norm,Network network) {
 		this.network = network;
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
 		this.bias = bias;
-		this.residual = residual;
 		this.layer_norm = layer_norm;
 		this.initLayers();
 	}
@@ -90,35 +87,35 @@ public class MultiHeadAttentionLayer extends Layer{
 //		float stdv = (float) (2.0f / Math.sqrt(embedDim + embedDim));
 		
 		this.qLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.1f, 0.0f), true);
-		Tensor qwt = new Tensor(1, 1, embedDim, embedDim, true);
-		TensorOP.permute(this.qLinerLayer.weight, qwt, new int[] {0, 1, 3, 2});
-		this.qLinerLayer.weight = qwt;
+//		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.1f, 0.0f), true);
+//		Tensor qwt = new Tensor(1, 1, embedDim, embedDim, true);
+//		TensorOP.permute(this.qLinerLayer.weight, qwt, new int[] {0, 1, 3, 2});
+//		this.qLinerLayer.weight = qwt;
 //		this.qLinerLayer.bias = new Tensor(1, 1, 1, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0, stdv), true);
 //		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0, stdv), true);
 //		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.1f), true);
 		
 		this.kLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.02f, 0.0f), true);
-		Tensor kwt = new Tensor(1, 1, embedDim, embedDim, true);
-		TensorOP.permute(this.kLinerLayer.weight, kwt, new int[] {0, 1, 3, 2});
-		this.kLinerLayer.weight = kwt;
+//		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.02f, 0.0f), true);
+//		Tensor kwt = new Tensor(1, 1, embedDim, embedDim, true);
+//		TensorOP.permute(this.kLinerLayer.weight, kwt, new int[] {0, 1, 3, 2});
+//		this.kLinerLayer.weight = kwt;
 //		this.kLinerLayer.weight = new Tensor(1, 1, hiddenSize, hiddenSize, RandomUtils.uniform(this.hiddenSize * this.hiddenSize, 0, stdv), true);
 //		this.selfLayer.bias = new Tensor(1, 1, 1, hiddenSize, RandomUtils.uniform(this.hiddenSize, 0, stdv), true);
 //		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.2f), true);
 
 		this.vLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.03f, 0.0f), true);
-		Tensor vwt = new Tensor(1, 1, embedDim, embedDim, true);
-		TensorOP.permute(this.vLinerLayer.weight, vwt, new int[] {0, 1, 3, 2});
-		this.vLinerLayer.weight = vwt;
+//		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.03f, 0.0f), true);
+//		Tensor vwt = new Tensor(1, 1, embedDim, embedDim, true);
+//		TensorOP.permute(this.vLinerLayer.weight, vwt, new int[] {0, 1, 3, 2});
+//		this.vLinerLayer.weight = vwt;
 //		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.01f), true);
 		
 		this.oLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.04f, 0.0f), true);
-		Tensor owt = new Tensor(1, 1, embedDim, embedDim, true);
-		TensorOP.permute(this.oLinerLayer.weight, owt, new int[] {0, 1, 3, 2});
-		this.oLinerLayer.weight = owt;
+//		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.04f, 0.0f), true);
+//		Tensor owt = new Tensor(1, 1, embedDim, embedDim, true);
+//		TensorOP.permute(this.oLinerLayer.weight, owt, new int[] {0, 1, 3, 2});
+//		this.oLinerLayer.weight = owt;
 //		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.02f), true);
 		
 		if(this.layer_norm) {
@@ -161,9 +158,7 @@ public class MultiHeadAttentionLayer extends Layer{
 			// [batch_size, len_q, n_heads * dim_v]
 			this.ot = Tensor.createTensor(this.ot, batchSize, time, headNum, dk, true);
 			
-			if(residual) {
-				this.ro = Tensor.createTensor(this.ro, batchSize * time, 1, 1, embedDim, true);
-			}
+			this.ro = Tensor.createTensor(this.ro, batchSize * time, 1, 1, embedDim, true);
 			
 		}
 		
@@ -188,7 +183,9 @@ public class MultiHeadAttentionLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		
+		if(this.cache_delta == null || output.number != cache_delta.number){
+			this.cache_delta = new Tensor(number, output.channel, output.height, output.width, true);
+		}
 	}
 
 	@Override
@@ -223,20 +220,13 @@ public class MultiHeadAttentionLayer extends Layer{
 		
 		this.oLinerLayer.getOutput().showDM();
 		
-		Tensor tmp = null;
-		
-		if(residual) {
-			TensorOP.add(this.oLinerLayer.getOutput(), this.input, this.ro);
-			tmp = this.ro;
-		}else {
-			tmp = this.oLinerLayer.getOutput();
-		}
+		TensorOP.add(this.oLinerLayer.getOutput(), this.input, this.ro);
 		
 		if(this.layer_norm) {
-			this.lnLayer.forward(tmp);
+			this.lnLayer.forward(this.ro);
 			this.output = this.lnLayer.getOutput();
 		}else {
-			this.output = tmp;
+			this.output = this.ro;
 		}
 
 	}
@@ -264,20 +254,13 @@ public class MultiHeadAttentionLayer extends Layer{
 
 		this.oLinerLayer.forward(ot);
 		
-		Tensor tmp = null;
-		
-		if(residual) {
-			TensorOP.add(this.oLinerLayer.getOutput(), this.input, this.ro);
-			tmp = this.ro;
-		}else {
-			tmp = this.oLinerLayer.getOutput();
-		}
+		TensorOP.add(this.oLinerLayer.getOutput(), this.input, this.ro);
 		
 		if(this.layer_norm) {
-			this.lnLayer.forward(tmp);
+			this.lnLayer.forward(ro);
 			this.output = this.lnLayer.getOutput();
 		}else {
-			this.output = tmp;
+			this.output = ro;
 		}
 
 	}
@@ -289,12 +272,19 @@ public class MultiHeadAttentionLayer extends Layer{
 		GPUOP.getInstance().bmm(query.getGpuData(), key.getGpuData(), scores.getGpuData(), query.number * query.channel, query.height, key.height, query.width,
 				CUBLAS_OP_N, CUBLAS_OP_T, d_k, 0.0f);
 		
+//		scores.showShape();
+//		System.out.println("scores.showDM():");
+//		scores.showDM();
+		
 		if(mask != null) {
 			softmax.softmaxMask(scores, mask, weights, -1e9f);
 		}else {
 			softmax.softmax(scores, weights);
 		}
-
+		
+//		System.out.println("weights.showDM():");
+//		weights.showDM();
+		
 		GPUOP.getInstance().bmm(weights.getGpuData(), value.getGpuData(), attn_outputs.getGpuData(), weights.number * weights.channel, weights.height, value.width, weights.width,
 				CUBLAS_OP_N, CUBLAS_OP_N, 1.0f, 0.0f);
 	}
@@ -371,28 +361,16 @@ public class MultiHeadAttentionLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		
 		if(this.layer_norm) {
-			this.lnLayer.back(delta);
+			baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
+			this.lnLayer.back(this.cache_delta);
 			this.oLinerLayer.back(this.lnLayer.diff, ot);
 		}else {
 			this.oLinerLayer.back(delta, ot);
 		}
-		
-//		this.oLinerLayer.diffW.showDM();
-//		
-//		this.oLinerLayer.diff.showDM();
-		
 		ot.view(batchSize, time, headNum, dk);
 		
 		TensorOP.permute(ot, attn_outputs, new int[] {0, 2, 1, 3});
-		
-//		attn_outputs.getGrad().showDM();
-
-//		scaledDotProductAttentionBackward(qt, kt, vt, attn_outputs);
-//		TensorOP.permute(qt.getGrad(), this.qLinerLayer.getOutput(), new int[] {0, 2, 1, 3});
-//		TensorOP.permute(kt.getGrad(), this.kLinerLayer.getOutput(), new int[] {0, 2, 1, 3});
-//		TensorOP.permute(vt.getGrad(), this.vLinerLayer.getOutput(), new int[] {0, 2, 1, 3});
 
 		int[] qo_shape = this.qLinerLayer.getOutput().shape();
 		int[] ko_shape = this.kLinerLayer.getOutput().shape();
@@ -413,9 +391,7 @@ public class MultiHeadAttentionLayer extends Layer{
 		this.kLinerLayer.back(keyDelta);
 		this.vLinerLayer.back(valueDelta);
 		
-		if(residual) {
-			TensorOP.add(this.qLinerLayer.diff, delta, this.qLinerLayer.diff);
-		}
+		TensorOP.add(this.qLinerLayer.diff, delta, this.qLinerLayer.diff);
 
 		TensorOP.add(this.vLinerLayer.diff, this.kLinerLayer.diff, this.kLinerLayer.diff);
 		TensorOP.add(this.qLinerLayer.diff, this.kLinerLayer.diff, this.qLinerLayer.diff);
@@ -521,8 +497,11 @@ public class MultiHeadAttentionLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-//		inputLayer.update(number / time);
-//		selfLayer.update(number / time);
+		qLinerLayer.update();
+		kLinerLayer.update();
+		vLinerLayer.update();
+		oLinerLayer.update();
+		lnLayer.update();
 	}
 
 	@Override
@@ -561,58 +540,64 @@ public class MultiHeadAttentionLayer extends Layer{
 
 	public static void main(String[] args) {
 		
-		int embedDim = 512;
-		int headNum = 8;
-		int batchSize = 64;
-		int time = 256;
+		int embedDim = 4;
+		int headNum = 2;
+		int batchSize = 3;
+		int time = 5;
 		
-		Transformers tf = new Transformers();
+		Transformer tf = new Transformer();
 		tf.number = batchSize * time;
 		
 		float[] data = RandomUtils.order(batchSize * time * embedDim, 0.1f, 0.1f);
 		
-		int[] rts = new int[] {2, 3, 3};
+//		int[] rts = new int[] {2, 3, 3};
+//		
+//		for(int b = 0;b<batchSize;b++) {
+//			int rt = rts[b];
+//			for(int t = 0;t<time;t++) {
+//				if(t > rt) {
+//					for(int n = 0;n<embedDim;n++) {
+//						data[b * time * embedDim + t * embedDim + n] = 0;
+//					}
+//				}
+//			}
+//		}
 		
-		for(int b = 0;b<batchSize;b++) {
-			int rt = rts[b];
-			for(int t = 0;t<time;t++) {
-				if(t > rt) {
-					for(int n = 0;n<embedDim;n++) {
-						data[b * time * embedDim + t * embedDim + n] = 0;
-					}
-				}
-			}
-		}
+//		float[] maskData = new float[] {1,1,1,0,0,1,1,1,1,0,1,1,1,1,0};
+//		
+//		Tensor mask = new Tensor(batchSize, 1, time, time, maskData, true);
 		
-		float[] maskData = new float[] {1,1,1,0,0,1,1,1,1,0,1,1,1,1,0};
-		
-		Tensor mask = new Tensor(batchSize, 1, 1, time, maskData, true);
+		Tensor mask = ENTokenizer.triu(batchSize, headNum, time, time, 1);
 		
 		Tensor input = new Tensor(batchSize * time, 1, 1, embedDim, data, true);
 		
-		input.showDM();
+//		input.showDM();
 		
 		float[] delta_data = MatrixUtils.val(batchSize * time * embedDim, 1.0f);
 		
 		Tensor delta = new Tensor(batchSize * time, 1, 1, embedDim, delta_data, true);
 		
-		MultiHeadAttentionLayer mal = new MultiHeadAttentionLayer(embedDim, headNum, time, false, true, true, tf);
+		MultiHeadAttentionLayer mal = new MultiHeadAttentionLayer(embedDim, headNum, time, false, true, tf);
 		
 //		mal.forward(input);
 		
-		mal.forward(input, mask);
-		
-//		input.showDM();
-		
-//		mal.getWeights().showDM();
-		
-		mal.getOutput().showShape();
-		
-		mal.getOutput().showDM();
-		
-		mal.back(delta);
-		
-		mal.diff.showDM();
+		for(int i = 0;i<10;i++) {
+
+			mal.forward(input, mask);
+			
+//			input.showDM();
+			
+//			mal.getWeights().showDM();
+			
+			mal.getOutput().showShape();
+			
+			mal.getOutput().showDM();
+			
+			mal.back(delta);
+			delta.showDM();
+			mal.diff.showDM();
+			
+		}
 		
 	}
 
