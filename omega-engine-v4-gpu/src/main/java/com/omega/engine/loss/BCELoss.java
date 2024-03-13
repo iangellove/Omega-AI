@@ -137,5 +137,17 @@ public class BCELoss extends LossFunction {
 		kernel.backward(x, label, diff);
 		return diff;
 	}
+
+	@Override
+	public Tensor loss(Tensor x, Tensor label, int igonre) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Tensor diff(Tensor x, Tensor label, int igonre) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 	
 }

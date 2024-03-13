@@ -9,6 +9,7 @@ import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.updater.UpdaterType;
 
+import jcuda.Sizeof;
 import jcuda.runtime.JCuda;
 
 /**
@@ -263,7 +264,7 @@ public class Yolo extends OutputsNetwork{
 		/**
 		 * forward
 		 */
-		JCuda.cudaMemset(CUDAMemoryManager.workspace.getPointer(), 0, CUDAMemoryManager.workspace.getSize());
+		JCuda.cudaMemset(CUDAMemoryManager.workspace.getPointer(), 0, CUDAMemoryManager.workspace.getSize() * Sizeof.FLOAT);
 		
 		for(int i = 0;i<layerCount;i++) {
 			

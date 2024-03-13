@@ -55,6 +55,8 @@ public abstract class Layer {
 	
 	public Tensor cache_delta;
 	
+	public Tensor org_delta;
+	
 	public ParamsInit paramsInit = ParamsInit.linear; 
 	
 	public boolean hasBias = true;

@@ -25,6 +25,7 @@ import com.omega.engine.optimizer.lr.GDDecay;
 import com.omega.engine.optimizer.lr.HalfDecay;
 import com.omega.engine.optimizer.lr.LRDecay;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
+import com.omega.transformer.utils.ENTokenizer;
 import com.omega.yolo.data.BaseDataLoader;
 import com.omega.yolo.data.DetectionDataLoader;
 import com.omega.yolo.model.YoloBox;
@@ -1350,7 +1351,35 @@ public abstract class Optimizer {
 			boolean allRight = true;
 			for(int t = 0;t<time;t++) {
 				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(t * batchSize + n));
+				
 				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(t * batchSize + n));
+				System.out.println(predictIndex+":"+labelIndex);
+				if(labelIndex != predictIndex) {
+					allRight = false;
+				}
+			}
+			if(allRight) {
+				trueCount++;
+			}
+		}
+		
+		error = trueCount / batchSize * 100;
+
+		return error;
+	}
+	
+	public float accuracyBatchFisrt(Tensor output,Tensor labelData,int time,int batchSize,ENTokenizer trainingData) {
+		
+		float error = 0.0f;
+		float trueCount = 0;
+		for(int n = 0;n<batchSize;n++) {
+			boolean allRight = true;
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+//				System.out.println(n);
+//				System.out.println(predictIndex+":"+labelIndex);
+//				System.out.println(trainingData.vocab[labelIndex]);
 				if(labelIndex != predictIndex) {
 					allRight = false;
 				}

@@ -17,11 +17,15 @@ public abstract class LossFunction {
 	
 	public abstract Tensor loss(Tensor x, Tensor label);
 	
+	public abstract Tensor loss(Tensor x, Tensor label,int igonre);
+	
 	public abstract Tensor loss(Tensor x, Tensor label, Tensor loss);
 	
 	public abstract Tensor[] loss(Tensor[] x, Tensor label);
 	
 	public abstract Tensor diff(Tensor x, Tensor label);
+	
+	public abstract Tensor diff(Tensor x, Tensor label,int igonre);
 	
 	public abstract Tensor diff(Tensor x, Tensor label, Tensor diff);
 	

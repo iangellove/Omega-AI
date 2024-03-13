@@ -374,21 +374,22 @@ public class EDOptimizer extends Optimizer {
 					 */
 					trainingData.loadData(indexs[it], input, label);
 					
+					
 					/**
 					 * forward
 					 */
 					output = network.forward(input, positions, mask);
-//					output.showDM();
-//					label.showDM();
+//					output.showDMByNumber(0);
+//					label.showDMByNumber(0);
 					/**
 					 * loss
 					 */
-					this.loss = network.loss(output, label);
+					this.loss = network.loss(output, label, trainingData.dictionary.get("<pad>"));
 					
 					/**
 					 * loss diff
 					 */
-					this.lossDiff = network.lossDiff(output, label);
+					this.lossDiff = network.lossDiff(output, label, trainingData.dictionary.get("<pad>"));
 					
 //					System.out.println(JsonUtils.toJson(output.syncHost()));
 					
@@ -428,7 +429,7 @@ public class EDOptimizer extends Optimizer {
 //					System.out.println(JsonUtils.toJson(output.shape()));
 //					System.out.println(JsonUtils.toJson(label.shape()));
 					int time = output.number / batchSize;
-					float error = this.accuracy(output, label, time, batchSize);
+					float error = this.accuracyBatchFisrt(output, label, time, batchSize, trainingData);
 					
 //					if(error > 99) {
 //						break;

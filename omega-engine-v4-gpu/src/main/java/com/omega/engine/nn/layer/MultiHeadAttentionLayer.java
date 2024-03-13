@@ -13,6 +13,7 @@ import com.omega.engine.gpu.SoftmaxKernel;
 import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Transformer;
+import com.omega.engine.updater.UpdaterFactory;
 import com.omega.transformer.utils.ENTokenizer;
 
 /**
@@ -73,6 +74,9 @@ public class MultiHeadAttentionLayer extends Layer{
 	
 	public MultiHeadAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean layer_norm,Network network) {
 		this.network = network;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
@@ -197,7 +201,7 @@ public class MultiHeadAttentionLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-
+//		System.out.println("in");
 		this.qLinerLayer.forward(this.input);
 		this.kLinerLayer.forward(this.input);
 		this.vLinerLayer.forward(this.input);
@@ -218,7 +222,7 @@ public class MultiHeadAttentionLayer extends Layer{
 
 		this.oLinerLayer.forward(ot);
 		
-		this.oLinerLayer.getOutput().showDM();
+//		this.oLinerLayer.getOutput().showDM();
 		
 		TensorOP.add(this.oLinerLayer.getOutput(), this.input, this.ro);
 		
@@ -228,7 +232,7 @@ public class MultiHeadAttentionLayer extends Layer{
 		}else {
 			this.output = this.ro;
 		}
-
+//		System.out.println("in2");
 	}
 	
 	public void output(Tensor mask) {
@@ -281,7 +285,6 @@ public class MultiHeadAttentionLayer extends Layer{
 		}else {
 			softmax.softmax(scores, weights);
 		}
-		
 //		System.out.println("weights.showDM():");
 //		weights.showDM();
 		
@@ -501,7 +504,9 @@ public class MultiHeadAttentionLayer extends Layer{
 		kLinerLayer.update();
 		vLinerLayer.update();
 		oLinerLayer.update();
-		lnLayer.update();
+		if(layer_norm) {
+			lnLayer.update();
+		}
 	}
 
 	@Override

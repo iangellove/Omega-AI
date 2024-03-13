@@ -34,12 +34,15 @@ public class ENTokenizer {
 	
 	public int vocab_size;
 	
+	public String[] vocab;
+	
 	public ENTokenizer(String dataPath,int max_len,int batchSize) {
 		this.dataPath = dataPath;
 		this.max_len = max_len;
 		this.batchSize = batchSize;
 		loadDataForTXT();
 		this.number = org_tokens.size();
+		System.out.println(this.number);
 	}
 	
 	public void loadDataForTXT() {
@@ -73,7 +76,7 @@ public class ENTokenizer {
 		for(int i = 0;i<specials.length;i++) {
 			dictionary.put(specials[i], i);
 		}
-		int idx = specials.length - 1;
+		int idx = specials.length;
 		for(int i = 0;i<org_tokens.size();i++) {
 			String[] once = org_tokens.get(i).split(" ");
 			if(once.length > 1) {
@@ -90,6 +93,10 @@ public class ENTokenizer {
 			
 		}
 		vocab_size = dictionary.size();
+		vocab = new String[vocab_size];
+		for(String key:dictionary.keySet()) {
+			vocab[dictionary.get(key)] = key;
+		}
 	}
 	
 	public void loadData(int[] indexs, Tensor input, Tensor label) {
@@ -97,7 +104,7 @@ public class ENTokenizer {
 		
 		input.clear();
 		label.clear();
-
+		
 		for(int i = 0;i<indexs.length;i++) {
 			String[] onceToken = tokens.get(indexs[i]);
 //			System.out.println(onceToken.length);
@@ -105,7 +112,7 @@ public class ENTokenizer {
 				format(i, t, onceToken, input, label);
 			}
 		}
-		
+
 		/**
 		 * copy data to gpu.
 		 */
@@ -120,6 +127,9 @@ public class ENTokenizer {
 			String next = onceToken[t + 1];
 			input.data[(b * max_len + t) * vocab_size + dictionary.get(curr)] = 1.0f;
 			label.data[(b * max_len + t) * vocab_size + dictionary.get(next)] = 1.0f;
+		}else {
+			input.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
+			label.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
 		}
 	}
 

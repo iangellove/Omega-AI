@@ -617,5 +617,17 @@ public class YoloLoss7 extends LossFunction {
 			}
 		}
 	}
+
+	@Override
+	public Tensor loss(Tensor x, Tensor label, int igonre) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Tensor diff(Tensor x, Tensor label, int igonre) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 	
 }

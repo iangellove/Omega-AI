@@ -7,6 +7,7 @@ import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * Transformer Decoder Layer
@@ -29,7 +30,7 @@ public class TransformerDecoder extends Layer{
 	
 	private int headNum = 8;
 	
-	private int n_layers = 1;
+	private int n_layers = 2;
 	
 	private EmbeddingLayer src_emb;
 	private EmbeddingLayer pos_emb;
@@ -52,6 +53,9 @@ public class TransformerDecoder extends Layer{
 	
 	public TransformerDecoder(int vocab_size,int time,int embedDim,int nChannel,boolean bias,boolean layer_norm,Network network) {
 		this.network = network;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
 		this.vocab_size = vocab_size;
 		this.time = time;
 		this.embedDim = embedDim;
@@ -105,8 +109,11 @@ public class TransformerDecoder extends Layer{
 		
 		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
 		
+		Tensor decoderOutput = src_emb.getOutput();
+		
 		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).forward(src_emb.getOutput());
+			decoderLayers.get(i).forward(decoderOutput);
+			decoderOutput = decoderLayers.get(i).getOutput();
 		}
 		
 		this.output = decoderLayers.get(n_layers - 1).getOutput();
@@ -253,7 +260,7 @@ public class TransformerDecoder extends Layer{
 		// TODO Auto-generated method stub
 		src_emb.update();
 		pos_emb.update();
-		for(int i = 0;i<n_layers - 1;i++) {
+		for(int i = 0;i<n_layers;i++) {
 			decoderLayers.get(i).update();
 		}
 	}

@@ -4,6 +4,7 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 import jcuda.jcublas.cublasOperation;
 
@@ -30,6 +31,9 @@ public class EmbeddingLayer extends Layer{
 
 	public EmbeddingLayer(int inputNum,int outputNum,Network network) {
 		this.network = network;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
 		this.channel = 1;
 		this.height = 1;
 		this.width = inputNum;

@@ -5,6 +5,7 @@ import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.network.CNN;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * Transformer Decoder Layer
@@ -27,9 +28,7 @@ public class TransformerDecoderLayer extends Layer{
 	
 	private MultiHeadAttentionLayer attn;
 	private PoswiseFeedForwardLinearLayer feed_forward;
-//	private LNLayer norm1;
-//	private LNLayer norm2;
-
+	
 	public TransformerDecoderLayer(int time,int embedDim,int nChannel,boolean bias,boolean layer_norm) {
 		this.time = time;
 		this.embedDim = embedDim;
@@ -41,6 +40,9 @@ public class TransformerDecoderLayer extends Layer{
 	
 	public TransformerDecoderLayer(int time,int embedDim,int nChannel,boolean bias,boolean layer_norm,Network network) {
 		this.network = network;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
 		this.time = time;
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
@@ -53,12 +55,6 @@ public class TransformerDecoderLayer extends Layer{
 		
 		this.attn = new MultiHeadAttentionLayer(embedDim, headNum, time, bias, layer_norm, network);
 		this.feed_forward = new PoswiseFeedForwardLinearLayer(embedDim, nChannel, bias, layer_norm, network);
-//		this.norm1 = new LNLayer(this.attn);
-//		this.norm2 = new LNLayer(this.feed_forward);
-//		
-//		if(baseKernel == null) {
-//			baseKernel = new BaseKernel();
-//		}
 		
 	}
 	

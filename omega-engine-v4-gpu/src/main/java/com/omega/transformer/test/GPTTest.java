@@ -20,23 +20,23 @@ public class GPTTest {
 		
 		try {
 			
-			int batchSize = 12;
+			int batchSize = 16;
 			
 			int max_len = 256;
 			
-			int embedDim = 128;
+			int embedDim = 256;
 			
-			int nChannel = 512;
+			int nChannel = 1024;
 			
 			String trainPath = "H:\\transformer_dataset\\gpt\\wikitext-2-v1\\wikitext-2\\wiki.train.tokens";
 
 			ENTokenizer trainData = new ENTokenizer(trainPath, max_len, batchSize);
 			
-			GPT network = new GPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, trainData.vocab_size, max_len, embedDim, nChannel);
+			GPT network = new GPT(LossType.softmax_with_cross_entropy, UpdaterType.adam, trainData.vocab_size, max_len, embedDim, nChannel);
 			
 			network.CUDNN = true;
 			
-			network.learnRate = 0.01f;
+			network.learnRate = 0.001f;
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 100, 0.001f, LearnRateUpdate.GD_GECAY, false);
 //			optimizer.lr_step = new int[] {20,50,80};

@@ -41,7 +41,7 @@ public class GPT extends Network {
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
 		this.inputLayer = new InputLayer(1, 1, vocab_size);
-		this.decoder = new TransformerDecoder(vocab_size, time, embedDim, nChannel, false, true, this);
+		this.decoder = new TransformerDecoder(vocab_size, time, embedDim, nChannel, true, true, this);
 		this.fullyLayer = new FullyLayer(embedDim, vocab_size, true, this);
 		this.addLayer(inputLayer);
 		this.addLayer(decoder);
@@ -173,6 +173,16 @@ public class GPT extends Network {
 	public Tensor lossDiff(Tensor output, Tensor label, Tensor diff) {
 		// TODO Auto-generated method stub
 		return this.lossFunction.diff(output, label, diff);
+	}
+	
+	public Tensor loss(Tensor output, Tensor label,int igonre) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.loss(output, label, igonre);
+	}
+
+	public Tensor lossDiff(Tensor output, Tensor label,int igonre) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.diff(output, label, igonre);
 	}
 	
 }

@@ -6,6 +6,7 @@ import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * PoswiseFeedForward Layer
@@ -42,6 +43,9 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	
 	public PoswiseFeedForwardLinearLayer(int embedDim,int nChannel,boolean bias,boolean layer_norm,Network network) {
 		this.network = network;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
 		this.bias = bias;
@@ -223,7 +227,9 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 		// TODO Auto-generated method stub
 		linear1.update();
 		linear2.update();
-		lnLayer.update();
+		if(layer_norm) {
+			lnLayer.update();
+		}
 	}
 
 	@Override
