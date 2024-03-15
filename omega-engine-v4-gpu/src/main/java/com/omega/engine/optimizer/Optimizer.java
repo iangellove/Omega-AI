@@ -1368,22 +1368,32 @@ public abstract class Optimizer {
 		return error;
 	}
 	
-	public float accuracyBatchFisrt(Tensor output,Tensor labelData,int time,int batchSize,ENTokenizer trainingData) {
+	public float accuracyBatchFisrt(Tensor input,Tensor output,Tensor labelData,int time,int batchSize,String[] vocab,int igonre) {
 		
 		float error = 0.0f;
 		float trueCount = 0;
 		for(int n = 0;n<batchSize;n++) {
 			boolean allRight = true;
+			String itxt = "";
+			String ptxt = "";
+			String ltxt = "";
 			for(int t = 0;t<time;t++) {
 				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
 				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
-//				System.out.println(n);
-//				System.out.println(predictIndex+":"+labelIndex);
-//				System.out.println(trainingData.vocab[labelIndex]);
-				if(labelIndex != predictIndex) {
+				int inputIndex = MatrixOperation.maxIndex(input.getByNumber(n * time + t));
+				ptxt += " " + vocab[predictIndex];
+				ltxt += " " + vocab[labelIndex];
+				itxt += " " + vocab[inputIndex];
+				if(labelIndex != igonre && labelIndex != predictIndex) {
 					allRight = false;
 				}
 			}
+			if(n == 0) {
+				System.out.println("itxt:"+itxt);
+				System.out.println("ptxt:"+ptxt);
+				System.out.println("ltxt:"+ltxt);
+			}
+			
 			if(allRight) {
 				trueCount++;
 			}

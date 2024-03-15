@@ -38,6 +38,9 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 		this.nChannel = nChannel;
 		this.bias = bias;
 		this.layer_norm = layer_norm;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
@@ -50,6 +53,9 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 		this.nChannel = nChannel;
 		this.bias = bias;
 		this.layer_norm = layer_norm;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
@@ -88,9 +94,9 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		if(this.cache_delta == null || output.number != cache_delta.number){
-			this.cache_delta = new Tensor(number, output.channel, output.height, output.width, true);
-		}
+//		if(this.cache_delta == null || output.number != cache_delta.number){
+//			this.cache_delta = new Tensor(number, output.channel, output.height, output.width, true);
+//		}
 	}
 
 	@Override
@@ -130,8 +136,8 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		if(this.layer_norm) {
-			baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
-			this.lnLayer.back(cache_delta);
+			this.lnLayer.back(delta);
+//			baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
 			this.linear2.back(this.lnLayer.diff);
 		}else {
 			this.linear2.back(this.delta);
@@ -141,9 +147,9 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 		
 		linear1.back(relu1.diff);
 		
-		TensorOP.add(this.linear1.diff, delta, this.ro);
+		TensorOP.add(this.linear1.diff, this.lnLayer.diff, this.linear1.diff);
 
-		this.diff = this.ro;
+		this.diff = this.linear1.diff;
 		
 	}
 

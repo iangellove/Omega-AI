@@ -12,6 +12,7 @@ import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.rnn.data.IndexDataLoader;
 import com.omega.rnn.seq2seq.Seq2seq;
+import com.omega.transformer.utils.CNTokenizer;
 import com.omega.transformer.utils.ENTokenizer;
 
 public class GPTTest {
@@ -36,9 +37,99 @@ public class GPTTest {
 			
 			network.CUDNN = true;
 			
-			network.learnRate = 0.001f;
+			network.learnRate = 0.0001f;
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 100, 0.001f, LearnRateUpdate.GD_GECAY, false);
+//			optimizer.lr_step = new int[] {20,50,80};
+			optimizer.trainGPT(trainData);
+
+//			Scanner scanner = new Scanner(System.in);
+//			while (true) {
+//				System.out.println("请输入英文:");
+//				String input_txt = scanner.nextLine();
+//				if(input_txt.equals("exit")){
+//					break;
+//				}
+//				input_txt = input_txt.toLowerCase();
+//				System.out.println(input_txt);
+//				optimizer.predictRNN(trainData, input_txt);
+//			}
+//			scanner.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void gpt_lang() {
+		
+		try {
+			
+			int batchSize = 10;
+			
+			int max_len = 256;
+			
+			int embedDim = 512;
+			
+			int nChannel = 2048;
+			
+			String trainPath = "H:\\transformer_dataset\\gpt\\lang\\lang.txt";
+
+			ENTokenizer trainData = new ENTokenizer(trainPath, max_len, batchSize);
+			
+			GPT network = new GPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, trainData.vocab_size, max_len, embedDim, nChannel);
+			
+			network.CUDNN = true;
+			
+			network.learnRate = 0.0001f;
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 300, 0.001f, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {20,50,80};
+			optimizer.trainGPT(trainData);
+
+//			Scanner scanner = new Scanner(System.in);
+//			while (true) {
+//				System.out.println("请输入英文:");
+//				String input_txt = scanner.nextLine();
+//				if(input_txt.equals("exit")){
+//					break;
+//				}
+//				input_txt = input_txt.toLowerCase();
+//				System.out.println(input_txt);
+//				optimizer.predictRNN(trainData, input_txt);
+//			}
+//			scanner.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void ch_chat() {
+		
+		try {
+			
+			int batchSize = 32;
+			
+			int max_len = 128;
+			
+			int embedDim = 512;
+			
+			int nChannel = 2048;
+			
+			String trainPath = "H:\\transformer_dataset\\gpt\\chatdata\\train-format1w.txt";
+
+			CNTokenizer trainData = new CNTokenizer(trainPath, max_len, batchSize);
+			
+			GPT network = new GPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, trainData.vocab_size, max_len, embedDim, nChannel);
+			
+			network.CUDNN = true;
+			
+			network.learnRate = 0.001f;
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 300, 0.0001f, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {20,50,80};
 			optimizer.trainGPT(trainData);
 
@@ -67,8 +158,12 @@ public class GPTTest {
 
 			CUDAModules.initContext();
 			
-			gpt();
+//			gpt();
 
+//			gpt_lang();
+			
+			ch_chat();
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

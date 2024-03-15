@@ -335,6 +335,13 @@ public class Tensor implements Serializable{
 			this.hostToDevice();
 		}
 	}
+	
+	public void copyData(float[] data) {
+		System.arraycopy(data, 0, this.data, 0, data.length);
+		if(isHasGPU()) {
+			this.hostToDevice();
+		}
+	}
 
 	public float getByIndex(int n,int c,int h,int w) {
 		return this.data[n * channel * height * width + c * height * width + h * width + w];

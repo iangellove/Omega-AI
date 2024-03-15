@@ -79,6 +79,9 @@ public class LNLayer extends NormalizationLayer {
 			}else if(this.preLayer.getLayerType() == LayerType.conv_transpose) {
 				this.setBnType(BNType.conv_bn);
 				this.meanNum = this.height * this.width;
+			}else {
+				this.setBnType(BNType.fully_bn);
+				this.meanNum = this.channel * this.height * this.width;
 			}
 		}
 		
@@ -122,7 +125,7 @@ public class LNLayer extends NormalizationLayer {
 //		System.out.println(this.index+":"+output.number+":"+output.channel+":"+output.height+":"+output.width);
 //		System.out.println(JsonUtils.toJson(gamma.shape()));
 //		System.out.println(JsonUtils.toJson(beta.shape()));
-		kernel.forward(gamma, beta, input, output);
+		kernel.forward2(gamma, beta, input, output);
 //		
 //		System.out.println("bn-output:");
 //		output.showDM();
@@ -169,10 +172,10 @@ public class LNLayer extends NormalizationLayer {
 	 */
 	@Override
 	public void diff() {
-		
+//		System.out.println(delta);
 //		long start = System.nanoTime();
 //		System.out.println(index);
-		kernel.backward(input, delta, diff, gamma, diffGamma, diffBeta);
+		kernel.backward2(input, delta, diff, gamma, diffGamma, diffBeta);
 
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
 		

@@ -6,6 +6,7 @@ import java.util.List;
 import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
@@ -28,13 +29,14 @@ public class TransformerDecoder extends Layer{
 	
 	private boolean layer_norm = false;
 	
-	private int headNum = 8;
+//	private int headNum = 8;
 	
-	private int n_layers = 2;
+	private int n_layers = 4;
 	
 	private EmbeddingLayer src_emb;
 	private EmbeddingLayer pos_emb;
 	private List<TransformerDecoderLayer> decoderLayers;
+	private LNLayer ln;
 	
 	private BaseKernel baseKernel;
 	
@@ -79,6 +81,9 @@ public class TransformerDecoder extends Layer{
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
 		}
+
+		this.ln = new LNLayer(decoderLayers.get(decoderLayers.size() - 1));
+		
 	}
 	
 	@Override
@@ -115,8 +120,10 @@ public class TransformerDecoder extends Layer{
 			decoderLayers.get(i).forward(decoderOutput);
 			decoderOutput = decoderLayers.get(i).getOutput();
 		}
-		
-		this.output = decoderLayers.get(n_layers - 1).getOutput();
+
+		this.ln.forward(decoderOutput);
+		this.output = this.ln.getOutput();
+//		this.output = decoderOutput;
 		
 	}
 	
@@ -135,9 +142,10 @@ public class TransformerDecoder extends Layer{
 			decoderLayers.get(i).forward(decoderOutput, mask);
 			decoderOutput = decoderLayers.get(i).getOutput();
 		}
-		
-		this.output = decoderOutput;
-		
+
+		this.ln.forward(decoderOutput);
+		this.output = this.ln.getOutput();
+//		this.output = decoderOutput;
 	}
 	
 	@Override
@@ -149,16 +157,21 @@ public class TransformerDecoder extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		Tensor decoderDiff = delta;
+//		baseKernel.copy_gpu(delta, this.getOutput(), delta.dataLength, 1, 1);
+		this.ln.back(delta);
+		Tensor decoderDiff = this.ln.diff;
+//		Tensor decoderDiff = delta;
 		for(int i = n_layers - 1;i>=0;i--) {
 			decoderLayers.get(i).back(decoderDiff);
 			decoderDiff = decoderLayers.get(i).diff;
+//			System.out.println(decoderDiff);
+//			decoderDiff.showDMByNumber(0);
 		}
-		
-		pos_emb.back(decoderDiff);
-		
+
 		src_emb.back(decoderDiff);
 
+		pos_emb.back(decoderDiff);
+		
 		this.diff = this.src_emb.diff;
 		
 	}

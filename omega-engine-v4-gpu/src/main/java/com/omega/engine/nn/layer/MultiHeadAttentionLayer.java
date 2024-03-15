@@ -69,6 +69,9 @@ public class MultiHeadAttentionLayer extends Layer{
 		this.embedDim = embedDim;
 		this.headNum = headNum;
 		this.bias = bias;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
@@ -82,6 +85,9 @@ public class MultiHeadAttentionLayer extends Layer{
 		this.headNum = headNum;
 		this.bias = bias;
 		this.layer_norm = layer_norm;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
@@ -187,9 +193,9 @@ public class MultiHeadAttentionLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		if(this.cache_delta == null || output.number != cache_delta.number){
-			this.cache_delta = new Tensor(number, output.channel, output.height, output.width, true);
-		}
+//		if(this.cache_delta == null || output.number != cache_delta.number){
+//			this.cache_delta = new Tensor(number, output.channel, output.height, output.width, true);
+//		}
 	}
 
 	@Override
@@ -266,7 +272,7 @@ public class MultiHeadAttentionLayer extends Layer{
 		}else {
 			this.output = ro;
 		}
-
+		
 	}
 	
 	public void scaledDotProductAttention(Tensor query,Tensor key,Tensor value,Tensor mask) {
@@ -365,8 +371,8 @@ public class MultiHeadAttentionLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		if(this.layer_norm) {
-			baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
-			this.lnLayer.back(this.cache_delta);
+//			baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
+			this.lnLayer.back(this.delta);
 			this.oLinerLayer.back(this.lnLayer.diff, ot);
 		}else {
 			this.oLinerLayer.back(delta, ot);
@@ -394,11 +400,11 @@ public class MultiHeadAttentionLayer extends Layer{
 		this.kLinerLayer.back(keyDelta);
 		this.vLinerLayer.back(valueDelta);
 		
-		TensorOP.add(this.qLinerLayer.diff, delta, this.qLinerLayer.diff);
-
-		TensorOP.add(this.vLinerLayer.diff, this.kLinerLayer.diff, this.kLinerLayer.diff);
 		TensorOP.add(this.qLinerLayer.diff, this.kLinerLayer.diff, this.qLinerLayer.diff);
-		
+		TensorOP.add(this.qLinerLayer.diff, this.vLinerLayer.diff, this.qLinerLayer.diff);
+
+		TensorOP.add(this.qLinerLayer.diff, this.lnLayer.diff, this.qLinerLayer.diff);
+
 		this.diff = this.qLinerLayer.diff;
 		
 	}
@@ -580,6 +586,8 @@ public class MultiHeadAttentionLayer extends Layer{
 		
 		float[] delta_data = MatrixUtils.val(batchSize * time * embedDim, 1.0f);
 		
+		float[] tmp = MatrixUtils.val(batchSize * time * embedDim, 1.0f);
+		
 		Tensor delta = new Tensor(batchSize * time, 1, 1, embedDim, delta_data, true);
 		
 		MultiHeadAttentionLayer mal = new MultiHeadAttentionLayer(embedDim, headNum, time, false, true, tf);
@@ -599,9 +607,9 @@ public class MultiHeadAttentionLayer extends Layer{
 			mal.getOutput().showDM();
 			
 			mal.back(delta);
-			delta.showDM();
+//			delta.showDM();
 			mal.diff.showDM();
-			
+			delta.copyData(tmp);
 		}
 		
 	}

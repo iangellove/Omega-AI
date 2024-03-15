@@ -3,6 +3,9 @@ package com.omega.engine.nn.layer;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.ad.op.TensorOP;
+import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.CNN;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
@@ -28,6 +31,14 @@ public class TransformerDecoderLayer extends Layer{
 	
 	private MultiHeadAttentionLayer attn;
 	private PoswiseFeedForwardLinearLayer feed_forward;
+	private LNLayer ln1;
+	private LNLayer ln2;
+	
+	private BaseKernel baseKernel;
+	
+	private Tensor ln1i;
+	
+	private Tensor ln2i;
 	
 	public TransformerDecoderLayer(int time,int embedDim,int nChannel,boolean bias,boolean layer_norm) {
 		this.time = time;
@@ -35,6 +46,9 @@ public class TransformerDecoderLayer extends Layer{
 		this.nChannel = nChannel;
 		this.bias = bias;
 		this.layer_norm = layer_norm;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
@@ -48,20 +62,33 @@ public class TransformerDecoderLayer extends Layer{
 		this.nChannel = nChannel;
 		this.bias = bias;
 		this.layer_norm = layer_norm;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
 	public void initLayers() {
-		
+		baseKernel = new BaseKernel();
 		this.attn = new MultiHeadAttentionLayer(embedDim, headNum, time, bias, layer_norm, network);
 		this.feed_forward = new PoswiseFeedForwardLinearLayer(embedDim, nChannel, bias, layer_norm, network);
-		
+		this.ln1 = new LNLayer(attn);
+		this.ln2 = new LNLayer(feed_forward);
 	}
 	
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
+		if(ln1i == null || this.number != ln1i.number) {
+			ln1i = Tensor.createTensor(ln1i, number, input.channel, input.height, input.width, true);
+//			System.out.println("-----------------");
+//			ln1i.showShape();
+		}
+		
+		if(ln2i == null || this.number != ln2i.number) {
+			ln2i = Tensor.createTensor(ln2i, number, input.channel, input.height, input.width, true);
+		}
 	}
 	
 	@Override
@@ -86,16 +113,44 @@ public class TransformerDecoderLayer extends Layer{
 		
 		this.output = this.feed_forward.getOutput();
 		
+//		this.attn.forward(input);
+//		
+//		TensorOP.add(this.attn.getOutput(), input, ro);
+//		
+//		this.ln1.forward(ro);
+//		
+//		this.feed_forward.forward(this.ln1.getOutput());
+//		
+//		TensorOP.add(this.feed_forward.getOutput(), this.ln1.getOutput(), ro);
+//		
+//		this.ln2.forward(ro);
+//		
+//		this.output = this.ln2.getOutput();
+		
 	}
 	
 	public void output(Tensor mask) {
 		// TODO Auto-generated method stub
+//		
+//		this.attn.forward(input, mask);
+//		
+//		this.feed_forward.forward(this.attn.getOutput());
+//		
+//		this.output = this.feed_forward.getOutput();
 		
 		this.attn.forward(input, mask);
 		
-		this.feed_forward.forward(this.attn.getOutput());
+		TensorOP.add(this.attn.getOutput(), input, ln1i);
 		
-		this.output = this.feed_forward.getOutput();
+		this.ln1.forward(ln1i);
+		
+		this.feed_forward.forward(this.ln1.getOutput());
+		
+		TensorOP.add(this.feed_forward.getOutput(), this.ln1.getOutput(), ln2i);
+		
+		this.ln2.forward(ln2i);
+		
+		this.output = this.ln2.getOutput();
 		
 	}
 	
@@ -109,11 +164,27 @@ public class TransformerDecoderLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		
-		this.feed_forward.back(delta);
+//		this.feed_forward.back(delta);
+//		
+//		this.attn.back(feed_forward.diff);
+//
+//		this.diff = this.attn.diff;
 		
-		this.attn.back(feed_forward.diff);
+		this.ln2.back(delta);
+		baseKernel.copy_gpu(this.ln2.diff, this.ln2i, this.ln2.diff.getDataLength(), 1, 1);
+		
+		this.feed_forward.back(this.ln2.diff);
+		
+		TensorOP.add(this.feed_forward.diff, ln2i, ln2.getOutput());
+		
+		this.ln1.back(ln2.getOutput());
+		baseKernel.copy_gpu(this.ln1.diff, this.ln1i, this.ln1.diff.getDataLength(), 1, 1);
+		
+		this.attn.back(ln1.diff);
+		
+		TensorOP.add(this.attn.diff, ln1i, ln1i);
 
-		this.diff = this.attn.diff;
+		this.diff = ln1i;
 		
 	}
 
