@@ -74,7 +74,7 @@ public class LNKernel extends BaseKernel{
 	
 	private int MAX_GRID_SIZE = 480;
 	
-	private float eta = 1e-5f;
+	private float eta = 1e-6f;
 	
 	private int warp_size = 32;
 	

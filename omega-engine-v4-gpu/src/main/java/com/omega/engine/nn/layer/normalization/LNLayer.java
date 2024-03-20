@@ -34,11 +34,6 @@ public class LNLayer extends NormalizationLayer {
 	
 	public LNKernel kernel;
 	
-//	private BNCudnnKernel kernel;
-
-	
-	public boolean hasRuning = true;
-	
 	public LNLayer() {
 //		initParam();
 		this.hasParams = true;

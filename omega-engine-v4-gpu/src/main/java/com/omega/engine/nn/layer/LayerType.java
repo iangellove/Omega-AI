@@ -17,6 +17,7 @@ public enum LayerType {
 	softmax_cross_entropy("softmax_cross_entropy"),
 	sigmod("sigmod"),
 	relu("relu"),
+	gelu("gelu"),
 	leakyRelu("leakyRelu"),
 	tanh("tanh"),
 	silu("silu"),
@@ -33,6 +34,7 @@ public enum LayerType {
 	mutli_head_attention("mutli_head_attention"),
 	poswise_feed_forward("poswise_feed_forward"),
 	transformer_decoder("transformer_decoder"),
+	transformer_block("transformer_block"),
 	lstm("lstm"),
 	embedding("embedding"),
 	dropout("dropout");

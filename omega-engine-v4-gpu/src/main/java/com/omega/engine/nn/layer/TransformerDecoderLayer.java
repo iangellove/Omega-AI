@@ -27,10 +27,11 @@ public class TransformerDecoderLayer extends Layer{
 	
 	private boolean layer_norm = false;
 	
-	private int headNum = 8;
+	private int headNum = 12;
 	
 	private MultiHeadAttentionLayer attn;
 	private PoswiseFeedForwardLinearLayer feed_forward;
+//	private PoswiseFeedForwardLayer feed_forward;
 	private LNLayer ln1;
 	private LNLayer ln2;
 	
@@ -72,6 +73,7 @@ public class TransformerDecoderLayer extends Layer{
 		baseKernel = new BaseKernel();
 		this.attn = new MultiHeadAttentionLayer(embedDim, headNum, time, bias, layer_norm, network);
 		this.feed_forward = new PoswiseFeedForwardLinearLayer(embedDim, nChannel, bias, layer_norm, network);
+//		this.feed_forward = new PoswiseFeedForwardLayer(time, embedDim, nChannel, bias, layer_norm, network);
 		this.ln1 = new LNLayer(attn);
 		this.ln2 = new LNLayer(feed_forward);
 	}

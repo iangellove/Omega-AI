@@ -59,7 +59,7 @@ public class PoswiseFeedForwardLayer extends Layer{
 	}
 	
 	public void initLayers() {
-		
+
 		this.conv1 = new ConvolutionLayer(embedDim, nChannel, time, 1, 1, 1, 0, 1, bias, this.network);
 //		this.conv1.weight = new Tensor(nChannel, embedDim, 1, 1, RandomUtils.order(this.nChannel * this.embedDim, 0.1f, 0.1f), true);
 //		this.conv1.bias = new Tensor(1, 1, 1, nChannel, RandomUtils.order(this.nChannel, 0.1f, 0.0f), true);
@@ -85,7 +85,7 @@ public class PoswiseFeedForwardLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
 		if(this.ro == null || this.ro.number != this.number) {
-			System.out.println(number);
+//			System.out.println(number);
 			this.it = Tensor.createTensor(this.it, number, embedDim, 1, time, true);
 			this.ro = Tensor.createTensor(this.ro, number, time, 1, embedDim, true);
 		}
@@ -113,8 +113,9 @@ public class PoswiseFeedForwardLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		TensorOP.permute(input, it, new int[] {0, 3, 2, 1});
-		
-		conv1.forward(it);
+		it.showShape();
+//		input.view(input.number, nChannel, 1, 1);
+		conv1.forward(input);
 		
 		relu1.forward(conv1.getOutput());
 

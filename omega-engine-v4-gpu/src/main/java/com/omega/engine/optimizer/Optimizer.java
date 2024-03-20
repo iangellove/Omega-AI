@@ -1372,8 +1372,13 @@ public abstract class Optimizer {
 		
 		float error = 0.0f;
 		float trueCount = 0;
+		int max_score = 0;
+		String max_itxt = "";
+		String max_ptxt = "";
+		String max_ltxt = "";
 		for(int n = 0;n<batchSize;n++) {
 			boolean allRight = true;
+			int score = time;
 			String itxt = "";
 			String ptxt = "";
 			String ltxt = "";
@@ -1386,19 +1391,29 @@ public abstract class Optimizer {
 				itxt += " " + vocab[inputIndex];
 				if(labelIndex != igonre && labelIndex != predictIndex) {
 					allRight = false;
+					score--;
 				}
 			}
-			if(n == 0) {
-				System.out.println("itxt:"+itxt);
-				System.out.println("ptxt:"+ptxt);
-				System.out.println("ltxt:"+ltxt);
+			if(max_score <= score) {
+				max_score = score;
+				max_itxt = itxt;
+				max_ptxt = ptxt;
+				max_ltxt = ltxt;
 			}
+//			if(n == 0) {
+//				System.out.println("itxt:"+itxt);
+//				System.out.println("ptxt:"+ptxt);
+//				System.out.println("ltxt:"+ltxt);
+//			}
 			
 			if(allRight) {
 				trueCount++;
 			}
 		}
-		
+		System.out.println("max_score:"+max_score);
+		System.out.println("itxt:"+max_itxt);
+		System.out.println("ptxt:"+max_ptxt);
+		System.out.println("ltxt:"+max_ltxt);
 		error = trueCount / batchSize * 100;
 
 		return error;
