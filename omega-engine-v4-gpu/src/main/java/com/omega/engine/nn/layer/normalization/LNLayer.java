@@ -120,7 +120,12 @@ public class LNLayer extends NormalizationLayer {
 //		System.out.println(this.index+":"+output.number+":"+output.channel+":"+output.height+":"+output.width);
 //		System.out.println(JsonUtils.toJson(gamma.shape()));
 //		System.out.println(JsonUtils.toJson(beta.shape()));
-		kernel.forward2(gamma, beta, input, output);
+//		kernel.forward(gamma, beta, input, output);
+		kernel.forwardAten(gamma, beta, input, output);
+//		System.err.println("1:");
+//		output.showDMByNumber(0);
+//		System.err.println("2:");
+//		output2.showDMByNumber(0);
 //		
 //		System.out.println("bn-output:");
 //		output.showDM();
@@ -170,8 +175,10 @@ public class LNLayer extends NormalizationLayer {
 //		System.out.println(delta);
 //		long start = System.nanoTime();
 //		System.out.println(index);
-		kernel.backward2(input, delta, diff, gamma, diffGamma, diffBeta);
-
+//		kernel.backward(input, delta, diff, gamma, diffGamma, diffBeta);
+		kernel.backwardAten(input, delta, diff, gamma, diffGamma, diffBeta);
+//		diff.showDMByNumber(0);
+//		diff2.showDMByNumber(0);
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
 		
 	}

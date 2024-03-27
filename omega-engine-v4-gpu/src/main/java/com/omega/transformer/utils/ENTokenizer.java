@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 
 public class ENTokenizer {
 	
@@ -60,7 +61,7 @@ public class ENTokenizer {
 	        	if(!strTmp.equals(" ")) {
 	        		strTmp = "<sos>" + strTmp + "<eos>";
 		        	org_tokens.add(strTmp);
-//		        	System.out.println("line["+dic_index+"]:" + strTmp);
+//		        	System.out.println("" + strTmp);
 //		        	dic_index++;
 	        	}
 	        }
@@ -107,6 +108,7 @@ public class ENTokenizer {
 		
 		for(int i = 0;i<indexs.length;i++) {
 			String[] onceToken = tokens.get(indexs[i]);
+//			System.out.println(JsonUtils.toJson(onceToken));
 //			System.out.println(onceToken.length);
 			for(int t = 0;t<max_len;t++) {
 				format(i, t, onceToken, input, label);

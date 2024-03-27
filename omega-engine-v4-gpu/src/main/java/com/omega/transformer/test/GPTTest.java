@@ -157,11 +157,11 @@ public class GPTTest {
 		
 		try {
 			
-			int batchSize = 64;
+			int batchSize = 32;
 			
 			int max_len = 128;
 			
-			int embedDim = 256;
+			int embedDim = 512;
 			
 			int head_num = 2;
 			
@@ -178,7 +178,7 @@ public class GPTTest {
 			network.learnRate = 0.0001f;
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1000, 0.0001f, LearnRateUpdate.SMART_HALF, false);
-			optimizer.lr_step = new int[] {500};
+			optimizer.lr_step = new int[] {300, 600};
 			optimizer.trainGPT2(trainData);
 
 //			Scanner scanner = new Scanner(System.in);
@@ -247,6 +247,53 @@ public class GPTTest {
 		
 	}
 	
+	public static void gpt2_gan() {
+		
+		try {
+			
+			int batchSize = 12;
+			
+			int max_len = 256;
+			
+			int embedDim = 512;
+			
+			int headNum = 4;
+			
+			int decoderNUm = 4;
+			
+			String trainPath = "H:\\transformer_dataset\\gpt\\wikitext-2-v1\\wikitext-2\\wiki.train.tokens";
+
+			ENTokenizer trainData = new ENTokenizer(trainPath, max_len, batchSize);
+			
+			GPT2 network = new GPT2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, decoderNUm, headNum, trainData.vocab_size, max_len, embedDim);
+			
+			network.CUDNN = true;
+			
+			network.learnRate = 0.0001f;
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 300, 0.001f, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {20,50,80};
+			optimizer.trainGPT2(trainData);
+
+//			Scanner scanner = new Scanner(System.in);
+//			while (true) {
+//				System.out.println("请输入英文:");
+//				String input_txt = scanner.nextLine();
+//				if(input_txt.equals("exit")){
+//					break;
+//				}
+//				input_txt = input_txt.toLowerCase();
+//				System.out.println(input_txt);
+//				optimizer.predictRNN(trainData, input_txt);
+//			}
+//			scanner.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -262,6 +309,8 @@ public class GPTTest {
 //			gpt2_lang();
 			
 			ch_chat_gpt2();
+			
+//			gpt2_gan();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

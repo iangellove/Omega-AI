@@ -322,6 +322,17 @@ public class GPUOP {
     	
     }
     
+    public void gemv(int trans_A,int M,int N,Tensor A,Tensor X,Tensor Y,float alpha,float beta) {
+    	try {
+	    	Pointer alphaP = Pointer.to(new float[]{ alpha });
+	        Pointer betaP = Pointer.to(new float[]{ beta });
+	        int status = JCublas2.cublasSgemv(handle, trans_A, N, M, alphaP, A.getGpuData(), N, X.getGpuData(), 1, betaP, Y.getGpuData(), 1);
+    	} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    }
+    
     public void launchMultiply(Pointer a,Pointer b,Pointer c,int batch_size, int m, int n, int k, boolean trans_A, boolean trans_B, int scaler) {
     	
     	if (scaler==0){

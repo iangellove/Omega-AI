@@ -191,19 +191,19 @@ public class CNTokenizer extends BaseTokenizer{
 	
 	public static void main(String[] args) {
 		
-		String dataPath = "H:\\transformer_dataset\\gpt\\chatdata\\train1w.txt";
-		
-		int batchSize = 64;
-		
-		CNTokenizer tokenizer = new CNTokenizer(dataPath, 256, batchSize);
+//		String dataPath = "H:\\transformer_dataset\\gpt\\chatdata\\train1w.txt";
+//		
+//		int batchSize = 64;
+//		
+//		CNTokenizer tokenizer = new CNTokenizer(dataPath, 256, batchSize);
 		
 //		tokenizer.loadDataForTXT();
 		
-		Tensor subsequent_mask = tokenizer.triu(2, 4, 5, 5, 1);
+		Tensor subsequent_mask = triu(2, 4, 5, 5, 1);
 		subsequent_mask.showDM();
 		
-		Tensor positions = getPositions(2, 4);
-		positions.showDM();
+//		Tensor positions = getPositions(2, 4);
+//		positions.showDM();
 	}
 	
 }

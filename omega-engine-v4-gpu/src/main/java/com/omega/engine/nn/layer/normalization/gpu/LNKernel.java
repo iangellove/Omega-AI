@@ -11,6 +11,7 @@ import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
+import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.normalization.BNType;
 
 import jcuda.Pointer;
@@ -38,29 +39,28 @@ public class LNKernel extends BaseKernel{
 	private int B;
 	private int W;
 	
-	private int slice_size;
-	
 	/**
 	 * 向前方法
 	 */
-	private CUfunction forward_small_function;
-	private CUfunction forward_1_function;
-	private CUfunction forward_2_function;
-	private CUfunction forward_3_function;
-	private CUfunction forward_4_function;
-	private CUfunction forward_5_function;
-	
 	private CUfunction forward_test_function;
+	
+	private CUfunction forward_aten_function;
+	
+	private CUfunction mean_var_function;
+	private CUfunction fused_params_function;
+	private CUfunction forward_fused_function;
+	
+	private CUfunction inter_grad_function;
+	private CUfunction backward_fused_function;
+	private CUfunction ln_backward_function;
+	
 	
 	/**
 	 * 反向传播方法
 	 */
-	private CUfunction backward_small_function;
-	private CUfunction backward_1_function;
-	private CUfunction backward_2_function;
-	private CUfunction backward_3_function;
-	private CUfunction backward_4_function;
-	private CUfunction backward_5_function;
+	private CUfunction backward_aten_function;
+	private CUfunction backward_aten_function2;
+	private CUfunction backward_aten_gamma_function2;
 	
 	private CUfunction backward_ig_function;
 	private CUfunction backward_fp_function;
@@ -68,15 +68,9 @@ public class LNKernel extends BaseKernel{
 	private CUfunction backward_gamma_function;
 	private CUfunction backward_gamma_simple_function;
 	
-	private CUfunction backward_input_function2;
-	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
-	private int MAX_GRID_SIZE = 480;
-	
-	private float eta = 1e-6f;
-	
-	private int warp_size = 32;
+	private float eta = 1e-5f;
 	
 	private int kCUDABlockReduceNumThreads = 512;
 	private int kCUDANumThreads = 256;
@@ -85,23 +79,29 @@ public class LNKernel extends BaseKernel{
 	/**
 	 * 前向方法参数
 	 */
-	private Pointer forwardSmallParameters;
-	private Pointer forwardParameters;
 	private Pointer forwardTestParameters;
+	private Pointer forwardAtenParameters;
+	
+	private Pointer meanVarParameters;
+	private Pointer fusedParameters;
+	private Pointer forwardFusedParams;
+	
+	private Pointer interGradParameters;
+	private Pointer backwardFusedParameters;
+	private Pointer lnBKParameters;
 	
 	/**
 	 * 反向方法参数
 	 */
-	private Pointer backwardSmallParameters;
-	private Pointer backwardParameters;
+	private Pointer backwardAtenParameters;
+	private Pointer backwardAtenParameters2;
+	private Pointer backwardAtenGammaParameters2;
 	
 	private Pointer backwardIGParameters;
 	private Pointer backwardFGParameters;
 	private Pointer backwardInputParameters;
 	private Pointer backwardGammaParameters;
 	private Pointer backwardGammaSampleParameters;
-	
-	private Pointer backwardInputParameters2;
 	
 	private CUdeviceptr d_mean;
 	private CUdeviceptr d_var;
@@ -111,85 +111,59 @@ public class LNKernel extends BaseKernel{
 	private CUdeviceptr d_scale;
 	private CUdeviceptr d_bias;
 	
+	private CUdeviceptr aten_mean;
+	private CUdeviceptr aten_var;
+	
+	private Tensor mean;
+	private Tensor simga;
+	private Tensor scale;
+	private Tensor bias;
+	
+	private Tensor ds;
+	private Tensor db;
+	private Tensor rstd;
+	private Tensor g_scale;
+	private Tensor X_scale;
+	private Tensor ones;
+	
 	
 	public LNKernel(int W,BNType bnType) {
 		this.W = W;
 		this.bnType = bnType;
-		if (this.W<=warp_size){
-	        int tmp_depth = this.W;
-	        int slice_size = 1;
-	        while((tmp_depth >>= 1) != 0)slice_size*=2;
-	        this.slice_size = slice_size>=this.W?slice_size:slice_size*2;
-	    }else{
-	        int slice_size = (this.W/warp_size)*warp_size;
-	        this.slice_size = slice_size>=this.W?slice_size:slice_size+warp_size;
-	    }
 		init();
 	}
 	
 	private void initKernel() {
-		/**
-		 * 申请向前传播参数显存
-		 */
-		this.d_mean = CUDAMemoryManager.getDevice(B);
-		this.d_var = CUDAMemoryManager.getDevice(B);
-		this.d_s = CUDAMemoryManager.getDevice(B);
-		this.d_b = CUDAMemoryManager.getDevice(B);
-		this.d_scale = CUDAMemoryManager.getDevice(B);
-		this.d_bias = CUDAMemoryManager.getDevice(B);
+//		if(aten_mean == null || aten_mean.number != B) {
+			/**
+			 * 申请向前传播参数显存
+			 */
+			this.d_mean = CUDAMemoryManager.getDevice(B);
+			this.d_var = CUDAMemoryManager.getDevice(B);
+//			this.d_s = CUDAMemoryManager.getDevice(B);
+//			this.d_b = CUDAMemoryManager.getDevice(B);
+//			this.d_scale = CUDAMemoryManager.getDevice(B);
+//			this.d_bias = CUDAMemoryManager.getDevice(B);
+			
+			this.aten_mean = CUDAMemoryManager.getDevice(B);
+			this.aten_var = CUDAMemoryManager.getDevice(B);
+			
+//			this.mean = new Tensor(B, 1, 1, 1, true);
+//			this.simga = new Tensor(B, 1, 1, 1, true);
+//			this.rstd = new Tensor(B, 1, 1, 1, true);
+//			this.scale = new Tensor(B, 1, 1, 1, true);
+//			this.bias = new Tensor(B, 1, 1, 1, true);
+//			this.ds = new Tensor(B, 1, 1, 1, true);
+//			this.db = new Tensor(B, 1, 1, 1, true);
+//			this.g_scale = new Tensor(B, 1, 1, W, true);
+//			this.X_scale = new Tensor(B, 1, 1, 1, true);
+//			this.ones = new Tensor(B, 1, 1, 1, MatrixUtils.one(B), true);
+//		}
 	}
 	
 	public void initFunction() {
 		
 		try {
-			
-			if(forward_small_function == null) {
-				forward_small_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel.cu", "LayerNormFusedSmallGPUKernel");
-			}
-			
-			if(forward_1_function == null) {
-				forward_1_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel.cu", "LayerNorm1GPUKernel");
-			}
-			
-			if(forward_2_function == null) {
-				forward_2_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel.cu", "LayerNorm2GPUKernel");
-			}
-			
-			if(forward_3_function == null) {
-				forward_3_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel.cu", "LayerNorm3GPUKernel");
-			}
-			
-			if(forward_4_function == null) {
-				forward_4_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel.cu", "LayerNorm4GPUKernel");
-			}
-			
-			if(forward_5_function == null) {
-				forward_5_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel.cu", "LayerNorm5GPUKernel");
-			}
-			
-			if(backward_small_function == null) {
-				backward_small_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernelBackward.cu", "LayerNormFusedSmallBackpropGPUKernel");
-			}
-			
-			if(backward_1_function == null) {
-				backward_1_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernelBackward.cu", "LayerNorm1FusedBackpropGPUKernel");
-			}
-			
-			if(backward_2_function == null) {
-				backward_2_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernelBackward.cu", "LayerNorm2FusedBackpropGPUKernel");
-			}
-			
-			if(backward_3_function == null) {
-				backward_3_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernelBackward.cu", "LayerNorm3FusedBackpropGPUKernel");
-			}
-			
-			if(backward_4_function == null) {
-				backward_4_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernelBackward.cu", "LayerNorm4FusedBackpropGPUKernel");
-			}
-			
-			if(backward_5_function == null) {
-				backward_5_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernelBackward.cu", "LayerNorm5FusedBackpropGPUKernel");
-			}
 			
 			if(forward_test_function == null) {
 				forward_test_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "LayerNormFusedForwardKernel");
@@ -215,10 +189,46 @@ public class LNKernel extends BaseKernel{
 				backward_gamma_simple_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "GammaBetaBackwardSimpleCUDAKernel");
 			}
 			
-			if(backward_input_function2 == null) {
-				backward_input_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel4.cu", "aten_layer_norm_grad_input_kernel");
+			if(mean_var_function == null) {
+				mean_var_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "RowwiseMomentsCUDAKernel");
 			}
 			
+			if(fused_params_function == null) {
+				fused_params_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "ComputeSigmaAndFusedParamsCUDAKernel");
+			}
+			
+			if(forward_fused_function == null) {
+				forward_fused_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "LayerNormForwardCUDAKernel");
+			}
+			
+			if(inter_grad_function == null) {
+				inter_grad_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "ComputeInternalGradientsCUDAKernel");
+			}
+			
+			if(backward_fused_function == null) {
+				backward_fused_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "ComputeFusedParamsCUDAKernel");
+			}
+			
+			if(ln_backward_function == null) {
+				ln_backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "LayerNormBackwardCUDAKernel");
+			}
+			
+			if(forward_aten_function == null) {
+				forward_aten_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "vectorized_layer_norm_kernel");
+			}
+			
+			if(backward_aten_function == null) {
+				backward_aten_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "layer_norm_grad_input_kernel_vectorized");
+			}
+			
+			if(backward_aten_function2 == null) {
+				backward_aten_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "layer_norm_grad_input_kernel");
+			}
+			
+			if(backward_aten_gamma_function2 == null) {
+				backward_aten_gamma_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "GammaBetaBackwardCUDAKernel");
+			}
+
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -239,8 +249,6 @@ public class LNKernel extends BaseKernel{
 		switch (bnType) {
 		case fully_bn:
 			batchSize = input.number * input.channel * input.height;
-//			System.out.println("batchSize:"+batchSize);
-//			System.out.println("B:"+B);
 			break;
 		case conv_bn:
 			batchSize = input.number * input.channel;
@@ -253,122 +261,7 @@ public class LNKernel extends BaseKernel{
 		return true;
 	}
 	
-	public void initForwardSmall(Tensor input,Tensor gamma,Tensor beta,Tensor output,int num_blocks,int slice_per_block) {
-		
-		if(checkBatch(input)) {
-			
-			/**
-			 * const int slice_size,const int in_depth,const int n_inputs,const float epsilon, const float* __restrict__ input,
-    const float* __restrict__ gamma, const float* __restrict__ beta,
-    float* __restrict__ output, const int num_blocks, const int slice_per_block
-			 */
-			forwardSmallParameters = Pointer.to(
-					Pointer.to(new int[] {slice_size}),
-					Pointer.to(new int[] {W}),
-					Pointer.to(new int[] {input.getDataLength()}),
-					Pointer.to(new float[] {eta}),
-	                Pointer.to(input.getGpuData()),
-	                Pointer.to(gamma.getGpuData()),
-	                Pointer.to(beta.getGpuData()),
-	                Pointer.to(output.getGpuData()),
-	                Pointer.to(new int[] {num_blocks}),
-	                Pointer.to(new int[] {slice_per_block})
-	            );
-
-		}
-		
-	}
-	
-	public void initTestForward(Tensor input,Tensor gamma,Tensor beta,Tensor output) {
-	
-		if(forwardTestParameters == null) {
-
-			initKernel();
-
-			/**
-			 * int N,
-	        float eps,
-	        float const *X,
-	        float *mean,
-	        float *rstd,
-	        float const *gamma,
-	        float const *beta,
-	        float *Y
-			 */
-			forwardTestParameters = Pointer.to(
-					Pointer.to(new int[] {W}),
-					Pointer.to(new float[] {eta}),
-					Pointer.to(input.getGpuData()),
-					Pointer.to(d_mean),
-					Pointer.to(d_var),
-	                Pointer.to(gamma.getGpuData()),
-	                Pointer.to(beta.getGpuData()),
-	                Pointer.to(output.getGpuData())
-	            );
-
-		}
-		
-	}
-	
-	public void initForward(Tensor input,Tensor gamma,Tensor beta,Tensor output,int num_blocks) {
-		
-		if(checkBatch(input)) {
-			
-			/**
-			 * const int slice_size,const int in_depth,const int n_inputs,const float epsilon,
-                                   const float* __restrict__ input,
-                                   const float* __restrict__ gamma,
-                                   const float* __restrict__ beta,
-                                   float* __restrict__ output,
-                                   const int num_blocks
-			 */
-			forwardParameters = Pointer.to(
-					Pointer.to(new int[] {slice_size}),
-					Pointer.to(new int[] {W}),
-					Pointer.to(new int[] {input.getDataLength()}),
-					Pointer.to(new float[] {eta}),
-	                Pointer.to(input.getGpuData()),
-	                Pointer.to(gamma.getGpuData()),
-	                Pointer.to(beta.getGpuData()),
-	                Pointer.to(output.getGpuData()),
-	                Pointer.to(new int[] {num_blocks})
-	            );
-	
-		}
-		
-	}
-	
-	public void initBackwardSmall(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta,int num_blocks,int slice_per_block) {
-
-		if(backwardSmallParameters == null) {
-			
-			/**
-			 * const int slice_size,const int in_depth,const int n_inputs,const float epsilon, const float* __restrict__ input,
-		    const float* __restrict__ out_back, const float* __restrict__ gamma,
-		    float* __restrict__ in_back, float* __restrict__ gamma_back,
-		    float* __restrict__ beta_back, const int num_blocks,
-		    const int slice_per_block
-			 */
-			backwardSmallParameters = Pointer.to(
-					Pointer.to(new int[] {slice_size}),
-					Pointer.to(new int[] {W}),
-					Pointer.to(new int[] {input.getDataLength()}),
-					Pointer.to(new float[] {eta}),
-	                Pointer.to(input.getGpuData()),
-	                Pointer.to(delta.getGpuData()),
-	                Pointer.to(gamma.getGpuData()),
-	                Pointer.to(diff.getGpuData()),
-	                Pointer.to(dgamma.getGpuData()),
-	                Pointer.to(dbeta.getGpuData()),
-	                Pointer.to(new int[] {num_blocks}),
-	                Pointer.to(new int[] {slice_per_block})
-	            );
-			
-		}
-		
-	}
-	
-	public void initBackwardTest(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
+	public void initBackward(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
 		
 		if(backwardInputParameters == null) {
 
@@ -463,67 +356,6 @@ public class LNKernel extends BaseKernel{
 		
 	}
 	
-	public void initBackward3(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
-
-		if(backwardInputParameters2 == null) {
-
-			/**
-			 * aten_layer_norm_grad_input_kernel(
-			   const float* __restrict__ dY,
-			   const float* __restrict__ X,
-			   const float* __restrict__ mean,
-			   const float* __restrict__ rstd,
-			   const float* __restrict__ gamma,
-			   float*  dX,
-			   const int N
-			 */
-			System.out.println(W);
-			backwardInputParameters2 = Pointer.to(
-					Pointer.to(delta.getGpuData()),
-					Pointer.to(input.getGpuData()),
-					Pointer.to(d_mean),
-					Pointer.to(d_var),
-					Pointer.to(gamma.getGpuData()), 
-	                Pointer.to(diff.getGpuData()),
-	                Pointer.to(new int[] {W})
-	            );
-			
-		}
-		
-	}
-	
-	public void initBackward(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta,int num_blocks) {
-
-		if(backwardParameters == null) {
-			
-			/**
-			 * const int in_depth,
-			 * const int n_inputs,
-			 * const float epsilon,
-			 * const float* __restrict__ input,
-			 * const float* __restrict__ out_back,
-			 * const float* __restrict__ gamma,
-			 * float* __restrict__ in_back,
-			 * float* __restrict__ gamma_back,
-			 * float* __restrict__ beta_back, 
-			 * const int num_blocks
-			 */
-			backwardParameters = Pointer.to(
-					Pointer.to(new int[] {W}),
-					Pointer.to(new int[] {input.getDataLength()}),
-					Pointer.to(new float[] {eta}),
-	                Pointer.to(input.getGpuData()),
-	                Pointer.to(delta.getGpuData()),
-	                Pointer.to(gamma.getGpuData()),
-	                Pointer.to(diff.getGpuData()),
-	                Pointer.to(dgamma.getGpuData()),
-	                Pointer.to(dbeta.getGpuData()),
-	                Pointer.to(new int[] {num_blocks})
-	            );
-		}
-		
-	}
-	
 	public int CAFFE_GET_BLOCKS(int N) {
 	    return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
 	}
@@ -533,79 +365,7 @@ public class LNKernel extends BaseKernel{
 		try {
 			
 			boolean check = checkBatch(input);
-			
-			if (slice_size <= warp_size) {
-			      int block_size = 256;
-			      int slice_per_block = block_size / slice_size;
-			      int num_blocks = get_num_blocks(B, slice_per_block);
-			      int grid_size = Math.min(120, num_blocks);
-			      
-			      if(!check) {
-			    	 initForwardSmall(input, gamma, beta, output, num_blocks, slice_per_block);
-			      }		 
-			      
-			      cuLaunchKernel(forward_small_function,
-			        		grid_size,  1, 1,      // Grid dimension
-			        		block_size, 1, 1,      // Block dimension
-				            0, null,               // Shared memory size and stream
-				            forwardSmallParameters, null // Kernel- and extra parameters
-				        );
-			      
-			}else {
 
-				int[] bs = get_block_size(slice_size);
-				int block_size = bs[0];
-			    int mult = bs[1];
-			    int num_blocks = B;
-			    int sbytes = 2 * Sizeof.FLOAT;
-			    int grid_size = Math.min(MAX_GRID_SIZE, num_blocks);
-			    
-			    if(!check) {
-			    	initForward(input, gamma, beta, output, num_blocks);
-			    }
-			    
-			    CUfunction func = null;
-			    
-			    switch (mult) {
-				case 1:
-					func = forward_1_function;
-					break;
-				case 2:
-					func = forward_2_function;
-					break;
-				case 3:
-					func = forward_3_function;
-					break;
-				case 4:
-					func = forward_4_function;
-					break;
-				case 5:
-					func = forward_5_function;
-					break;
-				}
-			    
-			    cuLaunchKernel(func,
-			    		grid_size,  1, 1,      // Grid dimension
-			    		block_size, 1, 1,      // Block dimension
-			    		sbytes, null,               // Shared memory size and stream
-			            forwardParameters, null // Kernel- and extra parameters
-			        );
-			    
-			} 
-			
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-		
-	}
-	
-	public void forward2(Tensor gamma, Tensor beta, Tensor input, Tensor output) {
-
-		try {
-			
-			boolean check = checkBatch(input);
-			
 			if(!check) {
 
 				initKernel();
@@ -647,7 +407,196 @@ public class LNKernel extends BaseKernel{
 	        		0, null,               // Shared memory size and stream
 		            forwardTestParameters, null // Kernel- and extra parameters
 				);
-		            
+//			System.err.println("mean2:");
+//			mean2.setGpuData(d_mean);
+//			mean2.showDM(0);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void forwardAten(Tensor gamma, Tensor beta, Tensor input, Tensor output) {
+
+		try {
+			
+			boolean check = checkBatch(input);
+
+			if(!check) {
+				
+				initKernel();
+
+				/**
+				 * const int N,
+				  float eps,
+				  const  float* __restrict__ X,
+				  const  float* gamma,
+				  const  float* beta,
+				  float* mean,
+				  float* rstd,
+				  float* Y
+				 */
+				forwardAtenParameters = Pointer.to(
+						Pointer.to(new int[] {W}),
+						Pointer.to(new float[] {eta}),
+						Pointer.to(input.getGpuData()),
+		                Pointer.to(gamma.getGpuData()),
+		                Pointer.to(beta.getGpuData()),
+		                Pointer.to(aten_mean),
+						Pointer.to(aten_var),
+		                Pointer.to(output.getGpuData())
+		            );
+
+			}
+			
+			int warp_size = 32;
+		    int[] threads = new int[] {warp_size, 256 / warp_size, 1};
+		    int[] blocks = new int[] {B, 1, 1};
+
+		    int nshared = threads[1] > 1 ? threads[1] * 3/2 *Sizeof.FLOAT : 0;
+		    
+			cuLaunchKernel(forward_aten_function,
+					blocks[0], blocks[1], blocks[2],      // Grid dimension
+					threads[0], threads[1], threads[2],      // Block dimension
+					nshared, null,               // Shared memory size and stream
+					forwardAtenParameters, null // Kernel- and extra parameters
+				);
+//			System.err.println("mean2:");
+//			mean2.setGpuData(d_mean);
+//			mean2.showDM(0);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void meanVar(Tensor input) {
+		
+		try {
+
+			boolean check = checkBatch(input);
+
+//			if(!check) {
+
+				initKernel();
+				
+				//const int cols, const float* X, float* mean, float* var
+				meanVarParameters = Pointer.to(
+						Pointer.to(new int[] {W}),
+						Pointer.to(input.getGpuData()),
+						Pointer.to(mean.getGpuData()),
+						Pointer.to(simga.getGpuData())
+		            );
+				
+//			}
+			
+			cuLaunchKernel(mean_var_function,
+					B, 1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					0, null,               // Shared memory size and stream
+					meanVarParameters, null // Kernel- and extra parameters
+				);
+			System.err.println("mean:");
+			mean.showDM(0);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void fusedParams() {
+		
+		try {
+			
+			if(fusedParameters == null) {
+				/**
+				 * const int N,                                                        
+			      const float eps,                                                        
+			      const float* mean,                                                      
+			      const float* var,                                                       
+			      float* sigma,                                                           
+			      float* scale,                                                           
+			      float* bias
+				 */
+				fusedParameters = Pointer.to(
+						Pointer.to(new int[] {B}),
+						Pointer.to(new float[] {eta}),
+						Pointer.to(mean.getGpuData()),
+						Pointer.to(simga.getGpuData()),
+						Pointer.to(simga.getGpuData()),
+						Pointer.to(scale.getGpuData()),
+						Pointer.to(bias.getGpuData())
+		            );
+			}
+			
+			cuLaunchKernel(fused_params_function,
+					this.CAFFE_GET_BLOCKS(B), 1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					0, null,               // Shared memory size and stream
+					fusedParameters, null // Kernel- and extra parameters
+				);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void forwardFused(Tensor input,Tensor gamma,Tensor beta,Tensor output) {
+		
+		try {
+			
+			if(forwardFusedParams == null) {
+				/**
+				 * const int M,
+				    const int N,
+				    const float* X,
+				    const float* scale,
+				    const float* bias,
+				    const float* gamma,
+				    const float* beta,
+				    float* Y
+				 */
+				forwardFusedParams = Pointer.to(
+						Pointer.to(new int[] {B}),
+						Pointer.to(new int[] {W}),
+						Pointer.to(input.getGpuData()),
+						Pointer.to(scale.getGpuData()),
+						Pointer.to(bias.getGpuData()),
+						Pointer.to(gamma.getGpuData()),
+						Pointer.to(beta.getGpuData()),
+						Pointer.to(output.getGpuData())
+		            );
+			}
+			
+			cuLaunchKernel(forward_fused_function,
+					this.CAFFE_GET_BLOCKS(B * W), 1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					0, null,               // Shared memory size and stream
+					forwardFusedParams, null // Kernel- and extra parameters
+				);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void forward_aten(Tensor gamma, Tensor beta, Tensor input, Tensor output) {
+		
+		try {
+			
+			meanVar(input);
+			
+			fusedParams();
+			
+			forwardFused(input, gamma, beta, output);
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -659,76 +608,7 @@ public class LNKernel extends BaseKernel{
 		
 		try {
 			
-			if (slice_size <= warp_size) {
-				int block_size = 128;
-			    int slice_per_block = block_size / slice_size;
-			    int num_blocks = get_num_blocks(B, slice_per_block);
-			    int grid_size = Math.min(120, num_blocks);
-			    int sbytes = (2 * W) * Sizeof.FLOAT;
-				
-			    initBackwardSmall(input, delta, diff, gamma, dgamma, dbeta, num_blocks, slice_per_block);
-			    
-			    cuLaunchKernel(backward_small_function,
-			    		grid_size,  1, 1,      // Grid dimension
-			    		block_size, 1, 1,      // Block dimension
-			    		sbytes, null,               // Shared memory size and stream
-			            backwardSmallParameters, null // Kernel- and extra parameters
-			        );
-			    
-			}else {
-				
-			    int[] bs = get_block_size(slice_size);
-			    int block_size = bs[0];
-			    int mult = bs[1];
-			    int num_blocks = B;
-			    int sbytes = 4 * Sizeof.FLOAT;
-			    int max_grid = B < 2 * MAX_GRID_SIZE ? 60 : MAX_GRID_SIZE;
-			    int grid_size = Math.min(max_grid, num_blocks);
-				
-			    initBackward(input, delta, diff, gamma, dgamma, dbeta, num_blocks);
-			    
-			    CUfunction func = null;
-//			    System.out.println(grid_size);
-//			    System.out.println(mult);
-			    switch (mult) {
-				case 1:
-					func = backward_1_function;
-					break;
-				case 2:
-					func = backward_2_function;
-					break;
-				case 3:
-					func = backward_3_function;
-					break;
-				case 4:
-					func = backward_4_function;
-					break;
-				case 5:
-					func = backward_5_function;
-					break;
-				}
-
-			    cuLaunchKernel(func,
-			    		grid_size,  1, 1,      // Grid dimension
-			    		block_size, 1, 1,      // Block dimension
-			    		sbytes, null,               // Shared memory size and stream
-			            backwardParameters, null // Kernel- and extra parameters
-			        );
-			    
-			}
-			
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-		
-	}
-	
-	public void backward2(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
-		
-		try {
-			
-			initBackwardTest(input, delta, diff, gamma, dgamma, dbeta);
+			initBackward(input, delta, diff, gamma, dgamma, dbeta);
 			
 			int M = B;
 			int N = W;
@@ -770,6 +650,7 @@ public class LNKernel extends BaseKernel{
 				int B4 = (N + kColwiseReduceTileSize - 1) / kColwiseReduceTileSize;
 				int kThreadX = kColwiseReduceTileSize;
 				int kThreadY = kColwiseReduceTileSize / 2;
+				
 				cuLaunchKernel(backward_gamma_function,
 						B4,  1, 1,      // Grid dimension
 						kThreadX, kThreadY, 1,      // Block dimension
@@ -785,23 +666,44 @@ public class LNKernel extends BaseKernel{
 		
 	}
 	
-	public void backward3(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
+	public void backwardAtenGamma(Tensor input,Tensor delta,Tensor dgamma,Tensor dbeta) {
 		
 		try {
 			
-			initBackward3(input, delta, diff, gamma, dgamma, dbeta);
+			if(backwardAtenGammaParameters2 == null) {
+
+				/**
+				 * int M,
+			    int N,
+			    const float* dY,
+			    const float* X,
+			    const float* mean,
+			    const float* rstd,
+			    float* dg,
+			    float* db
+				 */
+				backwardAtenGammaParameters2 = Pointer.to(
+						Pointer.to(new int[] {B}),
+						Pointer.to(new int[] {W}),
+						Pointer.to(delta.getGpuData()),
+						Pointer.to(input.getGpuData()),
+						Pointer.to(aten_mean),
+						Pointer.to(aten_var),
+						Pointer.to(dgamma.getGpuData()),
+						Pointer.to(dbeta.getGpuData())
+		            );
+				
+			}
 			
-			int M = B;
-			int N = W;
-			System.out.println("M:"+M);
-			int num_threads = 128;
-			int nshared = (num_threads / warp_size) * Sizeof.FLOAT;
+			int[] threads = new int[]{16, 32, 1};
+	        int blocks = (W + threads[0] - 1) / threads[0];
+	        int shmem_sz = 2 * Sizeof.FLOAT * threads[0] * threads[1];
 			
-			cuLaunchKernel(backward_input_function2,
-					M,  1, 1,      // Grid dimension
-					num_threads, 1, 1,      // Block dimension
-					nshared, null,               // Shared memory size and stream
-		    		backwardInputParameters2, null // Kernel- and extra parameters
+			cuLaunchKernel(backward_aten_gamma_function2,
+					blocks,  1, 1,      // Grid dimension
+					threads[0], threads[1], threads[2],      // Block dimension
+					shmem_sz, null,               // Shared memory size and stream
+		    		backwardAtenGammaParameters2, null // Kernel- and extra parameters
 		        );
 			
 		} catch (Exception e) {
@@ -811,29 +713,242 @@ public class LNKernel extends BaseKernel{
 		
 	}
 	
-	public int get_num_blocks(int n_slices, int slice_per_block) {
-		int _num_blocks = n_slices / slice_per_block;
-		if (_num_blocks * slice_per_block == n_slices) {
-		    return _num_blocks;
-		}else {
-			return _num_blocks + 1;
+	public void backwardAten(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
+		
+		try {
+			
+			backwardAtenGamma(input, delta, dgamma, dbeta);
+			
+			if(backwardAtenParameters == null) {
+
+				/**
+				 *const float* __restrict__ dY,
+				  const float* __restrict__ X,
+				  const float* __restrict__ mean,
+				  const float* __restrict__ rstd,
+				  const float* __restrict__ gamma,
+				  float* dX,
+				  const int N
+				 */
+				backwardAtenParameters = Pointer.to(
+						Pointer.to(delta.getGpuData()),
+						Pointer.to(input.getGpuData()),
+						Pointer.to(aten_mean),
+						Pointer.to(aten_var),
+						Pointer.to(gamma.getGpuData()),
+						Pointer.to(diff.getGpuData()),
+						Pointer.to(new int[] {W})
+		            );
+				
+			}
+			
+		    int[] blocks = new int[] {B, 1, 1};
+		    int nshared = (256 / 32) * Sizeof.FLOAT;
+			
+			cuLaunchKernel(backward_aten_function,
+					blocks[0],  blocks[1], blocks[2],      // Grid dimension
+					256, 1, 1,      // Block dimension
+					nshared, null,               // Shared memory size and stream
+		    		backwardAtenParameters, null // Kernel- and extra parameters
+		        );
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+//		try {
+//			
+//			/**
+//			 *const float* __restrict__ dY,
+//			  const float* __restrict__ X,
+//			  const float* __restrict__ mean,
+//			  const float* __restrict__ rstd,
+//			  const float* __restrict__ gamma,
+//			  float*  dX,
+//			  const int N
+//			 */
+//			backwardAtenParameters2 = Pointer.to(
+//					Pointer.to(delta.getGpuData()),
+//					Pointer.to(input.getGpuData()),
+//					Pointer.to(aten_mean),
+//					Pointer.to(aten_var),
+//					Pointer.to(gamma.getGpuData()),
+//					Pointer.to(diff.getGpuData()),
+//					Pointer.to(new int[] {W})
+//	            );
+//			
+//		    int[] blocks = new int[] {B, 1, 1};
+//		    int nshared = (256 / 32) * Sizeof.FLOAT;
+//			
+//			cuLaunchKernel(backward_aten_function2,
+//					blocks[0],  blocks[1], blocks[2],      // Grid dimension
+//					256, 1, 1,      // Block dimension
+//					nshared, null,               // Shared memory size and stream
+//		    		backwardAtenParameters2, null // Kernel- and extra parameters
+//		        );
+//			
+//		} catch (Exception e) {
+//			// TODO: handle exception
+//			e.printStackTrace();
+//		}
+		
+	}
+	
+	public void interGrad(Tensor delta,Tensor input,Tensor gamma,Tensor dYxX) {
+		
+		try {
+			
+			TensorOP.mul(delta, input, dYxX);
+
+			if(interGradParameters == null) {
+				/**
+				 * const int N,
+			    const float *const dYxX,
+			    const float *const dY,
+			    const float *const gamma,
+			    float *const ds,
+			    float *const db
+				 */
+				interGradParameters = Pointer.to(
+						Pointer.to(new int[] {W}),
+						Pointer.to(dYxX.getGpuData()),
+						Pointer.to(delta.getGpuData()),
+						Pointer.to(gamma.getGpuData()),
+						Pointer.to(ds.getGpuData()),
+		                Pointer.to(db.getGpuData())
+		            );
+			}
+			
+			cuLaunchKernel(inter_grad_function,
+					B,  1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					0, null,               // Shared memory size and stream
+					interGradParameters, null // Kernel- and extra parameters
+		        );
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backwardFusedParams() {
+	
+		try {
+			
+			if(backwardFusedParameters == null) {
+				/**
+				 * const int M,
+			    const int N,
+			    const float* mean,
+			    const float* sigma,
+			    const float* ds,
+			    const float* db,
+			    float* rstd,
+			    float* X_scale,
+			    float* bias,
+			    float* g_scale
+				 */
+				backwardFusedParameters = Pointer.to(
+						Pointer.to(new int[] {B}),
+						Pointer.to(new int[] {W}),
+						Pointer.to(mean.getGpuData()),
+						Pointer.to(simga.getGpuData()),
+						Pointer.to(ds.getGpuData()),
+						Pointer.to(db.getGpuData()),
+						Pointer.to(rstd.getGpuData()),
+						Pointer.to(X_scale.getGpuData()),
+						Pointer.to(bias.getGpuData()),
+		                Pointer.to(g_scale.getGpuData())
+		            );
+			}
+			
+			cuLaunchKernel(backward_fused_function,
+					this.CAFFE_GET_BLOCKS(B),  1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					0, null,               // Shared memory size and stream
+					backwardFusedParameters, null // Kernel- and extra parameters
+		        );
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void gammaBetaBackward(Tensor dYxX,Tensor delta,Tensor dgamma,Tensor dbeta) {
+		
+		try {
+			
+			GPUOP.getInstance().gemv(0, B, W, dYxX, rstd, dgamma, 1.0f, 0.0f);
+			
+			GPUOP.getInstance().gemv(0, B, W, delta, g_scale, dgamma, 1.0f, 1.0f);
+			
+			GPUOP.getInstance().gemv(0, B, W, delta, ones, dbeta, 1.0f, 0.0f);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void lnBackward(Tensor delta,Tensor input,Tensor gamma,Tensor diff) {
+		try {
+			
+			if(lnBKParameters == null) {
+				
+				/**
+				 * const int M,
+			    const int N,
+			    const float* dY,
+			    const float* X,
+			    const float* gamma,
+			    const float* dY_scale,
+			    const float* X_scale,
+			    const float* bias,
+			    float* dX
+				 */
+				lnBKParameters = Pointer.to(
+						Pointer.to(new int[] {B}),
+						Pointer.to(new int[] {W}),
+						Pointer.to(delta.getGpuData()),
+						Pointer.to(input.getGpuData()),
+						Pointer.to(gamma.getGpuData()),
+						Pointer.to(rstd.getGpuData()),
+						Pointer.to(X_scale.getGpuData()),
+						Pointer.to(bias.getGpuData()),
+		                Pointer.to(diff.getGpuData())
+		            );
+			}
+			
+			cuLaunchKernel(ln_backward_function,
+					this.CAFFE_GET_BLOCKS(B),  1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					0, null,               // Shared memory size and stream
+					lnBKParameters, null // Kernel- and extra parameters
+		        );
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
 		}
 	}
 	
-	public int[] get_block_size(int slice_size) {
-		  int block_size = 0;
-		  int mult = 0;
-		  int _warp_size = 32;
-		  int _block_size = _warp_size;
-		  int _mult = slice_size / _block_size;
-		  mult = _mult * _block_size >= slice_size ? _mult : _mult + 1;
-		  while (mult > 5) {
-		    _block_size += _warp_size;
-		    _mult = slice_size / _block_size;
-		    mult = _mult * _block_size >= slice_size ? _mult : _mult + 1;
-		  }
-		  block_size = _block_size;
-		  return new int[] {block_size, mult};
+	public void backward_aten(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
+		
+		interGrad(delta, input, gamma, diff);
+		
+		backwardFusedParams();
+		
+		gammaBetaBackward(diff, delta, dgamma, dbeta);
+		
+		lnBackward(delta, input, gamma, diff);
+		
 	}
 	
 	public void checkCUDA(int code) {
@@ -849,9 +964,9 @@ public class LNKernel extends BaseKernel{
     
     public static void main(String[] args) {
     	
-    	int N = 5;
-    	int T = 12;
-    	int W = 8;
+    	int N = 32;
+    	int T = 128;
+    	int W = 512;
     	
     	float[] data = RandomUtils.order(N * T * W, 0.1f, 0.1f);
     	
@@ -869,46 +984,68 @@ public class LNKernel extends BaseKernel{
     	Tensor input = new Tensor(N, T, 1, W, data, true);
     	
     	Tensor output = new Tensor(N, T, 1, W, true);
-    	
     	Tensor output2 = new Tensor(N, T, 1, W, true);
-
-    	Tensor delta = new Tensor(N, T, 1, W, MatrixUtils.one(N * T * W), true);
+    	
+    	Tensor delta = new Tensor(N, T, 1, W, MatrixUtils.order(N * T * W, 0.1f, 0.1f), true);
     	
     	LNKernel kernel = new LNKernel(W, BNType.fully_bn);
 
+    	Tensor diff = new Tensor(N, T, 1, W, true);
     	Tensor diff2 = new Tensor(N, T, 1, W, true);
+    	
+    	Tensor dgamma = new Tensor(1, 1, 1, W, true);
+    	Tensor dbeta = new Tensor(1, 1, 1, W, true);
     	
     	Tensor dgamma2 = new Tensor(1, 1, 1, W, true);
     	Tensor dbeta2 = new Tensor(1, 1, 1, W, true);
     	
-//    	kernel.forward(gamma, beta, input, output);
-
 //    	output.showShape();
 //    	output.showDM();
     	for(int i = 0;i<10;i++) {
 
         	System.out.println("output:");
+//        	float[] rn = RandomUtils.gaussianRandom(N * T * W, 0.5f);
+//        	input.setData(rn);
         	
-    		kernel.forward2(gamma, beta, input, output2);
-        	output2.showDM();
+//        	kernel.forward(gamma, beta, input, output);
+//        	output.showDM(0);
+        	kernel.forwardAten(gamma, beta, input, output2);
+//        	kernel.forward_aten(gamma, beta, input, output2);
+        	output2.showDM(0);
+        	
+//        	dgamma2.showDM(0);
+//        	dbeta2.showDM(0);
+//
+//        	System.err.println("---------------------------");
 
-        	kernel.backward2(input, delta, diff2, gamma, dgamma2, dbeta2);
-        	diff2.showDM();
+//    		kernel.backward(input, delta, diff, gamma, dgamma, dbeta);
+//        	diff.showDMByNumber(0);
+        	kernel.backwardAten(input, delta, diff2, gamma, dgamma2, dbeta2);
+        	diff2.showDMByNumber(0);
+        	
+////        	kernel.backward_aten(input, delta, diff2, gamma, dgamma2, dbeta2);
+////        	diff2.showDM(0);
+//        	dgamma.showDM();
+//        	dbeta.showDM();
+        	
+//        	kernel.backward3_cpu(input, delta, diff2, gamma, dgamma2, dbeta2);
+//        	
+//        	kernel.backward2(input, delta, diff2, gamma, dgamma2, dbeta2);
+//        	kernel.backward_apex(input, delta, diff2, gamma, dgamma2, dbeta2);
+//        	diff2.showDM();
         	dgamma2.showDM();
         	dbeta2.showDM();
         	
-        	float[] rmd = RandomUtils.gaussianRandom(N * T * W, 0.1f);
-        	Tensor rm = new Tensor(N, T, 1, W, rmd, true);
-        	TensorOP.add(input, rm, input);
-        	input.showDM();
+//        	float[] rmd = RandomUtils.gaussianRandom(N * T * W, 0.1f);
+//        	Tensor rm = new Tensor(N, T, 1, W, rmd, true);
+//        	TensorOP.add(input, rm, input);
+//        	input.showDM();
         	System.out.println("========================");
     	}
     	
 
 //    	Tensor dgamma = new Tensor(1, 1, 1, W, true);
 //    	Tensor dbeta = new Tensor(1, 1, 1, W, true);
-    	
-    	Tensor diff = new Tensor(N, T, 1, W, true);
     	
 //    	Tensor diff3 = new Tensor(N, T, 1, W, true);
     	
