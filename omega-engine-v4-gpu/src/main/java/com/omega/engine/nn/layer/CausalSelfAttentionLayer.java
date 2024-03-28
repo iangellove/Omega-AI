@@ -52,8 +52,6 @@ public class CausalSelfAttentionLayer extends Layer{
 	
 	private Tensor ot;
 	
-	private Tensor ro;
-	
 	private SoftmaxKernel softmax;
 	
 	private int batchSize = 1;
@@ -147,7 +145,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		this.dk = embedDim / headNum;
 		this.batchSize = number / time;
 
-		if(this.qt == null || this.qt.number != this.batchSize) {
+		if(this.scores == null || this.scores.number != this.batchSize) {
 			// [batch_size，time，head_num，d_k]
 			this.qt = Tensor.createTensor(this.qt, batchSize, headNum, time, dk, true);
 			this.kt = Tensor.createTensor(this.kt, batchSize, headNum, time, dk, true);
@@ -160,12 +158,10 @@ public class CausalSelfAttentionLayer extends Layer{
 			this.attn_outputs = Tensor.createTensor(this.attn_outputs, batchSize, headNum, time, dk, true);
 			// [batch_size, len_q, n_heads * dim_v]
 			this.ot = Tensor.createTensor(this.ot, batchSize, time, headNum, dk, true);
-			
-			this.ro = Tensor.createTensor(this.ro, batchSize * time, 1, 1, embedDim, true);
-			
+		}else {
+			resize();
 		}
-		
-		resize();
+
 	}
 	
 	public void resize() {
@@ -265,6 +261,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		if(mask != null) {
 			softmax.softmaxMask(scores, mask, weights, -1e9f);
 		}else {
+			weights.showShape();
 			softmax.softmax(scores, weights);
 		}
 //		System.out.println("weights.showDM():");

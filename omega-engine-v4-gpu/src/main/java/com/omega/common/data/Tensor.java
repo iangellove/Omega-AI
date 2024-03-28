@@ -205,6 +205,7 @@ public class Tensor implements Serializable{
 			t = new Tensor(number, channel, height, width, hasGPU);
 		}else {
 			t.resize(number, channel, height, width);
+			t.orgShape = new int[] {number, channel, height, width};
 		}
 		return t;
 	}

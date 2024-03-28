@@ -99,6 +99,22 @@ public class GPT2 extends Network {
 		return this.getOuput();
 	}
 	
+	public Tensor forward(Tensor input,Tensor positions) {
+//		System.out.println("en_time:"+en_time+",de_time:"+de_time);
+		/**
+		 * 设置输入数据
+		 */
+		this.setInputData(input);
+		
+		inputLayer.forward();
+		
+		decoder.forward(input, positions);
+//		decoder.getOutput().showShape();
+		fullyLayer.forward(decoder.getOutput());
+		
+		return this.getOuput();
+	}
+	
 	public Tensor forward(Tensor input,Tensor positions,Tensor mask) {
 //		System.out.println("en_time:"+en_time+",de_time:"+de_time);
 		/**

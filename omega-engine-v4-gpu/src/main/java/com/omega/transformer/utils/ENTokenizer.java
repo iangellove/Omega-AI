@@ -37,6 +37,8 @@ public class ENTokenizer {
 	
 	public String[] vocab;
 	
+	public Tensor testInput;
+	
 	public ENTokenizer(String dataPath,int max_len,int batchSize) {
 		this.dataPath = dataPath;
 		this.max_len = max_len;
@@ -98,6 +100,25 @@ public class ENTokenizer {
 		for(String key:dictionary.keySet()) {
 			vocab[dictionary.get(key)] = key;
 		}
+	}
+	
+	public Tensor loadByTxt(String txt) {
+		
+		char[] en_lines = txt.toLowerCase().toCharArray();
+
+		testInput = Tensor.createTensor(testInput, max_len, 1, 1, vocab_size, true);
+		testInput.clear();
+		for(int t = 0;t<max_len;t++) {
+    		int valIdx = dictionary.get("<PAD>");
+    		if(t < en_lines.length) {
+    			valIdx = dictionary.get(en_lines[t]+"");
+    		}
+    		testInput.data[t * vocab_size + valIdx] = 1.0f;
+    	}
+		
+		testInput.hostToDevice();
+		
+		return testInput;
 	}
 	
 	public void loadData(int[] indexs, Tensor input, Tensor label) {

@@ -84,8 +84,8 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 		this.number = this.input.number;
 		if(this.ro == null || this.ro.number != this.number) {
 			this.ro = Tensor.createTensor(this.ro, number, 1, 1, embedDim, true);
-		}
-		resize();
+		} 
+//		resize();
 	}
 	
 	public void resize() {

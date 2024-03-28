@@ -138,15 +138,22 @@ public class LNKernel extends BaseKernel{
 			/**
 			 * 申请向前传播参数显存
 			 */
+			if(this.d_mean != null) {
+				CUDAMemoryManager.free(this.d_mean);
+				CUDAMemoryManager.free(this.d_var);
+				CUDAMemoryManager.free(this.aten_mean);
+				CUDAMemoryManager.free(this.aten_var);
+			}
+			
 			this.d_mean = CUDAMemoryManager.getDevice(B);
 			this.d_var = CUDAMemoryManager.getDevice(B);
+
+			this.aten_mean = CUDAMemoryManager.getDevice(B);
+			this.aten_var = CUDAMemoryManager.getDevice(B);
 //			this.d_s = CUDAMemoryManager.getDevice(B);
 //			this.d_b = CUDAMemoryManager.getDevice(B);
 //			this.d_scale = CUDAMemoryManager.getDevice(B);
 //			this.d_bias = CUDAMemoryManager.getDevice(B);
-			
-			this.aten_mean = CUDAMemoryManager.getDevice(B);
-			this.aten_var = CUDAMemoryManager.getDevice(B);
 			
 //			this.mean = new Tensor(B, 1, 1, 1, true);
 //			this.simga = new Tensor(B, 1, 1, 1, true);

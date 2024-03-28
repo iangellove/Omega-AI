@@ -21,10 +21,10 @@ __global__ void adamw(float *diffW, float *weight,float *mw,float *vw,float beta
     if (i >= n) return;
     float diff = diffW[i] / batch;
     weight[i] = weight[i] * (1.0f - learnRate * weight_decay);
-    mw[i] = beta1 * mw[i] + (1 - beta1) * diff;
-	vw[i] = beta2 * vw[i] + (1 - beta2) * diff * diff;
-	float mhat = mw[i] / (1 - powf(beta1, t));
-	float vhat = vw[i] / (1 - powf(beta2, t));
+    mw[i] = beta1 * mw[i] + (1.0f - beta1) * diff;
+	vw[i] = beta2 * vw[i] + (1.0f - beta2) * diff * diff;
+	float mhat = mw[i] / (1.0f - powf(beta1, t));
+	float vhat = vw[i] / (1.0f - powf(beta2, t));
 	weight[i] = weight[i] - learnRate * mhat / (sqrt(vhat) + ETA);
 }
 
@@ -97,4 +97,23 @@ __global__ void sgd_bn(float *diffW, float *v,float *weight,float momentum,float
     }
     gt = gt + momentum * v[i];
 	weight[i] = weight[i] - learnRate * gt;
+}
+
+extern "C"
+__global__ void RMSProp(float *diffW, float *rw, float *weight, float mul, float eta, float learnRate, int n, int batch,int clamp,float min,float max)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (i >= n) return;
+    float gt = diffW[i] / batch;
+    rw[i] = mul * rw[i] + (1 - mul) * gt * gt;
+    gt = learnRate / sqrtf(rw[i] + eta) * gt;
+	weight[i] = weight[i] - gt;
+	if(clamp == 1){
+		if(weight[i] < min){
+			weight[i] = min;
+		}
+		if(weight[i] > max){
+			weight[i] = max;
+		}
+	}
 }

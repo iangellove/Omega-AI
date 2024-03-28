@@ -33,6 +33,8 @@ public class SoftmaxKernel extends BaseKernel{
 	
 	private Pointer kernelParameters;
 	
+	private Pointer kernelMaskParameters;
+	
 	private Pointer backKernelParameters;
 	
 	private Pointer backKernelParameters2;
@@ -103,6 +105,7 @@ public class SoftmaxKernel extends BaseKernel{
 	public void softmax(Tensor input,Tensor output) {
 		
 		if(kernelParameters == null || this.N != output.number) {
+			System.out.println("in---init-softmax:"+N+"-"+output.number);
 			/**
 			 * float *input, float *output, int batch, int n, float temp
 			 */
@@ -130,11 +133,11 @@ public class SoftmaxKernel extends BaseKernel{
 	
 	public void softmaxMask(Tensor input,Tensor mask,Tensor output,float tmp) {
 		
-		if(kernelParameters == null || this.N != output.number) {
+		if(kernelMaskParameters == null || this.N != output.number) {
 			/**
 			 * float *input, float *output, float *mask, int batch, int n, float tmp
 			 */
-			kernelParameters = Pointer.to(
+			kernelMaskParameters = Pointer.to(
 	                Pointer.to(input.getGpuData()),
 	                Pointer.to(output.getGpuData()),
 	                Pointer.to(mask.getGpuData()),
@@ -151,7 +154,7 @@ public class SoftmaxKernel extends BaseKernel{
 				input.number * input.channel * output.height,  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
-	            kernelParameters, null // Kernel- and extra parameters
+	            kernelMaskParameters, null // Kernel- and extra parameters
 	        );
 		
 //		JCudaDriver.cuCtxSynchronize();

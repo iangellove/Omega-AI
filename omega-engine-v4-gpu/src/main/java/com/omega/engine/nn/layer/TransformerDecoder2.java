@@ -127,6 +127,27 @@ public class TransformerDecoder2 extends Layer{
 		
 	}
 	
+	public void output(Tensor positions) {
+		// TODO Auto-generated method stub
+
+		src_emb.forward(input);
+		
+		pos_emb.forward(positions);
+		
+		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
+		
+		Tensor decoderOutput = src_emb.getOutput();
+		
+		for(int i = 0;i<n_layers;i++) {
+			decoderLayers.get(i).forward(decoderOutput);
+			decoderOutput = decoderLayers.get(i).getOutput();
+		}
+
+//		this.ln.forward(decoderOutput);
+//		this.output = this.ln.getOutput();
+		this.output = decoderOutput;
+	}
+	
 	public void output(Tensor mask,Tensor positions) {
 		// TODO Auto-generated method stub
 
@@ -225,6 +246,23 @@ public class TransformerDecoder2 extends Layer{
 		 * 计算输出
 		 */
 		this.output();
+		
+	}
+	
+	public void forward(Tensor input,Tensor positions) {
+		// TODO Auto-generated method stub
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+		/**
+		 * 计算输出
+		 */
+		this.output(positions);
 		
 	}
 	

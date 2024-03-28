@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 
 public class CNTokenizer extends BaseTokenizer{
 	
@@ -36,6 +35,8 @@ public class CNTokenizer extends BaseTokenizer{
 	public int vocab_size;
 	
 	public String[] vocab;
+	
+	public Tensor testInput;
 	
 	public CNTokenizer(String dataPath,int max_len,int batchSize) {
 		this.dataPath = dataPath;
@@ -108,6 +109,23 @@ public class CNTokenizer extends BaseTokenizer{
 		}
 	}
 	
+
+	public Tensor loadByTxt(String txt) {
+		
+		String[] onceToken = txt.split("");
+
+		testInput = Tensor.createTensor(testInput, max_len, 1, 1, vocab_size, true);
+		testInput.clear();
+		for(int t = 0;t<max_len;t++) {
+			formatOnce(t, onceToken, testInput);
+		}
+		
+		testInput.hostToDevice();
+		
+		return testInput;
+	}
+	
+	
 	public void loadData(int[] indexs, Tensor input, Tensor label) {
 		// TODO Auto-generated method stub
 		
@@ -128,6 +146,26 @@ public class CNTokenizer extends BaseTokenizer{
 		input.hostToDevice();
 		label.hostToDevice();
 		
+	}
+	
+	public void formatOnce(int t,String[] onceToken,Tensor input) {
+		if(t == 0){
+			String curr = onceToken[t];
+			input.data[t * vocab_size + 1] = 1.0f;
+			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
+			return;
+		}
+		if(t == onceToken.length - 1) {
+			String curr = onceToken[t];
+			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
+			return;
+		}
+		if((t + 1) < onceToken.length) {
+			String curr = onceToken[t];
+			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
+		}else {
+			input.data[t * vocab_size + 0] = 1.0f;
+		}
 	}
 	
 	public void format(int b,int t,String[] onceToken,Tensor input,Tensor label) {
