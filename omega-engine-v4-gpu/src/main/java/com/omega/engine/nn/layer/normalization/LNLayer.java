@@ -39,14 +39,32 @@ public class LNLayer extends NormalizationLayer {
 		this.hasParams = true;
 	}
 	
+	public LNLayer(boolean hasBias) {
+//		initParam();
+		this.hasBias = hasBias;
+		this.hasParams = true;
+	}
+	
 	public LNLayer(Layer preLayer) {
 		this.setPreLayer(preLayer);
 		this.hasParams = true;
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
+	public LNLayer(Layer preLayer,boolean hasBias) {
+		this.setPreLayer(preLayer);
+		this.hasBias = hasBias;
+		this.hasParams = true;
+		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+	}
+	
 	public LNLayer(Network network) {
 		this.network = network;
+	}
+	
+	public LNLayer(Network network,boolean hasBias) {
+		this.network = network;
+		this.hasBias = hasBias;
 	}
 	
 	@Override
@@ -80,10 +98,14 @@ public class LNLayer extends NormalizationLayer {
 			}
 		}
 		
-		if(this.gamma == null || this.beta == null) {
+		if(this.gamma == null) {
 			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
-			this.beta = new Tensor(1, 1, 1, meanNum, true);
 			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+			
+		}
+		
+		if(this.beta == null && hasBias) {
+			this.beta = new Tensor(1, 1, 1, meanNum, true);
 			this.diffBeta = new Tensor(1, 1, 1, meanNum, true);
 		}
 

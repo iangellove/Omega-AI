@@ -22,6 +22,10 @@ import com.omega.transformer.utils.ENTokenizer;
  */
 public class CausalSelfAttentionLayer extends Layer{
 	
+	private boolean dropout = false;
+	
+	private float dropput_probability = 0.5f;
+	
 	private int time;
 	
 	private int headNum = 1;
@@ -37,6 +41,8 @@ public class CausalSelfAttentionLayer extends Layer{
 	private FullyLayer vLinerLayer;
 	
 	private FullyLayer oLinerLayer;
+	
+	private DropoutLayer dropoutLayer;
 	
 	private BaseKernel baseKernel;
 	
@@ -56,7 +62,9 @@ public class CausalSelfAttentionLayer extends Layer{
 	
 	private int batchSize = 1;
 	
-	public CausalSelfAttentionLayer(int embedDim,int headNum,int time,boolean bias) {
+	public CausalSelfAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout) {
+		this.bias = bias;
+		this.dropout = dropout;
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
@@ -67,7 +75,9 @@ public class CausalSelfAttentionLayer extends Layer{
 		this.initLayers();
 	}
 	
-	public CausalSelfAttentionLayer(int embedDim,int headNum,int time,boolean bias,Network network) {
+	public CausalSelfAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout,Network network) {
+		this.bias = bias;
+		this.dropout = dropout;
 		this.network = network;
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
@@ -122,6 +132,10 @@ public class CausalSelfAttentionLayer extends Layer{
 //		TensorOP.permute(this.oLinerLayer.weight, owt, new int[] {0, 1, 3, 2});
 //		this.oLinerLayer.weight = owt;
 //		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.02f), true);
+		
+		if(dropout) {
+			this.dropoutLayer = new DropoutLayer(dropput_probability, this.oLinerLayer);
+		}
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
@@ -217,7 +231,13 @@ public class CausalSelfAttentionLayer extends Layer{
 
 		this.oLinerLayer.forward(ot);
 		
-		this.output = this.oLinerLayer.getOutput();
+		if(dropout) {
+			this.dropoutLayer.forward(this.oLinerLayer.getOutput());
+			this.output = this.dropoutLayer.getOutput();
+		}else {
+			this.output = this.oLinerLayer.getOutput();
+		}
+
 	}
 	
 	public void output(Tensor mask) {
@@ -243,7 +263,12 @@ public class CausalSelfAttentionLayer extends Layer{
 
 		this.oLinerLayer.forward(ot);
 		
-		this.output = this.oLinerLayer.getOutput();
+		if(dropout) {
+			this.dropoutLayer.forward(this.oLinerLayer.getOutput());
+			this.output = this.dropoutLayer.getOutput();
+		}else {
+			this.output = this.oLinerLayer.getOutput();
+		}
 		
 	}
 	
@@ -344,8 +369,13 @@ public class CausalSelfAttentionLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		
-		this.oLinerLayer.back(delta, ot);
-		
+		if(dropout) {
+			this.dropoutLayer.back(delta);
+			this.oLinerLayer.back(dropoutLayer.diff, ot);
+		}else {
+			this.oLinerLayer.back(delta, ot);
+		}
+
 		ot.view(batchSize, time, headNum, dk);
 		
 		TensorOP.permute(ot, attn_outputs, new int[] {0, 2, 1, 3});
@@ -554,7 +584,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		
 		Tensor delta = new Tensor(batchSize * time, 1, 1, embedDim, delta_data, true);
 		
-		CausalSelfAttentionLayer mal = new CausalSelfAttentionLayer(embedDim, headNum, time, false, tf);
+		CausalSelfAttentionLayer mal = new CausalSelfAttentionLayer(embedDim, headNum, time, false, false, tf);
 		
 //		mal.forward(input);
 		

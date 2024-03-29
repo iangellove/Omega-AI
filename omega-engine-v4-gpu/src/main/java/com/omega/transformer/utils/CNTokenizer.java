@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 
 public class CNTokenizer extends BaseTokenizer{
 	
@@ -113,7 +114,7 @@ public class CNTokenizer extends BaseTokenizer{
 	public Tensor loadByTxt(String txt) {
 		
 		String[] onceToken = txt.split("");
-
+		System.out.println(JsonUtils.toJson(onceToken));
 		testInput = Tensor.createTensor(testInput, max_len, 1, 1, vocab_size, true);
 		testInput.clear();
 		for(int t = 0;t<max_len;t++) {
@@ -149,6 +150,7 @@ public class CNTokenizer extends BaseTokenizer{
 	}
 	
 	public void formatOnce(int t,String[] onceToken,Tensor input) {
+		
 		if(t == 0){
 			String curr = onceToken[t];
 			input.data[t * vocab_size + 1] = 1.0f;
@@ -157,14 +159,19 @@ public class CNTokenizer extends BaseTokenizer{
 		}
 		if(t == onceToken.length - 1) {
 			String curr = onceToken[t];
+			if(curr.equals(" ")) {
+				curr = "<sep>";
+			}
+			
 			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
 			return;
 		}
+		
 		if((t + 1) < onceToken.length) {
 			String curr = onceToken[t];
 			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
-		}else {
-			input.data[t * vocab_size + 0] = 1.0f;
+		}else if(t < max_len - 1){
+			input.data[(t + 1) * vocab_size + 0] = 1.0f;
 		}
 	}
 	

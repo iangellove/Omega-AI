@@ -11,13 +11,9 @@ import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.network.GPT;
 import com.omega.engine.nn.network.GPT2;
 import com.omega.engine.nn.network.RNN;
-import com.omega.engine.nn.network.Seq2SeqRNN;
 import com.omega.engine.optimizer.EDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
-import com.omega.rnn.data.IndexDataLoader;
-import com.omega.rnn.data.OneHotDataLoader;
-import com.omega.rnn.seq2seq.Seq2seq;
 import com.omega.transformer.utils.CNTokenizer;
 import com.omega.transformer.utils.ENTokenizer;
 
@@ -162,6 +158,10 @@ public class GPTTest {
 		
 		try {
 			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
 			int batchSize = 32;
 			
 			int max_len = 128;
@@ -176,13 +176,13 @@ public class GPTTest {
 
 			CNTokenizer trainData = new CNTokenizer(trainPath, max_len, batchSize);
 			
-			GPT2 network = new GPT2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim);
+			GPT2 network = new GPT2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout);
 			
 			network.CUDNN = true;
 			
-			network.learnRate = 0.0001f;
+			network.learnRate = 0.00025f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 50, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 500, 0.0001f, LearnRateUpdate.SMART_HALF, false);
 			optimizer.lr_step = new int[] {300, 600};
 			optimizer.trainGPT2(trainData);
 
@@ -198,7 +198,7 @@ public class GPTTest {
 				if(input_txt.equals("exit")){
 					break;
 				}
-				input_txt = input_txt.toLowerCase();
+				input_txt = input_txt.toLowerCase() + " ";
 				System.out.println(input_txt);
 				Tensor input = trainData.loadByTxt(input_txt);
 				Tensor output = network.forward(input, positions);
@@ -219,6 +219,10 @@ public class GPTTest {
 		
 		try {
 			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
 			int batchSize = 10;
 			
 			int max_len = 256;
@@ -233,7 +237,7 @@ public class GPTTest {
 
 			ENTokenizer trainData = new ENTokenizer(trainPath, max_len, batchSize);
 			
-			GPT2 network = new GPT2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, decoderNUm, headNum, trainData.vocab_size, max_len, embedDim);
+			GPT2 network = new GPT2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, decoderNUm, headNum, trainData.vocab_size, max_len, embedDim, bias, dropout);
 			
 			network.CUDNN = true;
 			
@@ -266,6 +270,10 @@ public class GPTTest {
 		
 		try {
 			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
 			int batchSize = 12;
 			
 			int max_len = 256;
@@ -280,7 +288,7 @@ public class GPTTest {
 
 			ENTokenizer trainData = new ENTokenizer(trainPath, max_len, batchSize);
 			
-			GPT2 network = new GPT2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, decoderNUm, headNum, trainData.vocab_size, max_len, embedDim);
+			GPT2 network = new GPT2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, decoderNUm, headNum, trainData.vocab_size, max_len, embedDim, bias, dropout);
 			
 			network.CUDNN = true;
 			

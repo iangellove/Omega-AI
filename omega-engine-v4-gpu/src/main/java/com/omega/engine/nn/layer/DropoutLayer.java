@@ -3,6 +3,9 @@ package com.omega.engine.nn.layer;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.engine.gpu.GPUOP;
+import com.omega.engine.nn.layer.gpu.DropoutKernel;
+import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
 
 /**
@@ -14,12 +17,40 @@ public class DropoutLayer extends Layer {
 	
 	private float probability = 0.5f;
 	
-	private float[] mask;
+	private Tensor mask;
 	
 	public Layer preLayer;
 	
+	private float scale = 0.0f;
+	
+	private DropoutKernel kernel;
+	
 	public DropoutLayer(float probability) {
 		this.probability = probability;
+		this.scale = 1.0f / (1.0f - probability);
+	}
+	
+	public DropoutLayer(float probability,Layer preLayer) {
+		this.setPreLayer(preLayer);
+		this.probability = probability;
+		this.scale = 1.0f / (1.0f - probability);
+	}
+	
+	public DropoutLayer(float probability,Network network) {
+		this.network = network;
+		this.probability = probability;
+		this.scale = 1.0f / (1.0f - probability);
+	}
+	
+	public void setPreLayer(Layer pre) {
+		this.preLayer = pre;
+		this.network = pre.network;
+		this.channel = preLayer.oChannel;
+		this.height = preLayer.oHeight;
+		this.width = preLayer.oWidth;
+		this.oChannel = this.channel;
+		this.oHeight = this.height;
+		this.oWidth = this.width;
 	}
 	
 	@Override
@@ -34,8 +65,11 @@ public class DropoutLayer extends Layer {
 			this.oHeight = this.height;
 			this.oWidth = this.width;
 		}
+		
+		if(kernel == null) {
+			kernel = new DropoutKernel(this.probability, this.scale);
+		}
 		this.number = this.network.number;
-		this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 		initParam();
 	}
 
@@ -47,26 +81,27 @@ public class DropoutLayer extends Layer {
 		 * 训练
 		 */
 		if(this.network.RUN_MODEL == RunModel.TRAIN) {
-			this.mask = MatrixUtils.val(this.number * this.oChannel * this.oHeight * this.oWidth, probability, 1.0f - probability);
+			if(this.mask == null || this.mask.number != this.number) {
+				this.mask = Tensor.createTensor(this.mask, number, channel, height, oWidth, true);
+			}
+			GPUOP.getInstance().cudaRandom(this.mask);
 		}
-		
+
 	}
 
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		this.diff = new Tensor(number, channel, height, width);
+
 	}
 
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
 		if(this.network.RUN_MODEL == RunModel.TRAIN) {
-			this.output.data = MatrixOperation.multiplication(this.input.data, this.mask);
-		}else {
-			this.output.data = MatrixOperation.multiplication(this.input.data, 1.0f - probability);
+			kernel.forward(input, mask);
 		}
-		
+		this.output = input;
 	}
 
 	@Override
@@ -78,7 +113,10 @@ public class DropoutLayer extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		this.diff.data = MatrixOperation.multiplication(this.delta.data, this.mask);
+		if(this.network.RUN_MODEL == RunModel.TRAIN) {
+			kernel.backward(delta, mask);
+		}
+		this.diff = delta;
 	}
 
 	@Override
@@ -147,7 +185,7 @@ public class DropoutLayer extends Layer {
 	
 
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 参数初始化
@@ -156,7 +194,7 @@ public class DropoutLayer extends Layer {
 		/**
 		 * 设置输入
 		 */
-		this.setInput(inpnut);
+		this.setInput(input);
 		/**
 		 * 计算输出
 		 */

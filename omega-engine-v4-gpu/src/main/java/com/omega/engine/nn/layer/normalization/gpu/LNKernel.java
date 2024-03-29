@@ -434,6 +434,12 @@ public class LNKernel extends BaseKernel{
 				
 				initKernel();
 
+				Pointer bias = null;
+				
+				if(beta != null) {
+					bias = beta.getGpuData();
+				}
+				
 				/**
 				 * const int N,
 				  float eps,
@@ -449,7 +455,7 @@ public class LNKernel extends BaseKernel{
 						Pointer.to(new float[] {eta}),
 						Pointer.to(input.getGpuData()),
 		                Pointer.to(gamma.getGpuData()),
-		                Pointer.to(beta.getGpuData()),
+		                Pointer.to(bias),
 		                Pointer.to(aten_mean),
 						Pointer.to(aten_var),
 		                Pointer.to(output.getGpuData())
@@ -678,7 +684,13 @@ public class LNKernel extends BaseKernel{
 		try {
 			
 			if(backwardAtenGammaParameters2 == null) {
-
+				
+				Pointer db = null;
+				
+				if(dbeta != null) {
+					db = dbeta.getGpuData();
+				}
+				
 				/**
 				 * int M,
 			    int N,
@@ -697,7 +709,7 @@ public class LNKernel extends BaseKernel{
 						Pointer.to(aten_mean),
 						Pointer.to(aten_var),
 						Pointer.to(dgamma.getGpuData()),
-						Pointer.to(dbeta.getGpuData())
+						Pointer.to(db)
 		            );
 				
 			}

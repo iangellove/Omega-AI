@@ -37,6 +37,9 @@ import jcuda.jcublas.cublasHandle;
 import jcuda.jcublas.cublasOperation;
 import jcuda.jcublas.cublasPointerMode;
 import jcuda.jcublas.cublasStatus;
+import jcuda.jcurand.JCurand;
+import jcuda.jcurand.curandGenerator;
+import jcuda.jcurand.curandRngType;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaMemcpyKind;
 import jcuda.cudaDataType;
@@ -556,6 +559,24 @@ public class GPUOP {
 
 //        System.out.println((System.nanoTime() - start) / 1e6+"ms。gpu");
          
+    }
+    
+    public void cudaRandom(Tensor x) {
+    	
+    	try {
+
+        	curandGenerator generator = new curandGenerator();
+    		 
+    		JCurand.curandCreateGenerator(generator, curandRngType.CURAND_RNG_PSEUDO_DEFAULT);
+    		JCurand.curandSetPseudoRandomGeneratorSeed(generator, 1337);
+    		 
+    		JCurand.curandGenerateUniform(generator, x.getGpuData(), x.dataLength);
+    		
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
     }
     
     public void free(Pointer p) {

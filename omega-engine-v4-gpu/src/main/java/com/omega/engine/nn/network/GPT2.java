@@ -1,7 +1,6 @@
 package com.omega.engine.nn.network;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.RandomUtils;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.FullyLayer;
@@ -28,14 +27,20 @@ public class GPT2 extends Network {
 	
 	private int decoderNum = 1;
 	
+	private boolean bias = true;
+	
+	private boolean dropout;
+	
 	private InputLayer inputLayer;
 	
 	private TransformerDecoder2 decoder;
 	
 	private FullyLayer fullyLayer;
 	
-	public GPT2(LossType lossType,UpdaterType updater,int headNum,int decoderNum,int vocabSize,int time,int embedDim) {
+	public GPT2(LossType lossType,UpdaterType updater,int headNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout) {
 		this.lossFunction = LossFactory.create(lossType);
+		this.bias = bias;
+		this.dropout = dropout;
 		this.decoderNum = decoderNum;
 		this.updater = updater;
 		this.headNum = headNum;
@@ -43,8 +48,8 @@ public class GPT2 extends Network {
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.decoder = new TransformerDecoder2(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, false, this);
-		this.fullyLayer = new FullyLayer(embedDim, vocabSize, true, this);
+		this.decoder = new TransformerDecoder2(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, this.bias, this.dropout, this);
+		this.fullyLayer = new FullyLayer(embedDim, vocabSize, this.bias, this);
 		this.addLayer(inputLayer);
 		this.addLayer(decoder);
 		this.addLayer(fullyLayer);

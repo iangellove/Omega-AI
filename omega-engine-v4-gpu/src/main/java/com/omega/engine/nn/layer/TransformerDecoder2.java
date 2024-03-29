@@ -7,7 +7,6 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
-import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
@@ -26,6 +25,8 @@ public class TransformerDecoder2 extends Layer{
 	
 	private boolean bias = false;
 	
+	private boolean dropout = false;
+	
 	private int headNum = 8;
 	
 	private int n_layers = 6;
@@ -40,17 +41,18 @@ public class TransformerDecoder2 extends Layer{
 	private Tensor positions;
 
 
-	public TransformerDecoder2(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias) {
+	public TransformerDecoder2(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout) {
 		this.headNum = headNum;
 		this.n_layers = n_layers;
 		this.vocab_size = vocab_size;
 		this.time = time;
 		this.embedDim = embedDim;
 		this.bias = bias;
+		this.dropout = dropout;
 		this.initLayers();
 	}
 	
-	public TransformerDecoder2(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,Network network) {
+	public TransformerDecoder2(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout,Network network) {
 		this.headNum = headNum;
 		this.n_layers = n_layers;
 		this.network = network;
@@ -61,6 +63,7 @@ public class TransformerDecoder2 extends Layer{
 		this.time = time;
 		this.embedDim = embedDim;
 		this.bias = bias;
+		this.dropout = dropout;
 		this.initLayers();
 	}
 	
@@ -75,7 +78,7 @@ public class TransformerDecoder2 extends Layer{
 		decoderLayers = new ArrayList<TransformerBlock>();
 		
 		for(int i = 0;i<n_layers;i++) {
-			TransformerBlock decoderLayer = new TransformerBlock(headNum, time, embedDim, bias, network);
+			TransformerBlock decoderLayer = new TransformerBlock(headNum, time, embedDim, bias, dropout, network);
 			decoderLayers.add(decoderLayer);
 		}
 		if(baseKernel == null) {

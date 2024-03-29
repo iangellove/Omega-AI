@@ -5,8 +5,6 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.GeluLayer;
-import com.omega.engine.nn.layer.active.LeakyReluLayer;
-import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
@@ -26,6 +24,8 @@ public class TransformerBlock extends Layer{
 	
 	private boolean bias = false;
 	
+	private boolean dropout = false;
+	
 	private CausalSelfAttentionLayer attn;
 	private LNLayer ln1;
 	
@@ -44,18 +44,19 @@ public class TransformerBlock extends Layer{
 	
 	private Tensor tmp2;
 	
-	public TransformerBlock(int headNum,int time,int embedDim,boolean bias) {
+	public TransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout) {
 		this.headNum = headNum;
 		this.time = time;
 		this.embedDim = embedDim;
 		this.bias = bias;
+		this.dropout = dropout;
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
-	public TransformerBlock(int headNum,int time,int embedDim,boolean bias,Network network) {
+	public TransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout,Network network) {
 		this.headNum = headNum;
 		this.network = network;
 		if(this.updater == null) {
@@ -64,6 +65,7 @@ public class TransformerBlock extends Layer{
 		this.time = time;
 		this.embedDim = embedDim;
 		this.bias = bias;
+		this.dropout = dropout;
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
@@ -72,9 +74,9 @@ public class TransformerBlock extends Layer{
 	
 	public void initLayers() {
 		
-		this.attn = new CausalSelfAttentionLayer(embedDim, headNum, time, bias, network);
+		this.attn = new CausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
 
-		this.ln1 = new LNLayer(attn);
+		this.ln1 = new LNLayer(attn, bias);
 		
 		this.linear1 = new FullyLayer(embedDim, 4 * embedDim, bias, network);
 		this.linear1.weight = new Tensor(1, 1, embedDim, 4 * embedDim, RandomUtils.uniform(this.embedDim * 4 * this.embedDim, 0.0f, 0.02f), true);
@@ -87,7 +89,7 @@ public class TransformerBlock extends Layer{
 		this.linear2.weight = new Tensor(1, 1, 4 * embedDim, embedDim, RandomUtils.uniform(this.embedDim * 4 * this.embedDim, 0.0f, 0.02f), true);
 		
 		
-		this.ln2 = new LNLayer(linear2);
+		this.ln2 = new LNLayer(linear2, bias);
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
