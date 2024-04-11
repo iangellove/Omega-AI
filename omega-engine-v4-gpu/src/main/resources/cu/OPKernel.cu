@@ -405,6 +405,13 @@ __global__ void pow_kernel(int N, float *X, float ALPHA, float *Y)
 }
 
 extern "C"
+__global__ void sqrt_kernel(int N, float *X, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) Y[i] = sqrtf(X[i]);
+}
+
+extern "C"
 __global__ void log_kernel(int N, float *X, float *Y)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
