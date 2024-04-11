@@ -1,7 +1,6 @@
 package com.omega.common.utils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -498,7 +497,7 @@ public class RandomUtils {
 		float[] temp = new float[x];
 		
 		for(int i = 0;i<x;i++) {
-			temp[i] = (float) (std * RandomUtils.getInstance().nextGaussian() + mean);
+			temp[i] = (float) (std * Math.random() + mean);
 		}
 		
 		return temp;

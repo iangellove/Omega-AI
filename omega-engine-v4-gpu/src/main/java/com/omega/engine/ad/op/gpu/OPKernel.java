@@ -143,6 +143,7 @@ public class OPKernel implements Serializable{
 	
 	private CUfunction permute_gpu_function;
 	
+	private CUfunction sqrt_gpu_function;
 	
 	public OPKernel() {
 		
@@ -257,6 +258,8 @@ public class OPKernel implements Serializable{
 		transpose_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "transpose_kernel");
 		
 		permute_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "permute_kernel");
+		
+		sqrt_gpu_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"OPKernel.cu", "sqrt_kernel");
 		
 	}
 	
@@ -1612,6 +1615,33 @@ public class OPKernel implements Serializable{
 			        ));
 				
 			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void sqrt_gpu(Tensor a,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *X, float *Y
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(y.getGpuData())
+	            );
+			
+			checkCUDA(cuLaunchKernel(sqrt_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
 			
 		} catch (Exception e) {
 			// TODO: handle exception

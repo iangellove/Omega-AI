@@ -70,6 +70,8 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adamw);
 		
+		netWork.CUDNN = true;
+		
 		InputLayer inputLayer = new InputLayer(1,1,4);
 		
 		FullyLayer hidden1 = new FullyLayer(4, 40);
@@ -81,6 +83,8 @@ public class BusinessServiceImpl implements BusinessService {
 		ReluLayer active2 = new ReluLayer();
 		
 		FullyLayer hidden3 = new FullyLayer(20, 2);
+		
+//		DropoutLayer dropout = new DropoutLayer(0.2f);
 
 		SoftmaxWithCrossEntropyLayer hidden4 = new SoftmaxWithCrossEntropyLayer(2);
 		
@@ -92,6 +96,7 @@ public class BusinessServiceImpl implements BusinessService {
 //		netWork.addLayer(ln2);
 		netWork.addLayer(active2);
 		netWork.addLayer(hidden3);
+//		netWork.addLayer(dropout);
 		netWork.addLayer(hidden4);
 
 //		SGDOptimizer optimizer = new SGDOptimizer(netWork, 2000, 0.001d);
@@ -145,6 +150,8 @@ public class BusinessServiceImpl implements BusinessService {
 
 		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adamw);
 		
+		netWork.CUDNN = true;
+		
 		netWork.learnRate = 0.001f;
 		
 		int inputCount = (int) (Math.sqrt(794)+10);
@@ -171,6 +178,8 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		FullyLayer hidden4 = new FullyLayer(inputCount, 10);
 		
+//		DropoutLayer dropout = new DropoutLayer(0.2f);
+		
 		SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
 		netWork.addLayer(inputLayer);
@@ -184,6 +193,7 @@ public class BusinessServiceImpl implements BusinessService {
 		netWork.addLayer(bn3);
 		netWork.addLayer(active3);
 		netWork.addLayer(hidden4);
+//		netWork.addLayer(dropout);
 		netWork.addLayer(softmax);
 		
 //		SGDOptimizer optimizer = new SGDOptimizer(netWork, 20000, 0.001d);
@@ -3127,8 +3137,8 @@ public class BusinessServiceImpl implements BusinessService {
 	    	CUDAModules.initContext();
 	    	
 //			bs.showImage();
-			bs.bpNetwork_iris();
-//			bs.bpNetwork_mnist();
+//			bs.bpNetwork_iris();
+			bs.bpNetwork_mnist();
 //			bs.cnnNetwork_mnist_demo();
 //			bs.cnnNetwork_mnist();
 //			bs.cnnNetwork_cifar10();

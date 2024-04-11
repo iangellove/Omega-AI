@@ -145,7 +145,7 @@ public class AdamWKernel {
 	                Pointer.to(new int[]{net.number}),
 	                Pointer.to(new int[]{net.train_time})
 	            );
-
+			
 			cuLaunchKernel(function,
 		            this.CAFFE_GET_BLOCKS(diffW.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
@@ -212,7 +212,7 @@ public class AdamWKernel {
 			
 	        /**
 	         * 设置入参
-	         * float *diffW, float *weight,float *mw,float *vw,float beta1,float beta2,float learnRate, int n
+	         * float *diffW, float *weight,float *mw,float *vw,float beta1,float beta2,float learnRate, float weight_decay, int n, int batch, int t
 	         */ 
 			kernelParameters = Pointer.to(
 					Pointer.to(diffW.getGpuData()),
@@ -227,7 +227,7 @@ public class AdamWKernel {
 	                Pointer.to(new int[]{net.number}),
 	                Pointer.to(new int[]{net.train_time})
 	            );
-
+			
 			cuLaunchKernel(bn_function,
 		            this.CAFFE_GET_BLOCKS(diffW.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension

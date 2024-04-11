@@ -75,7 +75,7 @@ public class EmbeddingLayer extends Layer{
 	public void initParam() {
 		// TODO Auto-generated method stub
 		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_uniform(this.width * this.oWidth, this.width, this.paramsInit), true);
-		this.diffW = new Tensor(1, 1, width, oWidth, true);
+		this.diffW = this.network.createParamterGrad(1, 1, width, oWidth, true);
 	}
 	
 	@Override

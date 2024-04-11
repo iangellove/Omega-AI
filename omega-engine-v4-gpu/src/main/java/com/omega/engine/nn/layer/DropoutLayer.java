@@ -1,12 +1,18 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.DropoutKernel;
+import com.omega.engine.nn.layer.normalization.BNType;
+import com.omega.engine.nn.layer.normalization.gpu.LNKernel;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
+
+import jcuda.runtime.JCuda;
 
 /**
  * Dropout Layer
@@ -15,7 +21,7 @@ import com.omega.engine.nn.network.RunModel;
  */
 public class DropoutLayer extends Layer {
 	
-	private float probability = 0.5f;
+	private float probability = 0.2f;
 	
 	private Tensor mask;
 	
@@ -72,6 +78,25 @@ public class DropoutLayer extends Layer {
 		this.number = this.network.number;
 		initParam();
 	}
+	
+	public void init(Tensor input) {
+		// TODO Auto-generated method stub
+		if(preLayer == null) {
+			preLayer = this.network.getPreLayer(this.index);
+			this.channel = preLayer.oChannel;
+			this.height = preLayer.oHeight;
+			this.width = preLayer.oWidth;
+			this.oChannel = this.channel;
+			this.oHeight = this.height;
+			this.oWidth = this.width;
+		}
+		
+		if(kernel == null) {
+			kernel = new DropoutKernel(this.probability, this.scale);
+		}
+		this.number = input.number;
+		initParam();
+	}
 
 	@Override
 	public void initParam() {
@@ -82,9 +107,17 @@ public class DropoutLayer extends Layer {
 		 */
 		if(this.network.RUN_MODEL == RunModel.TRAIN) {
 			if(this.mask == null || this.mask.number != this.number) {
-				this.mask = Tensor.createTensor(this.mask, number, channel, height, oWidth, true);
+				this.mask = Tensor.createTensor(this.mask, number, oChannel, oHeight, oWidth, true);
 			}
-			GPUOP.getInstance().cudaRandom(this.mask);
+//			GPUOP.getInstance().cudaRandom(this.mask);
+//			JCuda.cudaDeviceSynchronize();
+//			this.mask.clearGPU();
+			this.mask.uniform(0.0f, 1.0f);
+//			this.mask.showDMByNumber(0);
+		}
+		
+		if(this.output == null || this.number != this.output.number) {
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 
 	}
@@ -92,16 +125,21 @@ public class DropoutLayer extends Layer {
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-
+		if(this.diff == null || this.number != this.diff.number) {
+			this.diff = Tensor.createTensor(this.diff, number, channel, height, width, true);
+		}
 	}
 
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+
 		if(this.network.RUN_MODEL == RunModel.TRAIN) {
-			kernel.forward(input, mask);
+//			input.showDMByNumber(0);
+			kernel.dropout(input, output, mask);
+//			output.showDMByNumber(0);
 		}
-		this.output = input;
+		
 	}
 
 	@Override
@@ -113,10 +151,11 @@ public class DropoutLayer extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+
 		if(this.network.RUN_MODEL == RunModel.TRAIN) {
-			kernel.backward(delta, mask);
+			kernel.dropout(delta, diff, mask);
 		}
-		this.diff = delta;
+
 	}
 
 	@Override
@@ -187,10 +226,11 @@ public class DropoutLayer extends Layer {
 	@Override
 	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
+//		input.showDMByNumber(0);
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 设置输入
 		 */
@@ -199,6 +239,7 @@ public class DropoutLayer extends Layer {
 		 * 计算输出
 		 */
 		this.output();
+//		getOutput().showDMByNumber(0);
 	}
 
 	@Override
@@ -223,5 +264,44 @@ public class DropoutLayer extends Layer {
 		// TODO Auto-generated method stub
 		
 	}
+	
+	 public static void main(String[] args) {
+	    	
+	    	int N = 512;
+	    	int W = 2048;
+	    	
+	    	float[] data = RandomUtils.order(N * W, 0.1f, 0.1f);
+	    	
+	    	Tensor input = new Tensor(N, 1, 1, W, data, true);
+	    	
+	    	Tensor mask = new Tensor(N, 1, 1, W, true);
+			
+	    	Tensor output = new Tensor(N, 1, 1, W, true);
+	    	
+	    	float[] diff_data = RandomUtils.order(N * W, 0.2f, 0.3f);
+	    	
+	    	Tensor delta = new Tensor(N, 1, 1, W, diff_data, true);
+	    	
+	    	Tensor diff = new Tensor(N, 1, 1, W, true);
 
+	    	DropoutKernel kernel = new DropoutKernel(0.2f, 1.0f / (1.0f - 0.2f));
+
+	    	for(int i = 0;i<10;i++) {
+	    		
+	    		GPUOP.getInstance().cudaRandom(mask);
+	    		
+	        	System.out.println("output:");
+	        	kernel.dropout(input, output, mask);
+	        	
+	        	output.showDMByNumber(0);
+
+	        	System.out.println("diff:");
+	        	kernel.dropout(delta, diff, mask);
+	        	
+	        	diff.showDMByNumber(0);
+
+	        	System.out.println("========================");
+	        	
+	    	}
+	 }
 }

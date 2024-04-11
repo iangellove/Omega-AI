@@ -126,7 +126,6 @@ public class CNTokenizer extends BaseTokenizer{
 		return testInput;
 	}
 	
-	
 	public void loadData(int[] indexs, Tensor input, Tensor label) {
 		// TODO Auto-generated method stub
 		

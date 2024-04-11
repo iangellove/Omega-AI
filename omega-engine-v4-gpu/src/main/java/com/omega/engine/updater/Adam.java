@@ -61,13 +61,18 @@ public class Adam extends Updater {
 		 * init
 		 */
 		if(kernel == null) {
-			kernel = new AdamKernel(layer.gamma.dataLength, layer.beta.dataLength);
+			if(layer.beta != null){
+				kernel = new AdamKernel(layer.gamma.dataLength, layer.beta.dataLength);
+			}else {
+				kernel = new AdamKernel(layer.gamma.dataLength);
+			}
 		}
 
 		kernel.updateGama(layer.diffGamma, layer.gamma, layer.network, layer.learnRate);
 		
-		kernel.updateBeta(layer.diffBeta, layer.beta, layer.network, layer.learnRate);
-
+		if(layer.beta != null){
+			kernel.updateBeta(layer.diffBeta, layer.beta, layer.network, layer.learnRate);
+		}
 //		
 //		System.out.println("==========diffBeta===========");
 //		diffW.showDM();

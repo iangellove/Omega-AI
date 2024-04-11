@@ -1,68 +1,49 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.RandomUtils;
-import com.omega.engine.ad.op.TensorOP;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.GeluLayer;
-import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
- * Transformer Decoder Layer
+ * PoswiseFeedForward Layer
  * @author Administrator
  *
  */
-public class TransformerBlock extends Layer{
-	
-	private int time;
-	
-	private int headNum = 8;
+public class MLPLayer extends Layer{
 	
 	private int embedDim = 0;
+	
+	private int nChannel = 1;
 	
 	private boolean bias = false;
 	
 	private boolean dropout = false;
 	
-	private CausalSelfAttentionLayer attn;
-	private LNLayer ln1;
+	private FullyLayer linear1;
+	private GeluLayer active;
+	private FullyLayer linear2;
+
+	private DropoutLayer dropoutLayer;
 	
-	/**
-	 * mlp
-	 */
-	private MLPLayer mlp;
-	private LNLayer ln2;
-	
-	private BaseKernel baseKernel;
-	
-	private Tensor tmp1;
-	
-	private Tensor tmp2;
-	
-	public TransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout) {
-		this.headNum = headNum;
-		this.time = time;
+	public MLPLayer(int embedDim,int nChannel,boolean bias) {
 		this.embedDim = embedDim;
+		this.nChannel = nChannel;
 		this.bias = bias;
-		this.dropout = dropout;
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
-	public TransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout,Network network) {
-		this.headNum = headNum;
+	public MLPLayer(int embedDim,int nChannel,boolean bias,Network network) {
 		this.network = network;
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
 		}
-		this.time = time;
 		this.embedDim = embedDim;
+		this.nChannel = nChannel;
 		this.bias = bias;
-		this.dropout = dropout;
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
@@ -70,36 +51,29 @@ public class TransformerBlock extends Layer{
 	}
 	
 	public void initLayers() {
+		
+		this.linear1 = new FullyLayer(embedDim, nChannel, bias, network);
 
-		this.ln1 = new LNLayer(this, bias);
+		this.active = new GeluLayer(linear1);
 		
-		this.attn = new CausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
-
-		this.ln2 = new LNLayer(attn, bias);
+		this.linear2 = new FullyLayer(nChannel, embedDim, bias, network);
 		
-		this.mlp = new MLPLayer(embedDim, embedDim * 4, bias, network);
-		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
+		if(dropout) {
+			dropoutLayer = new DropoutLayer(0.2f, linear2);
 		}
-
+		
 	}
 	
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
-		if(this.tmp1 == null || this.tmp1.number != this.number) {
-//			System.out.println(number);
-			this.tmp1 = Tensor.createTensor(this.tmp1, number, 1, 1, embedDim, true);
-			this.tmp2 = Tensor.createTensor(this.tmp2, number, 1, 1, embedDim, true);
-		}
 	}
 	
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -112,38 +86,19 @@ public class TransformerBlock extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		ln1.forward(input);
+		linear1.forward(input);
 		
-		attn.forward(ln1.getOutput());
-		
-		TensorOP.add(attn.getOutput(), input, tmp1);
-		
-		ln2.forward(tmp1);
-		
-		mlp.forward(ln2.getOutput());
-		
-		TensorOP.add(mlp.getOutput(), tmp1, tmp2);
-		
-		this.output = tmp2;
-		
-	}
-	
-	public void output(Tensor mask) {
-		// TODO Auto-generated method stub
+		active.forward(linear1.getOutput());
 
-		ln1.forward(input);
+		linear2.forward(active.getOutput());
 		
-		attn.forward(ln1.getOutput(), mask);
-		
-		TensorOP.add(attn.getOutput(), input, tmp1);
-		
-		ln2.forward(tmp1);
-		
-		mlp.forward(ln2.getOutput());
-		
-		TensorOP.add(mlp.getOutput(), tmp1, tmp2);
-		
-		this.output = tmp2;
+		if(dropout) {
+			dropoutLayer.forward(linear2.getOutput());
+			this.output = dropoutLayer.getOutput();
+		}else {
+			this.output = linear2.getOutput();
+		}
+
 	}
 	
 	@Override
@@ -155,20 +110,21 @@ public class TransformerBlock extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+		if(this.dropout) {
+			this.dropoutLayer.back(delta);
+			this.linear2.back(this.dropoutLayer.diff);
+		}else {
+			this.linear2.back(this.delta);
+		}
+
+		active.back(this.linear2.diff);
 		
-		mlp.back(delta);
+		linear1.back(active.diff);
 		
-		ln2.back(mlp.diff);
+		this.diff = this.linear1.diff;
 		
-		TensorOP.add(ln2.diff, delta, ln2.diff);
-		
-		attn.back(ln2.diff);
-		
-		ln1.back(attn.diff);
-		
-		TensorOP.add(ln1.diff, ln2.diff, tmp2);
-		
-		this.diff = tmp2;
+//		System.out.println("mlp diff:");
+//		diff.showDMByNumber(0);
 		
 	}
 
@@ -227,23 +183,6 @@ public class TransformerBlock extends Layer{
 		
 	}
 	
-	public void forward(Tensor input,Tensor mask) {
-		// TODO Auto-generated method stub
-		/**
-		 * 设置输入
-		 */
-		this.setInput(input);
-		/**
-		 * 参数初始化
-		 */
-		this.init();
-		/**
-		 * 计算输出
-		 */
-		this.output(mask);
-		
-	}
-	
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
@@ -267,10 +206,8 @@ public class TransformerBlock extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		ln1.update();
-		attn.update();
-		ln2.update();
-		mlp.update();
+		linear1.update();
+		linear2.update();
 	}
 
 	@Override
@@ -282,7 +219,7 @@ public class TransformerBlock extends Layer{
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.transformer_decoder;
+		return LayerType.mlp;
 	}
 
 	@Override
@@ -303,4 +240,8 @@ public class TransformerBlock extends Layer{
 		
 	}
 	
+	public static void main(String[] args) {
+		
+	}
+
 }

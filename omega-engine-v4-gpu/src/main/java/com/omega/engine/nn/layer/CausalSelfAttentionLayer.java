@@ -4,6 +4,7 @@ import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
@@ -57,6 +58,8 @@ public class CausalSelfAttentionLayer extends Layer{
 	private Tensor attn_outputs;
 	
 	private Tensor ot;
+	
+	private Tensor oi;
 	
 	private SoftmaxKernel softmax;
 	
@@ -172,6 +175,7 @@ public class CausalSelfAttentionLayer extends Layer{
 			this.attn_outputs = Tensor.createTensor(this.attn_outputs, batchSize, headNum, time, dk, true);
 			// [batch_size, len_q, n_heads * dim_v]
 			this.ot = Tensor.createTensor(this.ot, batchSize, time, headNum, dk, true);
+			this.oi = Tensor.createTensor(this.oi, batchSize, time, headNum, dk, true);
 		}else {
 			resize();
 		}
@@ -186,6 +190,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		this.weights.viewOrg();
 		this.attn_outputs.viewOrg();
 		this.ot.viewOrg();
+		this.oi.viewOrg();
 		if(this.qLinerLayer.getOutput() != null) {
 			this.qLinerLayer.getOutput().viewOrg();
 			this.kLinerLayer.getOutput().viewOrg();
@@ -265,7 +270,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		
 		if(dropout) {
 			this.dropoutLayer.forward(this.oLinerLayer.getOutput());
-			this.output = this.dropoutLayer.getOutput();
+			this.output = this.oLinerLayer.getOutput();
 		}else {
 			this.output = this.oLinerLayer.getOutput();
 		}
@@ -323,6 +328,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		
 		// qt_diff = delta / sqrt(dk) * kt
 		diffQ.view(query.shape());
+
 		GPUOP.getInstance().bmm(scores.getGpuData(), key.getGpuData(), diffQ.getGpuData(), scores.number * scores.channel, scores.height, key.width, scores.width,
 				CUBLAS_OP_N, CUBLAS_OP_N, d_k, 0.0f);
 //		
@@ -370,15 +376,18 @@ public class CausalSelfAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		if(dropout) {
+//			delta.showDMByNumber(0);
 			this.dropoutLayer.back(delta);
-			this.oLinerLayer.back(dropoutLayer.diff, ot);
+//			dropoutLayer.diff.showDMByNumber(0);
+//			System.out.println(same(delta, dropoutLayer.diff));
+			this.oLinerLayer.back(dropoutLayer.diff, oi);
 		}else {
-			this.oLinerLayer.back(delta, ot);
+			this.oLinerLayer.back(delta, oi);
 		}
 
-		ot.view(batchSize, time, headNum, dk);
+		oi.view(batchSize, time, headNum, dk);
 		
-		TensorOP.permute(ot, attn_outputs, new int[] {0, 2, 1, 3});
+		TensorOP.permute(oi, attn_outputs, new int[] {0, 2, 1, 3});
 
 		int[] qo_shape = this.qLinerLayer.getOutput().shape();
 		int[] ko_shape = this.kLinerLayer.getOutput().shape();
@@ -606,6 +615,18 @@ public class CausalSelfAttentionLayer extends Layer{
 			delta.copyData(tmp);
 		}
 		
+	}
+	
+	public static boolean same(Tensor a,Tensor b) {
+		float[] ad = a.syncHost();
+		float[] bd = b.syncHost();
+		for(int i=0;i<ad.length;i++) {
+			if(ad[i] != bd[i]) {
+				System.out.println(ad[i]+":"+bd[i] + "["+i+"]");
+				return false;
+			}
+		}
+		return true;
 	}
 
 }

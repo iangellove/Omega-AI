@@ -86,8 +86,13 @@ public class BNLayer extends NormalizationLayer {
 		if(this.gamma == null || this.beta == null) {
 			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
 			this.beta = new Tensor(1, 1, 1, meanNum, true);
-			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
-			this.diffBeta = new Tensor(1, 1, 1, meanNum, true);
+			if(network!=null) {
+				this.diffGamma = this.network.createParamterGrad(1, 1, 1, meanNum, true);
+				this.diffBeta = this.network.createParamterGrad(1, 1, 1, meanNum, true);
+			}else {
+				this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+				this.diffBeta = new Tensor(1, 1, 1, meanNum, true);
+			}
 			this.runingMean = new Tensor(1, 1, 1, this.meanNum, true);
 			this.runingVar = new Tensor(1, 1, 1, this.meanNum, true);
 		}

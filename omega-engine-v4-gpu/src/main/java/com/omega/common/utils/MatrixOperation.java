@@ -2622,6 +2622,15 @@ public class MatrixOperation {
 		return mean;
 	}
 	
+	public static float norm(float[] x) {
+		
+		x = MatrixOperation.pow(x, 2.0f);
+		
+		float sum = MatrixOperation.sum(x);
+		
+		return (float) Math.sqrt(sum);
+	}
+	
 	/**
 	 * mean
 	 * @param x

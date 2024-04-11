@@ -359,6 +359,16 @@ public class TensorOP {
 		
 	}
 	
+	public static void sqrt(Tensor a,Tensor c) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().sqrt_gpu(a, c);
+		}else {
+			c.data = MatrixOperation.sqrt(a.data);
+		}
+		
+	}
+	
 	public static void sin(Tensor a,Tensor c) {
 		
 		if(c.isHasGPU()) {

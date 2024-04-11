@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixOperation;
+import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.model.NetworkInit;
@@ -26,6 +28,8 @@ public abstract class Network {
 	private int threadNum = 8;
 	
 	public NetworkType networkType;
+	
+	public List<Tensor> paramters = new ArrayList<Tensor>();
 	
 	public UpdaterType updater = UpdaterType.none;
 	
@@ -101,6 +105,16 @@ public abstract class Network {
 	public abstract NetworkType getNetworkType();
 	
 	public abstract void clearGrad();
+	
+	public Tensor createParamterGrad(int number,int channel,int height,int width,boolean hasGPU) {
+		Tensor pGrad = new Tensor(number, channel, height, width, hasGPU);
+		this.addPamamter(pGrad);
+		return pGrad;
+	}
+	
+	public void addPamamter(Tensor pGrad) {
+		this.paramters.add(pGrad);
+	}
 	
 	public Tensor getDiff() {
 //		System.out.println(this.getNextLayer(0).getLayerType().toString());
@@ -237,6 +251,27 @@ public abstract class Network {
 
 	public void setThreadNum(int threadNum) {
 		this.threadNum = threadNum;
+	}
+	
+	public void clipGradNorm(float clip) {
+		float total_norm = 0.0f;
+		float[] norms = new float[paramters.size()];
+		System.out.println(paramters.size());
+		for(int i = 0;i<paramters.size();i++) {
+			Tensor pGrad = paramters.get(i);
+			norms[i] = pGrad.norm();
+//			total_norm += Math.pow(pGrad.norm(), 2.0d);
+		}
+		total_norm = MatrixOperation.norm(norms);
+		total_norm = (float) Math.pow(total_norm, (1.0d / 2.0d));
+		float clip_coef = clip / (total_norm + 1e-6f);
+		System.out.println("clip_coef:"+clip_coef);
+		if(clip_coef < 1) {
+			for(Tensor pGrad:paramters) {
+				TensorOP.mul(pGrad, clip_coef, pGrad);
+//				pGrad.showDM();
+			}
+		}
 	}
 	
 }

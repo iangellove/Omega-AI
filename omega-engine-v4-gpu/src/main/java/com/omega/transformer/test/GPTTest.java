@@ -10,6 +10,7 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.network.GPT;
 import com.omega.engine.nn.network.GPT2;
+import com.omega.engine.nn.network.NanoGPT;
 import com.omega.engine.nn.network.RNN;
 import com.omega.engine.optimizer.EDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
@@ -166,26 +167,23 @@ public class GPTTest {
 			
 			int max_len = 128;
 			
-			int embedDim = 512;
+			int embedDim = 384;
 			
-			int head_num = 4;
+			int head_num = 6;
 			
-			int decoderNum = 2;
+			int decoderNum = 4;
 			
 			String trainPath = "H:\\transformer_dataset\\gpt\\chatdata\\train-format1w.txt";
 
 			CNTokenizer trainData = new CNTokenizer(trainPath, max_len, batchSize);
 			
-			GPT2 network = new GPT2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout);
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
 			
-			network.CUDNN = true;
+			network.learnRate = 0.0001f;
 			
-			network.learnRate = 0.00025f;
-			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 500, 0.0001f, LearnRateUpdate.SMART_HALF, false);
-			optimizer.lr_step = new int[] {300, 600};
-			optimizer.trainGPT2(trainData);
-
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 20, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			optimizer.lr_step = new int[] {200, 300, 500, 600, 700, 800, 900};
+			optimizer.trainNanoGPT(trainData);
 
 			Tensor positions = ENTokenizer.getPositions(1, max_len);
 			
@@ -201,10 +199,20 @@ public class GPTTest {
 				input_txt = input_txt.toLowerCase() + " ";
 				System.out.println(input_txt);
 				Tensor input = trainData.loadByTxt(input_txt);
-				Tensor output = network.forward(input, positions);
-				output.syncHost();
-				String txts = output2TXT(output, trainData);
-				System.out.println(txts);
+				for(int t = 0;t<max_len;t++) {
+					Tensor output = network.forward(input, positions);
+					output.syncHost();
+					String txts = output2TXT(output, trainData);
+					String nextWord = txts.substring(input_txt.length() - 1, input_txt.length());
+					System.out.println(nextWord);
+					input_txt += txts.substring(input_txt.length() - 1, input_txt.length());
+					input = trainData.loadByTxt(input_txt);
+					if(nextWord.equals("<sep>") || nextWord.equals("<eos>")) {
+						break;
+					}
+				}
+				
+				System.out.println(input_txt);
 			}
 			scanner.close();
 			
@@ -276,11 +284,11 @@ public class GPTTest {
 			
 			int batchSize = 12;
 			
-			int max_len = 256;
+			int max_len = 128;
 			
 			int embedDim = 512;
 			
-			int headNum = 4;
+			int headNum = 6;
 			
 			int decoderNUm = 4;
 			
@@ -288,7 +296,7 @@ public class GPTTest {
 
 			ENTokenizer trainData = new ENTokenizer(trainPath, max_len, batchSize);
 			
-			GPT2 network = new GPT2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, decoderNUm, headNum, trainData.vocab_size, max_len, embedDim, bias, dropout);
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, decoderNUm, headNum, trainData.vocab_size, max_len, embedDim, bias, dropout);
 			
 			network.CUDNN = true;
 			
@@ -296,8 +304,59 @@ public class GPTTest {
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 300, 0.001f, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {20,50,80};
-			optimizer.trainGPT2(trainData);
+			optimizer.trainNanoGPT(trainData);
 			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void nano_gpt_lang() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			int batchSize = 10;
+			
+			int max_len = 128;
+			
+			int embedDim = 512;
+			
+			int headNum = 6;
+			
+			int decoderNum = 4;
+			
+			String trainPath = "H:\\transformer_dataset\\gpt\\lang\\lang.txt";
+
+			ENTokenizer trainData = new ENTokenizer(trainPath, max_len, batchSize);
+
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, headNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout);
+			
+			network.CUDNN = true;
+			
+			network.learnRate = 0.0001f;
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 300, 0.001f, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {20,50,80};
+			optimizer.trainNanoGPT(trainData);
+
+//			Scanner scanner = new Scanner(System.in);
+//			while (true) {
+//				System.out.println("请输入英文:");
+//				String input_txt = scanner.nextLine();
+//				if(input_txt.equals("exit")){
+//					break;
+//				}
+//				input_txt = input_txt.toLowerCase();
+//				System.out.println(input_txt);
+//				optimizer.predictRNN(trainData, input_txt);
+//			}
+//			scanner.close();
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -358,6 +417,8 @@ public class GPTTest {
 			ch_chat_gpt2();
 			
 //			gpt2_gan();
+			
+//			nano_gpt_lang();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

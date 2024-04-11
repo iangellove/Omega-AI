@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 
 public class ENTokenizer {
 	

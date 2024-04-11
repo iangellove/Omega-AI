@@ -8,6 +8,7 @@ import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.Graph;
 import com.omega.engine.ad.op.OPType;
+import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.ad.op.gpu.OPKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 
@@ -54,6 +55,24 @@ public class Tensor implements Serializable{
 	private Graph g;
 	
 	private int[] orgShape;
+	
+	private Tensor tmp;
+	
+	private Tensor tmp_once;
+	
+	public Tensor getTmp() {
+		if(tmp == null) {
+			tmp = new Tensor(number, channel, height, width, hasGPU);
+		}
+		return tmp;
+	}
+	
+	public Tensor getTmpOnce() {
+		if(tmp_once == null) {
+			tmp_once = new Tensor(1, 1, 1, 1, true);
+		}
+		return tmp_once;
+	}
 	
 	public String getId() {
 		if(this.id == null) {
@@ -646,6 +665,15 @@ public class Tensor implements Serializable{
 		return g.OP(OPType.pow, this, 2.0f);
 	}
 	
+	public float norm() {
+		getTmpOnce().valueGPU(0);
+		TensorOP.pow(this, 2, getTmp());
+    	TensorOP.sum(getTmp(), getTmpOnce(), 0);
+    	TensorOP.sqrt(getTmpOnce(), getTmpOnce());
+//    	System.out.println("sqrt:"+getTmpOnce().syncHost()[0]);
+    	return getTmpOnce().syncHost()[0];
+	}
+	
 	public Tensor pow(float scalar) {
 		return g.OP(OPType.pow, this, scalar);
 	}
@@ -763,6 +791,15 @@ public class Tensor implements Serializable{
 
 	public void setG(Graph g) {
 		this.g = g;
+	}
+	
+	public void uniform(float min,float max) {
+		for(int i = 0;i<this.dataLength;i++) {
+			data[i] = RandomUtils.uniformFloat(min, max);
+		}
+		if(isHasGPU()) {
+			hostToDevice();
+		}
 	}
 	
 //	public void backward() {

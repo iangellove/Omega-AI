@@ -420,13 +420,15 @@ public abstract class Optimizer {
 		float trueCount = 0;
 		
 		Tensor sample = new Tensor(1, testData.channel, testData.height, testData.width, true);
-
+		
+		this.network.RUN_MODEL = RunModel.TEST;
+		
 		for(int n = 0;n<testData.number;n++) {
 			
 //			float[] onceError = MatrixOperation.subtraction(output, testData.dataLabel[i]);
 			
 			testData.getOnceData(n, sample);
-
+			
 			Tensor output = this.network.predict(sample);
 			
 			output.syncHost();

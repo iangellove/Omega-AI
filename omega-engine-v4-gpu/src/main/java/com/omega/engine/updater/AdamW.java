@@ -72,26 +72,24 @@ public class AdamW extends Updater {
 		 * init
 		 */
 		if(kernel == null) {
-			kernel = new AdamWKernel(layer.gamma.dataLength, layer.beta.dataLength, weight_decay);
+			if(layer.beta != null) {
+				kernel = new AdamWKernel(layer.gamma.dataLength, layer.beta.dataLength, weight_decay);
+			}else {
+				kernel = new AdamWKernel(layer.gamma.dataLength, 0, weight_decay);
+			}
+			
 		}
 		
 		kernel.setParams(params);
 
 		kernel.updateGama(layer.diffGamma, layer.gamma, layer.network, layer.learnRate);
-		
-		kernel.updateBeta(layer.diffBeta, layer.beta, layer.network, layer.learnRate);
-
 		layer.diffGamma.clearGPU();
-		layer.diffBeta.clearGPU();
 		
-//		
-//		System.out.println("==========diffBeta===========");
-//		diffW.showDM();
-//		weight.showDM();
-//		layer.diffBeta.showDM();
-//		layer.beta.showDM();
-//		System.out.println("============beta=========");
-//		
+		if(layer.beta != null) {
+			kernel.updateBeta(layer.diffBeta, layer.beta, layer.network, layer.learnRate);
+			layer.diffBeta.clearGPU();
+		}
+
 	}
 
 	@Override

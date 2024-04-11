@@ -16,6 +16,7 @@ import static jcuda.runtime.JCuda.cudaMalloc;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.lib.LibPaths;
@@ -40,6 +41,7 @@ import jcuda.jcublas.cublasStatus;
 import jcuda.jcurand.JCurand;
 import jcuda.jcurand.curandGenerator;
 import jcuda.jcurand.curandRngType;
+import jcuda.jcurand.curandStatus;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaMemcpyKind;
 import jcuda.cudaDataType;
@@ -49,6 +51,8 @@ public class GPUOP {
 	private static GPUOP o;
 	
 	private cublasHandle handle;
+	
+	private curandGenerator generator;
 	
 	public GPUOP() {
 		// TODO Auto-generated constructor stub
@@ -62,6 +66,14 @@ public class GPUOP {
 	
 	public void clear() {
 		cublasDestroy(handle);
+	}
+	
+	public curandGenerator getGenerator() {
+		if(generator == null) {
+			generator = new curandGenerator();
+			checkCURANDResult(JCurand.curandCreateGenerator(generator, curandRngType.CURAND_RNG_PSEUDO_DEFAULT));
+		}
+		return generator;
 	}
 	
 	public void conv(float[] px,float[] ik,float[] out,int n,int c,int h,int w,int ko,int kh,int kw,int s) {
@@ -564,14 +576,9 @@ public class GPUOP {
     public void cudaRandom(Tensor x) {
     	
     	try {
-
-        	curandGenerator generator = new curandGenerator();
-    		 
-    		JCurand.curandCreateGenerator(generator, curandRngType.CURAND_RNG_PSEUDO_DEFAULT);
-    		JCurand.curandSetPseudoRandomGeneratorSeed(generator, 1337);
-    		 
-    		JCurand.curandGenerateUniform(generator, x.getGpuData(), x.dataLength);
-    		
+    		checkCURANDResult(JCurand.curandSetPseudoRandomGeneratorSeed(getGenerator(), RandomUtils.rand()));
+    		checkCURANDResult(JCurand.curandGenerateUniform(getGenerator(), x.getGpuData(), x.getDataLength()));
+//    		System.out.println("in");
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -779,6 +786,16 @@ public class GPUOP {
         if (result != cublasStatus.CUBLAS_STATUS_SUCCESS)
         {	
             System.err.println("cuda error code:"+result+"["+cublasStatus.stringFor(result)+"]");
+            throw new CudaException(cublasStatus.stringFor(result));
+        }
+        return result;
+    }
+    
+    private static int checkCURANDResult(int result)
+    {	
+        if (result != curandStatus.CURAND_STATUS_SUCCESS)
+        {	
+            System.err.println("curand error code:"+result+"["+curandStatus.stringFor(result)+"]");
             throw new CudaException(cublasStatus.stringFor(result));
         }
         return result;
