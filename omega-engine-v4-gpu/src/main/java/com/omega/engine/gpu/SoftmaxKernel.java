@@ -105,7 +105,6 @@ public class SoftmaxKernel extends BaseKernel{
 	public void softmax(Tensor input,Tensor output) {
 		
 		if(kernelParameters == null || this.N != output.number) {
-			System.out.println("in---init-softmax:"+N+"-"+output.number);
 			/**
 			 * float *input, float *output, int batch, int n, float temp
 			 */

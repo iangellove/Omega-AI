@@ -111,13 +111,15 @@ public class TransformerBlock extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		
+//		System.out.println("in1");
+//		input.showShape();
 		ln1.forward(input);
-		
+//		ln1.getOutput().showShape();
+//		System.out.println("in2");
 		attn.forward(ln1.getOutput());
-		
+//		System.out.println("in3");
 		TensorOP.add(attn.getOutput(), input, tmp1);
-		
+//		System.out.println("in4");
 		ln2.forward(tmp1);
 		
 		mlp.forward(ln2.getOutput());
@@ -126,6 +128,7 @@ public class TransformerBlock extends Layer{
 		
 		this.output = tmp2;
 		
+//		this.output.showShape();
 	}
 	
 	public void output(Tensor mask) {

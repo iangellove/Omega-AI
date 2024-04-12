@@ -163,7 +163,7 @@ public class TransformerNanoDecoder extends Layer{
 		}
 		
 		Tensor decoderOutput = out1;
-		
+//		out1.showShape();
 		for(int i = 0;i<n_layers;i++) {
 			decoderLayers.get(i).forward(decoderOutput);
 			decoderOutput = decoderLayers.get(i).getOutput();

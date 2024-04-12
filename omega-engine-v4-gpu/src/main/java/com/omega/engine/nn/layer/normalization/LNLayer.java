@@ -77,22 +77,97 @@ public class LNLayer extends NormalizationLayer {
 		}
 
 		if(this.bnType == null) {
-			this.channel = preLayer.oChannel;
-			this.height = preLayer.oHeight;
-			this.width = preLayer.oWidth;
-			this.oChannel = this.channel;
-			this.oHeight = this.height;
-			this.oWidth = this.width;
-			if(this.preLayer.getLayerType() == LayerType.conv) {
-				this.setBnType(BNType.conv_bn);
-				this.meanNum = this.height * this.width;
-			}else if(this.preLayer.getLayerType() == LayerType.full){
+			if(preLayer != null) {
+				this.channel = preLayer.oChannel;
+				this.height = preLayer.oHeight;
+				this.width = preLayer.oWidth;
+				this.oChannel = this.channel;
+				this.oHeight = this.height;
+				this.oWidth = this.width;
+				if(this.preLayer.getLayerType() == LayerType.conv) {
+					this.setBnType(BNType.conv_bn);
+					this.meanNum = this.height * this.width;
+				}else if(this.preLayer.getLayerType() == LayerType.full){
+					this.setBnType(BNType.fully_bn);
+					this.meanNum = this.channel * this.height * this.width;
+				}else if(this.preLayer.getLayerType() == LayerType.conv_transpose) {
+					this.setBnType(BNType.conv_bn);
+					this.meanNum = this.height * this.width;
+				}else {
+					this.setBnType(BNType.fully_bn);
+					this.meanNum = this.channel * this.height * this.width;
+				}
+			}else {
 				this.setBnType(BNType.fully_bn);
 				this.meanNum = this.channel * this.height * this.width;
-			}else if(this.preLayer.getLayerType() == LayerType.conv_transpose) {
-				this.setBnType(BNType.conv_bn);
-				this.meanNum = this.height * this.width;
+			}
+			
+		}
+		
+		if(this.gamma == null) {
+			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
+			if(network != null) {
+				this.diffGamma = this.network.createParamterGrad(1, 1, 1, meanNum, true);
 			}else {
+				this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+			}
+		}
+		
+		if(this.beta == null && hasBias) {
+			this.beta = new Tensor(1, 1, 1, meanNum, true);
+			if(network != null) {
+				this.diffBeta = this.network.createParamterGrad(1, 1, 1, meanNum, true);
+			}else {
+				this.diffBeta = new Tensor(1, 1, 1, meanNum, true);
+			}
+		}
+
+		if(this.output == null || this.number != this.output.number) {
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+		}
+		
+		if(kernel == null) {
+			kernel = new LNKernel(width, bnType);
+		}
+		
+	}
+	
+	public void init(Tensor input) {
+
+		this.number = input.number;
+		
+		if(preLayer == null) {
+			preLayer = this.network.getPreLayer(this.index);
+		}
+
+		if(this.bnType == null) {
+			if(preLayer != null) {
+				this.channel = preLayer.oChannel;
+				this.height = preLayer.oHeight;
+				this.width = preLayer.oWidth;
+				this.oChannel = this.channel;
+				this.oHeight = this.height;
+				this.oWidth = this.width;
+				if(this.preLayer.getLayerType() == LayerType.conv) {
+					this.setBnType(BNType.conv_bn);
+					this.meanNum = this.height * this.width;
+				}else if(this.preLayer.getLayerType() == LayerType.full){
+					this.setBnType(BNType.fully_bn);
+					this.meanNum = this.channel * this.height * this.width;
+				}else if(this.preLayer.getLayerType() == LayerType.conv_transpose) {
+					this.setBnType(BNType.conv_bn);
+					this.meanNum = this.height * this.width;
+				}else {
+					this.setBnType(BNType.fully_bn);
+					this.meanNum = this.channel * this.height * this.width;
+				}
+			}else {
+				this.channel = input.channel;
+				this.height = input.height;
+				this.width = input.width;
+				this.oChannel = this.channel;
+				this.oHeight = this.height;
+				this.oWidth = this.width;
 				this.setBnType(BNType.fully_bn);
 				this.meanNum = this.channel * this.height * this.width;
 			}
@@ -292,7 +367,7 @@ public class LNLayer extends NormalizationLayer {
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 
 		/**
 		 * 设置输入

@@ -182,6 +182,32 @@ public class CausalSelfAttentionLayer extends Layer{
 
 	}
 	
+	public void init(Tensor input) {
+		// TODO Auto-generated method stub
+		this.number = input.number;
+		this.dk = embedDim / headNum;
+		this.batchSize = number / time;
+
+		if(this.scores == null || this.scores.number != this.batchSize) {
+			// [batch_size，time，head_num，d_k]
+			this.qt = Tensor.createTensor(this.qt, batchSize, headNum, time, dk, true);
+			this.kt = Tensor.createTensor(this.kt, batchSize, headNum, time, dk, true);
+			this.vt = Tensor.createTensor(this.vt, batchSize, headNum, time, dk, true);
+			// [batch_size，n_heads，len_q，len_k]
+			this.scores = Tensor.createTensor(this.scores, batchSize, headNum, time, time, true);
+			// [batch_size，n_heads，len_q，len_k]
+			this.weights = Tensor.createTensor(this.weights, batchSize, headNum, time, time, true);
+			// [batch_size, n_heads, len_q, dim_v]
+			this.attn_outputs = Tensor.createTensor(this.attn_outputs, batchSize, headNum, time, dk, true);
+			// [batch_size, len_q, n_heads * dim_v]
+			this.ot = Tensor.createTensor(this.ot, batchSize, time, headNum, dk, true);
+			this.oi = Tensor.createTensor(this.oi, batchSize, time, headNum, dk, true);
+		}else {
+			resize();
+		}
+
+	}
+	
 	public void resize() {
 		this.qt.viewOrg();
 		this.kt.viewOrg();
@@ -223,7 +249,8 @@ public class CausalSelfAttentionLayer extends Layer{
 		Tensor query = this.qLinerLayer.getOutput().view(batchSize, time, headNum, dk);
 		Tensor key = this.kLinerLayer.getOutput().view(batchSize, time, headNum, dk);
 		Tensor value = this.vLinerLayer.getOutput().view(batchSize, time, headNum, dk);
-		
+//		query.showShape();
+//		qt.showShape();
 		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
@@ -238,7 +265,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		
 		if(dropout) {
 			this.dropoutLayer.forward(this.oLinerLayer.getOutput());
-			this.output = this.dropoutLayer.getOutput();
+			this.output = this.oLinerLayer.getOutput();
 		}else {
 			this.output = this.oLinerLayer.getOutput();
 		}
@@ -291,7 +318,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		if(mask != null) {
 			softmax.softmaxMask(scores, mask, weights, -1e9f);
 		}else {
-			weights.showShape();
+//			weights.showShape();
 			softmax.softmax(scores, weights);
 		}
 //		System.out.println("weights.showDM():");
@@ -459,7 +486,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 设置输入
 		 */
@@ -477,7 +504,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 设置输入
 		 */

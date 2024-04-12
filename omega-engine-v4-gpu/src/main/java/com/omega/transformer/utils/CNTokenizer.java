@@ -31,6 +31,20 @@ public class CNTokenizer extends BaseTokenizer{
 	
 	private final String[] specials = new String[] {"<pad>","<sos>","<eos>","<sep>"};
 	
+	public Map<String,String> specials_dictionary = new HashMap<String, String>(){{
+	    put("<pad>", "#");
+	    put("<sos>", "@");
+	    put("<eos>", "-");
+	    put("<sep>", " ");
+	}};
+	
+	public Map<String,String> sd = new HashMap<String, String>(){{
+	    put("#", "<pad>");
+	    put("@", "<sos>");
+	    put("-", "<eos>");
+	    put(" ", "<sep>");
+	}};
+	
 	public int max_len = 256;
 	
 	public int vocab_size;
@@ -120,9 +134,7 @@ public class CNTokenizer extends BaseTokenizer{
 		for(int t = 0;t<max_len;t++) {
 			formatOnce(t, onceToken, testInput);
 		}
-		
 		testInput.hostToDevice();
-		
 		return testInput;
 	}
 	
@@ -149,25 +161,31 @@ public class CNTokenizer extends BaseTokenizer{
 	}
 	
 	public void formatOnce(int t,String[] onceToken,Tensor input) {
-		
 		if(t == 0){
 			String curr = onceToken[t];
+			if(sd.get(curr) != null) {
+				curr = sd.get(curr);
+			}
 			input.data[t * vocab_size + 1] = 1.0f;
 			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
 			return;
 		}
 		if(t == onceToken.length - 1) {
 			String curr = onceToken[t];
-			if(curr.equals(" ")) {
-				curr = "<sep>";
+			if(sd.get(curr) != null) {
+				curr = sd.get(curr);
 			}
-			
+			System.out.println("curr:"+curr);
 			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
 			return;
 		}
 		
 		if((t + 1) < onceToken.length) {
 			String curr = onceToken[t];
+			if(sd.get(curr) != null) {
+				curr = sd.get(curr);
+			}
+			System.out.println("curr:"+curr);
 			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
 		}else if(t < max_len - 1){
 			input.data[(t + 1) * vocab_size + 0] = 1.0f;

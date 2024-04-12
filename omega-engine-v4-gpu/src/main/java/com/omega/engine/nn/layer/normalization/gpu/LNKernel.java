@@ -13,6 +13,8 @@ import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.normalization.BNType;
+import com.omega.engine.nn.layer.normalization.LNLayer;
+import com.omega.engine.nn.network.Transformer;
 
 import jcuda.Pointer;
 import jcuda.Sizeof;
@@ -111,8 +113,8 @@ public class LNKernel extends BaseKernel{
 	private CUdeviceptr d_scale;
 	private CUdeviceptr d_bias;
 	
-	private CUdeviceptr aten_mean;
-	private CUdeviceptr aten_var;
+	private Tensor aten_mean;
+	private Tensor aten_var;
 	
 	private Tensor mean;
 	private Tensor simga;
@@ -138,18 +140,19 @@ public class LNKernel extends BaseKernel{
 			/**
 			 * 申请向前传播参数显存
 			 */
-			if(this.d_mean != null) {
-				CUDAMemoryManager.free(this.d_mean);
-				CUDAMemoryManager.free(this.d_var);
-				CUDAMemoryManager.free(this.aten_mean);
-				CUDAMemoryManager.free(this.aten_var);
-			}
-			
-			this.d_mean = CUDAMemoryManager.getDevice(B);
-			this.d_var = CUDAMemoryManager.getDevice(B);
+//			if(this.aten_mean != null) {
+//				CUDAMemoryManager.free(this.d_mean);
+//				CUDAMemoryManager.free(this.d_var);
+//				CUDAMemoryManager.free(this.aten_mean);
+//				CUDAMemoryManager.free(this.aten_var);
+//			}
 
-			this.aten_mean = CUDAMemoryManager.getDevice(B);
-			this.aten_var = CUDAMemoryManager.getDevice(B);
+//			this.d_mean = CUDAMemoryManager.getDevice(B);
+//			this.d_var = CUDAMemoryManager.getDevice(B);
+			this.aten_mean = Tensor.createTensor(this.aten_mean, B, 1, 1, 1, true);
+			this.aten_var = Tensor.createTensor(this.aten_var, B, 1, 1, 1, true);
+//			this.aten_mean = CUDAMemoryManager.getPointer(B);
+//			this.aten_var = CUDAMemoryManager.getPointer(B);
 //			this.d_s = CUDAMemoryManager.getDevice(B);
 //			this.d_b = CUDAMemoryManager.getDevice(B);
 //			this.d_scale = CUDAMemoryManager.getDevice(B);
@@ -456,17 +459,17 @@ public class LNKernel extends BaseKernel{
 						Pointer.to(input.getGpuData()),
 		                Pointer.to(gamma.getGpuData()),
 		                Pointer.to(bias),
-		                Pointer.to(aten_mean),
-						Pointer.to(aten_var),
+		                Pointer.to(aten_mean.getGpuData()),
+						Pointer.to(aten_var.getGpuData()),
 		                Pointer.to(output.getGpuData())
 		            );
 
 			}
-			
+
 			int warp_size = 32;
 		    int[] threads = new int[] {warp_size, 256 / warp_size, 1};
 		    int[] blocks = new int[] {B, 1, 1};
-
+		
 		    int nshared = threads[1] > 1 ? threads[1] * 3/2 *Sizeof.FLOAT : 0;
 		    
 			cuLaunchKernel(forward_aten_function,
@@ -706,8 +709,8 @@ public class LNKernel extends BaseKernel{
 						Pointer.to(new int[] {W}),
 						Pointer.to(delta.getGpuData()),
 						Pointer.to(input.getGpuData()),
-						Pointer.to(aten_mean),
-						Pointer.to(aten_var),
+						Pointer.to(aten_mean.getGpuData()),
+						Pointer.to(aten_var.getGpuData()),
 						Pointer.to(dgamma.getGpuData()),
 						Pointer.to(db)
 		            );
@@ -752,8 +755,8 @@ public class LNKernel extends BaseKernel{
 				backwardAtenParameters = Pointer.to(
 						Pointer.to(delta.getGpuData()),
 						Pointer.to(input.getGpuData()),
-						Pointer.to(aten_mean),
-						Pointer.to(aten_var),
+						Pointer.to(aten_mean.getGpuData()),
+						Pointer.to(aten_var.getGpuData()),
 						Pointer.to(gamma.getGpuData()),
 						Pointer.to(diff.getGpuData()),
 						Pointer.to(new int[] {W})
@@ -994,75 +997,102 @@ public class LNKernel extends BaseKernel{
     	
 //    	float[] gammaData = RandomUtils.order(W, 0.1f, 0.1f);
 //    	float[] betaData = RandomUtils.order(W, 0.1f, 0.0f);
-    	float[] gammaData = MatrixUtils.one(W);
-    	float[] betaData = new float[W];
-    	
-    	Tensor gamma = new Tensor(1, 1, 1, W, gammaData, true);
-    	Tensor beta = new Tensor(1, 1, 1, W, betaData, true);
-    	
+//    	float[] gammaData = MatrixUtils.one(W);
+//    	float[] betaData = new float[W];
+//    	
+//    	Tensor gamma = new Tensor(1, 1, 1, W, gammaData, true);
+//    	Tensor beta = new Tensor(1, 1, 1, W, betaData, true);
+//    	
     	Tensor input = new Tensor(N, T, 1, W, data, true);
-    	
-    	Tensor output = new Tensor(N, T, 1, W, true);
-    	Tensor output2 = new Tensor(N, T, 1, W, true);
-    	
+//    	
+//    	Tensor output = new Tensor(N, T, 1, W, true);
+//    	Tensor output2 = new Tensor(N, T, 1, W, true);
+//    	
     	Tensor delta = new Tensor(N, T, 1, W, MatrixUtils.order(N * T * W, 0.1f, 0.1f), true);
-    	
-    	LNKernel kernel = new LNKernel(W, BNType.fully_bn);
-
-    	Tensor diff = new Tensor(N, T, 1, W, true);
-    	Tensor diff2 = new Tensor(N, T, 1, W, true);
-    	
-    	Tensor dgamma = new Tensor(1, 1, 1, W, true);
-    	Tensor dbeta = new Tensor(1, 1, 1, W, true);
-    	
-    	Tensor dgamma2 = new Tensor(1, 1, 1, W, true);
-    	Tensor dbeta2 = new Tensor(1, 1, 1, W, true);
-    	
-//    	output.showShape();
-//    	output.showDM();
-    	for(int i = 0;i<10;i++) {
-
-        	System.out.println("output:");
-//        	float[] rn = RandomUtils.gaussianRandom(N * T * W, 0.5f);
-//        	input.setData(rn);
-        	
-//        	kernel.forward(gamma, beta, input, output);
-//        	output.showDM(0);
-        	kernel.forwardAten(gamma, beta, input, output2);
-//        	kernel.forward_aten(gamma, beta, input, output2);
-        	output2.showDM(0);
-        	
-//        	dgamma2.showDM(0);
-//        	dbeta2.showDM(0);
+//    	
+//    	LNKernel kernel = new LNKernel(W, BNType.fully_bn);
 //
-//        	System.err.println("---------------------------");
-
-//    		kernel.backward(input, delta, diff, gamma, dgamma, dbeta);
-//        	diff.showDMByNumber(0);
-        	kernel.backwardAten(input, delta, diff2, gamma, dgamma2, dbeta2);
-        	diff2.showDMByNumber(0);
-        	
-////        	kernel.backward_aten(input, delta, diff2, gamma, dgamma2, dbeta2);
-////        	diff2.showDM(0);
-//        	dgamma.showDM();
-//        	dbeta.showDM();
-        	
-//        	kernel.backward3_cpu(input, delta, diff2, gamma, dgamma2, dbeta2);
+//    	Tensor diff = new Tensor(N, T, 1, W, true);
+//    	Tensor diff2 = new Tensor(N, T, 1, W, true);
+//    	
+//    	Tensor dgamma = new Tensor(1, 1, 1, W, true);
+//    	Tensor dbeta = new Tensor(1, 1, 1, W, true);
+//    	
+//    	Tensor dgamma2 = new Tensor(1, 1, 1, W, true);
+//    	Tensor dbeta2 = new Tensor(1, 1, 1, W, true);
+//    	
+////    	output.showShape();
+////    	output.showDM();
+//    	for(int i = 0;i<10;i++) {
+//
+//        	System.out.println("output:");
+////        	float[] rn = RandomUtils.gaussianRandom(N * T * W, 0.5f);
+////        	input.setData(rn);
 //        	
-//        	kernel.backward2(input, delta, diff2, gamma, dgamma2, dbeta2);
-//        	kernel.backward_apex(input, delta, diff2, gamma, dgamma2, dbeta2);
-//        	diff2.showDM();
-        	dgamma2.showDM();
-        	dbeta2.showDM();
-        	
-//        	float[] rmd = RandomUtils.gaussianRandom(N * T * W, 0.1f);
-//        	Tensor rm = new Tensor(N, T, 1, W, rmd, true);
-//        	TensorOP.add(input, rm, input);
-//        	input.showDM();
-        	System.out.println("========================");
+////        	kernel.forward(gamma, beta, input, output);
+////        	output.showDM(0);
+//        	kernel.forwardAten(gamma, beta, input, output2);
+////        	kernel.forward_aten(gamma, beta, input, output2);
+//        	output2.showDM(0);
+//        	
+////        	dgamma2.showDM(0);
+////        	dbeta2.showDM(0);
+////
+////        	System.err.println("---------------------------");
+//
+////    		kernel.backward(input, delta, diff, gamma, dgamma, dbeta);
+////        	diff.showDMByNumber(0);
+//        	kernel.backwardAten(input, delta, diff2, gamma, dgamma2, dbeta2);
+//        	diff2.showDMByNumber(0);
+//        	
+//////        	kernel.backward_aten(input, delta, diff2, gamma, dgamma2, dbeta2);
+//////        	diff2.showDM(0);
+////        	dgamma.showDM();
+////        	dbeta.showDM();
+//        	
+////        	kernel.backward3_cpu(input, delta, diff2, gamma, dgamma2, dbeta2);
+////        	
+////        	kernel.backward2(input, delta, diff2, gamma, dgamma2, dbeta2);
+////        	kernel.backward_apex(input, delta, diff2, gamma, dgamma2, dbeta2);
+////        	diff2.showDM();
+//        	dgamma2.showDM();
+//        	dbeta2.showDM();
+//        	
+////        	float[] rmd = RandomUtils.gaussianRandom(N * T * W, 0.1f);
+////        	Tensor rm = new Tensor(N, T, 1, W, rmd, true);
+////        	TensorOP.add(input, rm, input);
+////        	input.showDM();
+//        	System.out.println("========================");
+//    	}
+//    	
+    	float[] data2 = RandomUtils.order(1 * T * W, 0.1f, 0.1f);
+
+    	Tensor input2 = new Tensor(1, T, 1, W, data2, true);
+//    	
+//    	Tensor output3 = new Tensor(1, T, 1, W, true);
+//    	
+//    	kernel.forwardAten(gamma, beta, input2, output3);
+//
+//    	output3.showDM();
+    	
+    	Transformer tf = new Transformer();
+		tf.number = N * T;
+    	
+    	LNLayer ln = new LNLayer(tf,false);
+    	
+    	for(int i = 0;i<10;i++) {
+    		ln.forward(input);
+    		ln.getOutput().showDMByNumber(0);
+    		ln.back(delta);
     	}
     	
-
+    	tf.number = 1 * T;
+    	
+    	ln.forward(input2);
+    	ln.getOutput().showDM();
+    	
+    	
+    	
 //    	Tensor dgamma = new Tensor(1, 1, 1, W, true);
 //    	Tensor dbeta = new Tensor(1, 1, 1, W, true);
     	

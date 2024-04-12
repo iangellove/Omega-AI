@@ -167,7 +167,7 @@ public class GPTTest {
 			
 			int max_len = 128;
 			
-			int embedDim = 384;
+			int embedDim = 512;
 			
 			int head_num = 6;
 			
@@ -181,7 +181,7 @@ public class GPTTest {
 			
 			network.learnRate = 0.0001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 20, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1000, 0.0001f, LearnRateUpdate.SMART_HALF, false);
 			optimizer.lr_step = new int[] {200, 300, 500, 600, 700, 800, 900};
 			optimizer.trainNanoGPT(trainData);
 
@@ -197,19 +197,23 @@ public class GPTTest {
 					break;
 				}
 				input_txt = input_txt.toLowerCase() + " ";
-				System.out.println(input_txt);
+				System.out.println("input_txt:"+input_txt);
 				Tensor input = trainData.loadByTxt(input_txt);
 				for(int t = 0;t<max_len;t++) {
 					Tensor output = network.forward(input, positions);
 					output.syncHost();
-					String txts = output2TXT(output, trainData);
-					String nextWord = txts.substring(input_txt.length() - 1, input_txt.length());
-					System.out.println(nextWord);
-					input_txt += txts.substring(input_txt.length() - 1, input_txt.length());
-					input = trainData.loadByTxt(input_txt);
-					if(nextWord.equals("<sep>") || nextWord.equals("<eos>")) {
+					String txts = output2TXT(output, trainData, true);
+//					System.out.println("output:"+txts);
+					String nextWord = txts.substring(input_txt.length(), input_txt.length() + 1);
+					System.out.println("nextWord:"+nextWord);
+					
+					if(trainData.sd.get(nextWord)!=null && (trainData.sd.get(nextWord).equals("<sep>") || trainData.sd.get(nextWord).equals("<eos>"))) {
+						input_txt += trainData.sd.get(nextWord);
 						break;
+					}else {
+						input_txt += nextWord;
 					}
+					input = trainData.loadByTxt(input_txt);
 				}
 				
 				System.out.println(input_txt);
@@ -377,6 +381,22 @@ public class GPTTest {
 			int charIndex = pickTopN(output.getByNumber(i), 3);
 			String c = trainData.vocab[charIndex];
 			txt += c;
+		}
+		return txt;
+	}
+	
+	public static String output2TXT(Tensor output,CNTokenizer trainData,boolean format) {
+		String txt = "";
+		for(int i = 0;i<output.number;i++) {
+			int charIndex = pickTopN(output.getByNumber(i), 3);
+			String c = trainData.vocab[charIndex];
+			txt += c;
+		}
+		System.out.println("output txt:"+txt);
+		if(format) {
+			for(String key:trainData.specials_dictionary.keySet()) {
+				txt = txt.replaceAll(key, trainData.specials_dictionary.get(key));
+			}
 		}
 		return txt;
 	}
