@@ -113,8 +113,8 @@ public class LNKernel extends BaseKernel{
 	private CUdeviceptr d_scale;
 	private CUdeviceptr d_bias;
 	
-	private Tensor aten_mean;
-	private Tensor aten_var;
+	private Pointer aten_mean;
+	private Pointer aten_var;
 	
 	private Tensor mean;
 	private Tensor simga;
@@ -140,19 +140,19 @@ public class LNKernel extends BaseKernel{
 			/**
 			 * 申请向前传播参数显存
 			 */
-//			if(this.aten_mean != null) {
+			if(this.aten_mean != null) {
 //				CUDAMemoryManager.free(this.d_mean);
 //				CUDAMemoryManager.free(this.d_var);
-//				CUDAMemoryManager.free(this.aten_mean);
-//				CUDAMemoryManager.free(this.aten_var);
-//			}
+				CUDAMemoryManager.free(this.aten_mean);
+				CUDAMemoryManager.free(this.aten_var);
+			}
 
 //			this.d_mean = CUDAMemoryManager.getDevice(B);
 //			this.d_var = CUDAMemoryManager.getDevice(B);
-			this.aten_mean = Tensor.createTensor(this.aten_mean, B, 1, 1, 1, true);
-			this.aten_var = Tensor.createTensor(this.aten_var, B, 1, 1, 1, true);
-//			this.aten_mean = CUDAMemoryManager.getPointer(B);
-//			this.aten_var = CUDAMemoryManager.getPointer(B);
+//			this.aten_mean = Tensor.createTensor(this.aten_mean, B, 1, 1, 1, true);
+//			this.aten_var = Tensor.createTensor(this.aten_var, B, 1, 1, 1, true);
+			this.aten_mean = CUDAMemoryManager.getPointer(B);
+			this.aten_var = CUDAMemoryManager.getPointer(B);
 //			this.d_s = CUDAMemoryManager.getDevice(B);
 //			this.d_b = CUDAMemoryManager.getDevice(B);
 //			this.d_scale = CUDAMemoryManager.getDevice(B);
@@ -459,8 +459,8 @@ public class LNKernel extends BaseKernel{
 						Pointer.to(input.getGpuData()),
 		                Pointer.to(gamma.getGpuData()),
 		                Pointer.to(bias),
-		                Pointer.to(aten_mean.getGpuData()),
-						Pointer.to(aten_var.getGpuData()),
+		                Pointer.to(aten_mean),
+						Pointer.to(aten_var),
 		                Pointer.to(output.getGpuData())
 		            );
 
@@ -709,8 +709,8 @@ public class LNKernel extends BaseKernel{
 						Pointer.to(new int[] {W}),
 						Pointer.to(delta.getGpuData()),
 						Pointer.to(input.getGpuData()),
-						Pointer.to(aten_mean.getGpuData()),
-						Pointer.to(aten_var.getGpuData()),
+						Pointer.to(aten_mean),
+						Pointer.to(aten_var),
 						Pointer.to(dgamma.getGpuData()),
 						Pointer.to(db)
 		            );
@@ -755,8 +755,8 @@ public class LNKernel extends BaseKernel{
 				backwardAtenParameters = Pointer.to(
 						Pointer.to(delta.getGpuData()),
 						Pointer.to(input.getGpuData()),
-						Pointer.to(aten_mean.getGpuData()),
-						Pointer.to(aten_var.getGpuData()),
+						Pointer.to(aten_mean),
+						Pointer.to(aten_var),
 						Pointer.to(gamma.getGpuData()),
 						Pointer.to(diff.getGpuData()),
 						Pointer.to(new int[] {W})

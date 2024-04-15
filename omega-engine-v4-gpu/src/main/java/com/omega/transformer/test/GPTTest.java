@@ -181,7 +181,7 @@ public class GPTTest {
 			
 			network.learnRate = 0.0001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1000, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 100, 0.0001f, LearnRateUpdate.SMART_HALF, false);
 			optimizer.lr_step = new int[] {200, 300, 500, 600, 700, 800, 900};
 			optimizer.trainNanoGPT(trainData);
 
@@ -388,7 +388,7 @@ public class GPTTest {
 	public static String output2TXT(Tensor output,CNTokenizer trainData,boolean format) {
 		String txt = "";
 		for(int i = 0;i<output.number;i++) {
-			int charIndex = pickTopN(output.getByNumber(i), 3);
+			int charIndex = pickTopN(output.getByNumber(i), 1);
 			String c = trainData.vocab[charIndex];
 			txt += c;
 		}
