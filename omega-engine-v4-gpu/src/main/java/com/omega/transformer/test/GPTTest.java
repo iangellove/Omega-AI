@@ -181,13 +181,13 @@ public class GPTTest {
 			
 			network.learnRate = 0.0001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 100, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 50, 0.0001f, LearnRateUpdate.SMART_HALF, false);
 			optimizer.lr_step = new int[] {200, 300, 500, 600, 700, 800, 900};
 			optimizer.trainNanoGPT(trainData);
 
 			Tensor positions = ENTokenizer.getPositions(1, max_len);
 			
-			network.number = 1;
+			network.number = 1 * max_len;
 			
 			Scanner scanner = new Scanner(System.in);
 			while (true) {
@@ -341,7 +341,7 @@ public class GPTTest {
 
 			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, headNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout);
 			
-			network.CUDNN = true;
+//			network.CUDNN = true;
 			
 			network.learnRate = 0.0001f;
 			

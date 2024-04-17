@@ -988,7 +988,7 @@ public class LNKernel extends BaseKernel{
     	
     	int N = 32;
     	int T = 128;
-    	int W = 512;
+    	int W = 384;
     	
     	float[] data = RandomUtils.order(N * T * W, 0.1f, 0.1f);
     	
@@ -1086,7 +1086,7 @@ public class LNKernel extends BaseKernel{
     		ln.back(delta);
     	}
     	
-    	tf.number = 1 * T;
+//    	tf.number = 1 * T;
     	
     	ln.forward(input2);
     	ln.getOutput().showDM();

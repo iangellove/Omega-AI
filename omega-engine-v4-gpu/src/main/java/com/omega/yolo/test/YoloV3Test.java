@@ -524,7 +524,7 @@ public class YoloV3Test {
 		
 		int im_w = 416;
 		int im_h = 416;
-		int batchSize = 16;
+		int batchSize = 24;
 		int class_num = 1;
 		
 		String[] labelset = new String[1];

@@ -472,7 +472,7 @@ Engine2D.spirit = function(){
 	
 }
 
-Engine2D.resource._import = function(key,res){
+Engine2D.resource._import = function(key,res,onloadFunction){
 	
 	if(res.length > 0){
 		let count = res.length;
@@ -490,8 +490,41 @@ Engine2D.resource._import = function(key,res){
 	     		Engine2D.resource[key][once.id].pos = {"x": once.x,"y": once.y,"width": once.width,"height": once.height};
 	     	}
 	     	image.onload = function () {
+	     		once.width = this.naturalWidth;
+	     		once.height = this.naturalHeight;
+	     		if(onloadFunction != undefined && onloadFunction !=null){
+	     			onloadFunction();
+	     		}
+	     		//console.log("image.onload");
 	     		current++;
 	        }
+		}
+	}
+	
+}
+
+Engine2D.resource._import_obj = function(key,res,onloadFunction){
+	
+	if(res.length > 0){
+		let count = res.length;
+		let current = 0;
+		Engine2D.resource[key] = {};
+		for(var i = 0;i<res.length;i++){
+			let once = res[i];
+	     	Engine2D.resource[key][once.id] = {};
+	     	Engine2D.resource[key][once.id].src = once.src;
+	     	if(once.x == null || once.x == undefined){
+	     		Engine2D.resource[key][once.id].pos = null;
+	     	}else{
+	     		Engine2D.resource[key][once.id].pos = {"x": once.x,"y": once.y,"width": once.width,"height": once.height};
+	     	}
+	     	console.log(once.src);
+	     	once.width = once.src.naturalWidth;
+     		once.height = once.src.naturalHeight;
+     		if(onloadFunction != undefined && onloadFunction !=null){
+     			onloadFunction();
+     		}
+     		current++;
 		}
 	}
 	
@@ -646,6 +679,7 @@ Engine2D.util.drawText = function(spirit){
 	}
 	spirit.context.font = spirit.font;
 	spirit.context.fillText(spirit.name,spirit.x,spirit.y);
+	spirit.context.globalAlpha = 1;
 }
 
 Engine2D.util.drawPoint = function(spirit,x,y,r,color,alpha){
@@ -655,6 +689,7 @@ Engine2D.util.drawPoint = function(spirit,x,y,r,color,alpha){
 	spirit.context.arc(x,y,r,0,360,false);
 	spirit.context.fill();//画实心圆
 	spirit.context.closePath();
+	spirit.context.globalAlpha = 1;
 }
 
 Engine2D.util.drawCircles = function(spirit){
@@ -668,6 +703,7 @@ Engine2D.util.drawCircles = function(spirit){
 	if(spirit.showName){
 		Engine2D.util.showName(spirit);
 	}
+	spirit.context.globalAlpha = 1;
 }
 
 Engine2D.util.drawCirclesArray = function(spirits){
@@ -680,6 +716,7 @@ Engine2D.util.drawCirclesArray = function(spirits){
 		spirit.context.fill();//画实心圆
 	}
 	spirit.context.closePath();
+	spirit.context.globalAlpha = 1;
 }
 
 Engine2D.util.drawRect = function(spirit){
@@ -691,6 +728,7 @@ Engine2D.util.drawRect = function(spirit){
 	spirit.context.globalAlpha = spirit.alpha;//透明度
 	spirit.context.fillRect(spirit.x,spirit.y,spirit.width,spirit.height);
 	spirit.context.restore();
+	spirit.context.globalAlpha = 1;
 }
 
 Engine2D.util.drawRect2 = function(spirit){
@@ -717,6 +755,7 @@ Engine2D.util.drawRect2 = function(spirit){
 	spirit.context.fillStyle = spirit.style;
 	spirit.context.fill();
 	spirit.context.restore();
+	spirit.context.globalAlpha = 1;
 }
 
 /**
@@ -730,6 +769,7 @@ Engine2D.util.drawLine = function(spirit){
 	spirit.context.globalAlpha = spirit.alpha;//透明度
 	spirit.context.lineTo(spirit.x + Engine2D.util.cos(spirit.rotate) * spirit.width,spirit.y + Engine2D.util.sin(spirit.rotate) * spirit.width);
 	spirit.context.stroke();
+	spirit.context.globalAlpha = 1;
 }
 
 /**
@@ -743,6 +783,7 @@ Engine2D.util.drawLine2 = function(spirit,point,rotate,dis,color,alpha){
 	spirit.context.globalAlpha = alpha;//透明度
 	spirit.context.lineTo(point.x + Engine2D.util.cos(rotate) * dis,point.y + Engine2D.util.sin(rotate) * dis);
 	spirit.context.stroke();
+	spirit.context.globalAlpha = 1;
 }
 
 
@@ -752,9 +793,6 @@ Engine2D.util.drawImage = function(spirit){
 
 //frameAnimation
 Engine2D.util.drawFA = function(spirit){
-	
-	
-	
 	spirit.context.drawImage(spirit.image,spirit.x,spirit.y,spirit.width,spirit.height);
 }
 

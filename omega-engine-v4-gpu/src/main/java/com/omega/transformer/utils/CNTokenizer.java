@@ -31,14 +31,24 @@ public class CNTokenizer extends BaseTokenizer{
 	
 	private final String[] specials = new String[] {"<pad>","<sos>","<eos>","<sep>"};
 	
-	public Map<String,String> specials_dictionary = new HashMap<String, String>(){{
+	public static final Map<String,String> specials_dictionary = new HashMap<String, String>(){/**
+		 * 
+		 */
+		private static final long serialVersionUID = 342465861011632616L;
+
+	{
 	    put("<pad>", "#");
 	    put("<sos>", "@");
 	    put("<eos>", "-");
 	    put("<sep>", " ");
 	}};
 	
-	public Map<String,String> sd = new HashMap<String, String>(){{
+	public static final Map<String,String> sd = new HashMap<String, String>(){/**
+		 * 
+		 */
+		private static final long serialVersionUID = 3669659616912512613L;
+
+	{
 	    put("#", "<pad>");
 	    put("@", "<sos>");
 	    put("-", "<eos>");

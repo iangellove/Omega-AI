@@ -1,6 +1,9 @@
 package com.omega.engine.optimizer;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MathUtils;
@@ -920,6 +923,12 @@ public class EDOptimizer extends Optimizer {
 			
 			Tensor positions = ENTokenizer.getPositions(batchSize, network.time);
 			
+			int itc = new BigDecimal(trainingData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+			
+			int[][] tmp = new int[itc][batchSize];
+			
+			List<Integer> list = new ArrayList<Integer>(); 
+			
 			for(int i = 0;i<this.trainTime;i++) {
 				
 				if(this.trainIndex >= this.minTrainTime) {
@@ -928,7 +937,7 @@ public class EDOptimizer extends Optimizer {
 				
 				this.trainIndex = i + 1;
 				
-				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize, tmp, list);
 				
 				Tensor output = null;
 				
@@ -943,9 +952,9 @@ public class EDOptimizer extends Optimizer {
 					
 					long start = System.nanoTime();
 					
-					this.loss.clear();
-
-					this.lossDiff.clear();
+//					this.loss.clear();
+//
+//					this.lossDiff.clear();
 					
 					/**
 					 * 读取训练数据
@@ -991,7 +1000,7 @@ public class EDOptimizer extends Optimizer {
 					 */
 					this.network.update();
 					
-					JCudaDriver.cuCtxSynchronize();
+//					JCudaDriver.cuCtxSynchronize();
 					
 					/**
 					 * current time error
@@ -1011,10 +1020,6 @@ public class EDOptimizer extends Optimizer {
 //					System.out.println(JsonUtils.toJson(label.shape()));
 					int time = output.number / batchSize;
 					float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
-					
-//					if(error > 99) {
-//						break;
-//					}
 					
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					

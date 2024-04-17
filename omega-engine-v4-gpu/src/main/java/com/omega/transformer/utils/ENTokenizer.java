@@ -164,7 +164,7 @@ public class ENTokenizer {
 			}
 		}
 		Tensor positions = new Tensor(b, time, 1, time, data, true);
-		
+//		positions.showDMByNumber(0);
 		return positions;
 	}
 	

@@ -69,6 +69,34 @@ public class MathUtils {
 		return tmp;
 	}
 	
+	/**
+	 * 生成随机数组
+	 * @param length
+	 * @return
+	 */
+	public static int[][] randomInts(int length,int batchSize, int[][] tmp,List<Integer> list) {
+		
+		list.clear();
+		
+		for(int i = 0;i<length;i++) {
+			list.add(i);
+		}
+		
+		Collections.shuffle(list);
+		
+		for(int i = 0;i<tmp.length;i++) {
+			for(int j = 0;j<tmp[i].length;j++) {
+				if(i * batchSize + j >= length) {
+					tmp[i][j] = list.get(0 * batchSize + j);
+				}else {
+					tmp[i][j] = list.get(i * batchSize + j);
+				}
+			}
+		}
+		
+		return tmp;
+	}
+	
 	public static void main(String[] args) {
 		
 		int length = 1000;
