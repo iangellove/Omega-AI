@@ -263,8 +263,8 @@ public class CrossEntropyKernel extends BaseKernel {
 	
 	public void backward(Tensor input,Tensor currentLabel,Tensor diff,int igonre) {
 
-		if(backKernelParameters == null) {
-
+		if(backKernelParameters == null || this.BN != input.number) {
+			
 			/**
 			 * float *input, float *currentLabel, float *diff, int n, int batch
 			 */
@@ -276,7 +276,9 @@ public class CrossEntropyKernel extends BaseKernel {
 	                Pointer.to(new int[] {input.width}),
 	                Pointer.to(new int[] {igonre})
 	            );
-
+			
+			 this.BN = input.number;
+			
 		}
 		
 		cuLaunchKernel(loss_igonre_backward_function,
@@ -287,9 +289,9 @@ public class CrossEntropyKernel extends BaseKernel {
 	        );
 		
 
-		if(MatrixOperation.isNaN(diff.syncHost())){
-			input.showDMByNumber(0);
-		}
+//		if(MatrixOperation.isNaN(diff.syncHost())){
+//			input.showDMByNumber(0);
+//		}
 
 		
 //		JCudaDriver.cuCtxSynchronize();

@@ -141,6 +141,16 @@ public class TensorOP {
 		
 	}
 	
+	public static void bool(Tensor a,Tensor b,Tensor c,float val) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().bool_gpu(a, b, c, val);
+		}else {
+			c.data = MatrixOperation.bool(a.data, b.data, val);
+		}
+		
+	}
+	
 	public static void mul(Tensor a,Tensor b,Tensor c, int offset,int N) {
 		
 		if(c.isHasGPU()) {

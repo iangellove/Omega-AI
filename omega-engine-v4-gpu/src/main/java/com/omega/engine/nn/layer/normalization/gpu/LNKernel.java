@@ -21,6 +21,7 @@ import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
 import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
+import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 
 /**
@@ -151,6 +152,7 @@ public class LNKernel extends BaseKernel{
 //			this.d_var = CUDAMemoryManager.getDevice(B);
 //			this.aten_mean = Tensor.createTensor(this.aten_mean, B, 1, 1, 1, true);
 //			this.aten_var = Tensor.createTensor(this.aten_var, B, 1, 1, 1, true);
+			System.out.println(B);
 			this.aten_mean = CUDAMemoryManager.getPointer(B);
 			this.aten_var = CUDAMemoryManager.getPointer(B);
 //			this.d_s = CUDAMemoryManager.getDevice(B);
@@ -432,11 +434,12 @@ public class LNKernel extends BaseKernel{
 		try {
 			
 			boolean check = checkBatch(input);
-
+//			input.showShape();
+//			output.showShape();
 			if(!check) {
 				
 				initKernel();
-
+//				System.out.println("in");
 				Pointer bias = null;
 				
 				if(beta != null) {
@@ -470,14 +473,14 @@ public class LNKernel extends BaseKernel{
 		    int[] threads = new int[] {warp_size, 256 / warp_size, 1};
 		    int[] blocks = new int[] {B, 1, 1};
 		
-		    int nshared = threads[1] > 1 ? threads[1] * 3/2 *Sizeof.FLOAT : 0;
+		    int nshared = threads[1] > 1 ? threads[1] * 3/2 * Sizeof.FLOAT : 0;
 		    
-			cuLaunchKernel(forward_aten_function,
+		    checkCUDA(cuLaunchKernel(forward_aten_function,
 					blocks[0], blocks[1], blocks[2],      // Grid dimension
 					threads[0], threads[1], threads[2],      // Block dimension
 					nshared, null,               // Shared memory size and stream
 					forwardAtenParameters, null // Kernel- and extra parameters
-				);
+				));
 //			System.err.println("mean2:");
 //			mean2.setGpuData(d_mean);
 //			mean2.showDM(0);
@@ -986,9 +989,9 @@ public class LNKernel extends BaseKernel{
     
     public static void main(String[] args) {
     	
-    	int N = 32;
-    	int T = 128;
-    	int W = 384;
+    	int N = 4096;
+    	int T = 1;
+    	int W = 512;
     	
     	float[] data = RandomUtils.order(N * T * W, 0.1f, 0.1f);
     	
@@ -1065,9 +1068,9 @@ public class LNKernel extends BaseKernel{
 //        	System.out.println("========================");
 //    	}
 //    	
-    	float[] data2 = RandomUtils.order(1 * T * W, 0.1f, 0.1f);
+    	float[] data2 = RandomUtils.order(128 * W, 0.1f, 0.1f);
 
-    	Tensor input2 = new Tensor(1, T, 1, W, data2, true);
+    	Tensor input2 = new Tensor(128, 1, 1, W, data2, true);
 //    	
 //    	Tensor output3 = new Tensor(1, T, 1, W, true);
 //    	
@@ -1076,13 +1079,15 @@ public class LNKernel extends BaseKernel{
 //    	output3.showDM();
     	
     	Transformer tf = new Transformer();
-		tf.number = N * T;
+//		tf.number = N * T;
     	
     	LNLayer ln = new LNLayer(tf,false);
     	
-    	for(int i = 0;i<10;i++) {
+    	for(int i = 0;i<1000;i++) {
     		ln.forward(input);
     		ln.getOutput().showDMByNumber(0);
+    		ln.forward(input2);
+        	ln.getOutput().showDM();
     		ln.back(delta);
     	}
     	

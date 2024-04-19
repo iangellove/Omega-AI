@@ -272,6 +272,19 @@ __global__ void scalar_sub_kernel(int N, float ALPHA, float *X, float *R)
 }
 
 extern "C"
+__global__ void bool_kernel(int N, float *X, float *Y, float *R,float val)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N){
+    	if(Y[i] == 1){
+    		R[i] = val;
+    	}else{
+    		R[i] = X[i];
+    	}
+    } 
+}
+
+extern "C"
 __global__ void mul_kernel(int N, float *X, float *Y, float *R)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;

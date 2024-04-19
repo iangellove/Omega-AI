@@ -1271,6 +1271,19 @@ public class MatrixOperation {
 		return temp;
 	}
 	
+	public static float[] bool(float[] x,float[] b,float val) {
+		float[] temp = MatrixUtils.zero(x.length);
+		for(int i = 0;i<x.length;i++) {
+			if(b[i] == 1) {
+				temp[i] = val;
+			}else {
+				temp[i] = x[i];
+			}
+			
+		}
+		return temp;
+	}
+	
 	/**
 	 * 
 	 * @Title: multiplication

@@ -17,8 +17,6 @@ import com.omega.engine.updater.UpdaterType;
  */
 public class NanoGPT extends Network {
 
-	public int time = 1;
-	
 	public int vocabSize;
 	
 	public int embedDim;

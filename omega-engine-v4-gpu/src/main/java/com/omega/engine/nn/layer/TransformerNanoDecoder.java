@@ -102,6 +102,7 @@ public class TransformerNanoDecoder extends Layer{
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
+		this.time = this.network.time;
 	}
 	
 	@Override

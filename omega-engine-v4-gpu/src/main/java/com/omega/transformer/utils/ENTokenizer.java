@@ -163,7 +163,7 @@ public class ENTokenizer {
 				data[n * time * time + t * time + t] = 1;
 			}
 		}
-		Tensor positions = new Tensor(b, time, 1, time, data, true);
+		Tensor positions = new Tensor(b * time, 1, 1, time, data, true);
 //		positions.showDMByNumber(0);
 		return positions;
 	}

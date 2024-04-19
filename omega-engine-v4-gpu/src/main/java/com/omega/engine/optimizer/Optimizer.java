@@ -1421,6 +1421,52 @@ public abstract class Optimizer {
 		return error;
 	}
 	
+	public float accuracyBatchFisrt(Tensor input,Tensor output,Tensor labelData,int time,int batchSize,String[] vocab) {
+		
+		float error = 0.0f;
+		float trueCount = 0;
+		int max_score = 0;
+		String max_itxt = "";
+		String max_ptxt = "";
+		String max_ltxt = "";
+		for(int n = 0;n<batchSize;n++) {
+			boolean allRight = true;
+			int score = time;
+			String itxt = "";
+			String ptxt = "";
+			String ltxt = "";
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+				int inputIndex = MatrixOperation.maxIndex(input.getByNumber(n * time + t));
+				ptxt += " " + vocab[predictIndex];
+				ltxt += " " + vocab[labelIndex];
+				itxt += " " + vocab[inputIndex];
+				if(labelIndex != predictIndex) {
+					allRight = false;
+					score--;
+				}
+			}
+			if(max_score <= score) {
+				max_score = score;
+				max_itxt = itxt;
+				max_ptxt = ptxt;
+				max_ltxt = ltxt;
+			}
+			
+			if(allRight) {
+				trueCount++;
+			}
+		}
+		System.out.println("max_score:"+max_score);
+		System.out.println("itxt:"+max_itxt);
+		System.out.println("ptxt:"+max_ptxt);
+		System.out.println("ltxt:"+max_ltxt);
+		error = trueCount / batchSize * 100;
+
+		return error;
+	}
+	
 	public float testLoss(Tensor output,Tensor labelData) {
 		
 		float[] data = new float[output.number];

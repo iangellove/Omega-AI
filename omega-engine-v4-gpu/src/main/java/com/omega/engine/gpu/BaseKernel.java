@@ -17,6 +17,8 @@ public class BaseKernel {
 	
 	public int N = 0;
 	
+	public int BN = 0;
+	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
 	private CUfunction copy_gpu_function;

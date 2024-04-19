@@ -52,6 +52,8 @@ public class CausalSelfAttentionLayer extends Layer{
 	
 	private Tensor scores;
 	
+	private Tensor scores_masked;
+	
 	private Tensor weights;
 	
 	private Tensor attn_outputs;
@@ -158,6 +160,7 @@ public class CausalSelfAttentionLayer extends Layer{
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
+		this.time = this.network.time;
 		this.dk = embedDim / headNum;
 		this.batchSize = number / time;
 
@@ -168,6 +171,7 @@ public class CausalSelfAttentionLayer extends Layer{
 			this.vt = Tensor.createTensor(this.vt, batchSize, headNum, time, dk, true);
 			// [batch_size，n_heads，len_q，len_k]
 			this.scores = Tensor.createTensor(this.scores, batchSize, headNum, time, time, true);
+			this.scores_masked = Tensor.createTensor(this.scores_masked, batchSize, headNum, time, time, true);
 			// [batch_size，n_heads，len_q，len_k]
 			this.weights = Tensor.createTensor(this.weights, batchSize, headNum, time, time, true);
 			// [batch_size, n_heads, len_q, dim_v]
@@ -184,9 +188,10 @@ public class CausalSelfAttentionLayer extends Layer{
 	public void init(Tensor input) {
 		// TODO Auto-generated method stub
 		this.number = input.number;
+		this.time = this.network.time;
 		this.dk = embedDim / headNum;
 		this.batchSize = number / time;
-
+		
 		if(this.scores == null || this.scores.number != this.batchSize) {
 			// [batch_size，time，head_num，d_k]
 			this.qt = Tensor.createTensor(this.qt, batchSize, headNum, time, dk, true);
@@ -194,6 +199,7 @@ public class CausalSelfAttentionLayer extends Layer{
 			this.vt = Tensor.createTensor(this.vt, batchSize, headNum, time, dk, true);
 			// [batch_size，n_heads，len_q，len_k]
 			this.scores = Tensor.createTensor(this.scores, batchSize, headNum, time, time, true);
+//			this.scores_masked = Tensor.createTensor(this.scores_masked, batchSize, headNum, time, time, true);
 			// [batch_size，n_heads，len_q，len_k]
 			this.weights = Tensor.createTensor(this.weights, batchSize, headNum, time, time, true);
 			// [batch_size, n_heads, len_q, dim_v]
@@ -213,6 +219,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		this.vt.viewOrg();
 		this.scores.viewOrg();
 		this.weights.viewOrg();
+//		this.scores_masked.viewOrg();
 		this.attn_outputs.viewOrg();
 		this.ot.viewOrg();
 		this.oi.viewOrg();
@@ -309,20 +316,20 @@ public class CausalSelfAttentionLayer extends Layer{
 
 		GPUOP.getInstance().bmm(query.getGpuData(), key.getGpuData(), scores.getGpuData(), query.number * query.channel, query.height, key.height, query.width,
 				CUBLAS_OP_N, CUBLAS_OP_T, d_k, 0.0f);
-		
-//		scores.showShape();
-//		System.out.println("scores.showDM():");
-//		scores.showDM();
-		
+
 		if(mask != null) {
+//			mask.showDMByNumber(0);
+			
+//			scores_masked.showDMByNumber(0);
+//			TensorOP.bool(scores, mask, scores_masked, -1e9f);
+//			softmax.softmax(scores_masked, weights);
 			softmax.softmaxMask(scores, mask, weights, -1e9f);
+//			scores.showDMByNumber(0);
+//			weights.showDMByNumber(0);
 		}else {
-//			weights.showShape();
 			softmax.softmax(scores, weights);
 		}
-//		System.out.println("weights.showDM():");
-//		weights.showDM();
-		
+
 		GPUOP.getInstance().bmm(weights.getGpuData(), value.getGpuData(), attn_outputs.getGpuData(), weights.number * weights.channel, weights.height, value.width, weights.width,
 				CUBLAS_OP_N, CUBLAS_OP_N, 1.0f, 0.0f);
 	}

@@ -89,6 +89,7 @@ public class TransformerBlock extends Layer{
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
+		this.time = this.network.time;
 		if(this.tmp1 == null || this.tmp1.number != this.number) {
 //			System.out.println(number);
 			this.tmp1 = Tensor.createTensor(this.tmp1, number, 1, 1, embedDim, true);

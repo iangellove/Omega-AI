@@ -120,7 +120,7 @@ public class SoftmaxKernel extends BaseKernel{
 		}
 		
 		cuLaunchKernel(softmax_function,
-				input.number * input.channel * input.height,  1, 1,      // Grid dimension
+				this.CAFFE_GET_BLOCKS(input.number * input.channel * input.height),  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
 	            kernelParameters, null // Kernel- and extra parameters
@@ -132,7 +132,8 @@ public class SoftmaxKernel extends BaseKernel{
 	
 	public void softmaxMask(Tensor input,Tensor mask,Tensor output,float tmp) {
 		
-		if(kernelMaskParameters == null || this.N != output.number) {
+//		if(kernelMaskParameters == null || this.N != output.number) {
+
 			/**
 			 * float *input, float *output, float *mask, int batch, int n, float tmp
 			 */
@@ -147,7 +148,7 @@ public class SoftmaxKernel extends BaseKernel{
 			
 			this.N = output.number;
 			
-		}
+//		}
 		
 		cuLaunchKernel(softmax_mask_function,
 				this.CAFFE_GET_BLOCKS(input.number * input.channel * output.height),  1, 1,      // Grid dimension

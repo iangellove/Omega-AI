@@ -9,6 +9,7 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.ad.op.gpu.OPKernel;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.grad.GradClipping;
@@ -21,6 +22,8 @@ import com.omega.engine.nn.network.Seq2Seq;
 import com.omega.engine.nn.network.Seq2SeqRNN;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.rnn.data.IndexDataLoader;
+import com.omega.transformer.test.GPTTest;
+import com.omega.transformer.utils.CNChatTokenizer;
 import com.omega.transformer.utils.CNTokenizer;
 import com.omega.transformer.utils.ENTokenizer;
 
@@ -614,7 +617,7 @@ public class EDOptimizer extends Optimizer {
 		}
 	}
 	
-	public void trainGPT(CNTokenizer trainingData) {
+	public void trainGPT(CNChatTokenizer trainingData) {
 		// TODO Auto-generated method stub
 		try {
 			
@@ -758,7 +761,7 @@ public class EDOptimizer extends Optimizer {
 		}
 	}
 	
-	public void trainGPT2(CNTokenizer trainingData) {
+	public void trainGPT2(CNChatTokenizer trainingData) {
 		// TODO Auto-generated method stub
 		try {
 			
@@ -1048,7 +1051,7 @@ public class EDOptimizer extends Optimizer {
 		}
 	}
 	
-	public void trainNanoGPT(CNTokenizer trainingData) {
+	public void trainNanoGPT(CNChatTokenizer trainingData) {
 		// TODO Auto-generated method stub
 		try {
 			
@@ -1066,9 +1069,172 @@ public class EDOptimizer extends Optimizer {
 
 			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
 			
-			Tensor mask = ENTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
+			Tensor mask = CNChatTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
+
+			Tensor positions = CNChatTokenizer.getPositions(batchSize, network.time);
 			
-			Tensor positions = ENTokenizer.getPositions(batchSize, network.time);
+			Tensor positions1 = CNChatTokenizer.getPositions(1, network.time);
+			
+			Tensor mask1 = CNChatTokenizer.triu(1, network.headNum, network.time, network.time, 1);
+			
+			Tensor input1 = new Tensor(1 * network.time, 1, 1, network.vocabSize, true);
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+				
+				Tensor output = null;
+				
+				Tensor output1 = null;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+					
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadData(indexs[it], input, label);
+					
+					/**
+					 * forward
+					 */
+					output = network.forward(input, positions, mask);
+					
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, label, trainingData.dictionary.get("<pad>"));
+//					this.loss = network.loss(output, label);
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label, trainingData.dictionary.get("<pad>"));
+//					this.lossDiff = network.lossDiff(output, label);
+//					lossDiff.showDMByNumber(0);
+					
+//					System.out.println(JsonUtils.toJson(output.syncHost()));
+					
+//					GradClipping.gradClipping(this.lossDiff, 1e-7f);
+
+					/**
+					 * back
+					 */
+					this.network.back(this.lossDiff);
+					
+//					/**
+//					 * grad clipping
+//					 */
+//					this.gradClipping(this.network);
+					
+//					this.network.clipGradNorm(1.0f);
+					
+					/**
+					 * update
+					 */
+					if(it<indexs.length - 1){
+						this.network.update();
+					}
+
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
+					}
+
+//					train_loss += this.currentError;
+					
+					output.syncHost();
+					
+//					System.out.println(JsonUtils.toJson(inputEncoder.shape()));
+//					System.out.println(JsonUtils.toJson(output.shape()));
+//					System.out.println(JsonUtils.toJson(label.shape()));
+					int time = output.number / batchSize;
+					float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
+					
+//					if(error > 99) {
+//						break;
+//					}
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+				}
+//				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
+
+				output.showDMByNumber(1);
+				
+				OPKernel.getInstance().copy_number_gpu(input, input1, 0, 0);
+				
+				output1 = network.forward(input1, positions1, mask1);
+				output1.showDMByNumber(1);
+				
+				System.out.println("==============>");
+				GPTTest.output2TXT(input1, trainingData, true);
+				GPTTest.output2TXT(output1, trainingData, true);
+				input1.showDMByNumber(0);
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(this.lr_step);
+
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void trainNanoGPT_GEN(CNTokenizer trainingData) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			NanoGPT network = (NanoGPT) this.network;
+			
+			Tensor input = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
+
+			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
+			
+			Tensor mask = CNChatTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
+
+			Tensor positions = CNChatTokenizer.getPositions(batchSize, network.time);
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				
@@ -1106,18 +1272,17 @@ public class EDOptimizer extends Optimizer {
 					 * forward
 					 */
 					output = network.forward(input, positions, mask);
-//					output.showDMByNumber(0);
-//					label.showDMByNumber(0);
+					
 					/**
 					 * loss
 					 */
-					this.loss = network.loss(output, label, trainingData.dictionary.get("<pad>"));
-//					this.loss = network.loss(output, label);
+//					this.loss = network.loss(output, label, trainingData.dictionary.get("<pad>"));
+					this.loss = network.loss(output, label);
 					/**
 					 * loss diff
 					 */
-					this.lossDiff = network.lossDiff(output, label, trainingData.dictionary.get("<pad>"));
-//					this.lossDiff = network.lossDiff(output, label);
+//					this.lossDiff = network.lossDiff(output, label, trainingData.dictionary.get("<pad>"));
+					this.lossDiff = network.lossDiff(output, label);
 //					lossDiff.showDMByNumber(0);
 					
 //					System.out.println(JsonUtils.toJson(output.syncHost()));
@@ -1139,10 +1304,10 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * update
 					 */
-					this.network.update();
-					
-					JCudaDriver.cuCtxSynchronize();
-					
+					if(it<indexs.length - 1){
+						this.network.update();
+					}
+
 					/**
 					 * current time error
 					 */
@@ -1160,7 +1325,7 @@ public class EDOptimizer extends Optimizer {
 //					System.out.println(JsonUtils.toJson(output.shape()));
 //					System.out.println(JsonUtils.toJson(label.shape()));
 					int time = output.number / batchSize;
-					float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
+					float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab);
 					
 //					if(error > 99) {
 //						break;
@@ -1172,9 +1337,8 @@ public class EDOptimizer extends Optimizer {
 
 					this.batchIndex++;
 				}
-//				output.showDMByNumber(0);
 //				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
-				
+
 				/**
 				 * update learning rate
 				 */

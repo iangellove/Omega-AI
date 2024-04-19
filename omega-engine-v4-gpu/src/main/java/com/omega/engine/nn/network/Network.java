@@ -27,6 +27,8 @@ public abstract class Network {
 	
 	private int threadNum = 8;
 	
+	public int time;
+	
 	public NetworkType networkType;
 	
 	public List<Tensor> paramters = new ArrayList<Tensor>();

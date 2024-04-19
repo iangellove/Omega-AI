@@ -10,66 +10,55 @@ import java.util.Map;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MathUtils;
 
 public class CNTokenizer extends BaseTokenizer{
 	
-	public int number = 0;
-	
-	private int batchSize = 1;
-	
-	private final String[] _patterns = new String[]{"\\'", "\\\"", "\\.", "<br />", "\\,", "\\(", "\\)", "\\!", "\\?", "\\;", "\\:", "\\s+"};
-
-	private final String[] _replacements = new String[] {" '  ", "", " . ", " ", " , ", " ( ", " ) ", " ! ", " ? ", " ", " ", " "};
-	
 	private String dataPath;
 	
-	public Map<String,Integer> dictionary = new HashMap<String, Integer>();
+	private int dataSize = 0;
 	
-	private List<String> org_tokens = new ArrayList<String>();
+	public int characters = 1;
 	
-	public List<String[]> tokens = new ArrayList<String[]>();
+	public Map<Character,Integer> dictionary = new HashMap<Character, Integer>();
 	
-	private final String[] specials = new String[] {"<pad>","<sos>","<eos>","<sep>"};
+	private Character[] data;
 	
-	public static final Map<String,String> specials_dictionary = new HashMap<String, String>(){/**
-		 * 
-		 */
-		private static final long serialVersionUID = 342465861011632616L;
-
-	{
-	    put("<pad>", "#");
-	    put("<sos>", "@");
-	    put("<eos>", "-");
-	    put("<sep>", " ");
-	}};
-	
-	public static final Map<String,String> sd = new HashMap<String, String>(){/**
-		 * 
-		 */
-		private static final long serialVersionUID = 3669659616912512613L;
-
-	{
-	    put("#", "<pad>");
-	    put("@", "<sos>");
-	    put("-", "<eos>");
-	    put(" ", "<sep>");
-	}};
-	
-	public int max_len = 256;
-	
-	public int vocab_size;
+	public Character[] dictionaryData;
 	
 	public String[] vocab;
 	
+	public int inputType = 0;
+	
+	public int time;
+	
+	public int number;
+	
+	public int batchSize;
+	
 	public Tensor testInput;
 	
-	public CNTokenizer(String dataPath,int max_len,int batchSize) {
+	public CNTokenizer(String dataPath,int time,int batchSize) {
 		this.dataPath = dataPath;
-		this.max_len = max_len;
+		this.time = time;
+		this.loadDataForTXT();
+		this.dataSize = data.length;
+		this.number = this.dataSize - time;
+		this.characters = dictionary.size();
+		System.out.println("dataSize["+dataSize+"] characters["+characters+"]");
 		this.batchSize = batchSize;
-		loadDataForTXT();
-		this.number = org_tokens.size();
-		System.out.println(this.number);
+	}
+	
+	public CNTokenizer(String dataPath,int time,int batchSize,int inputType) {
+		this.dataPath = dataPath;
+		this.time = time;
+		this.inputType = inputType;
+		this.loadDataForTXT();
+		this.dataSize = data.length;
+		this.number = this.dataSize - time;
+		this.characters = dictionary.size();
+		System.out.println("dataSize["+dataSize+"] characters["+characters+"]");
+		this.batchSize = batchSize;
 	}
 	
 	public void loadDataForTXT() {
@@ -77,23 +66,27 @@ public class CNTokenizer extends BaseTokenizer{
 		try (FileInputStream fin = new FileInputStream(this.dataPath);
 			InputStreamReader reader = new InputStreamReader(fin);	
 		    BufferedReader buffReader = new BufferedReader(reader);){
-//			int dic_index = 0;
+			int dic_index = 0;
 			String strTmp = "";
+			List<Character> chars = new ArrayList<Character>();
 	        while((strTmp = buffReader.readLine())!=null){
-	        	for(int i = 0;i<_patterns.length;i++) {
-	        		strTmp = strTmp.replaceAll(_patterns[i], _replacements[i]);
-	        	}
-	        	strTmp = strTmp.toLowerCase();
-	        	strTmp = strTmp.substring(0, strTmp.length() - 1);
-	        	if(!strTmp.equals(" ") && !strTmp.equals("") && strTmp.length() <= max_len - 2) {
-	        		org_tokens.add(strTmp);
-//	        		strTmp = "<sos>" + strTmp + "<eos>";
-//		        	System.out.println(strTmp);
-//		        	System.out.println("line["+dic_index+"]:" + strTmp);
-//		        	dic_index++;
+	        	char[] lines = strTmp.toCharArray();
+	        	for(char txt:lines) {
+	        		chars.add(txt);
+	        		if(!dictionary.containsKey(txt)) {
+	        			dictionary.put(txt, dic_index);
+	        			dic_index++;
+	        		}
 	        	}
 	        }
-	        buildVocab();
+	        dictionaryData = new Character[dictionary.size()];
+	        vocab = new String[dictionary.size()];
+	        for(Character key:dictionary.keySet()) {
+	        	dictionaryData[dictionary.get(key)] = key;
+	        	vocab[dictionary.get(key)] = key.toString();
+	        }
+	        data = new Character[chars.size()];
+	        data = chars.toArray(data);
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -101,67 +94,23 @@ public class CNTokenizer extends BaseTokenizer{
 		
 	}
 	
-	public void buildVocab() {
-		for(int i = 0;i<specials.length;i++) {
-			dictionary.put(specials[i], i);
-		}
-		int idx = specials.length;
-		for(int i = 0;i<org_tokens.size();i++) {
-			String[] once = org_tokens.get(i).split("");
-//			System.out.println(JsonUtils.toJson(once));
-			if(once.length > 1) {
-				tokens.add(once);
-				for(int j = 0;j<once.length;j++) {
-					String txt = once[j];
-					if(!txt.equals("")) {
-						if(txt.equals(" ")) {
-							txt = "<sep>";
-							once[j] = "<sep>";
-						}
-						if(!dictionary.containsKey(txt)) {
-		        			dictionary.put(txt, idx);
-		        			idx++;
-		        		}
-					}
-				}
-			}
-			
-		}
-		vocab_size = dictionary.size();
-		vocab = new String[vocab_size];
-		for(String key:dictionary.keySet()) {
-			vocab[dictionary.get(key)] = key;
-		}
+	public int[][] shuffle() {
+		// TODO Auto-generated method stub
+		return MathUtils.randomInts(this.number,this.batchSize);
 	}
-	
 
-	public Tensor loadByTxt(String txt) {
-		
-		String[] onceToken = txt.split("");
-		System.out.println(JsonUtils.toJson(onceToken));
-		testInput = Tensor.createTensor(testInput, max_len, 1, 1, vocab_size, true);
-		testInput.clear();
-		for(int t = 0;t<max_len;t++) {
-			formatOnce(t, onceToken, testInput);
-		}
-		testInput.hostToDevice();
-		return testInput;
-	}
-	
 	public void loadData(int[] indexs, Tensor input, Tensor label) {
 		// TODO Auto-generated method stub
 		
 		input.clear();
 		label.clear();
-		
+
 		for(int i = 0;i<indexs.length;i++) {
-			String[] onceToken = tokens.get(indexs[i]);
-//			System.out.println(onceToken.length);
-			for(int t = 0;t<max_len;t++) {
-				format(i, t, onceToken, input, label);
+			for(int t = 0;t<time;t++) {
+				format(i, indexs[i], t, input, label);
 			}
 		}
-
+		
 		/**
 		 * copy data to gpu.
 		 */
@@ -170,65 +119,54 @@ public class CNTokenizer extends BaseTokenizer{
 		
 	}
 	
-	public void formatOnce(int t,String[] onceToken,Tensor input) {
-		if(t == 0){
-			String curr = onceToken[t];
-			if(sd.get(curr) != null) {
-				curr = sd.get(curr);
-			}
-			input.data[t * vocab_size + 1] = 1.0f;
-			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
-			return;
-		}
-		if(t == onceToken.length - 1) {
-			String curr = onceToken[t];
-			if(sd.get(curr) != null) {
-				curr = sd.get(curr);
-			}
-			System.out.println("curr:"+curr);
-			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
-			return;
-		}
-		
-		if((t + 1) < onceToken.length) {
-			String curr = onceToken[t];
-			if(sd.get(curr) != null) {
-				curr = sd.get(curr);
-			}
-			System.out.println("curr:"+curr);
-			input.data[(t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
-		}else if(t < max_len - 1){
-			input.data[(t + 1) * vocab_size + 0] = 1.0f;
+	public void format(int b,int i,int t,Tensor input,Tensor label) {
+		char curr = data[i + t];
+		char next = data[i + t + 1];
+		if(inputType == 1) {
+			input.data[(b * time + t)] = dictionary.get(curr);
+			label.data[(b * time + t) * characters + dictionary.get(next)] = 1.0f;
+		}else {
+			input.data[(b * time + t) * characters + dictionary.get(curr)] = 1.0f;
+			label.data[(b * time + t) * characters + dictionary.get(next)] = 1.0f;
 		}
 	}
 	
-	public void format(int b,int t,String[] onceToken,Tensor input,Tensor label) {
-		if(t == 0){
-			String curr = onceToken[t];
-			String next = onceToken[t+1];
-			input.data[(b * max_len + t) * vocab_size + 1] = 1.0f;
-			input.data[(b * max_len + t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
-			label.data[(b * max_len + t) * vocab_size + dictionary.get(next)] = 1.0f;
-			return;
-		}
-		if(t == onceToken.length - 1) {
-			String curr = onceToken[t];
-			input.data[(b * max_len + t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
-			label.data[(b * max_len + t) * vocab_size + 2] = 1.0f;
-			return;
-		}
-		if((t + 1) < onceToken.length) {
-			String curr = onceToken[t];
-			String next = onceToken[t + 1];
-//			System.out.println(next);
-			input.data[(b * max_len + t + 1) * vocab_size + dictionary.get(curr)] = 1.0f;
-			label.data[(b * max_len + t) * vocab_size + dictionary.get(next)] = 1.0f;
-		}else {
-			input.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
-			label.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
-		}
+	public void format(int t,Tensor input,char curr) {
+		input.data[t * characters + dictionary.get(curr)] = 1.0f;
 	}
 
+	public void loadData(int pageIndex, int batchSize, Tensor input, Tensor label) {
+		// TODO Auto-generated method stub
+		
+		int[] indexs = getIndexsByAsc(pageIndex, batchSize);
+		
+		this.loadData(indexs, input, label);
+		
+	}
+
+	public Tensor initLabelTensor() {
+		// TODO Auto-generated method stub
+		return new Tensor(time * batchSize, 1, 1, characters, true);
+	} 
+	
+	public int[] getIndexsByAsc(int pageIndex, int batchSize) {
+		
+		int start = pageIndex * batchSize;
+		
+		int end = pageIndex * batchSize + batchSize;
+		
+		if(end > number) {
+			start = start - (end - number);
+		}
+		
+		int[] indexs = new int[batchSize];
+		
+		for(int i = 0;i<batchSize;i++){
+			indexs[i] = start + i;
+		}
+		
+		return indexs;
+	}
 	
 	public static Tensor getPositions(int b,int time) {
 		float[] data = new float[b * time * time];
@@ -237,7 +175,7 @@ public class CNTokenizer extends BaseTokenizer{
 				data[n * time * time + t * time + t] = 1;
 			}
 		}
-		Tensor positions = new Tensor(b, time, 1, time, data, true);
+		Tensor positions = new Tensor(b * time, 1, 1, time, data, true);
 		
 		return positions;
 	}
@@ -261,21 +199,17 @@ public class CNTokenizer extends BaseTokenizer{
 		return mask;
 	}
 	
-	public static void main(String[] args) {
-		
-//		String dataPath = "H:\\transformer_dataset\\gpt\\chatdata\\train1w.txt";
-//		
-//		int batchSize = 64;
-//		
-//		CNTokenizer tokenizer = new CNTokenizer(dataPath, 256, batchSize);
-		
-//		tokenizer.loadDataForTXT();
-		
-		Tensor subsequent_mask = triu(2, 4, 5, 5, 1);
-		subsequent_mask.showDM();
-		
-//		Tensor positions = getPositions(2, 4);
-//		positions.showDM();
+	public Tensor loadByTxt(String txt) {
+		char[] onceToken = txt.toCharArray();
+//		String[] onceToken = txt.split("");
+		System.out.println(JsonUtils.toJson(onceToken));
+		testInput = Tensor.createTensor(testInput, onceToken.length, 1, 1, characters, true);
+		testInput.clear();
+		for(int t = 0;t<onceToken.length;t++) {
+			format(t, testInput, onceToken[t]);
+		}
+		testInput.hostToDevice();
+		return testInput;
 	}
 	
 }

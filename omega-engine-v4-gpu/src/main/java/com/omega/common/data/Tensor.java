@@ -407,6 +407,12 @@ public class Tensor implements Serializable{
 		}
 	}
 	
+	public void val_cpu(float val) {
+		for(int i = 0;i<this.dataLength;i++) {
+			this.data[i] = val;
+		}
+	}
+	
 	public void clear(int number,int channel,int height,int width) {
 		this.number = number;
 		this.channel = channel;
