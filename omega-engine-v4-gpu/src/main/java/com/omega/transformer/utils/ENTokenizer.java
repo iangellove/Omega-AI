@@ -38,11 +38,27 @@ public class ENTokenizer {
 	
 	public Tensor testInput;
 	
+	public int formatType = 0; //0:word,1:char
+	
 	public ENTokenizer(String dataPath,int max_len,int batchSize) {
 		this.dataPath = dataPath;
 		this.max_len = max_len;
 		this.batchSize = batchSize;
 		loadDataForTXT();
+		this.number = org_tokens.size();
+		System.out.println(this.number);
+	}
+	
+	public ENTokenizer(String dataPath,int max_len,int batchSize,int formatType) {
+		this.dataPath = dataPath;
+		this.max_len = max_len;
+		this.batchSize = batchSize;
+		this.formatType= formatType;
+		if(formatType > 0) {
+			loadDataForTXTByChar();
+		}else {
+			loadDataForTXT();
+		}
 		this.number = org_tokens.size();
 		System.out.println(this.number);
 	}
@@ -74,6 +90,33 @@ public class ENTokenizer {
 		
 	}
 	
+	public void loadDataForTXTByChar() {
+		
+		try (FileInputStream fin = new FileInputStream(this.dataPath);
+			InputStreamReader reader = new InputStreamReader(fin);	
+		    BufferedReader buffReader = new BufferedReader(reader);){
+//			int dic_index = 0;
+			String strTmp = "";
+	        while((strTmp = buffReader.readLine())!=null){
+	        	for(int i = 0;i<_patterns.length;i++) {
+	        		strTmp = strTmp.replaceAll(_patterns[i], _replacements[i]);
+	        	}
+	        	strTmp = strTmp.toLowerCase();
+	        	if(!strTmp.equals(" ")) {
+	        		strTmp = "<sos>" + strTmp + "<eos>";
+		        	org_tokens.add(strTmp);
+//		        	System.out.println("" + strTmp);
+//		        	dic_index++;
+	        	}
+	        }
+	        buildVocabByChar();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void buildVocab() {
 		for(int i = 0;i<specials.length;i++) {
 			dictionary.put(specials[i], i);
@@ -81,6 +124,33 @@ public class ENTokenizer {
 		int idx = specials.length;
 		for(int i = 0;i<org_tokens.size();i++) {
 			String[] once = org_tokens.get(i).split(" ");
+			if(once.length > 1) {
+				tokens.add(once);
+				for(int j = 0;j<once.length;j++) {
+					if(!once[j].equals("")) {
+						if(!dictionary.containsKey(once[j])) {
+		        			dictionary.put(once[j], idx);
+		        			idx++;
+		        		}
+					}
+				}
+			}
+			
+		}
+		vocab_size = dictionary.size();
+		vocab = new String[vocab_size];
+		for(String key:dictionary.keySet()) {
+			vocab[dictionary.get(key)] = key;
+		}
+	}
+	
+	public void buildVocabByChar() {
+		for(int i = 0;i<specials.length;i++) {
+			dictionary.put(specials[i], i);
+		}
+		int idx = specials.length;
+		for(int i = 0;i<org_tokens.size();i++) {
+			String[] once = org_tokens.get(i).split("");
 			if(once.length > 1) {
 				tokens.add(once);
 				for(int j = 0;j<once.length;j++) {
@@ -143,6 +213,27 @@ public class ENTokenizer {
 		
 	}
 	
+	public void loadDataIdx(int[] indexs, Tensor input, Tensor label) {
+		// TODO Auto-generated method stub
+		
+		input.clear();
+		label.clear();
+		
+		for(int i = 0;i<indexs.length;i++) {
+			String[] onceToken = tokens.get(indexs[i]);
+			for(int t = 0;t<max_len;t++) {
+				formatIdx(i, t, onceToken, input, label);
+			}
+		}
+
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+		label.hostToDevice();
+		
+	}
+	
 	public void format(int b,int t,String[] onceToken,Tensor input,Tensor label) {
 		if((t + 1) < onceToken.length) {
 			String curr = onceToken[t];
@@ -151,6 +242,18 @@ public class ENTokenizer {
 			label.data[(b * max_len + t) * vocab_size + dictionary.get(next)] = 1.0f;
 		}else {
 			input.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
+			label.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
+		}
+	}
+	
+	public void formatIdx(int b,int t,String[] onceToken,Tensor input,Tensor label) {
+		if((t + 1) < onceToken.length) {
+			String curr = onceToken[t];
+			String next = onceToken[t + 1];
+			input.data[b * max_len + t] = dictionary.get(curr);
+			label.data[(b * max_len + t) * vocab_size + dictionary.get(next)] = 1.0f;
+		}else {
+			input.data[b * max_len + t] = dictionary.get("<pad>");
 			label.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
 		}
 	}

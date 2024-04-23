@@ -122,11 +122,12 @@ public class CNTokenizer extends BaseTokenizer{
 	public void format(int b,int i,int t,Tensor input,Tensor label) {
 		char curr = data[i + t];
 		char next = data[i + t + 1];
+
 		if(inputType == 1) {
-			input.data[(b * time + t)] = dictionary.get(curr);
+			input.data[b * time + t] = dictionary.get(curr);
 			label.data[(b * time + t) * characters + dictionary.get(next)] = 1.0f;
 		}else {
-			input.data[(b * time + t) * characters + dictionary.get(curr)] = 1.0f;
+			input.data[b * time + t] = dictionary.get(curr);
 			label.data[(b * time + t) * characters + dictionary.get(next)] = 1.0f;
 		}
 	}

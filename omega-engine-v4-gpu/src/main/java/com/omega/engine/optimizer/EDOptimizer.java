@@ -1228,13 +1228,13 @@ public class EDOptimizer extends Optimizer {
 			
 			NanoGPT network = (NanoGPT) this.network;
 			
-			Tensor input = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
+			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
 
 			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
 			
 			Tensor mask = CNChatTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
 
-			Tensor positions = CNChatTokenizer.getPositions(batchSize, network.time, network.time);
+			Tensor positions = CNChatTokenizer.getPositions(batchSize, network.time);
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				

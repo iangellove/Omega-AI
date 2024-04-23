@@ -1438,10 +1438,10 @@ public abstract class Optimizer {
 			for(int t = 0;t<time;t++) {
 				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
 				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
-				int inputIndex = MatrixOperation.maxIndex(input.getByNumber(n * time + t));
-				ptxt += " " + vocab[predictIndex];
-				ltxt += " " + vocab[labelIndex];
-				itxt += " " + vocab[inputIndex];
+				int inputIndex = (int) input.data[n * time + t];
+				ptxt += vocab[predictIndex];
+				ltxt += vocab[labelIndex];
+				itxt += vocab[inputIndex];
 				if(labelIndex != predictIndex) {
 					allRight = false;
 					score--;
