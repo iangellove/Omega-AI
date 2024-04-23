@@ -212,6 +212,7 @@ public class GPTTest {
 				Tensor mask = CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1);
 				mask.showDM();
 				for(int t = 0;t<max_len;t++) {
+					network.time = input.number;
 					Tensor output = network.forward(input, positions, mask);
 					output.syncHost();
 					String txts = output2TXT(output, trainData, true);
