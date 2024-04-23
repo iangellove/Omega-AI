@@ -119,6 +119,8 @@ public class FullyCudnnKernel extends ConvBaseKernel{
 		
 		this.init(input.number);
 		
+//		JCudnn.cudnnDropoutForward(handle, dropoutDesc, xdesc, x, ydesc, y, reserveSpace, reserveSpaceSizeInBytes)
+		
 		handle(JCudnn.cudnnConvolutionForward(CudnnHandleManager.getHandle(), alpha_P, xDesc, input.getGpuData(), kernelDesc, kernel.getGpuData(), convDesc, fw_algo,
 				this.network.workspace, this.network.workspaceSize, beta_P, yDesc, output.getGpuData()));
 		

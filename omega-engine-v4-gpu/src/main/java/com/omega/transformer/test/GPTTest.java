@@ -495,7 +495,7 @@ public class GPTTest {
 			
 			String pre_txt = "All";
 			
-			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length(), max_len);
+			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length());
 			
 			Tensor mask = CNChatTokenizer.triu(1, network.headNum, pre_txt.length(), pre_txt.length(), 1);
 			
@@ -513,7 +513,8 @@ public class GPTTest {
 				}
 				System.out.println(pre_txt);
 				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, pre_txt.length());
-				CNChatTokenizer.getPositions(1, pre_txt.length(), max_len, positions);
+				CNChatTokenizer.getPositions(1, pre_txt.length(), positions);
+				CNChatTokenizer.triu(1, network.headNum, pre_txt.length(), pre_txt.length(), 1, mask);
 			}
 
 		} catch (Exception e) {

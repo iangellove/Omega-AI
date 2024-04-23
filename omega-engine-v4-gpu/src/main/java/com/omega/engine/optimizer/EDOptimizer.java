@@ -1244,7 +1244,7 @@ public class EDOptimizer extends Optimizer {
 				
 				this.trainIndex = i + 1;
 				
-				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+				int[][] indexs = MathUtils.randomInts(trainingData.trainData.length,this.batchSize);
 				
 				Tensor output = null;
 				
@@ -1337,6 +1337,47 @@ public class EDOptimizer extends Optimizer {
 
 					this.batchIndex++;
 				}
+				
+				int[][] vailIndexs = MathUtils.randomInts(trainingData.vailData.length,this.batchSize);
+				
+				for(int it = 0;it<vailIndexs.length;it++) {
+					
+					long start = System.nanoTime();
+					
+					this.loss.clear();
+
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadDataVail(indexs[it], input, label);
+					/**
+					 * forward
+					 */
+					output = network.forward(input, positions, mask);
+					
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, label);
+					
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
+					}
+
+					output.syncHost();
+					int time = output.number / batchSize;
+					float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab);
+					
+					String msg = "vail["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+				}
+				
 //				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
 
 				/**

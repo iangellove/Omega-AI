@@ -38,6 +38,12 @@ public class CNTokenizer extends BaseTokenizer{
 	
 	public Tensor testInput;
 	
+	public Character[] trainData;
+	
+	public Character[] vailData;
+	
+	private float vailRatio = 0.1f;
+	
 	public CNTokenizer(String dataPath,int time,int batchSize) {
 		this.dataPath = dataPath;
 		this.time = time;
@@ -47,6 +53,7 @@ public class CNTokenizer extends BaseTokenizer{
 		this.characters = dictionary.size();
 		System.out.println("dataSize["+dataSize+"] characters["+characters+"]");
 		this.batchSize = batchSize;
+		buildData();
 	}
 	
 	public CNTokenizer(String dataPath,int time,int batchSize,int inputType) {
@@ -59,6 +66,18 @@ public class CNTokenizer extends BaseTokenizer{
 		this.characters = dictionary.size();
 		System.out.println("dataSize["+dataSize+"] characters["+characters+"]");
 		this.batchSize = batchSize;
+		buildData();
+	}
+	
+	public void buildData() {
+		int trainDataSize = (int) (this.number * (1 - vailRatio));
+		int vailDataSize = this.number - trainDataSize;
+		
+		trainData = new Character[trainDataSize];
+		vailData = new Character[vailDataSize];
+		
+		System.arraycopy(data, 0, trainData, 0, trainData.length);
+		System.arraycopy(data, trainData.length, vailData, 0, vailData.length);
 	}
 	
 	public void loadDataForTXT() {
@@ -107,7 +126,7 @@ public class CNTokenizer extends BaseTokenizer{
 
 		for(int i = 0;i<indexs.length;i++) {
 			for(int t = 0;t<time;t++) {
-				format(i, indexs[i], t, input, label);
+				format(i, indexs[i], t, trainData, input, label);
 			}
 		}
 		
@@ -117,6 +136,39 @@ public class CNTokenizer extends BaseTokenizer{
 		input.hostToDevice();
 		label.hostToDevice();
 		
+	}
+	
+	public void loadDataVail(int[] indexs, Tensor input, Tensor label) {
+		// TODO Auto-generated method stub
+		
+		input.clear();
+		label.clear();
+
+		for(int i = 0;i<indexs.length;i++) {
+			for(int t = 0;t<time;t++) {
+				format(i, indexs[i], t, vailData, input, label);
+			}
+		}
+		
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+		label.hostToDevice();
+		
+	}
+	
+	public void format(int b,int i,int t,Character[] dataset,Tensor input,Tensor label) {
+		char curr = dataset[i + t];
+		char next = dataset[i + t + 1];
+
+		if(inputType == 1) {
+			input.data[b * time + t] = dictionary.get(curr);
+			label.data[(b * time + t) * characters + dictionary.get(next)] = 1.0f;
+		}else {
+			input.data[b * time + t] = dictionary.get(curr);
+			label.data[(b * time + t) * characters + dictionary.get(next)] = 1.0f;
+		}
 	}
 	
 	public void format(int b,int i,int t,Tensor input,Tensor label) {
