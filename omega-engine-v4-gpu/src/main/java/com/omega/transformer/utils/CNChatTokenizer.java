@@ -145,7 +145,20 @@ public class CNChatTokenizer extends BaseTokenizer{
 		testInput = Tensor.createTensor(testInput, max_len, 1, 1, vocab_size, true);
 		testInput.clear();
 		for(int t = 0;t<max_len;t++) {
-			formatOnce(t, onceToken, testInput);
+			formatNotHeadToIdx(t, onceToken, testInput);
+		}
+		testInput.hostToDevice();
+		return testInput;
+	}
+	
+	public Tensor loadByTxtToIdx(String txt) {
+		
+		String[] onceToken = txt.split("");
+		System.out.println(JsonUtils.toJson(onceToken));
+		testInput = Tensor.createTensor(testInput, txt.length(), 1, 1, 1, true);
+		testInput.clear();
+		for(int t = 0;t<txt.length();t++) {
+			formatNotHeadToIdx(t, onceToken, testInput);
 		}
 		testInput.hostToDevice();
 		return testInput;
@@ -161,7 +174,7 @@ public class CNChatTokenizer extends BaseTokenizer{
 			String[] onceToken = tokens.get(indexs[i]);
 //			System.out.println(onceToken.length);
 			for(int t = 0;t<max_len;t++) {
-				format(i, t, onceToken, input, label);
+				formatNotHeadToIdx(i, t, onceToken, input, label);
 			}
 		}
 
@@ -231,6 +244,42 @@ public class CNChatTokenizer extends BaseTokenizer{
 		}
 	}
 	
+	public void formatOnceNotHead(int t,String[] onceToken,Tensor input) {
+		if((t + 1) < onceToken.length) {
+			String curr = onceToken[t];
+			if(sd.get(curr) != null) {
+				curr = sd.get(curr);
+			}
+			input.data[t * vocab_size + dictionary.get(curr)] = 1.0f;
+		}else if((t + 1) == onceToken.length){
+			String curr = onceToken[t];
+			if(sd.get(curr) != null) {
+				curr = sd.get(curr);
+			}
+			input.data[t * vocab_size + dictionary.get(curr)] = 1.0f;
+		}else {
+			input.data[t * vocab_size + 0] = 1.0f;
+		}
+	}
+	
+	public void formatNotHeadToIdx(int t,String[] onceToken,Tensor input) {
+		if((t + 1) < onceToken.length) {
+			String curr = onceToken[t];
+			if(sd.get(curr) != null) {
+				curr = sd.get(curr);
+			}
+			input.data[t] = dictionary.get(curr);
+		}else if((t + 1) == onceToken.length){
+			String curr = onceToken[t];
+			if(sd.get(curr) != null) {
+				curr = sd.get(curr);
+			}
+			input.data[t] = dictionary.get(curr);
+		}else {
+			input.data[t] = dictionary.get("<pad>");
+		}
+	}
+	
 	public void format(int b,int t,String[] onceToken,Tensor input,Tensor label) {
 		if(t == 0){
 			String curr = onceToken[t];
@@ -257,25 +306,94 @@ public class CNChatTokenizer extends BaseTokenizer{
 			label.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
 		}
 	}
-
+	
+	public void formatNotHead(int b,int t,String[] onceToken,Tensor input,Tensor label) {
+		if((t + 1) < onceToken.length) {
+			String curr = onceToken[t];
+			String next = onceToken[t + 1];
+			input.data[(b * max_len + t) * vocab_size + dictionary.get(curr)] = 1.0f;
+			label.data[(b * max_len + t) * vocab_size + dictionary.get(next)] = 1.0f;
+		}else if((t + 1) == onceToken.length){
+			String curr = onceToken[t];
+			input.data[(b * max_len + t) * vocab_size + dictionary.get(curr)] = 1.0f;
+			label.data[(b * max_len + t) * vocab_size + dictionary.get("<sep>")] = 1.0f;
+		}else {
+			input.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
+			label.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
+		}
+	}
+	
+	public void formatNotHeadToIdx(int b,int t,String[] onceToken,Tensor input,Tensor label) {
+		if((t + 1) < onceToken.length) {
+			String curr = onceToken[t];
+			String next = onceToken[t + 1];
+			input.data[b * max_len + t] = dictionary.get(curr);
+			label.data[(b * max_len + t) * vocab_size + dictionary.get(next)] = 1.0f;
+		}else if((t + 1) == onceToken.length){
+			String curr = onceToken[t];
+			input.data[b * max_len + t] = dictionary.get(curr);
+			label.data[(b * max_len + t) * vocab_size + dictionary.get("<sep>")] = 1.0f;
+		}else {
+			input.data[b * max_len + t] = dictionary.get("<pad>");
+			label.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
+		}
+	}
 	
 	public static Tensor getPositions(int b,int time) {
-		float[] data = new float[b * time * time];
+		float[] data = new float[b * time];
 		for(int n = 0;n<b;n++) {
 			for(int t = 0;t<time;t++) {
-				data[n * time * time + t * time + t] = 1;
+				data[n * time + t] = t;
 			}
 		}
-		Tensor positions = new Tensor(b * time, 1, 1, time, data, true);
+		Tensor positions = new Tensor(b * time, 1, 1, 1, data, true);
 		
 		return positions;
 	}
 	
-	public static void getPositions(int b,int time,Tensor positions) {
+	public static Tensor getPositions(int b,int c,int time) {
+		float[] data = new float[b * c * time];
+		for(int n = 0;n<b * c;n++) {
+			int pt = n % c;
+			for(int t = 0;t<time;t++) {
+				if(pt == t) {
+					data[n * time + t] = 1;
+				}
+			}
+		}
+		Tensor positions = new Tensor(b * c, 1, 1, time, data, true);
+		
+		return positions;
+	}
+	
+//	public static void getPositions(int b,int time,Tensor positions) {
+//		positions = Tensor.createTensor(positions, b * time, 1, 1, time, true);
+//		for(int n = 0;n<b;n++) {
+//			for(int t = 0;t<time;t++) {
+//				positions.data[n * time * time + t * time + t] = 1;
+//			}
+//		}
+//		positions.hostToDevice();
+//	}
+	
+	public static void getPositions(int b,int c,int time,Tensor positions) {
 		positions = Tensor.createTensor(positions, b * time, 1, 1, time, true);
+		for(int n = 0;n<b * c;n++) {
+			int pt = n % b;
+			for(int t = 0;t<time;t++) {
+				if(pt == t) {
+					positions.data[n * time + t] = 1;
+				}
+			}
+		}
+		positions.hostToDevice();
+	}
+	
+	public static void getPositions(int b,int time,Tensor positions) {
+		positions = Tensor.createTensor(positions, b * time, 1, 1, 1, true);
 		for(int n = 0;n<b;n++) {
 			for(int t = 0;t<time;t++) {
-				positions.data[n * time * time + t * time + t] = 1;
+				positions.data[n * time + t] = t;
 			}
 		}
 		positions.hostToDevice();
@@ -346,13 +464,13 @@ public class CNChatTokenizer extends BaseTokenizer{
 //		CNTokenizer tokenizer = new CNTokenizer(dataPath, 256, batchSize);
 		
 //		tokenizer.loadDataForTXT();
-		int[] targetLens = new int[] {2, 4};
-		Tensor subsequent_mask = triu(2, 4, 5, 5, 1);
-		triu(1, targetLens, subsequent_mask);
-		subsequent_mask.showDM();
-		PrintUtils.printImage(subsequent_mask);
-//		Tensor positions = getPositions(2, 4);
-//		positions.showDM();
+//		int[] targetLens = new int[] {2, 4};
+//		Tensor subsequent_mask = triu(2, 4, 5, 5, 1);
+//		triu(1, targetLens, subsequent_mask);
+//		subsequent_mask.showDM();
+//		PrintUtils.printImage(subsequent_mask);
+		Tensor positions = getPositions(2, 3, 4);
+		PrintUtils.printImage(positions);
 	}
 	
 	public int[] getTargetLens() {

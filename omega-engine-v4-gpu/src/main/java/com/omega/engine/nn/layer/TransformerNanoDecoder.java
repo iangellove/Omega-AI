@@ -32,8 +32,8 @@ public class TransformerNanoDecoder extends Layer{
 	
 	private int n_layers = 6;
 	
-	private EmbeddingLayer src_emb;
-	private EmbeddingLayer pos_emb;
+	private EmbeddingIDLayer src_emb;
+	private EmbeddingIDLayer pos_emb;
 	private List<TransformerBlock> decoderLayers;
 	private LNLayer ln;
 	private DropoutLayer dropoutLayer;
@@ -71,10 +71,10 @@ public class TransformerNanoDecoder extends Layer{
 	
 	public void initLayers() {
 		
-		this.src_emb = new EmbeddingLayer(vocab_size, embedDim, network);
+		this.src_emb = new EmbeddingIDLayer(vocab_size, embedDim, network);
 		this.src_emb.weight = new Tensor(1, 1, src_emb.width, src_emb.oWidth, RandomUtils.uniform(this.src_emb.width * this.src_emb.oWidth, 0.0f, 0.02f), true);
 		
-		this.pos_emb = new EmbeddingLayer(time, embedDim, network);
+		this.pos_emb = new EmbeddingIDLayer(time, embedDim, network);
 		this.pos_emb.weight = new Tensor(1, 1, pos_emb.width, pos_emb.oWidth, RandomUtils.uniform(this.pos_emb.width * this.pos_emb.oWidth, 0.0f, 0.02f), true);
 		
 		decoderLayers = new ArrayList<TransformerBlock>();
@@ -179,13 +179,13 @@ public class TransformerNanoDecoder extends Layer{
 		// TODO Auto-generated method stub
 
 		src_emb.forward(input);
-		
+
 		pos_emb.forward(positions);
-		
+
 		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
 		
 		Tensor out1 = src_emb.getOutput();
-		
+
 		if(dropout) {
 			this.dropoutLayer.forward(src_emb.getOutput());
 			out1 = dropoutLayer.getOutput();

@@ -2,8 +2,9 @@ package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.nn.layer.gpu.EmbeddingKernel;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * 
@@ -14,28 +15,31 @@ import com.omega.engine.nn.network.Network;
  */
 public class EmbeddingIDLayer extends Layer{
 	
-	private BaseKernel baseKernel;
+	private EmbeddingKernel kernel;
 	
-	public EmbeddingIDLayer(int inputNum,int outputNum) {
+	public EmbeddingIDLayer(int num_embeddings,int embedding_dim) {
 		this.channel = 1;
 		this.height = 1;
-		this.width = inputNum;
+		this.width = num_embeddings;
 		this.oChannel = channel;
 		this.oHeight = height;
-		this.oWidth = outputNum;
+		this.oWidth = embedding_dim;
 		this.hasParams = true;
 		this.hasBias = false;
 		this.initParam();
 	}
 
-	public EmbeddingIDLayer(int inputNum,int outputNum,Network network) {
+	public EmbeddingIDLayer(int num_embeddings,int embedding_dim,Network network) {
 		this.network = network;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
 		this.channel = 1;
 		this.height = 1;
-		this.width = inputNum;
+		this.width = num_embeddings;
 		this.oChannel = channel;
 		this.oHeight = height;
-		this.oWidth = outputNum;
+		this.oWidth = embedding_dim;
 		this.hasParams = true;
 		this.hasBias = false;
 		this.initParam();
@@ -55,14 +59,24 @@ public class EmbeddingIDLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		if(this.output == null || this.number != this.output.number){
-			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+		}
+	}
+	
+	public void init(Tensor input) {
+		// TODO Auto-generated method stub
+		this.number = input.number;
+		if(this.output == null || this.number != this.output.number){
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 	}
 	
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub
-		baseKernel = new BaseKernel();
+		if(kernel == null) {
+			kernel = new EmbeddingKernel();
+		}
 		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_uniform(this.width * this.oWidth, this.width, this.paramsInit), true);
 		this.diffW = new Tensor(1, 1, width, oWidth, true);
 	}
@@ -73,13 +87,8 @@ public class EmbeddingIDLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		if(this.input != null) {
-			
-//			this.input.syncHost();
-			
-			for(int i=0;i<output.number;i++) {
-				int wi = (int) this.input.data[i];
-				baseKernel.copy_gpu(weight, output, output.getOnceSize(), wi * oWidth, 1, i * oWidth, 1);
-			}
+
+			kernel.forward(input, weight, output);
 
 		}
 		
@@ -89,10 +98,7 @@ public class EmbeddingIDLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		diffW.clearGPU();
-		for(int i=0;i<input.number;i++) {
-			int wi = (int) this.input.data[i];
-			baseKernel.copy_gpu(delta, diffW, diffW.getOnceSize(), i * delta.getOnceSize(), 1, wi * diffW.getOnceSize(), 1);
-		}
+		kernel.backward(delta, diffW, input);
 	}
 	
 	@Override
@@ -187,16 +193,16 @@ public class EmbeddingIDLayer extends Layer{
 	}
 
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 设置输入
 		 */
-		this.setInput(inpnut);
+		this.setInput(input);
 		/**
 		 * 计算输出
 		 */

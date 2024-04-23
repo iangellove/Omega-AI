@@ -154,7 +154,7 @@ public class CUDAModules {
         	maxThreads = instance.getMaxThreads(device);
         	
             threadsPerDimension = (int) Math.sqrt(maxThreads);
-			
+             
 	        // Load the ptx file.
 	        MyCUDAModule module = new MyCUDAModule();
 	        cuModuleLoad(module, ptxFileName);

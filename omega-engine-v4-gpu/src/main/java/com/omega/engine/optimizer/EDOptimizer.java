@@ -1065,7 +1065,7 @@ public class EDOptimizer extends Optimizer {
 			
 			NanoGPT network = (NanoGPT) this.network;
 			
-			Tensor input = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
+			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
 
 			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
 			
@@ -1077,7 +1077,7 @@ public class EDOptimizer extends Optimizer {
 			
 			Tensor mask1 = CNChatTokenizer.triu(1, network.headNum, network.time, network.time, 1);
 			
-			Tensor input1 = new Tensor(1 * network.time, 1, 1, network.vocabSize, true);
+			Tensor input1 = new Tensor(1 * network.time, 1, 1, 1, true);
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				
@@ -1149,9 +1149,9 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * update
 					 */
-					if(it<indexs.length - 1){
+//					if(it<indexs.length - 1){
 						this.network.update();
-					}
+//					}
 
 					/**
 					 * current time error
@@ -1184,17 +1184,17 @@ public class EDOptimizer extends Optimizer {
 				}
 //				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
 
-				output.showDMByNumber(1);
-				
-				OPKernel.getInstance().copy_number_gpu(input, input1, 0, 0);
-				
-				output1 = network.forward(input1, positions1, mask1);
-				output1.showDMByNumber(1);
-				
-				System.out.println("==============>");
-				GPTTest.output2TXT(input1, trainingData, true);
-				GPTTest.output2TXT(output1, trainingData, true);
-				input1.showDMByNumber(0);
+//				output.showDMByNumber(1);
+//				
+//				OPKernel.getInstance().copy_number_gpu(input, input1, 0, 0);
+//				
+//				output1 = network.forward(input1, positions1, mask1);
+//				output1.showDMByNumber(1);
+//				
+//				System.out.println("==============>");
+//				GPTTest.output2TXT(input1, trainingData, true);
+//				GPTTest.output2TXT(output1, trainingData, true);
+//				input1.showDMByNumber(0);
 				
 				/**
 				 * update learning rate
@@ -1234,7 +1234,7 @@ public class EDOptimizer extends Optimizer {
 			
 			Tensor mask = CNChatTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
 
-			Tensor positions = CNChatTokenizer.getPositions(batchSize, network.time);
+			Tensor positions = CNChatTokenizer.getPositions(batchSize, network.time, network.time);
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				

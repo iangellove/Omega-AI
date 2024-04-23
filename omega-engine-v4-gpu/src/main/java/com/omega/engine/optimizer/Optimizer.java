@@ -1387,7 +1387,7 @@ public abstract class Optimizer {
 			for(int t = 0;t<time;t++) {
 				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
 				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
-				int inputIndex = MatrixOperation.maxIndex(input.getByNumber(n * time + t));
+				int inputIndex = (int) input.data[n * time + t];
 				ptxt += " " + vocab[predictIndex];
 				ltxt += " " + vocab[labelIndex];
 				itxt += " " + vocab[inputIndex];
@@ -1425,7 +1425,7 @@ public abstract class Optimizer {
 		
 		float error = 0.0f;
 		float trueCount = 0;
-		int max_score = 0;
+		int max_score = time;
 		String max_itxt = "";
 		String max_ptxt = "";
 		String max_ltxt = "";
@@ -1447,7 +1447,7 @@ public abstract class Optimizer {
 					score--;
 				}
 			}
-			if(max_score <= score) {
+			if(max_score >= score) {
 				max_score = score;
 				max_itxt = itxt;
 				max_ptxt = ptxt;

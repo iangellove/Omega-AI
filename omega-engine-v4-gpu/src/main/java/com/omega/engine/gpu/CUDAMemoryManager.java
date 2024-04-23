@@ -11,6 +11,7 @@ import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
 import jcuda.runtime.JCuda;
+import jcuda.runtime.cudaError;
 
 public class CUDAMemoryManager {
 	
@@ -63,7 +64,7 @@ public class CUDAMemoryManager {
 	
 	public static Pointer getPointer(int size) {
 		Pointer p = new Pointer();
-		cudaMalloc(p, size * Sizeof.FLOAT);
+		checkCUDA(cudaMalloc(p, size * Sizeof.FLOAT), p.toString(), size * Sizeof.FLOAT);
 		cu_porints.add(p);
 		return p;
 	}
@@ -107,8 +108,8 @@ public class CUDAMemoryManager {
 	
 	public static void free(Pointer pointer) {
 		
-		JCuda.cudaFree(pointer);
-		
+		checkCUDA(JCuda.cudaFree(pointer),"free"+pointer.toString());
+		checkCUDA(JCuda.cudaDeviceSynchronize());
 		cu_porints.remove(pointer);
 		
 	}
@@ -125,4 +126,27 @@ public class CUDAMemoryManager {
 
 	}
 	
+	public static void checkCUDA(int code,String op,long size) {
+		if(code != cudaError.cudaSuccess) {
+			String error = "[["+op+"]("+size+")]Error code "+code+":"+cudaError.stringFor(code);
+			throw new RuntimeException(error);
+//			System.err.println();
+		}
+	}
+	
+	public static void checkCUDA(int code,String op) {
+		if(code != cudaError.cudaSuccess) {
+			String error = "["+op+"]Error code "+code+":"+cudaError.stringFor(code);
+			throw new RuntimeException(error);
+//			System.err.println();
+		}
+	}
+	
+	public static void checkCUDA(int code) {
+		if(code != cudaError.cudaSuccess) {
+			String error = cudaError.stringFor(code);
+			throw new RuntimeException(error);
+//			System.err.println();
+		}
+	}
 }

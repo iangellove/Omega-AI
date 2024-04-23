@@ -190,16 +190,12 @@ public class GPTTest {
 			
 			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
 			
-			network.learnRate = 0.0001f;
+			network.learnRate = 0.001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.SMART_HALF, false);
-			optimizer.lr_step = new int[] {200, 300, 500, 600, 700, 800, 900};
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.GD_GECAY, false);
+//			optimizer.lr_step = new int[] {200, 300, 500, 600, 700, 800, 900};
 			optimizer.trainNanoGPT(trainData);
 
-			Tensor positions = CNChatTokenizer.getPositions(1, max_len);
-			
-			Tensor mask = CNChatTokenizer.triu(1, network.headNum, network.time, network.time, 1);
-			
 			Scanner scanner = new Scanner(System.in);
 			while (true) {
 				System.out.println("请输入中文:");
@@ -209,7 +205,12 @@ public class GPTTest {
 				}
 				input_txt = input_txt.toLowerCase() + " ";
 				System.out.println("input_txt:"+input_txt);
-				Tensor input = trainData.loadByTxt(input_txt);
+				Tensor input = trainData.loadByTxtToIdx(input_txt);
+				input.showDM();
+				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
+				positions.showDM();
+				Tensor mask = CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1);
+				mask.showDM();
 				for(int t = 0;t<max_len;t++) {
 					Tensor output = network.forward(input, positions, mask);
 					output.syncHost();
@@ -224,7 +225,9 @@ public class GPTTest {
 					}else {
 						input_txt += nextWord;
 					}
-					input = trainData.loadByTxt(input_txt);
+					input = trainData.loadByTxtToIdx(input_txt);
+					CNChatTokenizer.getPositions(1, input.number, positions);
+					CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
 				}
 				
 				System.out.println(input_txt);
@@ -407,7 +410,7 @@ public class GPTTest {
 			
 			network.learnRate = 0.001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.001f, LearnRateUpdate.GD_GECAY, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.001f, LearnRateUpdate.GD_GECAY, false);
 //			optimizer.lr_step = new int[] {20,50,80};
 			optimizer.trainNanoGPT_GEN(trainData);
 			
@@ -419,14 +422,15 @@ public class GPTTest {
 			
 			Tensor output = null;
 			
-			String pre_txt = "干 枯 的 手 掌 仓 皇 的 抓 着 正 疑 惑 的 纳 兰 嫣 然 以 及 那 名 青 年 ， 然 后 逃 命 般 的 窜 出 了 大 厅 之 中";
+			String pre_txt = "那算你修炼的是天阶高级的稀世";
 			
-			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length());
+			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length(), max_len);
 			
 			Tensor mask = CNChatTokenizer.triu(1, network.headNum, pre_txt.length(), pre_txt.length(), 1);
 			
 			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, pre_txt.length());
-			
+			input.shape();
+			positions.shape();
 			for(int i = 0;i<gen_len;i++) {
 				network.time = input.number;
 				String txt = genTxt(input, output, network, trainData, pre_txt.length(), mask, positions);
@@ -438,6 +442,7 @@ public class GPTTest {
 				}
 				System.out.println(pre_txt);
 				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, pre_txt.length());
+				CNChatTokenizer.getPositions(1, pre_txt.length(), max_len, positions);
 			}
 
 		} catch (Exception e) {
@@ -537,7 +542,7 @@ public class GPTTest {
 	public static String output2TXT(Tensor output,CNTokenizer trainData) {
 		String txt = "";
 		for(int i = 0;i<output.number;i++) {
-			int charIndex = pickTopN(output.getByNumber(i), 3);
+			int charIndex = pickTopN(output.getByNumber(i), 1);
 			char c = trainData.dictionaryData[charIndex];
 			txt += c;
 		}
@@ -558,9 +563,9 @@ public class GPTTest {
 			
 //			gpt2_lang();
 			
-//			ch_chat_gpt2();
+			ch_chat_gpt2();
 			
-			gpt_dp();
+//			gpt_dp();
 			
 //			gpt2_gan();
 			

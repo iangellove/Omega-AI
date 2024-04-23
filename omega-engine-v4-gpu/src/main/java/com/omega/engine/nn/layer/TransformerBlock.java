@@ -91,7 +91,9 @@ public class TransformerBlock extends Layer{
 		this.number = this.input.number;
 		this.time = this.network.time;
 		if(this.tmp1 == null || this.tmp1.number != this.number) {
-//			System.out.println(number);
+//			if(this.tmp1 == null) {
+//				System.out.println(number+":"+embedDim);
+//			}
 			this.tmp1 = Tensor.createTensor(this.tmp1, number, 1, 1, embedDim, true);
 			this.tmp2 = Tensor.createTensor(this.tmp2, number, 1, 1, embedDim, true);
 		}
@@ -134,7 +136,7 @@ public class TransformerBlock extends Layer{
 	
 	public void output(Tensor mask) {
 		// TODO Auto-generated method stub
-
+		
 		ln1.forward(input);
 		
 		attn.forward(ln1.getOutput(), mask);

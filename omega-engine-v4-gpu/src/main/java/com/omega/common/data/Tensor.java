@@ -491,6 +491,7 @@ public class Tensor implements Serializable{
 	public void clearGPU() {
 		if(gpuData!=null) {
 			checkCUDA(JCuda.cudaMemset(gpuData, 0, this.dataLength * Sizeof.FLOAT));
+			JCuda.cudaDeviceSynchronize();
 		}
 	}
 	
