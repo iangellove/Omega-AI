@@ -327,7 +327,7 @@ public class GPUOP {
             
             int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, alphaP, 
                 dB, ldb, dA, lda, betaP, dC, n);
-            
+            checkCUBLASResult(status);
 //            cudaDeviceSynchronize();
             
 		} catch (Exception e) {
@@ -393,7 +393,7 @@ public class GPUOP {
 
         int status = JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, dB, ldb,
         		n * k, dA, lda, m * k, betaP, dC, n, m * n, batch_size);
-
+        checkCUBLASResult(status);
     }
     
     public void bmm(Pointer dA,Pointer dB,Pointer dC,int batch_size, int m, int n, int k, int CUBLAS_OP_A, int CUBLAS_OP_B,float alpha,float beta) {
@@ -406,7 +406,7 @@ public class GPUOP {
 
         int status = JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, dB, ldb,
         		n * k, dA, lda, m * k, betaP, dC, n, m * n, batch_size);
-
+        checkCUBLASResult(status);
     }
     
     /**

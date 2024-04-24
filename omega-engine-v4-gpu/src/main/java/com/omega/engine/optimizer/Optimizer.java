@@ -1425,7 +1425,7 @@ public abstract class Optimizer {
 		
 		float error = 0.0f;
 		float trueCount = 0;
-		int max_score = time;
+		int max_score = 0;
 		String max_itxt = "";
 		String max_ptxt = "";
 		String max_ltxt = "";
@@ -1447,7 +1447,7 @@ public abstract class Optimizer {
 					score--;
 				}
 			}
-			if(max_score >= score) {
+			if(max_score <= score) {
 				max_score = score;
 				max_itxt = itxt;
 				max_ptxt = ptxt;

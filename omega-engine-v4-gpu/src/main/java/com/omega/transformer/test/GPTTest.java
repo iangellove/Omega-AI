@@ -8,6 +8,7 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
+import com.omega.engine.gpu.SoftmaxKernel;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.EmbeddingLayer;
 import com.omega.engine.nn.layer.FullyLayer;
@@ -30,6 +31,8 @@ import com.omega.transformer.utils.CNTokenizer;
 import com.omega.transformer.utils.ENTokenizer;
 
 public class GPTTest {
+	
+	private static SoftmaxKernel kernel;
 	
 	public static void gpt() {
 		
@@ -393,7 +396,7 @@ public class GPTTest {
 			
 			int batchSize = 32;
 			
-			int max_len = 128;
+			int max_len = 64;
 			
 			int embedDim = 128;
 			
@@ -411,7 +414,7 @@ public class GPTTest {
 			
 			network.learnRate = 0.001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.001f, LearnRateUpdate.GD_GECAY, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.001f, LearnRateUpdate.GD_GECAY, false);
 //			optimizer.lr_step = new int[] {20,50,80};
 			optimizer.trainNanoGPT_GEN(trainData);
 			
@@ -423,15 +426,14 @@ public class GPTTest {
 			
 			Tensor output = null;
 			
-			String pre_txt = "那算你修炼的是天阶高级的稀世";
+			String pre_txt = "那算你修炼";
 			
-			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length(), max_len);
+			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length());
 			
 			Tensor mask = CNChatTokenizer.triu(1, network.headNum, pre_txt.length(), pre_txt.length(), 1);
 			
 			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, pre_txt.length());
-			input.shape();
-			positions.shape();
+	
 			for(int i = 0;i<gen_len;i++) {
 				network.time = input.number;
 				String txt = genTxt(input, output, network, trainData, pre_txt.length(), mask, positions);
@@ -443,7 +445,8 @@ public class GPTTest {
 				}
 				System.out.println(pre_txt);
 				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, pre_txt.length());
-				CNChatTokenizer.getPositions(1, pre_txt.length(), max_len, positions);
+				CNChatTokenizer.getPositions(1, pre_txt.length(), positions);
+				CNChatTokenizer.triu(1, network.headNum, pre_txt.length(), pre_txt.length(), 1, mask);
 			}
 
 		} catch (Exception e) {
@@ -463,13 +466,13 @@ public class GPTTest {
 			
 			int batchSize = 32;
 			
-			int max_len = 256;
+			int max_len = 64;
 			
-			int embedDim = 384;
+			int embedDim = 128;
 			
-			int headNum = 6;
+			int headNum = 4;
 			
-			int decoderNum = 6;
+			int decoderNum = 4;
 			
 			String trainPath = "H:\\transformer_dataset\\gpt\\ssby\\ssby.txt";
 			
@@ -479,7 +482,7 @@ public class GPTTest {
 			
 //			network.CUDNN = true;
 			
-			network.learnRate = 0.001f;
+			network.learnRate = 0.0001f;
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.001f, LearnRateUpdate.GD_GECAY, false);
 //			optimizer.lr_step = new int[] {20,50,80};
@@ -489,11 +492,13 @@ public class GPTTest {
 			
 			network.RUN_MODEL = RunModel.TEST;
 			
+			kernel = new SoftmaxKernel();
+			
 			Tensor input = null;
 			
 			Tensor output = null;
 			
-			String pre_txt = "All";
+			String pre_txt = " ";
 			
 			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length());
 			
@@ -513,8 +518,6 @@ public class GPTTest {
 				}
 				System.out.println(pre_txt);
 				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, pre_txt.length());
-				CNChatTokenizer.getPositions(1, pre_txt.length(), positions);
-				CNChatTokenizer.triu(1, network.headNum, pre_txt.length(), pre_txt.length(), 1, mask);
 			}
 
 		} catch (Exception e) {
@@ -588,13 +591,30 @@ public class GPTTest {
 		}
 		txt.getChars(start, txt.length(), charset, 0);
 //		System.out.println(JsonUtils.toJson(charset));
-		float[] td = new float[charLength * charDim];
+		float[] td = new float[charLength];
 		
 		for(int i = 0;i<charLength;i++) {
-			td[i * charDim + dictionary.get(charset[i])] = 1;
+			td[i] = dictionary.get(charset[i]);
 		}
-		input = Tensor.createTensor(input, charset.length, 1, 1, charDim, td, true);
+		input = Tensor.createTensor(input, charset.length, 1, 1, 1, td, true);
 		return input;
+	}
+	
+	public static String genTxt(Tensor input,Tensor output,Tensor softmaxOut,NanoGPT network,CNTokenizer trainData,int maxLength,Tensor mask, Tensor positions) {
+
+		CNChatTokenizer.getPositions(1, maxLength, positions);
+		
+		CNChatTokenizer.triu(1, network.headNum, maxLength, maxLength, 1, mask);
+		
+		network.time = maxLength;
+
+		output = network.forward(input, positions, mask);
+//		output.syncHost();
+		softmaxOut = Tensor.createTensor(softmaxOut,input.number, input.channel, input.height, input.width, true);
+		kernel.softmax_out(output, softmaxOut);
+//		output.showDMByNumber(0);
+		softmaxOut.syncHost();
+		return output2TXT(softmaxOut, trainData);
 	}
 	
 	public static String genTxt(Tensor input,Tensor output,NanoGPT network,CNTokenizer trainData,int maxLength,Tensor mask, Tensor positions) {
@@ -637,9 +657,9 @@ public class GPTTest {
 			
 //			ch_chat_gpt2();
 			
-//			gpt_dp();
+			gpt_dp();
 			
-			gpt_ssby();
+//			gpt_ssby();
 			
 //			gpt2_gan();
 			

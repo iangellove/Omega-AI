@@ -130,6 +130,29 @@ public class SoftmaxKernel extends BaseKernel{
 		
 	}
 	
+	public void softmax_out(Tensor input,Tensor output) {
+
+		/**
+		 * float *input, float *output, int batch, int n, float temp
+		 */
+		kernelParameters = Pointer.to(
+                Pointer.to(input.getGpuData()),
+                Pointer.to(output.getGpuData()),
+                Pointer.to(new int[] {input.number * input.channel * input.height}),
+                Pointer.to(new int[] {input.width})
+            );
+		
+		cuLaunchKernel(softmax_function,
+				this.CAFFE_GET_BLOCKS(input.number * input.channel * input.height),  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            kernelParameters, null // Kernel- and extra parameters
+	        );
+		
+//		JCudaDriver.cuCtxSynchronize();
+		
+	}
+	
 	public void softmaxMask(Tensor input,Tensor mask,Tensor output,float tmp) {
 		
 //		if(kernelMaskParameters == null || this.N != output.number) {

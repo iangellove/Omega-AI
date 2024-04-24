@@ -11,6 +11,8 @@ import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
 import jcuda.driver.CUfunction;
+import jcuda.driver.JCudaDriver;
+import jcuda.runtime.cudaError;
 
 public class EmbeddingKernel extends BaseKernel{
 
@@ -73,9 +75,9 @@ public class EmbeddingKernel extends BaseKernel{
 		try {
 			
 			if(kernelParameters == null || input.number != this.N){
-				output.showShape();
-				weight.showShape();
-				input.showShape();
+//				output.showShape();
+//				weight.showShape();
+//				input.showShape();
 		        /**
 		         * 设置入参
 		         *  float *output,
@@ -90,7 +92,7 @@ public class EmbeddingKernel extends BaseKernel{
 		        		Pointer.to(weight.getGpuData()),
 		        		Pointer.to(input.getGpuData()),
 		        		Pointer.to(new int[]{weight.height}),
-		        		Pointer.to(new int[]{input.dataLength}),
+		        		Pointer.to(new int[]{input.getDataLength()}),
 		        		Pointer.to(new int[]{weight.width})
 		            );
 		        
@@ -102,15 +104,16 @@ public class EmbeddingKernel extends BaseKernel{
 		    int[] threads = new int[] {256, 4, 1};
 		    int[] grids = new int[] {gridx, 1, 1};
 			
-			cuLaunchKernel(function,
+		    checkCUDA(cuLaunchKernel(function,
 					grids[0],  grids[1], grids[2],      // Grid dimension
 					threads[0], threads[1], threads[2],
 		            0, null,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
-		        );
+		        ));
 
 //	        JCudaDriver.cuCtxSynchronize();
-
+//	        output.syncHost();
+//	        output.showDMByNumber(0);
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -152,12 +155,12 @@ public class EmbeddingKernel extends BaseKernel{
 		    int[] threads = new int[] {128, 8, 1};
 		    int[] grids = new int[] {gridx, 1, 1};
 
-			cuLaunchKernel(back_function,
+		    checkCUDA(cuLaunchKernel(back_function,
 					grids[0],  grids[1], grids[2],      // Grid dimension
 					threads[0], threads[1], threads[2],
 		            0, null,               // Shared memory size and stream
 		            kernelBackParameters, null // Kernel- and extra parameters
-		        );
+		        ));
 //			delta.showDMByNumber(0);
 //	        JCudaDriver.cuCtxSynchronize();
 
@@ -166,6 +169,13 @@ public class EmbeddingKernel extends BaseKernel{
 			e.printStackTrace();
 		}
 		
+	}
+	
+	public void checkCUDA(int code) {
+		if(code != cudaError.cudaSuccess) {
+			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
+			throw new RuntimeException("Error code "+code+":"+cudaError.stringFor(code));
+		}
 	}
 	
 	public static void main(String[] args) {

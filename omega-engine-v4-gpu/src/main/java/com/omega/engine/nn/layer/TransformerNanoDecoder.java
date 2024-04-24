@@ -177,7 +177,7 @@ public class TransformerNanoDecoder extends Layer{
 	
 	public void output(Tensor mask,Tensor positions) {
 		// TODO Auto-generated method stub
-
+	
 		src_emb.forward(input);
 
 		pos_emb.forward(positions);

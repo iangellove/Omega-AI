@@ -152,7 +152,7 @@ public class LNKernel extends BaseKernel{
 //			this.d_var = CUDAMemoryManager.getDevice(B);
 //			this.aten_mean = Tensor.createTensor(this.aten_mean, B, 1, 1, 1, true);
 //			this.aten_var = Tensor.createTensor(this.aten_var, B, 1, 1, 1, true);
-			System.out.println(B);
+//			System.out.println(B);
 			this.aten_mean = CUDAMemoryManager.getPointer(B);
 			this.aten_var = CUDAMemoryManager.getPointer(B);
 //			this.d_s = CUDAMemoryManager.getDevice(B);
@@ -979,6 +979,7 @@ public class LNKernel extends BaseKernel{
 	public void checkCUDA(int code) {
 		if(code != cudaError.cudaSuccess) {
 			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
+			throw new RuntimeException("Error code "+code+":"+cudaError.stringFor(code));
 		}
 	}
 

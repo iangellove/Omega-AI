@@ -164,7 +164,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		this.dk = embedDim / headNum;
 		this.batchSize = number / time;
 
-		if(this.scores == null || this.scores.number != this.batchSize) {
+		if(this.scores == null || this.scores.number != this.batchSize || this.scores.width != this.time) {
 			// [batch_size，time，head_num，d_k]
 			this.qt = Tensor.createTensor(this.qt, batchSize, headNum, time, dk, true);
 			this.kt = Tensor.createTensor(this.kt, batchSize, headNum, time, dk, true);
@@ -192,7 +192,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		this.dk = embedDim / headNum;
 		this.batchSize = number / time;
 		
-		if(this.scores == null || this.scores.number != this.batchSize) {
+		if(this.scores == null || this.scores.number != this.batchSize || this.scores.width != this.time) {
 			// [batch_size，time，head_num，d_k]
 			this.qt = Tensor.createTensor(this.qt, batchSize, headNum, time, dk, true);
 			this.kt = Tensor.createTensor(this.kt, batchSize, headNum, time, dk, true);
