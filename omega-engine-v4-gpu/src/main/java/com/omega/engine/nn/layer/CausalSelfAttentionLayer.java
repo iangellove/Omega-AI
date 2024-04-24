@@ -284,7 +284,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		this.qLinerLayer.forward(this.input);
 		this.kLinerLayer.forward(this.input);
 		this.vLinerLayer.forward(this.input);
-
+		
 		Tensor query = this.qLinerLayer.getOutput().view(batchSize, time, headNum, dk);
 		Tensor key = this.kLinerLayer.getOutput().view(batchSize, time, headNum, dk);
 		Tensor value = this.vLinerLayer.getOutput().view(batchSize, time, headNum, dk);
