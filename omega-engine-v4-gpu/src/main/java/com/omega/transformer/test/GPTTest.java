@@ -415,11 +415,11 @@ public class GPTTest {
 			
 			network.learnRate = 0.0001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.001f, LearnRateUpdate.GD_GECAY, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.001f, LearnRateUpdate.GD_GECAY, false);
 //			optimizer.lr_step = new int[] {20,50,80};
 			optimizer.trainNanoGPT_GEN(trainData);
 			
-			int gen_len = 200;
+			int gen_len = 1000;
 			
 			network.RUN_MODEL = RunModel.TEST;
 			
@@ -437,19 +437,19 @@ public class GPTTest {
 			
 			for(int i = 0;i<gen_len;i++) {
 				network.time = input.number;
-				System.out.println(input.number);
-				input.showDM();
+//				System.out.println(input.number);
+//				input.showDM();
 				String txt = genTxt(input, output, network, trainData, pre_txt.length(), mask, positions);
-				System.out.println("output txt="+txt);
+//				System.out.println("output txt="+txt);
 				if(network.time > 1) {
 					pre_txt += txt.substring(input.number - 1, input.number);
 				}else {
 					pre_txt += txt;
 				}
-				System.out.println(pre_txt);
+//				System.out.println(pre_txt);
 				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
 			}
-
+			System.out.println(pre_txt);
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -485,7 +485,7 @@ public class GPTTest {
 			
 			network.learnRate = 0.0001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.001f, LearnRateUpdate.GD_GECAY, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.001f, LearnRateUpdate.GD_GECAY, false);
 //			optimizer.lr_step = new int[] {20,50,80};
 			optimizer.trainNanoGPT_GEN(trainData);
 			
@@ -505,7 +505,7 @@ public class GPTTest {
 			
 			Tensor mask = CNChatTokenizer.triu(1, network.headNum, pre_txt.length(), pre_txt.length(), 1);
 			
-			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, pre_txt.length());
+			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
 			input.shape();
 			positions.shape();
 			for(int i = 0;i<gen_len;i++) {
@@ -518,7 +518,7 @@ public class GPTTest {
 					pre_txt += txt;
 				}
 				System.out.println(pre_txt);
-				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, pre_txt.length());
+				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
 			}
 
 		} catch (Exception e) {
@@ -661,9 +661,9 @@ public class GPTTest {
 			
 //			gpt2_lang();
 			
-//			ch_chat_gpt2();
+			ch_chat_gpt2();
 			
-			gpt_dp();
+//			gpt_dp();
 			
 //			gpt_ssby();
 			

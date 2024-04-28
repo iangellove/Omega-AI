@@ -409,6 +409,32 @@ public class GPUOP {
         checkCUBLASResult(status);
     }
     
+    public void bmm(int transa, 
+            int transb, 
+            int m, 
+            int n, 
+            int k, 
+            float alpha, /** host or device pointer */
+            Pointer A, 
+            int lda, 
+            long strideA, /** purposely signed */
+            Pointer B, 
+            int ldb, 
+            long strideB, 
+            float beta, /** host or device pointer */
+            Pointer C, 
+            int ldc, 
+            long strideC, 
+            int batchCount) {
+
+        Pointer alphaP = Pointer.to(new float[]{ alpha });
+        Pointer betaP = Pointer.to(new float[]{ beta });
+        
+        int status = JCublas2.cublasSgemmStridedBatched(handle, transa, transb, m, n, k, alphaP, A, lda,
+        		strideA, B, ldb, strideB, betaP, C, ldc, strideC, batchCount);
+        checkCUBLASResult(status);
+    }
+    
     /**
      * Multiplies the matrices A and B and writes the result into C.
      * 

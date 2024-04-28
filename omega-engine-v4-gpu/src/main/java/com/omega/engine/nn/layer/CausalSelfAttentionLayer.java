@@ -594,6 +594,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		
 		Transformer tf = new Transformer();
 		tf.number = batchSize * time;
+		tf.time = time;
 		
 		float[] data = RandomUtils.order(batchSize * time * embedDim, 0.1f, 0.1f);
 		

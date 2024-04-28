@@ -26,7 +26,8 @@ public class TransformerBlock extends Layer{
 	
 	private boolean dropout = false;
 	
-	private CausalSelfAttentionLayer attn;
+//	private CausalSelfAttentionLayer attn;
+	private FastCausalSelfAttentionLayer attn;
 	private LNLayer ln1;
 	
 	/**
@@ -73,7 +74,8 @@ public class TransformerBlock extends Layer{
 
 		this.ln1 = new LNLayer(this, bias);
 		
-		this.attn = new CausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
+//		this.attn = new CausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
+		this.attn = new FastCausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
 
 		this.ln2 = new LNLayer(attn, bias);
 		
@@ -139,7 +141,8 @@ public class TransformerBlock extends Layer{
 		
 		ln1.forward(input);
 		
-		attn.forward(ln1.getOutput(), mask);
+//		attn.forward(ln1.getOutput(), mask);
+		attn.forward(ln1.getOutput());
 		
 		TensorOP.add(attn.getOutput(), input, tmp1);
 		
