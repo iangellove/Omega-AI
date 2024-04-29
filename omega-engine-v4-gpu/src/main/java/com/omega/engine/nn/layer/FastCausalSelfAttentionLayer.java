@@ -14,6 +14,8 @@ import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
 
+import jcuda.runtime.JCuda;
+
 /**
  * CausalSelfAttentionLayer
  * @author Administrator
@@ -174,6 +176,9 @@ public class FastCausalSelfAttentionLayer extends Layer{
 			this.dattn = Tensor.createTensor(this.dattn, batchSize, headNum, time, time, true);
 			this.dpreatt = Tensor.createTensor(this.dpreatt, batchSize, headNum, time, time, true);
 			this.diff = Tensor.createTensor(this.diff, number, 1, 1, embedDim, true);
+		}else {
+			this.diff.clearGPU();
+			this.dvaccum.clearGPU();
 		}
 	}
 
@@ -222,8 +227,10 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		GPUOP.getInstance().bmm(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, vt.getGpuData(), dk, time * dk, dvaccum.getGpuData(), dk, time * dk, 0.0f, dattn.getGpuData(), time, time * time, batchSize * headNum);
 		// backward into dv
 		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_T, dk, time, time, 1.0f, dvaccum.getGpuData(), dk, time * dk, attn.getGpuData(), time, time * time, 0.0f, dvt.getGpuData(), dk, time * dk, batchSize * headNum);
+		
 		// backward into preatt
 		attentionKernel.softmax_backward(dpreatt, dattn, attn, batchSize, time, embedDim, headNum);
+		
 		// backward into q
 		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, kt.getGpuData(), dk, time * dk, dpreatt.getGpuData(), time, time * time, 0.0f, dqt.getGpuData(), dk, time * dk, batchSize * headNum);
 		// backward into k
@@ -241,12 +248,14 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		this.oLinerLayer.back(delta, oi);
-
+//		oi.showDMByNumber(0);
+//		dvaccum.showDMByNumber(0);
 		attentionKernel.unpermute_backward(dvaccum, oi, batchSize, time, headNum, dk);
 		
 		scaledDotProductAttentionBackward();
 		
 		attentionKernel.permute_backward(diff, dqt, dkt, dvt, batchSize, time, headNum, dk);
+		
 	}
 
 	@Override

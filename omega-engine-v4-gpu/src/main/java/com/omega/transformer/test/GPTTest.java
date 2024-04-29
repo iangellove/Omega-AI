@@ -413,7 +413,7 @@ public class GPTTest {
 			
 //			network.CUDNN = true;
 			
-			network.learnRate = 0.0001f;
+			network.learnRate = 0.001f;
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.001f, LearnRateUpdate.GD_GECAY, false);
 //			optimizer.lr_step = new int[] {20,50,80};
@@ -661,9 +661,9 @@ public class GPTTest {
 			
 //			gpt2_lang();
 			
-			ch_chat_gpt2();
+//			ch_chat_gpt2();
 			
-//			gpt_dp();
+			gpt_dp();
 			
 //			gpt_ssby();
 			

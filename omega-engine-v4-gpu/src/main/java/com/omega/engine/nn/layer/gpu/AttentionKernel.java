@@ -26,6 +26,8 @@ public class AttentionKernel extends BaseKernel{
 	
 	private CUfunction softmax_backward_function;
 	
+	private CUfunction softmax_backward_function2;
+	
 	private CUfunction scale_function;
 	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
@@ -94,6 +96,10 @@ public class AttentionKernel extends BaseKernel{
 			if(softmax_backward_function == null) {
 //				softmax_backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"AttentionKernel.cu", "softmax_autoregressive_backward_kernel");
 				softmax_backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"AttentionKernel.cu", "softmax_autoregressive_backward_kernel4");
+			}
+			
+			if(softmax_backward_function2 == null) {
+				softmax_backward_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"AttentionKernel.cu", "softmax_autoregressive_backward_kernel2");
 			}
 			
 			if(scale_function == null) {
@@ -198,7 +204,7 @@ public class AttentionKernel extends BaseKernel{
 			int total_threads = B * NH * N * d;
 		    int num_blocks = get_number_of_blocks(total_threads, BLOCK);
 			
-		    checkCUDA(cuLaunchKernel(permute_function,
+		    checkCUDA(cuLaunchKernel(permute_backward_function,
 					num_blocks,  1, 1,      // Grid dimension
 		            BLOCK, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
@@ -266,7 +272,7 @@ public class AttentionKernel extends BaseKernel{
 			int total_threads = B * N * NH * d;
 		    int num_blocks = get_number_of_blocks(total_threads, BLOCK);
 			
-		    checkCUDA(cuLaunchKernel(unpermute_function,
+		    checkCUDA(cuLaunchKernel(unpermute_backward_function,
 					num_blocks,  1, 1,      // Grid dimension
 		            BLOCK, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
@@ -352,8 +358,8 @@ public class AttentionKernel extends BaseKernel{
 	                Pointer.to(new int[]{NH})
 	            );
 	        int block_size = 256;
-			int num_blocks = get_number_of_blocks(32/8*T, block_size);
-			
+//			int num_blocks = get_number_of_blocks(32/8*T, block_size);
+	        int num_blocks = get_number_of_blocks(T, block_size);
 		    checkCUDA(cuLaunchKernel(softmax_backward_function,
 		    		num_blocks,  B * NH, 1,      // Grid dimension
 		    		block_size, 1, 1,      // Block dimension
