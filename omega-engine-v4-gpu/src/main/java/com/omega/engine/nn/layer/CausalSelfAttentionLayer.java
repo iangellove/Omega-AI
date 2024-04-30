@@ -102,8 +102,9 @@ public class CausalSelfAttentionLayer extends Layer{
 //		float stdv = (float) (2.0f / Math.sqrt(embedDim + embedDim));
 		
 		this.qLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
-//		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.1f, 0.0f), true);
+//		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.1f, 0.1f), true);
+		this.qLinerLayer.weight.showDM();
 //		Tensor qwt = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.qLinerLayer.weight, qwt, new int[] {0, 1, 3, 2});
 //		this.qLinerLayer.weight = qwt;
@@ -112,8 +113,9 @@ public class CausalSelfAttentionLayer extends Layer{
 //		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.1f), true);
 		
 		this.kLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
-//		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.02f, 0.0f), true);
+//		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.1f, this.embedDim * this.embedDim * 0.1f + 0.1f), true);
+		this.kLinerLayer.weight.showDM();
 //		Tensor kwt = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.kLinerLayer.weight, kwt, new int[] {0, 1, 3, 2});
 //		this.kLinerLayer.weight = kwt;
@@ -122,16 +124,17 @@ public class CausalSelfAttentionLayer extends Layer{
 //		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.2f), true);
 
 		this.vLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
-//		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.03f, 0.0f), true);
+//		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.1f, this.embedDim * this.embedDim * 0.2f + 0.1f), true);
+		this.vLinerLayer.weight.showDM();
 //		Tensor vwt = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.vLinerLayer.weight, vwt, new int[] {0, 1, 3, 2});
 //		this.vLinerLayer.weight = vwt;
 //		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.val(this.embedDim * this.embedDim, 0.01f), true);
 		
 		this.oLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
-//		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.04f, 0.0f), true);
+//		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.01f, 0.01f), true);
 //		Tensor owt = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.oLinerLayer.weight, owt, new int[] {0, 1, 3, 2});
 //		this.oLinerLayer.weight = owt;
@@ -292,13 +295,13 @@ public class CausalSelfAttentionLayer extends Layer{
 		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
-
+		
 		scaledDotProductAttention(qt, kt, vt, mask);
 
 		TensorOP.permute(attn_outputs, ot, new int[] {0, 2, 1, 3});
 
 		ot.view(batchSize * time, 1, 1, headNum * dk);
-
+		
 		this.oLinerLayer.forward(ot);
 		
 		if(dropout) {
@@ -316,7 +319,7 @@ public class CausalSelfAttentionLayer extends Layer{
 
 		GPUOP.getInstance().bmm(query.getGpuData(), key.getGpuData(), scores.getGpuData(), query.number * query.channel, query.height, key.height, query.width,
 				CUBLAS_OP_N, CUBLAS_OP_T, d_k, 0.0f);
-
+		
 		if(mask != null) {
 //			mask.showDMByNumber(0);
 			
@@ -324,6 +327,7 @@ public class CausalSelfAttentionLayer extends Layer{
 //			TensorOP.bool(scores, mask, scores_masked, -1e9f);
 //			softmax.softmax(scores_masked, weights);
 			softmax.softmaxMask(scores, mask, weights, -1e9f);
+
 //			scores.showDMByNumber(0);
 //			weights.showDMByNumber(0);
 		}else {
@@ -332,6 +336,7 @@ public class CausalSelfAttentionLayer extends Layer{
 
 		GPUOP.getInstance().bmm(weights.getGpuData(), value.getGpuData(), attn_outputs.getGpuData(), weights.number * weights.channel, weights.height, value.width, weights.width,
 				CUBLAS_OP_N, CUBLAS_OP_N, 1.0f, 0.0f);
+
 	}
 	
 	public void scaledDotProductAttentionBackward(Tensor query,Tensor key,Tensor value,Tensor delta,Tensor diffQ,Tensor diffK,Tensor diffV) {
@@ -344,11 +349,9 @@ public class CausalSelfAttentionLayer extends Layer{
 		// weights_diff = delta * vt
 		GPUOP.getInstance().bmm(delta.getGpuData(), value.getGpuData(), scores.getGpuData(), delta.number * delta.channel, delta.height, value.height, value.width,
 				CUBLAS_OP_N, CUBLAS_OP_T, 1.0f, 0.0f);
-		
+
 		// scores_diff = softmax_backward
 		softmax.backward_noloss(weights, scores, scores);
-		
-//		scores.showDM();
 		
 		float d_k = (float) (1.0f / Math.sqrt(dk));
 		
@@ -417,11 +420,11 @@ public class CausalSelfAttentionLayer extends Layer{
 		}else {
 			this.oLinerLayer.back(delta, oi);
 		}
-
+		
 		oi.view(batchSize, time, headNum, dk);
 		
 		TensorOP.permute(oi, attn_outputs, new int[] {0, 2, 1, 3});
-
+		
 		int[] qo_shape = this.qLinerLayer.getOutput().shape();
 		int[] ko_shape = this.kLinerLayer.getOutput().shape();
 		int[] vo_shape = this.vLinerLayer.getOutput().shape();	
@@ -590,7 +593,7 @@ public class CausalSelfAttentionLayer extends Layer{
 		int embedDim = 4;
 		int headNum = 2;
 		int batchSize = 3;
-		int time = 5;
+		int time = 3;
 		
 		Transformer tf = new Transformer();
 		tf.number = batchSize * time;

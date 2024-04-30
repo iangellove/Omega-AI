@@ -358,8 +358,8 @@ public class AttentionKernel extends BaseKernel{
 	                Pointer.to(new int[]{NH})
 	            );
 	        int block_size = 256;
-//			int num_blocks = get_number_of_blocks(32/8*T, block_size);
-	        int num_blocks = get_number_of_blocks(T, block_size);
+			int num_blocks = get_number_of_blocks(32/8*T, block_size);
+//	        int num_blocks = get_number_of_blocks(T, block_size);
 		    checkCUDA(cuLaunchKernel(softmax_backward_function,
 		    		num_blocks,  B * NH, 1,      // Grid dimension
 		    		block_size, 1, 1,      // Block dimension
