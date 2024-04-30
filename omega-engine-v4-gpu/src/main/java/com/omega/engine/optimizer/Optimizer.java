@@ -1388,9 +1388,9 @@ public abstract class Optimizer {
 				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
 				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
 				int inputIndex = (int) input.data[n * time + t];
-				ptxt += " " + vocab[predictIndex];
-				ltxt += " " + vocab[labelIndex];
-				itxt += " " + vocab[inputIndex];
+				ptxt += vocab[predictIndex];
+				ltxt += vocab[labelIndex];
+				itxt += vocab[inputIndex];
 				if(labelIndex != igonre && labelIndex != predictIndex) {
 					allRight = false;
 					score--;

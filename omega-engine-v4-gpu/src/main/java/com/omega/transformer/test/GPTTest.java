@@ -180,13 +180,13 @@ public class GPTTest {
 			
 			int batchSize = 32;
 			
-			int max_len = 128;
+			int max_len = 64;
 			
 			int embedDim = 512;
 			
-			int head_num = 6;
+			int head_num = 8;
 			
-			int decoderNum = 4;
+			int decoderNum = 6;
 			
 			String trainPath = "H:\\transformer_dataset\\gpt\\chatdata\\train-format1w.txt";
 
@@ -196,7 +196,7 @@ public class GPTTest {
 			
 			network.learnRate = 0.001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.0001f, LearnRateUpdate.GD_GECAY, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.GD_GECAY, false);
 //			optimizer.lr_step = new int[] {200, 300, 500, 600, 700, 800, 900};
 			optimizer.trainNanoGPT(trainData);
 
@@ -661,9 +661,9 @@ public class GPTTest {
 			
 //			gpt2_lang();
 			
-//			ch_chat_gpt2();
+			ch_chat_gpt2();
 			
-			gpt_dp();
+//			gpt_dp();
 			
 //			gpt_ssby();
 			
