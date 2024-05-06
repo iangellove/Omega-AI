@@ -498,12 +498,13 @@ public class Tensor implements Serializable{
 	public void valueGPU(int val) {
 		if(gpuData!=null) {
 			checkCUDA(JCuda.cudaMemset(gpuData, val, this.dataLength * Sizeof.FLOAT));
+			JCuda.cudaDeviceSynchronize();
 		}
 	}
 	
 	public void checkCUDA(int code) {
 		if(code != cudaError.cudaSuccess) {
-			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
+			throw new RuntimeException(cudaError.stringFor(code));
 		}
 	}
 	

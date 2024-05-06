@@ -1,555 +1,240 @@
 #define BLOCK 1024 
-
+#include <cuda_runtime.h>
+#include <cooperative_groups.h>
+#include <cooperative_groups/reduce.h>
 
 extern "C"
-__device__ __inline__ float get_value(const float* index, const int bound_check,
-                                  const int up_bound) {
-  if (bound_check < up_bound)
-    return __ldg(index);
-  else
-    return 0.0f;
+__global__ void layernorm_forward_kernel(float* __restrict__ out, float* __restrict__ mean, float* __restrict__ rstd,
+                                    const float*  __restrict__ inp, const float*  __restrict__ weight,
+                                    const float* __restrict__ bias, int N, int C) {
+    namespace cg = cooperative_groups;
+    cg::thread_block block = cg::this_thread_block();
+    cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
+    __shared__ float shared_sum[32]; // block_size max is 1024 = 32 * 32 warps
+    __shared__ float shared_sum2[32]; // warps will be writing into shared memeory after warp-reduce
+    int num_warps = blockDim.x / 32;
+    int warp_id = threadIdx.x / 32;
+    int lane_id = threadIdx.x % 32;
+    int idx = blockIdx.x; // simpoy one block per row
+    // the row of input that this group of threads is responsible for
+    const float* x = inp + idx * C;
+    // thread coarsening through the row, reduce the sum in series
+    float thread_sum = 0.0; // stores sum(x)
+    float thread_sum2 = 0.0; // stores sum(x**2)
+    // for (int i = C + threadIdx.x - blockDim.x; i >= 0; i -= blockDim.x) {
+    for (int i = threadIdx.x; i < C; i += blockDim.x) {
+        float xi = x[i];
+        thread_sum += xi;
+        thread_sum2 += xi * xi;
+    }
+    // warp-level reduction
+    float warp_sum = cg::reduce(warp, thread_sum, cg::plus<float>{}); // sum(x)
+    float warp_sum2 = cg::reduce(warp, thread_sum2, cg::plus<float>{}); // sum(x**2)
+    // store the warp-level reduction in shared memory (we could have lane_id == 0 guard but not needed)
+    shared_sum[warp_id] = warp_sum;
+    shared_sum2[warp_id] = warp_sum2;
+    __syncthreads();
+    // load results from shared memory to threads, pad with zeros for threads that are out of bounds
+    warp_sum = (lane_id < num_warps) ? shared_sum[lane_id] : 0.0f;
+    warp_sum2 = (lane_id < num_warps) ? shared_sum2[lane_id] : 0.0f;
+    // now reduce the warp-level reductions
+    float block_sum = cg::reduce(warp, warp_sum, cg::plus<float>{}); // sum(x)
+    float block_sum2 = cg::reduce(warp, warp_sum2, cg::plus<float>{}); // sum(x**2)
+    // mean, var, rstd
+    block_sum /= C; // mean(x)
+    block_sum2 /= C; // mean(x**2)
+    float m = block_sum;
+    float var = block_sum2 - m * m;
+    float s = rsqrtf(var + 1e-5f);
+    // store the mean, no need to cache it
+    if(threadIdx.x == 0 && mean != nullptr) {
+        __stcs(mean + idx, m);
+    }
+    // store the rstd, no need to cache it
+    if(threadIdx.x == 0 && rstd != nullptr) {
+        __stcs(rstd + idx, s);
+    }
+    // final normalization and scaling by weight/bias
+    float* o = out + idx * C;
+    for (int i = threadIdx.x; i < C; i += blockDim.x) {
+        float n = s * (__ldcs(x+i) - m);
+        __stcs(o+i, n * weight[i] + bias[i]);
+    }
+}
+
+__device__ float warpReduceSum(float val) {
+    for (int offset = 16; offset > 0; offset /= 2) {
+        val += __shfl_xor_sync(0xFFFFFFFF, val, offset);
+    }
+    return val;
+}
+
+__device__ void atomicAddX(float* addr, float val) {
+    atomicAdd(addr, val);
 }
 
 extern "C"
-__device__ double atomicAdd(double* address, double val) {
-  unsigned long long int* address_as_ull = (unsigned long long int*)address;
-  unsigned long long int old = *address_as_ull, assumed;
-  do {
-    assumed = old;
-    old = atomicCAS(address_as_ull, assumed,
-                    __double_as_longlong(val + __longlong_as_double(assumed)));
-  } while (assumed != old);
-  return __longlong_as_double(old);
+__global__ void layernorm_backward_kernel(float* dinp, float* dweight, float* dbias, float* scratch,
+                        const float* dout, const float* inp, const float* weight, const float* mean, const float* rstd,
+                        int B, int T, int C) {
+    extern __shared__ float shared[]; // size = 2 * C + 1
+    int warpId = threadIdx.x / warpSize; // warp index within a block
+    int warpsInBlock = blockDim.x / warpSize;
+    int base_idx = blockIdx.x * warpsInBlock + warpId;
+    int warpThreadIdx = threadIdx.x % warpSize; // Thread index within the warp
+    int warps_in_grid = gridDim.x * warpsInBlock;
+
+    // the first half of shared memory is bias, second is weight
+    float* dbias_shared = shared;
+    float* dweight_shared = shared + C;
+
+    // init shared memory to zero
+    #pragma unroll 4
+    for(int i = threadIdx.x; i < C; i+= blockDim.x){
+       dbias_shared[i] = 0.0f;
+       dweight_shared[i] = 0.0f;
+    }
+    int *tmp_flag = (int*)(shared + C*2);
+    __syncthreads();
+
+    for (int idx = base_idx; idx < B * T; idx += warps_in_grid) {
+        int b = idx / T;
+        int t = idx % T;
+
+        const float* dout_bt = dout + b * T * C + t * C;
+        const float* inp_bt = inp + b * T * C + t * C;
+        float* dinp_bt = dinp + b * T * C + t * C;
+        const float mean_bt = (float)mean[b * T + t];
+        const float rstd_bt = (float)rstd[b * T + t];
+
+        // first: two reduce operations
+        float dnorm_mean = 0.0f;
+        float dnorm_norm_mean = 0.0f;
+        for (int i = warpThreadIdx; i < C; i  += warpSize) {
+            float norm_bti = ((float)inp_bt[i] - mean_bt) * rstd_bt;
+            float dnorm_i = (float)weight[i] * (float)dout_bt[i];
+            dnorm_mean += dnorm_i;
+            dnorm_norm_mean += dnorm_i * norm_bti;
+        }
+        dnorm_mean = warpReduceSum(dnorm_mean);
+        dnorm_norm_mean = warpReduceSum(dnorm_norm_mean);
+
+        dnorm_mean = dnorm_mean / C;
+        dnorm_norm_mean = dnorm_norm_mean / C;
+
+        // now iterate again and accumulate all the gradients
+        for (int i = warpThreadIdx; i < C; i += warpSize) {
+            float dout_i = (float)__ldcs(&dout_bt[i]);
+            float norm_bti = ((float)__ldcs(&inp_bt[i]) - mean_bt) * rstd_bt;
+            float dnorm_i = (float)weight[i] * dout_i;
+            // gradient contribution to bias
+            atomicAdd(&dbias_shared[i], dout_i);
+            // gradient contribution to weight
+            atomicAdd(&dweight_shared[i], norm_bti * dout_i);
+            // gradient contribution to input
+            float dval = 0.0f;
+            dval += dnorm_i; // term 1
+            dval -= dnorm_mean; // term 2
+            dval -= norm_bti * dnorm_norm_mean; // term 3
+            dval *= rstd_bt; // final scale
+            dinp_bt[i] = dinp_bt[i] + dval;
+        }
+    }
+
+    // Accumulate into a FP32 scratchpad
+    // BF16 atomics are potentially much slower... and this is more precise!
+    __syncthreads();
+    float* scratch_dbias = scratch;
+    float* scratch_dweight = scratch + C;
+    int* scratchFlag = (int*)(scratch + (2 * C));
+    for(int i = threadIdx.x; i < C; i+= blockDim.x) {
+        atomicAdd(&scratch_dbias[i], dbias_shared[i]);
+        atomicAdd(&scratch_dweight[i], dweight_shared[i]);
+    }
+    __syncthreads();
+    if (threadIdx.x == 0) {
+        *tmp_flag = atomicAdd(scratchFlag, 1);
+    }
+    __syncthreads();
+    if (*tmp_flag == gridDim.x-1) {
+        for(int i = threadIdx.x; i < C; i+= blockDim.x) {
+            // todo - potentially do stochastic rounding here as well
+            dbias[i] = (float)scratch_dbias[i];
+            dweight[i] = (float)scratch_dweight[i];
+        }
+    }
 }
 
 extern "C"
-__global__ void LayerNormFusedSmallGPUKernel(
-    const int slice_size,const int in_depth,const int n_inputs,const float epsilon, const float* __restrict__ input,
-    const float* __restrict__ gamma, const float* __restrict__ beta,
-    float* __restrict__ output, const int num_blocks, const int slice_per_block) {
+__global__ void layernorm_backward_kernel3(float* dinp, float* dweight, float* dbias,
+                        const float* dout, const float* inp, const float* weight, const float* mean, const float* rstd,
+                        int B, int T, int C) {
+    extern __shared__ float shared[]; // size = 2 * C
 
-  const float i_n = 1.0f / in_depth;
+    namespace cg = cooperative_groups;
+    cg::thread_block block = cg::this_thread_block();
+    cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
+    int base_idx = blockIdx.x * warp.meta_group_size() + warp.meta_group_rank();
 
-  const int slice_id = threadIdx.x / slice_size;
-  const int tSliceIdx = threadIdx.x % slice_size;
+    // the first half of shared memory is bias, second is weight
+    float* dbias_shared = shared;
+    float* dweight_shared = shared + C;
 
-  const float _gamma = get_value(gamma + tSliceIdx, tSliceIdx, in_depth);
-  const float _beta = get_value(beta + tSliceIdx, tSliceIdx, in_depth);
+    // init shared memory to zero
+    #pragma unroll 4
+    for(int i = threadIdx.x; i < C; i+= blockDim.x){
+       dbias_shared[i] = 0.0f;
+       dweight_shared[i] = 0.0f;
+    }
+    __syncthreads();
 
-  float mu;
-  float rstd;
+    int warps_in_grid = gridDim.x * warp.meta_group_size();
+    for (int idx = base_idx; idx < B * T; idx += warps_in_grid) {
+        int b = idx / T;
+        int t = idx % T;
 
-  for (int bId = blockIdx.x; bId < num_blocks; bId += gridDim.x) {
-		mu = 0.0f;
-		rstd = 0.0f;
-		
-		const int thread_id = (bId * slice_per_block + slice_id) * in_depth + tSliceIdx;
-		// const T inp = 0;
-		const float inp = get_value(input + thread_id, tSliceIdx, in_depth);
-		
-		mu += inp * i_n;
-		
-		for (int mask = slice_size / 2; mask > 0; mask /= 2) {
-		  mu += __shfl_xor(mu, mask);
-		}
-		
-		if (tSliceIdx < in_depth) rstd += (inp - mu) * (inp - mu);
-		// rstd += (inp-mu)*(inp-mu);
-		
-		for (int mask = slice_size / 2; mask > 0; mask /= 2) {
-		  rstd += __shfl_xor(rstd, mask);
-		}
-		
-		rstd = rsqrt(rstd * i_n + epsilon);
-		
-		if (tSliceIdx < in_depth && thread_id < n_inputs)
-		  output[thread_id] = (inp - mu) * rstd * _gamma + _beta;
-  }
+        const float* dout_bt = dout + b * T * C + t * C;
+        const float* inp_bt = inp + b * T * C + t * C;
+        float* dinp_bt = dinp + b * T * C + t * C;
+        const float mean_bt = (float)mean[b * T + t];
+        const float rstd_bt = (float)rstd[b * T + t];
+
+        // first: two reduce operations
+        float dnorm_mean = 0.0f;
+        float dnorm_norm_mean = 0.0f;
+        for (int i = warp.thread_rank(); i < C; i  += warp.size()) {
+            float norm_bti = ((float)inp_bt[i] - mean_bt) * rstd_bt;
+            float dnorm_i = (float)weight[i] * (float)dout_bt[i];
+            dnorm_mean += dnorm_i;
+            dnorm_norm_mean += dnorm_i * norm_bti;
+        }
+        dnorm_mean = cg::reduce(warp, dnorm_mean, cg::plus<float>{});
+        dnorm_norm_mean = cg::reduce(warp, dnorm_norm_mean, cg::plus<float>{});
+        dnorm_mean = dnorm_mean / C;
+        dnorm_norm_mean = dnorm_norm_mean / C;
+
+        // now iterate again and accumulate all the gradients
+        for (int i = warp.thread_rank(); i < C; i += warp.size()) {
+            float dout_i = (float)__ldcs(&dout_bt[i]);
+            float norm_bti = ((float)__ldcs(&inp_bt[i]) - mean_bt) * rstd_bt;
+            float dnorm_i = (float)weight[i] * dout_i;
+            // gradient contribution to bias
+            atomicAdd(&dbias_shared[i], dout_i);
+            // gradient contribution to weight
+            atomicAdd(&dweight_shared[i], norm_bti * dout_i);
+            // gradient contribution to input
+            float dval = 0.0f;
+            dval += dnorm_i; // term 1
+            dval -= dnorm_mean; // term 2
+            dval -= norm_bti * dnorm_norm_mean; // term 3
+            dval *= rstd_bt; // final scale
+            dinp_bt[i] = (float)((float)dinp_bt[i] + dval);
+        }
+    }
+    __syncthreads();
+
+    for(int i = threadIdx.x; i < C; i+= blockDim.x) {
+        atomicAddX(&dbias[i], (float)dbias_shared[i]);
+        atomicAddX(&dweight[i], (float)dweight_shared[i]);
+    }
 }
-
-extern "C"
-__global__ void LayerNorm1GPUKernel(const int slice_size,const int in_depth,const int n_inputs,const float epsilon,
-                                   const float* __restrict__ input,
-                                   const float* __restrict__ gamma,
-                                   const float* __restrict__ beta,
-                                   float* __restrict__ output,
-                                   const int num_blocks) {
-
-  const int tWarpIdx = threadIdx.x % warpSize;
-
-  const int tSliceIdx = threadIdx.x % slice_size;
-
-  extern __shared__ __align__(sizeof(float)) unsigned char my_smem[];
-  float* mean_cache = (float*)my_smem;
-  float* std_cache = (float*)&my_smem[sizeof(float)];
-  const int mult = 1;
-  const float i_n = 1.0f / in_depth;
-  float inp[mult];
-  float _gamma[mult];
-  float _beta[mult];
-  int thread_id[mult];
-
-  float sum;
-  float sqSum;
-  float mu;
-  float rstd;
-  
-  #pragma unroll
-  for (int m = 0; m < mult; m++) {
-    _gamma[m] = get_value(gamma + tSliceIdx + m * blockDim.x,
-                             tSliceIdx + m * blockDim.x, in_depth);
-    _beta[m] = get_value(beta + tSliceIdx + m * blockDim.x,
-                            tSliceIdx + m * blockDim.x, in_depth);
-  }
-  
-  for (int bId = blockIdx.x; bId < num_blocks; bId += gridDim.x) {
-    sum = 0.0f;
-    sqSum = 0.0f;
-
-    if (tSliceIdx == 0) {
-      mean_cache[0] = 0.0f;
-      std_cache[0] = 0.0f;
-    }
-    __syncthreads();
-
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      thread_id[m] = bId * in_depth + m * blockDim.x + tSliceIdx;
-    }
-	
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      inp[m] = get_value(input + thread_id[m], tSliceIdx + m * blockDim.x,
-                            in_depth);
-    }
-	
-	#pragma unroll
-    for (int m = 0; m < mult; m++) { sum += inp[m] * i_n; }
-    
-    for (int mask = warpSize / 2; mask > 0; mask /= 2) {
-      sum += __shfl_xor(sum, mask);
-    }
-    if (tWarpIdx == 0) {
-      atomicAdd(&mean_cache[0], sum);
-    }
-    __syncthreads();
-
-    mu = mean_cache[0];
-    
-    #pragma unroll
-    for (int m = 0; m < mult; m++) {
-      if (tSliceIdx + m * blockDim.x < in_depth)
-        sqSum += (inp[m] - mu) * (inp[m] - mu);
-    }
-    for (int mask = warpSize / 2; mask > 0; mask /= 2) {
-      sqSum += __shfl_xor(sqSum, mask);
-    }
-    if (tWarpIdx == 0) {
-      atomicAdd(&std_cache[0], sqSum);
-    }
-    __syncthreads();
-    if (tSliceIdx == 0) {
-      std_cache[0] = rsqrt(std_cache[0] * i_n + epsilon);
-    }
-    __syncthreads();
-    rstd = std_cache[0];
-
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      if (tSliceIdx + m * blockDim.x < in_depth && thread_id[m] < n_inputs) {
-         output[thread_id[m]] = (inp[m] - mu) * rstd * _gamma[m] + _beta[m];
-      }
-    }
-    __syncthreads();
-  }
-}
-
-extern "C"
-__global__ void LayerNorm2GPUKernel(const int slice_size,const int in_depth,const int n_inputs,const float epsilon,
-                                   const float* __restrict__ input,
-                                   const float* __restrict__ gamma,
-                                   const float* __restrict__ beta,
-                                   float* __restrict__ output,
-                                   const int num_blocks) {
-
-  const int tWarpIdx = threadIdx.x % warpSize;
-
-  const int tSliceIdx = threadIdx.x % slice_size;
-
-  extern __shared__ __align__(sizeof(float)) unsigned char my_smem[];
-  float* mean_cache = (float*)my_smem;
-  float* std_cache = (float*)&my_smem[sizeof(float)];
-  const int mult = 2;
-  const float i_n = 1.0f / in_depth;
-  float inp[mult];
-  float _gamma[mult];
-  float _beta[mult];
-  int thread_id[mult];
-
-  float sum;
-  float sqSum;
-  float mu;
-  float rstd;
-  
-  #pragma unroll
-  for (int m = 0; m < mult; m++) {
-    _gamma[m] = get_value(gamma + tSliceIdx + m * blockDim.x,
-                             tSliceIdx + m * blockDim.x, in_depth);
-    _beta[m] = get_value(beta + tSliceIdx + m * blockDim.x,
-                            tSliceIdx + m * blockDim.x, in_depth);
-  }
-  
-  for (int bId = blockIdx.x; bId < num_blocks; bId += gridDim.x) {
-    sum = 0.0f;
-    sqSum = 0.0f;
-
-    if (tSliceIdx == 0) {
-      mean_cache[0] = 0.0f;
-      std_cache[0] = 0.0f;
-    }
-    __syncthreads();
-
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      thread_id[m] = bId * in_depth + m * blockDim.x + tSliceIdx;
-    }
-	
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      inp[m] = get_value(input + thread_id[m], tSliceIdx + m * blockDim.x,
-                            in_depth);
-    }
-	
-	#pragma unroll
-    for (int m = 0; m < mult; m++) { sum += inp[m] * i_n; }
-    
-    for (int mask = warpSize / 2; mask > 0; mask /= 2) {
-      sum += __shfl_xor(sum, mask);
-    }
-    if (tWarpIdx == 0) {
-      atomicAdd(&mean_cache[0], sum);
-    }
-    __syncthreads();
-
-    mu = mean_cache[0];
-    
-    #pragma unroll
-    for (int m = 0; m < mult; m++) {
-      if (tSliceIdx + m * blockDim.x < in_depth)
-        sqSum += (inp[m] - mu) * (inp[m] - mu);
-    }
-    for (int mask = warpSize / 2; mask > 0; mask /= 2) {
-      sqSum += __shfl_xor(sqSum, mask);
-    }
-    if (tWarpIdx == 0) {
-      atomicAdd(&std_cache[0], sqSum);
-    }
-    __syncthreads();
-    if (tSliceIdx == 0) {
-      std_cache[0] = rsqrt(std_cache[0] * i_n + epsilon);
-    }
-    __syncthreads();
-    rstd = std_cache[0];
-
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      if (tSliceIdx + m * blockDim.x < in_depth && thread_id[m] < n_inputs) {
-         output[thread_id[m]] = (inp[m] - mu) * rstd * _gamma[m] + _beta[m];
-      }
-    }
-    __syncthreads();
-  }
-}
-
-extern "C"
-__global__ void LayerNorm3GPUKernel(const int slice_size,const int in_depth,const int n_inputs,const float epsilon,
-                                   const float* __restrict__ input,
-                                   const float* __restrict__ gamma,
-                                   const float* __restrict__ beta,
-                                   float* __restrict__ output,
-                                   const int num_blocks) {
-
-  const int tWarpIdx = threadIdx.x % warpSize;
-
-  const int tSliceIdx = threadIdx.x % slice_size;
-
-  extern __shared__ __align__(sizeof(float)) unsigned char my_smem[];
-  float* mean_cache = (float*)my_smem;
-  float* std_cache = (float*)&my_smem[sizeof(float)];
-  const int mult = 3;
-  const float i_n = 1.0f / in_depth;
-  float inp[mult];
-  float _gamma[mult];
-  float _beta[mult];
-  int thread_id[mult];
-
-  float sum;
-  float sqSum;
-  float mu;
-  float rstd;
-  
-  #pragma unroll
-  for (int m = 0; m < mult; m++) {
-    _gamma[m] = get_value(gamma + tSliceIdx + m * blockDim.x,
-                             tSliceIdx + m * blockDim.x, in_depth);
-    _beta[m] = get_value(beta + tSliceIdx + m * blockDim.x,
-                            tSliceIdx + m * blockDim.x, in_depth);
-  }
-  
-  for (int bId = blockIdx.x; bId < num_blocks; bId += gridDim.x) {
-    sum = 0.0f;
-    sqSum = 0.0f;
-
-    if (tSliceIdx == 0) {
-      mean_cache[0] = 0.0f;
-      std_cache[0] = 0.0f;
-    }
-    __syncthreads();
-
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      thread_id[m] = bId * in_depth + m * blockDim.x + tSliceIdx;
-    }
-	
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      inp[m] = get_value(input + thread_id[m], tSliceIdx + m * blockDim.x,
-                            in_depth);
-    }
-	
-	#pragma unroll
-    for (int m = 0; m < mult; m++) { sum += inp[m] * i_n; }
-    
-    for (int mask = warpSize / 2; mask > 0; mask /= 2) {
-      sum += __shfl_xor(sum, mask);
-    }
-    if (tWarpIdx == 0) {
-      atomicAdd(&mean_cache[0], sum);
-    }
-    __syncthreads();
-
-    mu = mean_cache[0];
-    
-    #pragma unroll
-    for (int m = 0; m < mult; m++) {
-      if (tSliceIdx + m * blockDim.x < in_depth)
-        sqSum += (inp[m] - mu) * (inp[m] - mu);
-    }
-    for (int mask = warpSize / 2; mask > 0; mask /= 2) {
-      sqSum += __shfl_xor(sqSum, mask);
-    }
-    if (tWarpIdx == 0) {
-      atomicAdd(&std_cache[0], sqSum);
-    }
-    __syncthreads();
-    if (tSliceIdx == 0) {
-      std_cache[0] = rsqrt(std_cache[0] * i_n + epsilon);
-    }
-    __syncthreads();
-    rstd = std_cache[0];
-
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      if (tSliceIdx + m * blockDim.x < in_depth && thread_id[m] < n_inputs) {
-         output[thread_id[m]] = (inp[m] - mu) * rstd * _gamma[m] + _beta[m];
-      }
-    }
-    __syncthreads();
-  }
-}
-
-extern "C"
-__global__ void LayerNorm4GPUKernel(const int slice_size,const int in_depth,const int n_inputs,const float epsilon,
-                                   const float* __restrict__ input,
-                                   const float* __restrict__ gamma,
-                                   const float* __restrict__ beta,
-                                   float* __restrict__ output,
-                                   const int num_blocks) {
-
-  const int tWarpIdx = threadIdx.x % warpSize;
-
-  const int tSliceIdx = threadIdx.x % slice_size;
-
-  extern __shared__ __align__(sizeof(float)) unsigned char my_smem[];
-  float* mean_cache = (float*)my_smem;
-  float* std_cache = (float*)&my_smem[sizeof(float)];
-  const int mult = 4;
-  const float i_n = 1.0f / in_depth;
-  float inp[mult];
-  float _gamma[mult];
-  float _beta[mult];
-  int thread_id[mult];
-
-  float sum;
-  float sqSum;
-  float mu;
-  float rstd;
-  
-  #pragma unroll
-  for (int m = 0; m < mult; m++) {
-    _gamma[m] = get_value(gamma + tSliceIdx + m * blockDim.x,
-                             tSliceIdx + m * blockDim.x, in_depth);
-    _beta[m] = get_value(beta + tSliceIdx + m * blockDim.x,
-                            tSliceIdx + m * blockDim.x, in_depth);
-  }
-  
-  for (int bId = blockIdx.x; bId < num_blocks; bId += gridDim.x) {
-    sum = 0.0f;
-    sqSum = 0.0f;
-
-    if (tSliceIdx == 0) {
-      mean_cache[0] = 0.0f;
-      std_cache[0] = 0.0f;
-    }
-    __syncthreads();
-
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      thread_id[m] = bId * in_depth + m * blockDim.x + tSliceIdx;
-    }
-	
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      inp[m] = get_value(input + thread_id[m], tSliceIdx + m * blockDim.x,
-                            in_depth);
-    }
-	
-	#pragma unroll
-    for (int m = 0; m < mult; m++) { sum += inp[m] * i_n; }
-    
-    for (int mask = warpSize / 2; mask > 0; mask /= 2) {
-      sum += __shfl_xor(sum, mask);
-    }
-    if (tWarpIdx == 0) {
-      atomicAdd(&mean_cache[0], sum);
-    }
-    __syncthreads();
-
-    mu = mean_cache[0];
-    
-    #pragma unroll
-    for (int m = 0; m < mult; m++) {
-      if (tSliceIdx + m * blockDim.x < in_depth)
-        sqSum += (inp[m] - mu) * (inp[m] - mu);
-    }
-    for (int mask = warpSize / 2; mask > 0; mask /= 2) {
-      sqSum += __shfl_xor(sqSum, mask);
-    }
-    if (tWarpIdx == 0) {
-      atomicAdd(&std_cache[0], sqSum);
-    }
-    __syncthreads();
-    if (tSliceIdx == 0) {
-      std_cache[0] = rsqrt(std_cache[0] * i_n + epsilon);
-    }
-    __syncthreads();
-    rstd = std_cache[0];
-
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      if (tSliceIdx + m * blockDim.x < in_depth && thread_id[m] < n_inputs) {
-         output[thread_id[m]] = (inp[m] - mu) * rstd * _gamma[m] + _beta[m];
-      }
-    }
-    __syncthreads();
-  }
-}
-
-extern "C"
-__global__ void LayerNorm5GPUKernel(const int slice_size,const int in_depth,const int n_inputs,const float epsilon,
-                                   const float* __restrict__ input,
-                                   const float* __restrict__ gamma,
-                                   const float* __restrict__ beta,
-                                   float* __restrict__ output,
-                                   const int num_blocks) {
-
-  const int tWarpIdx = threadIdx.x % warpSize;
-
-  const int tSliceIdx = threadIdx.x % slice_size;
-
-  extern __shared__ __align__(sizeof(float)) unsigned char my_smem[];
-  float* mean_cache = (float*)my_smem;
-  float* std_cache = (float*)&my_smem[sizeof(float)];
-  const int mult = 5;
-  const float i_n = 1.0f / in_depth;
-  float inp[mult];
-  float _gamma[mult];
-  float _beta[mult];
-  int thread_id[mult];
-
-  float sum;
-  float sqSum;
-  float mu;
-  float rstd;
-  
-  #pragma unroll
-  for (int m = 0; m < mult; m++) {
-    _gamma[m] = get_value(gamma + tSliceIdx + m * blockDim.x,
-                             tSliceIdx + m * blockDim.x, in_depth);
-    _beta[m] = get_value(beta + tSliceIdx + m * blockDim.x,
-                            tSliceIdx + m * blockDim.x, in_depth);
-  }
-  
-  for (int bId = blockIdx.x; bId < num_blocks; bId += gridDim.x) {
-    sum = 0.0f;
-    sqSum = 0.0f;
-
-    if (tSliceIdx == 0) {
-      mean_cache[0] = 0.0f;
-      std_cache[0] = 0.0f;
-    }
-    __syncthreads();
-
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      thread_id[m] = bId * in_depth + m * blockDim.x + tSliceIdx;
-    }
-	
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      inp[m] = get_value(input + thread_id[m], tSliceIdx + m * blockDim.x,
-                            in_depth);
-    }
-	
-	#pragma unroll
-    for (int m = 0; m < mult; m++) { sum += inp[m] * i_n; }
-    
-    for (int mask = warpSize / 2; mask > 0; mask /= 2) {
-      sum += __shfl_xor(sum, mask);
-    }
-    if (tWarpIdx == 0) {
-      atomicAdd(&mean_cache[0], sum);
-    }
-    __syncthreads();
-
-    mu = mean_cache[0];
-    
-    #pragma unroll
-    for (int m = 0; m < mult; m++) {
-      if (tSliceIdx + m * blockDim.x < in_depth)
-        sqSum += (inp[m] - mu) * (inp[m] - mu);
-    }
-    for (int mask = warpSize / 2; mask > 0; mask /= 2) {
-      sqSum += __shfl_xor(sqSum, mask);
-    }
-    if (tWarpIdx == 0) {
-      atomicAdd(&std_cache[0], sqSum);
-    }
-    __syncthreads();
-    if (tSliceIdx == 0) {
-      std_cache[0] = rsqrt(std_cache[0] * i_n + epsilon);
-    }
-    __syncthreads();
-    rstd = std_cache[0];
-
-	#pragma unroll
-    for (int m = 0; m < mult; m++) {
-      if (tSliceIdx + m * blockDim.x < in_depth && thread_id[m] < n_inputs) {
-         output[thread_id[m]] = (inp[m] - mu) * rstd * _gamma[m] + _beta[m];
-      }
-    }
-    __syncthreads();
-  }
-}
-
-

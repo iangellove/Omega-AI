@@ -66,7 +66,7 @@ public class NanoGPT extends Network {
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
 		this.decoder = new TransformerNanoDecoder(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, this.bias, this.dropout, this);
-		this.fullyLayer = new FullyLayer(embedDim, vocabSize, this.bias, this);
+		this.fullyLayer = new FullyLayer(embedDim, vocabSize, true, this);
 		this.addLayer(inputLayer);
 		this.addLayer(decoder);
 		this.addLayer(fullyLayer);

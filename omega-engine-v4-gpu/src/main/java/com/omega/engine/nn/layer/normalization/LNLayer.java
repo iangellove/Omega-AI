@@ -53,7 +53,7 @@ public class LNLayer extends NormalizationLayer {
 	
 	public LNLayer(Layer preLayer,boolean hasBias) {
 		this.setPreLayer(preLayer);
-		this.hasBias = hasBias;
+		this.hasBias = true;
 		this.hasParams = true;
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
@@ -64,7 +64,7 @@ public class LNLayer extends NormalizationLayer {
 	
 	public LNLayer(Network network,boolean hasBias) {
 		this.network = network;
-		this.hasBias = hasBias;
+		this.hasBias = true;
 	}
 	
 	@Override
@@ -209,12 +209,14 @@ public class LNLayer extends NormalizationLayer {
 	@Override
 	public void initBack() {
 		if(this.diff == null) {
-			this.diff = this.network.getNextLayer(this.index).diff;
+			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true);
 		}
 	}
 	
 	public void initBack(Tensor diff) {
-		this.diff = diff;
+		if(this.diff == null) {
+			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true);
+		}
 	}
 
 	@Override
@@ -225,7 +227,8 @@ public class LNLayer extends NormalizationLayer {
 //		System.out.println(JsonUtils.toJson(gamma.shape()));
 //		System.out.println(JsonUtils.toJson(beta.shape()));
 //		kernel.forward(gamma, beta, input, output);
-		kernel.forwardAten(gamma, beta, input, output);
+//		kernel.forwardAten(gamma, beta, input, output);
+		kernel.forward_llm(gamma, beta, input, output);
 //		System.err.println("1:");
 //		output.showDMByNumber(0);
 //		System.err.println("2:");
@@ -280,7 +283,8 @@ public class LNLayer extends NormalizationLayer {
 //		long start = System.nanoTime();
 //		System.out.println(index);
 //		kernel.backward(input, delta, diff, gamma, diffGamma, diffBeta);
-		kernel.backwardAten(input, delta, diff, gamma, diffGamma, diffBeta);
+//		kernel.backwardAten(input, delta, diff, gamma, diffGamma, diffBeta);
+		kernel.backward_llm(input, delta, diff, gamma, diffGamma, diffBeta);
 //		diff.showDMByNumber(0);
 //		diff2.showDMByNumber(0);
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");

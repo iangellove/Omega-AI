@@ -178,7 +178,7 @@ public class GPTTest {
 			
 			boolean dropout = false;
 			
-			int batchSize = 32;
+			int batchSize = 24;
 			
 			int max_len = 64;
 			
@@ -186,9 +186,9 @@ public class GPTTest {
 			
 			int head_num = 8;
 			
-			int decoderNum = 6;
+			int decoderNum = 8;
 			
-			String trainPath = "H:\\transformer_dataset\\gpt\\chatdata\\train-format1w.txt";
+			String trainPath = "H:\\transformer_dataset\\gpt\\chatdata\\train-format20w.txt";
 
 			CNChatTokenizer trainData = new CNChatTokenizer(trainPath, max_len, batchSize);
 			
@@ -196,7 +196,7 @@ public class GPTTest {
 			
 			network.learnRate = 0.001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.GD_GECAY, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 10, 0.0001f, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {200, 300, 500, 600, 700, 800, 900};
 			optimizer.trainNanoGPT(trainData);
 
