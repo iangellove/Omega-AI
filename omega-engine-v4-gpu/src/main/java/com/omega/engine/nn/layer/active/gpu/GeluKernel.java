@@ -4,8 +4,6 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.lib.LibPaths;
-import com.omega.common.utils.CheckArrayUtils;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
@@ -44,13 +42,15 @@ public class GeluKernel extends BaseKernel{
 
 			if(function == null) {
 
-				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "gelu_fwd_cuda");
+//				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "gelu_fwd_cuda");
+				function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "gelu_forward");
 				
 			}
 			
 			if(function_back == null) {
 
-				function_back = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "gelu_bwd_cuda");
+//				function_back = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "gelu_bwd_cuda");
+				function_back = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"activeFunction.cu", "gelu_backward");
 				
 			}
 			
@@ -72,7 +72,7 @@ public class GeluKernel extends BaseKernel{
 //			if(forwardKernelParameters == null || this.N != output.number) {
 					/**
 			         * 设置入参
-			         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+			         * float *x, float *output, int N
 			         */ 
 					forwardKernelParameters = Pointer.to(
 			        		Pointer.to(input.getGpuData()),
@@ -163,12 +163,12 @@ public class GeluKernel extends BaseKernel{
 //			if(backwardKernelParameters == null) {
 				/**
 		         * 设置入参
-		         * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
+		         * float* dinp, const float* inp, const float* dout, int N
 		         */ 
 				backwardKernelParameters = Pointer.to(
+						Pointer.to(diff.getGpuData()),
 						Pointer.to(input.getGpuData()),
 		        		Pointer.to(delta.getGpuData()),
-		                Pointer.to(diff.getGpuData()),
 		                Pointer.to(new int[]{input.dataLength})
 		            );
 //			}
