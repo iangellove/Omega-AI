@@ -1,5 +1,9 @@
 #define BLOCK 1024 
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+#define GELU_SCALING_FACTOR sqrtf(2.0f / M_PI)
 
 extern "C"
 __global__ void relu_forward(float *x, float *output, int n)
@@ -164,29 +168,9 @@ __global__ void silu_backward_temp(float *x, float *output, float *delta, float 
     }
 }
 
-
-extern "C"
-__global__ void gelu_forward(float *x, float *output, int n)
-{
-    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
-    if(i < n) {
-    	output[i] = 0.5f * x[i] * (1.0f + tanhf(0.797885 * x[i] + 0.035677f * powf(x[i], 3)));
-    }
-}
-
 extern "C"
 __device__ float sech_gpu(float x) {
   return 2 / (expf(x) + expf(-x)); 
-}
-
-extern "C"
-__global__ void gelu_backward(float *x, float *delta, float *diff, int n)
-{
-    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
-    if(i < n) {
-    	const float x3 = powf(x[i], 3);
-    	diff[i] = delta[i] * 0.5*tanhf(0.0356774*x3 + 0.797885*x[i]) + (0.0535161*x3 + 0.398942*x[i]) * powf(sech_gpu(0.0356774*x3 + 0.797885*x[i]), 2) + 0.5;
-    }
 }
 
 __device__ float sigmoid(float x) {
@@ -207,5 +191,30 @@ __global__ void gelu_bwd_cuda(float *x, float *delta, float *diff, int n) {
     if(idx < n) {
         float tmp = sigmoid(1.702*x[idx]);
         diff[idx] = delta[idx]*(tmp + 1.702*x[idx]*tmp*(1-tmp));
+    }
+}
+
+extern "C"
+__global__ void gelu_forward(float *x, float *out, int N) {
+    int idx = threadIdx.x + blockIdx.x*blockDim.x;
+    if(idx < N) {
+    	float xi = x[idx];
+    	float cube = 0.044715f * xi * xi * xi;
+        out[idx] = 0.5f * xi * (1.0f + tanhf(GELU_SCALING_FACTOR * (xi + cube)));
+    }
+}
+
+extern "C"
+__global__ void gelu_backward(float* dinp, const float* inp, const float* dout, int N) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < N) {
+        float x = (float)inp[i];
+        float cube = 0.044715f * x * x * x;
+        float tanh_arg = GELU_SCALING_FACTOR * (x + cube);
+        float tanh_out = tanhf(tanh_arg);
+        float coshf_out = coshf(tanh_arg);
+        float sech_out = 1.0f / (coshf_out * coshf_out);
+        float local_grad = 0.5f * (1.0f + tanh_out) + x * 0.5f * sech_out * GELU_SCALING_FACTOR * (1.0f + 3.0f * 0.044715f * x * x);
+        dinp[i] = (float)(local_grad * (float)dout[i]);
     }
 }
