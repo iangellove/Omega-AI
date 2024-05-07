@@ -137,7 +137,7 @@ public abstract class Network {
 		this.getLastLayer().setDelta(this.lossDiff);
 	}
 	
-	public Tensor getOuput() {
+	public Tensor getOutput() {
 		// TODO Auto-generated method stub
 		return this.getLastLayer().getOutput();
 	}

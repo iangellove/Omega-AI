@@ -13,6 +13,7 @@ import com.omega.engine.gpu.CUDAModules;
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
+import jcuda.runtime.cudaError;
 
 public class FullyKernel extends BaseKernel{
 
@@ -95,12 +96,12 @@ public class FullyKernel extends BaseKernel{
 		        
 			}
 
-			cuLaunchKernel(function,
+			checkCUDA(cuLaunchKernel(function,
 		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
-		        );
+		        ));
 
 //	        JCudaDriver.cuCtxSynchronize();
 
@@ -235,6 +236,13 @@ public class FullyKernel extends BaseKernel{
 			e.printStackTrace();
 		}
 		
+	}
+	
+	public void checkCUDA(int code) {
+		if(code != cudaError.cudaSuccess) {
+			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
+			throw new RuntimeException("Error code "+code+":"+cudaError.stringFor(code));
+		}
 	}
 	
 	 public static void main(String args[]){	

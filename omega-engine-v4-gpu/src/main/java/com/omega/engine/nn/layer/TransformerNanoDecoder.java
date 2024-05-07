@@ -51,6 +51,12 @@ public class TransformerNanoDecoder extends Layer{
 		this.embedDim = embedDim;
 		this.bias = bias;
 		this.dropout = dropout;
+		this.channel = 1;
+		this.height = 1;
+		this.width = embedDim;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
@@ -66,6 +72,12 @@ public class TransformerNanoDecoder extends Layer{
 		this.embedDim = embedDim;
 		this.bias = bias;
 		this.dropout = dropout;
+		this.channel = 1;
+		this.height = 1;
+		this.width = embedDim;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	

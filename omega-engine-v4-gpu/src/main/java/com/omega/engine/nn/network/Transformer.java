@@ -63,14 +63,14 @@ public class Transformer extends Network {
 		// TODO Auto-generated method stub
 		this.RUN_MODEL = RunModel.TEST;
 		this.forward(input);
-		return this.getOuput();
+		return this.getOutput();
 	}
 
 	@Override
 	public Tensor forward(Tensor input) {
 		// TODO Auto-generated method stub
 
-		return this.getOuput();
+		return this.getOutput();
 	}
 	
 	public Tensor forward(Tensor en_input,Tensor de_input) {
@@ -80,7 +80,7 @@ public class Transformer extends Network {
 		 */
 		this.setInputData(en_input);
 		
-		return this.getOuput();
+		return this.getOutput();
 	}
 	
 	@Override

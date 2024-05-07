@@ -186,7 +186,7 @@ public class GPTTest {
 			
 			int head_num = 8;
 			
-			int decoderNum = 8;
+			int decoderNum = 6;
 			
 			String trainPath = "H:\\transformer_dataset\\gpt\\chatdata\\train-format20w.txt";
 

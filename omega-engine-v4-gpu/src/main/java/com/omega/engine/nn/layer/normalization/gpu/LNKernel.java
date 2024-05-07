@@ -6,6 +6,7 @@ import com.omega.common.data.Tensor;
 import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.PrintUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
@@ -134,9 +135,6 @@ public class LNKernel extends BaseKernel{
 	private Tensor X_scale;
 	private Tensor ones;
 	
-	private Tensor scratch;
-	
-	
 	public LNKernel(int W,BNType bnType) {
 		this.W = W;
 		this.bnType = bnType;
@@ -162,7 +160,7 @@ public class LNKernel extends BaseKernel{
 //			System.out.println(B);
 			this.aten_mean = CUDAMemoryManager.getPointer(B);
 			this.aten_var = CUDAMemoryManager.getPointer(B);
-			this.scratch = new Tensor(1, 1, 1, W * 2 + 1, true);
+//			this.scratch = new Tensor(1, 1, 1, W * 2 + 1, true);
 //			this.d_s = CUDAMemoryManager.getDevice(B);
 //			this.d_b = CUDAMemoryManager.getDevice(B);
 //			this.d_scale = CUDAMemoryManager.getDevice(B);
@@ -675,7 +673,6 @@ public class LNKernel extends BaseKernel{
 				);
 			
 			
-			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -687,44 +684,51 @@ public class LNKernel extends BaseKernel{
 		
 		try {
 //			scratch.showDM();
-			diff.clearGPU();
+//			diff.clearGPU();
+			dgamma.clearGPU();
+//			dbeta.clearGPU();
+//			if(backwardLLMParameters == null) {
+//				
+//				/**
+//				 * float* dinp, float* dweight, float* dbias, float* scratch,
+//	                    const float* dout, const float* inp, const float* weight, const float* mean, const float* rstd,
+//	                    int B, int T, int C
+//				 */
+//				/**
+//				 * float* dinp, float* dweight, float* dbias,
+//                        const float* dout, const float* inp, const float* weight, const float* mean, const float* rstd,
+//                        int B, int T, int C
+//				 */
+//				backwardLLMParameters = Pointer.to(
+//						Pointer.to(diff.getGpuData()),
+//						Pointer.to(dgamma.getGpuData()),
+//						Pointer.to(dbeta.getGpuData()),
+//						Pointer.to(delta.getGpuData()),
+//						Pointer.to(input.getGpuData()),
+//						Pointer.to(gamma.getGpuData()),
+//						Pointer.to(aten_mean),
+//						Pointer.to(aten_var),
+//						Pointer.to(new int[] {B}),
+//						Pointer.to(new int[] {1}),
+//						Pointer.to(new int[] {W})
+//		            );
+//				
+//			}
+//
+//			int grid_size = (1024/CAFFE_CUDA_NUM_THREADS) * CUDAModules.props.multiProcessorCount;
+//			int shared_mem_size = (2 * W) * Sizeof.FLOAT;
+////			int grid_size = this.CAFFE_GET_BLOCKS(B);
+//			cuLaunchKernel(backward_llm_function,
+//					grid_size, 1, 1,      // Grid dimension
+//					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+//					shared_mem_size, null,               // Shared memory size and stream
+//					backwardLLMParameters, null // Kernel- and extra parameters
+//				);
 			
-			if(backwardLLMParameters == null) {
-
-				/**
-				 * float* dinp, float* dweight, float* dbias, float* scratch,
-	                    const float* dout, const float* inp, const float* weight, const float* mean, const float* rstd,
-	                    int B, int T, int C
-				 */
-				/**
-				 * float* dinp, float* dweight, float* dbias,
-                        const float* dout, const float* inp, const float* weight, const float* mean, const float* rstd,
-                        int B, int T, int C
-				 */
-				backwardLLMParameters = Pointer.to(
-						Pointer.to(diff.getGpuData()),
-						Pointer.to(dgamma.getGpuData()),
-						Pointer.to(dbeta.getGpuData()),
-						Pointer.to(delta.getGpuData()),
-						Pointer.to(input.getGpuData()),
-						Pointer.to(gamma.getGpuData()),
-						Pointer.to(aten_mean),
-						Pointer.to(aten_var),
-						Pointer.to(new int[] {B}),
-						Pointer.to(new int[] {1}),
-						Pointer.to(new int[] {W})
-		            );
-				
-			}
-
-			int grid_size = (1024/CAFFE_CUDA_NUM_THREADS) * CUDAModules.props.multiProcessorCount;
-			int shared_mem_size = (2 * W) * Sizeof.FLOAT;
-			cuLaunchKernel(backward_llm_function,
-					grid_size, 1, 1,      // Grid dimension
-					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
-					shared_mem_size, null,               // Shared memory size and stream
-					backwardLLMParameters, null // Kernel- and extra parameters
-				);
+//			diff.showDMByNumber(0);
+//			dgamma.syncHost();
+//			PrintUtils.printImage(dgamma);
+//			dgamma.showDM();
 
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -853,10 +857,12 @@ public class LNKernel extends BaseKernel{
 		try {
 			
 			backwardAtenGamma(input, delta, dgamma, dbeta);
-//			diff.showDM();
+//			dgamma.showDM();
 //			diff.valueGPU(0);
 			if(backwardAtenParameters == null) {
-
+//				Tensor test = new Tensor(1, 1, 1, B, true);
+//				test.setGpuData(aten_var);
+//				PrintUtils.printImage(test);
 				/**
 				 *const float* __restrict__ dY,
 				  const float* __restrict__ X,
@@ -1105,7 +1111,7 @@ public class LNKernel extends BaseKernel{
     	int T = 1;
     	int W = 512;
     	
-    	float[] data = RandomUtils.order(N * T * W, 0.1f, 0.1f);
+    	float[] data = RandomUtils.gaussianRandom(N * T * W, 0.5f);
     	
 //    	float[] gammaData = RandomUtils.order(W, 0.1f, 0.1f);
 //    	float[] betaData = RandomUtils.order(W, 0.1f, 0.0f);
@@ -1123,7 +1129,8 @@ public class LNKernel extends BaseKernel{
 //    	Tensor output = new Tensor(N, T, 1, W, true);
 //    	Tensor output2 = new Tensor(N, T, 1, W, true);
 //    	
-    	Tensor delta = new Tensor(N * T, 1, 1, W, MatrixUtils.order(N * T * W, 0.1f, 0.1f), true);
+//    	Tensor delta = new Tensor(N * T, 1, 1, W, MatrixUtils.order(N * T * W, 0.1f, 0.1f), true);
+    	Tensor delta = new Tensor(N * T, 1, 1, W, RandomUtils.gaussianRandom(N * T * W, 0.5f), true);
 //    	
 //    	LNKernel kernel = new LNKernel(W, BNType.fully_bn);
 //
@@ -1197,11 +1204,11 @@ public class LNKernel extends BaseKernel{
     	
     	for(int i = 0;i<1000;i++) {
     		ln.forward(input);
-    		ln.getOutput().showDMByNumber(0);
+//    		ln.getOutput().showDMByNumber(0);
 //    		ln.forward(input2);
 //        	ln.getOutput().showDM();
     		ln.back(delta);
-    		ln.diff.showDMByNumber(0);
+//    		ln.diff.showDMByNumber(0);
     	}
     	
 //    	tf.number = 1 * T;

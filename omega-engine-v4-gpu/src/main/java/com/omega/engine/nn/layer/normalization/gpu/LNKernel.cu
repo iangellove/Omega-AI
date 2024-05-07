@@ -238,3 +238,48 @@ __global__ void layernorm_backward_kernel3(float* dinp, float* dweight, float* d
         atomicAddX(&dweight[i], (float)dweight_shared[i]);
     }
 }
+
+extern "C"
+__global__ void layernorm_backward_kernel1(float* dinp, float* dweight, float* dbias,
+                        const float* dout, const float* inp, const float* weight, const float* mean, const float* rstd,
+                        int B, int T, int C) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= B*T) return;
+    int b = idx / T;
+    int t = idx % T;
+
+    const float* dout_bt = dout + b * T * C + t * C;
+    const float* inp_bt = inp + b * T * C + t * C;
+    float* dinp_bt = dinp + b * T * C + t * C;
+    const float mean_bt = mean[b * T + t];
+    const float rstd_bt = rstd[b * T + t];
+
+    // first: two reduce operations
+    float dnorm_mean = 0.0f;
+    float dnorm_norm_mean = 0.0f;
+    for (int i = 0; i < C; i++) {
+        float norm_bti = (inp_bt[i] - mean_bt) * rstd_bt;
+        float dnorm_i = weight[i] * dout_bt[i];
+        dnorm_mean += dnorm_i;
+        dnorm_norm_mean += dnorm_i * norm_bti;
+    }
+    dnorm_mean = dnorm_mean / C;
+    dnorm_norm_mean = dnorm_norm_mean / C;
+
+    // now iterate again and accumulate all the gradients
+    for (int i = 0; i < C; i++) {
+        float norm_bti = (inp_bt[i] - mean_bt) * rstd_bt;
+        float dnorm_i = weight[i] * dout_bt[i];
+        // gradient contribution to bias
+        atomicAdd(&dbias[i], dout_bt[i]);
+        // gradient contribution to weight
+        atomicAdd(&dweight[i], norm_bti * dout_bt[i]);
+        // gradient contribution to input
+        float dval = 0.0f;
+        dval += dnorm_i; // term 1
+        dval -= dnorm_mean; // term 2
+        dval -= norm_bti * dnorm_norm_mean; // term 3
+        dval *= rstd_bt; // final scale
+        dinp_bt[i] += dval;
+    }
+}

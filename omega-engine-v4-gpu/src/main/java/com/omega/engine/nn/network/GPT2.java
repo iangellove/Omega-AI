@@ -94,14 +94,14 @@ public class GPT2 extends Network {
 		// TODO Auto-generated method stub
 		this.RUN_MODEL = RunModel.TEST;
 		this.forward(input);
-		return this.getOuput();
+		return this.getOutput();
 	}
 
 	@Override
 	public Tensor forward(Tensor input) {
 		// TODO Auto-generated method stub
 
-		return this.getOuput();
+		return this.getOutput();
 	}
 	
 	public Tensor forward(Tensor input,Tensor positions) {
@@ -117,7 +117,7 @@ public class GPT2 extends Network {
 //		decoder.getOutput().showShape();
 		fullyLayer.forward(decoder.getOutput());
 		
-		return this.getOuput();
+		return this.getOutput();
 	}
 	
 	public Tensor forward(Tensor input,Tensor positions,Tensor mask) {
@@ -133,7 +133,7 @@ public class GPT2 extends Network {
 //		decoder.getOutput().showShape();
 		fullyLayer.forward(decoder.getOutput());
 		
-		return this.getOuput();
+		return this.getOutput();
 	}
 	
 	@Override

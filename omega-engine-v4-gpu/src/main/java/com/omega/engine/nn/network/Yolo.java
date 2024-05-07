@@ -106,7 +106,7 @@ public class Yolo extends OutputsNetwork{
 		// TODO Auto-generated method stub
 		this.RUN_MODEL = RunModel.TEST;
 		this.forward(input);
-		return this.getOuput();
+		return this.getOutput();
 	}
 
 	@Override
@@ -128,7 +128,7 @@ public class Yolo extends OutputsNetwork{
 
 		}
 
-		return this.getOuput();
+		return this.getOutput();
 	}
 	
 	@Override

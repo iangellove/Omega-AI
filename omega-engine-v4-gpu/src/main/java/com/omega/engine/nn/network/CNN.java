@@ -83,7 +83,7 @@ public class CNN extends Network {
 			
 		}
 
-		return this.getOuput();
+		return this.getOutput();
 	}
 
 	@Override
@@ -157,7 +157,7 @@ public class CNN extends Network {
 		// TODO Auto-generated method stub
 		this.RUN_MODEL = RunModel.TEST;
 		this.forward(input);
-		return this.getOuput();
+		return this.getOutput();
 	}
 
 	@Override
