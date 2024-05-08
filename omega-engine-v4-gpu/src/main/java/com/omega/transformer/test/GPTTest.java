@@ -427,7 +427,7 @@ public class GPTTest {
 			
 			Tensor output = null;
 			
-			String pre_txt = "那算你修炼";
+			String pre_txt = "萧炎";
 			
 			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length());
 			

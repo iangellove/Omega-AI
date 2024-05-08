@@ -602,7 +602,7 @@ public class GPUOP {
     public void cudaRandom(Tensor x) {
     	
     	try {
-    		checkCURANDResult(JCurand.curandSetPseudoRandomGeneratorSeed(getGenerator(), RandomUtils.rand()));
+    		checkCURANDResult(JCurand.curandSetPseudoRandomGeneratorSeed(getGenerator(), System.nanoTime()));
     		checkCURANDResult(JCurand.curandGenerateUniform(getGenerator(), x.getGpuData(), x.getDataLength()));
 //    		System.out.println("in");
 		} catch (Exception e) {

@@ -8,7 +8,6 @@ import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
 import com.omega.engine.nn.layer.TransformerNanoDecoder;
-import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.updater.UpdaterType;
 
 /**
@@ -24,7 +23,7 @@ public class NanoGPT extends Network {
 	
 	public int headNum = 8;
 	
-	private int decoderNum = 1;
+	public int decoderNum = 1;
 	
 	private boolean bias = true;
 	
@@ -33,8 +32,6 @@ public class NanoGPT extends Network {
 	private InputLayer inputLayer;
 	
 	private TransformerNanoDecoder decoder;
-	
-	private LNLayer ln;
 	
 	private FullyLayer fullyLayer;
 	
@@ -50,11 +47,9 @@ public class NanoGPT extends Network {
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
 		this.decoder = new TransformerNanoDecoder(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, this.bias, this.dropout, this);
-		this.ln = new LNLayer(this.decoder, this.bias);
-		this.fullyLayer = new FullyLayer(embedDim, vocabSize, this.bias, this);
+		this.fullyLayer = new FullyLayer(embedDim, vocabSize, false, this);
 		this.addLayer(inputLayer);
 		this.addLayer(decoder);
-		this.addLayer(ln);
 		this.addLayer(fullyLayer);
 	}
 	
@@ -71,11 +66,9 @@ public class NanoGPT extends Network {
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
 		this.decoder = new TransformerNanoDecoder(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, this.bias, this.dropout, this);
-		this.ln = new LNLayer(this.decoder, this.bias);
-		this.fullyLayer = new FullyLayer(embedDim, vocabSize, true, this);
+		this.fullyLayer = new FullyLayer(embedDim, vocabSize, false, this);
 		this.addLayer(inputLayer);
 		this.addLayer(decoder);
-		this.addLayer(ln);
 		this.addLayer(fullyLayer);
 	}
 	
@@ -139,9 +132,7 @@ public class NanoGPT extends Network {
 		
 		decoder.forward(input, positions);
 		
-		ln.forward(decoder.getOutput());
-
-		fullyLayer.forward(ln.getOutput());
+		fullyLayer.forward(decoder.getOutput());
 		
 		return this.getOutput();
 	}
@@ -157,9 +148,7 @@ public class NanoGPT extends Network {
 		
 		decoder.forward(input, mask, positions);
 		
-		ln.forward(decoder.getOutput());
-
-		fullyLayer.forward(ln.getOutput());
+		fullyLayer.forward(decoder.getOutput());
 
 		return this.getOutput();
 	}
@@ -176,9 +165,7 @@ public class NanoGPT extends Network {
 		
 		this.fullyLayer.back(lossDiff);
 		
-		this.ln.back(this.fullyLayer.diff);
-		
-		this.decoder.back(this.ln.diff);
+		this.decoder.back(this.fullyLayer.diff);
 		
 	}
 

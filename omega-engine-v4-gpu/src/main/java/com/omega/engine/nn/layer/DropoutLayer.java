@@ -83,9 +83,9 @@ public class DropoutLayer extends Layer {
 		// TODO Auto-generated method stub
 		if(preLayer == null) {
 			preLayer = this.network.getPreLayer(this.index);
-			this.channel = preLayer.oChannel;
-			this.height = preLayer.oHeight;
-			this.width = preLayer.oWidth;
+			this.channel = input.channel;
+			this.height = input.height;
+			this.width = input.width;
 			this.oChannel = this.channel;
 			this.oHeight = this.height;
 			this.oWidth = this.width;
@@ -109,10 +109,10 @@ public class DropoutLayer extends Layer {
 			if(this.mask == null || this.mask.number != this.number) {
 				this.mask = Tensor.createTensor(this.mask, number, oChannel, oHeight, oWidth, true);
 			}
-//			GPUOP.getInstance().cudaRandom(this.mask);
+			GPUOP.getInstance().cudaRandom(this.mask);
 //			JCuda.cudaDeviceSynchronize();
 //			this.mask.clearGPU();
-			this.mask.uniform(0.0f, 1.0f);
+//			this.mask.uniform(0.0f, 1.0f);
 //			this.mask.showDMByNumber(0);
 		}
 		
@@ -138,6 +138,8 @@ public class DropoutLayer extends Layer {
 //			input.showDMByNumber(0);
 			kernel.dropout(input, output, mask);
 //			output.showDMByNumber(0);
+		}else {
+			this.output = input;
 		}
 		
 	}

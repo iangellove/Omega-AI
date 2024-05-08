@@ -136,41 +136,15 @@ public class LNLayer extends NormalizationLayer {
 
 		this.number = input.number;
 		
-		if(preLayer == null) {
-			preLayer = this.network.getPreLayer(this.index);
-		}
-
 		if(this.bnType == null) {
-			if(preLayer != null) {
-				this.channel = preLayer.oChannel;
-				this.height = preLayer.oHeight;
-				this.width = preLayer.oWidth;
-				this.oChannel = this.channel;
-				this.oHeight = this.height;
-				this.oWidth = this.width;
-				if(this.preLayer.getLayerType() == LayerType.conv) {
-					this.setBnType(BNType.conv_bn);
-					this.meanNum = this.height * this.width;
-				}else if(this.preLayer.getLayerType() == LayerType.full){
-					this.setBnType(BNType.fully_bn);
-					this.meanNum = this.channel * this.height * this.width;
-				}else if(this.preLayer.getLayerType() == LayerType.conv_transpose) {
-					this.setBnType(BNType.conv_bn);
-					this.meanNum = this.height * this.width;
-				}else {
-					this.setBnType(BNType.fully_bn);
-					this.meanNum = this.channel * this.height * this.width;
-				}
-			}else {
-				this.channel = input.channel;
-				this.height = input.height;
-				this.width = input.width;
-				this.oChannel = this.channel;
-				this.oHeight = this.height;
-				this.oWidth = this.width;
-				this.setBnType(BNType.fully_bn);
-				this.meanNum = this.channel * this.height * this.width;
-			}
+			this.channel = input.channel;
+			this.height = input.height;
+			this.width = input.width;
+			this.oChannel = this.channel;
+			this.oHeight = this.height;
+			this.oWidth = this.width;
+			this.setBnType(BNType.fully_bn);
+			this.meanNum = this.channel * this.height * this.width;
 		}
 		
 		if(this.gamma == null) {

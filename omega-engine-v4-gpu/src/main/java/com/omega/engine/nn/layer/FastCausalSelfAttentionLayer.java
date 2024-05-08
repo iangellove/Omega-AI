@@ -9,6 +9,7 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
+import com.omega.engine.nn.network.NanoGPT;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
@@ -33,6 +34,10 @@ public class FastCausalSelfAttentionLayer extends Layer{
 	private FullyLayer qkvLinerLayer;
 	
 	private FullyLayer oLinerLayer;
+	
+	private DropoutLayer dropoutLayer;
+	
+	private DropoutLayer dropoutLayer2;
 	
 	private BaseKernel baseKernel;
 	
@@ -64,6 +69,8 @@ public class FastCausalSelfAttentionLayer extends Layer{
 	
 	private int batchSize = 1;
 	
+	private boolean dropout = false;
+	
 	public FastCausalSelfAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout) {
 		this.bias = bias;
 		this.time = time;
@@ -73,6 +80,7 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
+		this.dropout = dropout;
 		this.initLayers();
 	}
 	
@@ -89,12 +97,14 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
+		this.dropout = dropout;
 		this.initLayers();
 	}
 	
 	public void initLayers() {
 
 		this.qkvLinerLayer = new FullyLayer(embedDim,3 * embedDim, bias, this.network);
+		NanoGPT net = (NanoGPT) this.network;
 		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, RandomUtils.uniform(this.embedDim * 3 * this.embedDim, 0.0f, 0.02f), true);
 //		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, true);
 //		float[] data = RandomUtils.order(embedDim * 3 * embedDim, 0.1f, 0.1f);
@@ -109,9 +119,14 @@ public class FastCausalSelfAttentionLayer extends Layer{
 //		PrintUtils.printImage(this.qkvLinerLayer.weight);
 //		this.qkvLinerLayer.weight.showDM();
 		this.oLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, (float)(0.02f / Math.sqrt(2 * net.decoderNum))), true);
 //		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.01f, 0.01f), true);
-
+		
+		if(this.dropout) {
+			this.dropoutLayer = new DropoutLayer(0.2f, this.network);
+			this.dropoutLayer2 = new DropoutLayer(0.2f, oLinerLayer);
+		}
+		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
 		}
@@ -214,7 +229,12 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		this.oLinerLayer.forward(oi);
 		
 		this.output = this.oLinerLayer.getOutput();
-
+		
+		if(dropout) {
+			dropoutLayer2.forward(this.oLinerLayer.getOutput());
+			this.output = dropoutLayer2.getOutput();
+		}
+		
 	}
 	
 	public void scaledDotProductAttention(Tensor query,Tensor key,Tensor value) {
@@ -228,6 +248,11 @@ public class FastCausalSelfAttentionLayer extends Layer{
 
 		attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time);
 		
+		if(dropout) {
+			dropoutLayer.forward(attn);
+			attn = dropoutLayer.getOutput();
+		}
+		
 //		attn.syncHost();
 //		PrintUtils.printImage(attn);
 		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, value.getGpuData(), dk, time * dk, attn.getGpuData(), time, time * time, 0.0f, vaccum.getGpuData(), dk, time * dk, batchSize * headNum);
@@ -239,6 +264,11 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		
 		// backward into dv
 		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_T, dk, time, time, 1.0f, dvaccum.getGpuData(), dk, time * dk, attn.getGpuData(), time, time * time, 0.0f, dvt.getGpuData(), dk, time * dk, batchSize * headNum);
+		
+		if(dropout) {
+			dropoutLayer.back(dattn);
+			dattn = dropoutLayer.diff;
+		}
 		
 		// backward into preatt
 		attentionKernel.softmax_backward(dpreatt, dattn, attn, batchSize, time, embedDim, headNum);
@@ -260,9 +290,13 @@ public class FastCausalSelfAttentionLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		
-		this.oLinerLayer.back(delta, oi);
-//		oi.showDMByNumber(0);
-//		dvaccum.showDMByNumber(0);
+		if(dropout) {
+			dropoutLayer2.back(delta);
+			this.oLinerLayer.back(dropoutLayer2.diff, oi);
+		}else {
+			this.oLinerLayer.back(delta, oi);
+		}
+
 		attentionKernel.unpermute_backward(dvaccum, oi, batchSize, time, headNum, dk);
 		
 		scaledDotProductAttentionBackward();
