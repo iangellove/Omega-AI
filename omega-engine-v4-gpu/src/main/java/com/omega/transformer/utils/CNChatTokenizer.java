@@ -3,16 +3,22 @@ package com.omega.transformer.utils;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang.ArrayUtils;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.PrintUtils;
 
 public class CNChatTokenizer extends BaseTokenizer{
+	
+	private float vailRatio = 0.1f;
 	
 	public int number = 0;
 	
@@ -66,13 +72,27 @@ public class CNChatTokenizer extends BaseTokenizer{
 	
 	private int[] targetLens;
 	
+	public List<String[]> trainData;
+	
+	public List<String[]> vailData;
+	
 	public CNChatTokenizer(String dataPath,int max_len,int batchSize) {
 		this.dataPath = dataPath;
 		this.max_len = max_len;
 		this.batchSize = batchSize;
 		loadDataForTXT();
+		Collections.shuffle(tokens);
 		this.number = org_tokens.size();
-		System.out.println(this.number);
+		System.out.println("dataCount:"+this.number);
+		System.out.println("vocab_size:"+vocab_size);
+		buildData();
+	}
+	
+	public void buildData() {
+		int trainDataSize = (int) (this.number * (1 - vailRatio));
+		int vailDataSize = this.number - trainDataSize;
+		trainData = tokens.subList(0, trainDataSize);
+		vailData = tokens.subList(trainDataSize, trainDataSize + vailDataSize);
 	}
 	
 	public void loadDataForTXT() {
@@ -172,6 +192,50 @@ public class CNChatTokenizer extends BaseTokenizer{
 		
 		for(int i = 0;i<indexs.length;i++) {
 			String[] onceToken = tokens.get(indexs[i]);
+//			System.out.println(onceToken.length);
+			for(int t = 0;t<max_len;t++) {
+				formatNotHeadToIdx(i, t, onceToken, input, label);
+			}
+		}
+
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+		label.hostToDevice();
+		
+	}
+	
+	public void loadTrainData(int[] indexs, Tensor input, Tensor label) {
+		// TODO Auto-generated method stub
+		
+		input.clear();
+		label.clear();
+		
+		for(int i = 0;i<indexs.length;i++) {
+			String[] onceToken = trainData.get(indexs[i]);
+//			System.out.println(onceToken.length);
+			for(int t = 0;t<max_len;t++) {
+				formatNotHeadToIdx(i, t, onceToken, input, label);
+			}
+		}
+
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+		label.hostToDevice();
+		
+	}
+	
+	public void loadVailData(int[] indexs, Tensor input, Tensor label) {
+		// TODO Auto-generated method stub
+		
+		input.clear();
+		label.clear();
+		
+		for(int i = 0;i<indexs.length;i++) {
+			String[] onceToken = vailData.get(indexs[i]);
 //			System.out.println(onceToken.length);
 			for(int t = 0;t<max_len;t++) {
 				formatNotHeadToIdx(i, t, onceToken, input, label);

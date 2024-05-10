@@ -74,10 +74,8 @@ public class EmbeddingKernel extends BaseKernel{
 		
 		try {
 			
-			if(kernelParameters == null || input.number != this.N){
-//				output.showShape();
-//				weight.showShape();
-//				input.showShape();
+//			if(kernelParameters == null || input.number != this.N){
+
 		        /**
 		         * 设置入参
 		         *  float *output,
@@ -98,7 +96,7 @@ public class EmbeddingKernel extends BaseKernel{
 		        
 		        this.N = input.number;
 		        
-			}
+//			}
 			
 			int gridx = 2 * CUDAModules.props.multiProcessorCount;
 		    int[] threads = new int[] {256, 4, 1};
@@ -180,12 +178,12 @@ public class EmbeddingKernel extends BaseKernel{
 	
 	public static void main(String[] args) {
 		
-		int N = 32;
-		int W = 100000;
+		int N = 2;
+		int W = 3;
 		
-		int OW = 512;
+		int OW = 5;
 		
-		float[] data = new float[] {0.0f, 1.0f};
+		float[] data = new float[] {2.0f, 0.0f};
     	
     	Tensor input = new Tensor(N, 1, 1, 1, data, true);
     	
@@ -205,7 +203,7 @@ public class EmbeddingKernel extends BaseKernel{
     	
 //    	input.showDM();
 //    	weight.showDM();
-    	output.showDMByNumber(0);
+    	output.showDM();
     	
     	kernel.backward(delta, dw, input);
 		

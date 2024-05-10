@@ -18,6 +18,7 @@ import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaDeviceProp;
+import jcuda.runtime.cudaError;
 
 public class CUDAModules {
 	
@@ -108,7 +109,7 @@ public class CUDAModules {
 		}
 		
 		CUfunction function = new CUfunction();
-        cuModuleGetFunction(function, m, functionName);
+		checkCUDA(cuModuleGetFunction(function, m, functionName));
         m.getFunctions().put(functionName, function);
         
 		return function;
@@ -299,6 +300,13 @@ public class CUDAModules {
 			CUDAModules.getFunctionByModule(functions.get(key), key);
 		}
 		System.out.println("CUDA functions init finish.");
+	}
+	
+	public static void checkCUDA(int code) {
+		if(code != cudaError.cudaSuccess) {
+			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
+			throw new RuntimeException("Error code "+code+":"+cudaError.stringFor(code));
+		}
 	}
 	
 }

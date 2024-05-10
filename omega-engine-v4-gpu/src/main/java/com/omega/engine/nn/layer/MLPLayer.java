@@ -3,7 +3,6 @@ package com.omega.engine.nn.layer;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.layer.active.GeluLayer;
-import com.omega.engine.nn.network.NanoGPT;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
@@ -53,14 +52,15 @@ public class MLPLayer extends Layer{
 	}
 	
 	public void initLayers() {
-		NanoGPT net = (NanoGPT) this.network;
+//		NanoGPT net = (NanoGPT) this.network;
 		this.linear1 = new FullyLayer(embedDim, nChannel, bias, network);
-		this.linear1.weight = new Tensor(1, 1, embedDim, nChannel, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, 0.02f), true);
+//		this.linear1.weight = new Tensor(1, 1, embedDim, nChannel, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, 0.02f), true);
 
 		this.active = new GeluLayer(linear1);
 		
 		this.linear2 = new FullyLayer(nChannel, embedDim, bias, network);
-		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, (0.02f / (float) Math.sqrt(2 * net.decoderNum))), true);
+//		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, 0.02f), true);
+//		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, (0.02f / (float) Math.sqrt(2 * net.decoderNum))), true);
 		
 		if(dropout) {
 			dropoutLayer = new DropoutLayer(0.2f, linear2);

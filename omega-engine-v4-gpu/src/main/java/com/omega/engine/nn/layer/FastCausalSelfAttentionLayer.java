@@ -9,7 +9,6 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
-import com.omega.engine.nn.network.NanoGPT;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
@@ -76,6 +75,7 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
+		this.dk = embedDim / headNum;
 		this.bias = bias;
 		this.oChannel = 1;
 		this.oHeight = 1;
@@ -93,6 +93,7 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
+		this.dk = embedDim / headNum;
 		this.bias = bias;
 		this.oChannel = 1;
 		this.oHeight = 1;
@@ -103,8 +104,8 @@ public class FastCausalSelfAttentionLayer extends Layer{
 	
 	public void initLayers() {
 
-		this.qkvLinerLayer = new FullyLayer(embedDim,3 * embedDim, bias, this.network);
-		NanoGPT net = (NanoGPT) this.network;
+		this.qkvLinerLayer = new FullyLayer(embedDim, 3 * embedDim, bias, this.network);
+//		NanoGPT net = (NanoGPT) this.network;
 		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, RandomUtils.uniform(this.embedDim * 3 * this.embedDim, 0.0f, 0.02f), true);
 //		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, true);
 //		float[] data = RandomUtils.order(embedDim * 3 * embedDim, 0.1f, 0.1f);
@@ -119,7 +120,8 @@ public class FastCausalSelfAttentionLayer extends Layer{
 //		PrintUtils.printImage(this.qkvLinerLayer.weight);
 //		this.qkvLinerLayer.weight.showDM();
 		this.oLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, (float)(0.02f / Math.sqrt(2 * net.decoderNum))), true);
+		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+//		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, (float)(0.02f / Math.sqrt(2 * net.decoderNum))), true);
 //		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.01f, 0.01f), true);
 		
 		if(this.dropout) {
@@ -147,7 +149,6 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		this.time = this.network.time;
-		this.dk = embedDim / headNum;
 		this.batchSize = number / time;
 
 		if(this.preatt == null || this.preatt.number != this.batchSize || this.preatt.width != this.time) {
@@ -171,7 +172,6 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = input.number;
 		this.time = this.network.time;
-		this.dk = embedDim / headNum;
 		this.batchSize = number / time;
 		
 		if(this.preatt == null || this.preatt.number != this.batchSize || this.preatt.width != this.time) {
@@ -242,16 +242,15 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		float d_k = (float) (1.0f / Math.sqrt(dk));
 		
 		GPUOP.getInstance().bmm(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, key.getGpuData(), dk, time * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), time, time * time, batchSize * headNum);
-//		preatt.showDM();
-//		PrintUtils.printImage(preatt);
+
 		attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
 
 		attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time);
 		
-		if(dropout) {
-			dropoutLayer.forward(attn);
-			attn = dropoutLayer.getOutput();
-		}
+//		if(dropout) {
+//			dropoutLayer.forward(attn);
+//			attn = dropoutLayer.getOutput();
+//		}
 		
 //		attn.syncHost();
 //		PrintUtils.printImage(attn);
@@ -261,15 +260,15 @@ public class FastCausalSelfAttentionLayer extends Layer{
 	public void scaledDotProductAttentionBackward() {
 	    // backward into datt
 		GPUOP.getInstance().bmm(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, vt.getGpuData(), dk, time * dk, dvaccum.getGpuData(), dk, time * dk, 0.0f, dattn.getGpuData(), time, time * time, batchSize * headNum);
+	
+//		if(dropout) {
+//			dropoutLayer.back(dattn);
+//			dattn = dropoutLayer.diff;
+//		}
 		
 		// backward into dv
 		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_T, dk, time, time, 1.0f, dvaccum.getGpuData(), dk, time * dk, attn.getGpuData(), time, time * time, 0.0f, dvt.getGpuData(), dk, time * dk, batchSize * headNum);
-		
-		if(dropout) {
-			dropoutLayer.back(dattn);
-			dattn = dropoutLayer.diff;
-		}
-		
+
 		// backward into preatt
 		attentionKernel.softmax_backward(dpreatt, dattn, attn, batchSize, time, embedDim, headNum);
 		

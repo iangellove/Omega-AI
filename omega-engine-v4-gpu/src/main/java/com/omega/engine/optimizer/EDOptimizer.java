@@ -17,6 +17,7 @@ import com.omega.engine.nn.network.GPT;
 import com.omega.engine.nn.network.GPT2;
 import com.omega.engine.nn.network.NanoGPT;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Seq2Seq;
 import com.omega.engine.nn.network.Seq2SeqRNN;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
@@ -878,8 +879,9 @@ public class EDOptimizer extends Optimizer {
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
 					System.out.println(msg);
-
+					
 					this.batchIndex++;
+
 				}
 //				output.showDMByNumber(0);
 //				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
@@ -1067,15 +1069,9 @@ public class EDOptimizer extends Optimizer {
 
 			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
 			
-			Tensor mask = CNChatTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
+//			Tensor mask = CNChatTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
 
 			Tensor positions = CNChatTokenizer.getPositions(batchSize, network.time);
-			
-			Tensor positions1 = CNChatTokenizer.getPositions(1, network.time);
-			
-			Tensor mask1 = CNChatTokenizer.triu(1, network.headNum, network.time, network.time, 1);
-			
-			Tensor input1 = new Tensor(1 * network.time, 1, 1, 1, true);
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				
@@ -1084,12 +1080,10 @@ public class EDOptimizer extends Optimizer {
 				}
 				
 				this.trainIndex = i + 1;
-				
-				int[][] indexs = MathUtils.randomInts(trainingData.number,this.batchSize);
+
+				int[][] indexs = MathUtils.randomInts(trainingData.trainData.size(),this.batchSize);
 				
 				Tensor output = null;
-				
-				Tensor output1 = null;
 				
 				/**
 				 * 遍历整个训练集
@@ -1109,12 +1103,12 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * 读取训练数据
 					 */
-					trainingData.loadData(indexs[it], input, label);
+					trainingData.loadTrainData(indexs[it], input, label);
 					
 					/**
 					 * forward
 					 */
-					output = network.forward(input, positions, mask);
+					output = network.forward(input, positions);
 					
 					/**
 					 * loss
@@ -1179,6 +1173,16 @@ public class EDOptimizer extends Optimizer {
 					System.out.println(msg);
 
 					this.batchIndex++;
+					
+					if(it != 0 && it % 200 == 0) {
+						vail_chat(network, input, output, label, positions, trainingData);
+						network.RUN_MODEL = RunModel.TRAIN;
+					}
+					
+					if(it != 0 && it % 400 == 0) {
+						break;
+					}
+					
 				}
 //				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
 
@@ -1335,6 +1339,7 @@ public class EDOptimizer extends Optimizer {
 					
 					if(it != 0 && it % 200 == 0) {
 						vail_gen(network, input, output, label, mask, positions, trainingData);
+						network.RUN_MODEL = RunModel.TRAIN;
 					}
 				}
 				
@@ -1526,7 +1531,7 @@ public class EDOptimizer extends Optimizer {
 	}
 	
 	public void vail_gen(NanoGPT network,Tensor input,Tensor output,Tensor label,Tensor mask,Tensor positions,CNTokenizer trainingData) {
-
+		network.RUN_MODEL = RunModel.TEST;
 		int[][] vailIndexs = MathUtils.randomInts(trainingData.vailData.length - network.time,this.batchSize);
 		
 		for(int it = 0;it<vailIndexs.length;it++) {
@@ -1565,6 +1570,54 @@ public class EDOptimizer extends Optimizer {
 			output.syncHost();
 			int time = output.number / batchSize;
 			float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab);
+			
+			String msg = "vail["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} vail_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+			
+			System.out.println(msg);
+		}
+		
+	}
+	
+	public void vail_chat(NanoGPT network,Tensor input,Tensor output,Tensor label,Tensor positions,CNChatTokenizer trainingData) {
+		network.RUN_MODEL = RunModel.TEST;
+		int[][] vailIndexs = MathUtils.randomInts(trainingData.vailData.size() - network.time,this.batchSize);
+		
+		for(int it = 0;it<vailIndexs.length;it++) {
+			
+			if(it > 20) {
+				break;
+			}
+			
+			long start = System.nanoTime();
+			
+			this.loss.clear();
+
+			/**
+			 * 读取训练数据
+			 */
+			trainingData.loadVailData(vailIndexs[it], input, label);
+			/**
+			 * forward
+			 */
+			output = network.forward(input, positions);
+			
+			/**
+			 * loss
+			 */
+			this.loss = network.loss(output, label, trainingData.dictionary.get("<pad>"));
+			
+			/**
+			 * current time error
+			 */
+			if(this.loss.isHasGPU()) {
+				this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+			}else {
+				this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
+			}
+
+			output.syncHost();
+			int time = output.number / batchSize;
+			float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
 			
 			String msg = "vail["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} vail_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 			

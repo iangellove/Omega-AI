@@ -142,18 +142,16 @@ public class TransformerNanoDecoder extends Layer{
 		Tensor out1 = src_emb.getOutput();
 		
 		if(dropout) {
-			this.dropoutLayer.forward(src_emb.getOutput());
+			this.dropoutLayer.forward(out1);
 			out1 = dropoutLayer.getOutput();
 		}
 		
-		Tensor decoderOutput = out1;
-		
 		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).forward(decoderOutput);
-			decoderOutput = decoderLayers.get(i).getOutput();
+			decoderLayers.get(i).forward(out1);
+			out1 = decoderLayers.get(i).getOutput();
 		}
 
-		this.ln.forward(decoderOutput);
+		this.ln.forward(out1);
 		this.output = this.ln.getOutput();
 //		this.output = decoderOutput;
 		
@@ -165,25 +163,24 @@ public class TransformerNanoDecoder extends Layer{
 		src_emb.forward(input);
 		
 		pos_emb.forward(positions);
-		
+
 		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
 		
 		Tensor out1 = src_emb.getOutput();
 		
 		if(dropout) {
-			this.dropoutLayer.forward(src_emb.getOutput());
+			this.dropoutLayer.forward(out1);
 			out1 = dropoutLayer.getOutput();
 		}
-		
-		Tensor decoderOutput = out1;
-//		out1.showShape();
+
 		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).forward(decoderOutput);
-			decoderOutput = decoderLayers.get(i).getOutput();
+			decoderLayers.get(i).forward(out1);
+			out1 = decoderLayers.get(i).getOutput();
 		}
 
-		this.ln.forward(decoderOutput);
+		this.ln.forward(out1);
 		this.output = this.ln.getOutput();
+//		output.showDMByNumber(output.number - 1);
 //		this.output = decoderOutput;
 	}
 	
@@ -199,18 +196,16 @@ public class TransformerNanoDecoder extends Layer{
 		Tensor out1 = src_emb.getOutput();
 
 		if(dropout) {
-			this.dropoutLayer.forward(src_emb.getOutput());
+			this.dropoutLayer.forward(out1);
 			out1 = dropoutLayer.getOutput();
 		}
 		
-		Tensor decoderOutput = out1;
-		
 		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).forward(decoderOutput, mask);
-			decoderOutput = decoderLayers.get(i).getOutput();
+			decoderLayers.get(i).forward(out1, mask);
+			out1 = decoderLayers.get(i).getOutput();
 		}
 
-		this.ln.forward(decoderOutput);
+		this.ln.forward(out1);
 		this.output = this.ln.getOutput();
 //		this.output = decoderOutput;
 	}
@@ -227,7 +222,7 @@ public class TransformerNanoDecoder extends Layer{
 		this.ln.back(delta);
 		Tensor decoderDiff = this.ln.diff;
 //		Tensor decoderDiff = delta;
-		decoderDiff.showDMByNumber(0);
+		
 		for(int i = n_layers - 1;i>=0;i--) {
 			decoderLayers.get(i).back(decoderDiff);
 			decoderDiff = decoderLayers.get(i).diff;

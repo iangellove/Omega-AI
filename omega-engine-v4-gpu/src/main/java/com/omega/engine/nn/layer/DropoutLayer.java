@@ -5,6 +5,7 @@ import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.DropoutKernel;
 import com.omega.engine.nn.layer.normalization.BNType;
@@ -28,6 +29,8 @@ public class DropoutLayer extends Layer {
 	public Layer preLayer;
 	
 	private float scale = 0.0f;
+	
+	private BaseKernel baseKernel;
 	
 	private DropoutKernel kernel;
 	
@@ -74,6 +77,7 @@ public class DropoutLayer extends Layer {
 		
 		if(kernel == null) {
 			kernel = new DropoutKernel(this.probability, this.scale);
+			baseKernel = new BaseKernel();
 		}
 		this.number = this.network.number;
 		initParam();
@@ -81,18 +85,16 @@ public class DropoutLayer extends Layer {
 	
 	public void init(Tensor input) {
 		// TODO Auto-generated method stub
-		if(preLayer == null) {
-			preLayer = this.network.getPreLayer(this.index);
-			this.channel = input.channel;
-			this.height = input.height;
-			this.width = input.width;
-			this.oChannel = this.channel;
-			this.oHeight = this.height;
-			this.oWidth = this.width;
-		}
+		this.channel = input.channel;
+		this.height = input.height;
+		this.width = input.width;
+		this.oChannel = this.channel;
+		this.oHeight = this.height;
+		this.oWidth = this.width;
 		
 		if(kernel == null) {
 			kernel = new DropoutKernel(this.probability, this.scale);
+			baseKernel = new BaseKernel();
 		}
 		this.number = input.number;
 		initParam();
@@ -109,7 +111,6 @@ public class DropoutLayer extends Layer {
 			if(this.mask == null || this.mask.number != this.number) {
 				this.mask = Tensor.createTensor(this.mask, number, oChannel, oHeight, oWidth, true);
 			}
-			GPUOP.getInstance().cudaRandom(this.mask);
 //			JCuda.cudaDeviceSynchronize();
 //			this.mask.clearGPU();
 //			this.mask.uniform(0.0f, 1.0f);
@@ -136,10 +137,11 @@ public class DropoutLayer extends Layer {
 
 		if(this.network.RUN_MODEL == RunModel.TRAIN) {
 //			input.showDMByNumber(0);
+			GPUOP.getInstance().cudaRandom(this.mask);
 			kernel.dropout(input, output, mask);
 //			output.showDMByNumber(0);
 		}else {
-			this.output = input;
+			baseKernel.copy_gpu(input, this.output, input.getDataLength(), 1, 1);
 		}
 		
 	}
@@ -154,9 +156,7 @@ public class DropoutLayer extends Layer {
 	public void diff() {
 		// TODO Auto-generated method stub
 
-		if(this.network.RUN_MODEL == RunModel.TRAIN) {
-			kernel.dropout(delta, diff, mask);
-		}
+		kernel.dropout(delta, diff, mask);
 
 	}
 

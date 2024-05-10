@@ -86,7 +86,7 @@ public class DropoutKernel extends BaseKernel{
 		
 		try {
 			
-			if(kernelParameters == null || input.number != this.N){
+//			if(kernelParameters == null || input.number != this.N){
 
 		        /**
 		         * 设置入参
@@ -102,7 +102,7 @@ public class DropoutKernel extends BaseKernel{
 		        
 		        this.N = input.number;
 		        
-			}
+//			}
 			
 			cuLaunchKernel(function,
 		            this.get_number_of_blocks(input.getDataLength(), BLOCK),  1, 1,      // Grid dimension
@@ -178,12 +178,12 @@ public class DropoutKernel extends BaseKernel{
 		            );
 		        
 		        this.N = input.number;
-		        
+//		        rand.showDM(0);
 //			}
-			int[] grid = cuda_gridsize(input.getDataLength());
+//			int[] grid = cuda_gridsize(input.getDataLength());
 			cuLaunchKernel(dropout_function,
-					grid[0],  grid[1], grid[2],      // Grid dimension
-					BLOCK, 1, 1,      // Block dimension
+					this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
+			        CAFFE_CUDA_NUM_THREADS, 1, 1,      
 		            0, null,               // Shared memory size and stream
 		            dropoutKernelParameters, null // Kernel- and extra parameters
 		        );

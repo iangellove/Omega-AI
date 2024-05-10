@@ -11,7 +11,7 @@ extern "C"
 __global__ void dropout_kernel(float *input,float *output, float *mask, int size, float prob, float scale)
 {
     int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
-    if(id < size) output[id] = (mask[id] < prob) ? 0 : input[id]*scale;
+    if(id < size) output[id] = (mask[id] < prob) ? 0 : input[id] * scale;
 }
 
 extern "C"

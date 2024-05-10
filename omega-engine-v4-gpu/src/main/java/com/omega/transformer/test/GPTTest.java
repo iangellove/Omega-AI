@@ -178,15 +178,15 @@ public class GPTTest {
 			
 			boolean dropout = false;
 			
-			int batchSize = 24;
+			int batchSize = 32;
 			
 			int max_len = 64;
 			
 			int embedDim = 512;
 			
-			int head_num = 8;
+			int head_num = 4;
 			
-			int decoderNum = 6;
+			int decoderNum = 4;
 			
 			String trainPath = "H:\\transformer_dataset\\gpt\\chatdata\\train-format20w.txt";
 
@@ -196,7 +196,7 @@ public class GPTTest {
 			
 			network.learnRate = 0.001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 10, 0.0001f, LearnRateUpdate.CONSTANT, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {200, 300, 500, 600, 700, 800, 900};
 			optimizer.trainNanoGPT(trainData);
 
@@ -213,12 +213,13 @@ public class GPTTest {
 				input.showDM();
 				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
 				positions.showDM();
-				Tensor mask = CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1);
-				mask.showDM();
+//				Tensor mask = CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1);
+//				mask.showDM();
 				for(int t = 0;t<max_len;t++) {
 					network.time = input.number;
-					Tensor output = network.forward(input, positions, mask);
+					Tensor output = network.forward(input, positions);
 					output.syncHost();
+					output.showDM();
 					String txts = output2TXT(output, trainData, true);
 //					System.out.println("output:"+txts);
 					String nextWord = txts.substring(txts.length() - 1, input_txt.length());
@@ -232,7 +233,8 @@ public class GPTTest {
 					}
 					input = trainData.loadByTxtToIdx(input_txt);
 					CNChatTokenizer.getPositions(1, input.number, positions);
-					CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
+					
+//					CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
 				}
 				
 				System.out.println(input_txt);
@@ -393,7 +395,7 @@ public class GPTTest {
 			
 			boolean bias = false;
 			
-			boolean dropout = false;
+			boolean dropout = true;
 			
 			int batchSize = 32;
 			
@@ -401,9 +403,9 @@ public class GPTTest {
 			
 			int embedDim = 128;
 			
-			int headNum = 4;
+			int headNum = 8;
 			
-			int decoderNum = 4;
+			int decoderNum = 8;
 			
 			String trainPath = "H:\\rnn_dataset\\dpcc.txt";
 			
@@ -463,7 +465,7 @@ public class GPTTest {
 			
 			boolean bias = false;
 			
-			boolean dropout = false;
+			boolean dropout = true;
 			
 			int batchSize = 32;
 			
@@ -483,7 +485,7 @@ public class GPTTest {
 			
 //			network.CUDNN = true;
 			
-			network.learnRate = 0.0001f;
+			network.learnRate = 0.001f;
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.001f, LearnRateUpdate.GD_GECAY, false);
 //			optimizer.lr_step = new int[] {20,50,80};
@@ -661,9 +663,9 @@ public class GPTTest {
 			
 //			gpt2_lang();
 			
-			ch_chat_gpt2();
+//			ch_chat_gpt2();
 			
-//			gpt_dp();
+			gpt_dp();
 			
 //			gpt_ssby();
 			
