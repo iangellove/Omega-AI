@@ -180,13 +180,13 @@ public class GPTTest {
 			
 			int batchSize = 32;
 			
-			int max_len = 64;
+			int max_len = 128;
 			
-			int embedDim = 512;
+			int embedDim = 768;
 			
-			int head_num = 4;
+			int head_num = 12;
 			
-			int decoderNum = 4;
+			int decoderNum = 12;
 			
 			String trainPath = "H:\\transformer_dataset\\gpt\\chatdata\\train-format20w.txt";
 
@@ -194,10 +194,10 @@ public class GPTTest {
 			
 			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
 			
-			network.learnRate = 0.001f;
+			network.learnRate = 0.0001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.CONSTANT, false);
-//			optimizer.lr_step = new int[] {200, 300, 500, 600, 700, 800, 900};
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			optimizer.lr_step = new int[] {1, 2};
 			optimizer.trainNanoGPT(trainData);
 
 			Scanner scanner = new Scanner(System.in);
@@ -208,22 +208,22 @@ public class GPTTest {
 					break;
 				}
 				input_txt = input_txt.toLowerCase() + " ";
-				System.out.println("input_txt:"+input_txt);
+				System.out.println("user:"+input_txt);
 				Tensor input = trainData.loadByTxtToIdx(input_txt);
-				input.showDM();
+//				input.showDM();
 				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
-				positions.showDM();
+//				positions.showDM();
 //				Tensor mask = CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1);
 //				mask.showDM();
 				for(int t = 0;t<max_len;t++) {
 					network.time = input.number;
 					Tensor output = network.forward(input, positions);
 					output.syncHost();
-					output.showDM();
+//					output.showDM();
 					String txts = output2TXT(output, trainData, true);
 //					System.out.println("output:"+txts);
 					String nextWord = txts.substring(txts.length() - 1, input_txt.length());
-					System.out.println("nextWord:"+nextWord);
+//					System.out.println("nextWord:"+nextWord);
 					
 					if(trainData.sd.get(nextWord)!=null && (trainData.sd.get(nextWord).equals("<sep>") || trainData.sd.get(nextWord).equals("<eos>"))) {
 						input_txt += trainData.sd.get(nextWord);
@@ -237,7 +237,85 @@ public class GPTTest {
 //					CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
 				}
 				
-				System.out.println(input_txt);
+				System.out.println("chatbot:"+input_txt.split(" ")[1]);
+			}
+			scanner.close();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void yl_qa_gpt2() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			int batchSize = 8;
+			
+			int max_len = 128;
+			
+			int embedDim = 768;
+			
+			int head_num = 8;
+			
+			int decoderNum = 6;
+			
+			String trainPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\qaData.txt";
+
+			CNChatTokenizer trainData = new CNChatTokenizer(trainPath, max_len, batchSize);
+			
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
+			
+			network.learnRate = 0.001f;
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			optimizer.lr_step = new int[] {1, 2};
+			optimizer.trainNanoGPT(trainData);
+
+			Scanner scanner = new Scanner(System.in);
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase() + " ";
+				System.out.println("user:"+input_txt);
+				Tensor input = trainData.loadByTxtToIdx(input_txt);
+//				input.showDM();
+				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
+//				positions.showDM();
+//				Tensor mask = CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1);
+//				mask.showDM();
+				for(int t = 0;t<max_len;t++) {
+					network.time = input.number;
+					Tensor output = network.forward(input, positions);
+					output.syncHost();
+//					output.showDM();
+					String txts = output2TXT(output, trainData, true);
+//					System.out.println("output:"+txts);
+					String nextWord = txts.substring(txts.length() - 1, input_txt.length());
+//					System.out.println("nextWord:"+nextWord);
+					
+					if(trainData.sd.get(nextWord)!=null && (trainData.sd.get(nextWord).equals("<sep>") || trainData.sd.get(nextWord).equals("<eos>"))) {
+						input_txt += trainData.sd.get(nextWord);
+						break;
+					}else {
+						input_txt += nextWord;
+					}
+					input = trainData.loadByTxtToIdx(input_txt);
+					CNChatTokenizer.getPositions(1, input.number, positions);
+					
+//					CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
+				}
+				
+				System.out.println("chatbot:"+input_txt.split(" ")[1]);
 			}
 			scanner.close();
 			
@@ -407,7 +485,7 @@ public class GPTTest {
 			
 			int decoderNum = 8;
 			
-			String trainPath = "H:\\rnn_dataset\\dpcc.txt";
+			String trainPath = "H:\\transformer_dataset\\gpt\\dpcc50.txt";
 			
 			CNTokenizer trainData = new CNTokenizer(trainPath, max_len, batchSize);
 
@@ -417,7 +495,7 @@ public class GPTTest {
 			
 			network.learnRate = 0.001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.001f, LearnRateUpdate.GD_GECAY, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.001f, LearnRateUpdate.GD_GECAY, false);
 //			optimizer.lr_step = new int[] {20,50,80};
 			optimizer.trainNanoGPT_GEN(trainData);
 			
@@ -554,7 +632,7 @@ public class GPTTest {
 			String c = trainData.vocab[charIndex];
 			txt += c;
 		}
-		System.out.println("output txt:"+txt);
+//		System.out.println("output txt:"+txt);
 		if(format) {
 			for(String key:trainData.specials_dictionary.keySet()) {
 				txt = txt.replaceAll(key, trainData.specials_dictionary.get(key));
@@ -665,7 +743,9 @@ public class GPTTest {
 			
 //			ch_chat_gpt2();
 			
-			gpt_dp();
+//			gpt_dp();
+			
+			yl_qa_gpt2();
 			
 //			gpt_ssby();
 			

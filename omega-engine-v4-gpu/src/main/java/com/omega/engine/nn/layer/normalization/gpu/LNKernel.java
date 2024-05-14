@@ -6,7 +6,6 @@ import com.omega.common.data.Tensor;
 import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
-import com.omega.common.utils.PrintUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
@@ -185,69 +184,69 @@ public class LNKernel extends BaseKernel{
 		
 		try {
 			
-			if(forward_test_function == null) {
-				forward_test_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "LayerNormFusedForwardKernel");
-			}
-
-			if(backward_ig_function == null) {
-				backward_ig_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "ComputeInternalGradientsCUDAKernel");
-			}
-			
-			if(backward_fp_function == null) {
-				backward_fp_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "ComputeGradientFusedParamsCUDAKernel");
-			}
-			
-			if(backward_input_function == null) {
-				backward_input_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "layer_norm_grad_input_kernel");
-			}
-			
-			if(backward_gamma_function == null) {
-				backward_gamma_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "GammaBetaBackwardCUDAKernel");
-			}
-			
-			if(backward_gamma_simple_function == null) {
-				backward_gamma_simple_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "GammaBetaBackwardSimpleCUDAKernel");
-			}
-			
-			if(mean_var_function == null) {
-				mean_var_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "RowwiseMomentsCUDAKernel");
-			}
-			
-			if(fused_params_function == null) {
-				fused_params_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "ComputeSigmaAndFusedParamsCUDAKernel");
-			}
-			
-			if(forward_fused_function == null) {
-				forward_fused_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "LayerNormForwardCUDAKernel");
-			}
-			
-			if(inter_grad_function == null) {
-				inter_grad_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "ComputeInternalGradientsCUDAKernel");
-			}
-			
-			if(backward_fused_function == null) {
-				backward_fused_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "ComputeFusedParamsCUDAKernel");
-			}
-			
-			if(ln_backward_function == null) {
-				ln_backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "LayerNormBackwardCUDAKernel");
-			}
-			
-			if(forward_aten_function == null) {
-				forward_aten_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "vectorized_layer_norm_kernel");
-			}
-			
-			if(backward_aten_function == null) {
-				backward_aten_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "layer_norm_grad_input_kernel_vectorized");
-			}
-			
-			if(backward_aten_function2 == null) {
-				backward_aten_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "layer_norm_grad_input_kernel");
-			}
-			
-			if(backward_aten_gamma_function2 == null) {
-				backward_aten_gamma_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "GammaBetaBackwardCUDAKernel");
-			}
+//			if(forward_test_function == null) {
+//				forward_test_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "LayerNormFusedForwardKernel");
+//			}
+//
+//			if(backward_ig_function == null) {
+//				backward_ig_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "ComputeInternalGradientsCUDAKernel");
+//			}
+//			
+//			if(backward_fp_function == null) {
+//				backward_fp_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "ComputeGradientFusedParamsCUDAKernel");
+//			}
+//			
+//			if(backward_input_function == null) {
+//				backward_input_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "layer_norm_grad_input_kernel");
+//			}
+//			
+//			if(backward_gamma_function == null) {
+//				backward_gamma_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "GammaBetaBackwardCUDAKernel");
+//			}
+//			
+//			if(backward_gamma_simple_function == null) {
+//				backward_gamma_simple_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel3.cu", "GammaBetaBackwardSimpleCUDAKernel");
+//			}
+//			
+//			if(mean_var_function == null) {
+//				mean_var_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "RowwiseMomentsCUDAKernel");
+//			}
+//			
+//			if(fused_params_function == null) {
+//				fused_params_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "ComputeSigmaAndFusedParamsCUDAKernel");
+//			}
+//			
+//			if(forward_fused_function == null) {
+//				forward_fused_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "LayerNormForwardCUDAKernel");
+//			}
+//			
+//			if(inter_grad_function == null) {
+//				inter_grad_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "ComputeInternalGradientsCUDAKernel");
+//			}
+//			
+//			if(backward_fused_function == null) {
+//				backward_fused_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "ComputeFusedParamsCUDAKernel");
+//			}
+//			
+//			if(ln_backward_function == null) {
+//				ln_backward_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten.cu", "LayerNormBackwardCUDAKernel");
+//			}
+//			
+//			if(forward_aten_function == null) {
+//				forward_aten_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "vectorized_layer_norm_kernel");
+//			}
+//			
+//			if(backward_aten_function == null) {
+//				backward_aten_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "layer_norm_grad_input_kernel_vectorized");
+//			}
+//			
+//			if(backward_aten_function2 == null) {
+//				backward_aten_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "layer_norm_grad_input_kernel");
+//			}
+//			
+//			if(backward_aten_gamma_function2 == null) {
+//				backward_aten_gamma_function2 = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel_aten2.cu", "GammaBetaBackwardCUDAKernel");
+//			}
 			
 			if(forward_llm_function == null) {
 				forward_llm_function = CUDAModules.getFunctionByModule(LibPaths.LIB_PATH+"LNKernel.cu", "layernorm_forward_kernel5");

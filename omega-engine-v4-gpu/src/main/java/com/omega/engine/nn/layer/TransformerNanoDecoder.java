@@ -181,7 +181,7 @@ public class TransformerNanoDecoder extends Layer{
 		this.ln.forward(out1);
 		this.output = this.ln.getOutput();
 //		output.showDMByNumber(output.number - 1);
-//		this.output = decoderOutput;
+//		this.output = out1;
 	}
 	
 	public void output(Tensor mask,Tensor positions) {

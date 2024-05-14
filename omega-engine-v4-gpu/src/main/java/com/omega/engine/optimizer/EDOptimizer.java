@@ -1179,9 +1179,9 @@ public class EDOptimizer extends Optimizer {
 						network.RUN_MODEL = RunModel.TRAIN;
 					}
 					
-					if(it != 0 && it % 400 == 0) {
-						break;
-					}
+//					if(it != 0 && it % 400 == 0) {
+//						break;
+//					}
 					
 				}
 //				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
