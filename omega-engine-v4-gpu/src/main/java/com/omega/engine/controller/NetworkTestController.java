@@ -21,6 +21,7 @@ import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.LabelUtils;
 import com.omega.common.utils.PrintUtils;
 import com.omega.engine.database.NetworksDataBase;
+import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.network.CNN;
 import com.omega.engine.service.BusinessService;
 
@@ -42,6 +43,8 @@ public class NetworkTestController {
 		Map<String, Object> result = new HashMap<String, Object>();
 		
 		try {
+			
+			CUDAModules.initContext();
 			
 			businessService.bpNetwork_iris();
 			

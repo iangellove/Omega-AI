@@ -27,7 +27,9 @@ import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.rnn.data.OneHotDataLoader;
+import com.omega.transformer.utils.BPETokenizer;
 import com.omega.transformer.utils.CNChatTokenizer;
+import com.omega.transformer.utils.CNChatTokenizer2;
 import com.omega.transformer.utils.CNTokenizer;
 import com.omega.transformer.utils.ENTokenizer;
 
@@ -39,21 +41,27 @@ public class GPTTest {
 		
 		try {
 			
-			int batchSize = 16;
+			boolean bias = false;
 			
-			int max_len = 256;
+			boolean dropout = false;
 			
-			int embedDim = 256;
+			int batchSize = 32;
 			
-			int nChannel = 1024;
+			int max_len = 128;
+			
+			int embedDim = 768;
+			
+			int head_num = 12;
+			
+			int decoderNum = 12;
 			
 			String trainPath = "H:\\transformer_dataset\\gpt\\wikitext-2-v1\\wikitext-2\\wiki.train.tokens";
 
 			ENTokenizer trainData = new ENTokenizer(trainPath, max_len, batchSize);
 			
-			GPT network = new GPT(LossType.softmax_with_cross_entropy, UpdaterType.adam, trainData.vocab_size, max_len, embedDim, nChannel);
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
 			
-			network.CUDNN = true;
+//			network.CUDNN = true;
 			
 			network.learnRate = 0.0001f;
 			
@@ -201,14 +209,20 @@ public class GPTTest {
 			optimizer.trainNanoGPT(trainData);
 
 			Scanner scanner = new Scanner(System.in);
+			String context = "";
 			while (true) {
 				System.out.println("请输入中文:");
 				String input_txt = scanner.nextLine();
+				if(input_txt.equals("clean")){
+					context = "";
+					continue;
+				}
 				if(input_txt.equals("exit")){
 					break;
 				}
 				input_txt = input_txt.toLowerCase() + " ";
 				System.out.println("user:"+input_txt);
+				input_txt = context + input_txt;
 				Tensor input = trainData.loadByTxtToIdx(input_txt);
 //				input.showDM();
 				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
@@ -226,7 +240,8 @@ public class GPTTest {
 //					System.out.println("nextWord:"+nextWord);
 					
 					if(trainData.sd.get(nextWord)!=null && (trainData.sd.get(nextWord).equals("<sep>") || trainData.sd.get(nextWord).equals("<eos>"))) {
-						input_txt += trainData.sd.get(nextWord);
+//						input_txt += trainData.sd.get(nextWord);
+						input_txt += nextWord;
 						break;
 					}else {
 						input_txt += nextWord;
@@ -236,8 +251,10 @@ public class GPTTest {
 					
 //					CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
 				}
-				
-				System.out.println("chatbot:"+input_txt.split(" ")[1]);
+				String[] chatList = input_txt.split(" ");
+				String current = chatList[chatList.length - 1];
+				System.out.println("chatbot:"+current);
+				context += input_txt + current;
 			}
 			scanner.close();
 			
@@ -248,7 +265,7 @@ public class GPTTest {
 		
 	}
 	
-	public static void yl_qa_gpt2() {
+	public static void ch_chat_gpt2_voc() {
 		
 		try {
 			
@@ -256,13 +273,103 @@ public class GPTTest {
 			
 			boolean dropout = false;
 			
-			int batchSize = 8;
+			int batchSize = 16;
+			
+			int max_len = 128;
+			
+			int embedDim = 512;
+			
+			int head_num = 8;
+			
+			int decoderNum = 8;
+			
+			String trainPath = "H:\\transformer_dataset\\gpt\\50w.txt";
+			
+			String vocabPath = "H:\\transformer_dataset\\gpt\\50w_vocab.json";
+			
+			String decoderPath = "H:\\transformer_dataset\\gpt\\50w_decode_vocab.json";
+			
+			BPETokenizer bpe = new BPETokenizer(vocabPath, decoderPath);
+			
+			CNChatTokenizer2 trainData = new CNChatTokenizer2(trainPath, max_len, batchSize, bpe);
+			
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
+			
+			network.learnRate = 0.0001f;
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			optimizer.lr_step = new int[] {1, 2};
+			optimizer.trainNanoGPT(trainData);
+
+			Scanner scanner = new Scanner(System.in);
+			String context = "";
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("clean")){
+					context = "";
+					continue;
+				}
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase() + " ";
+				System.out.println("user:"+input_txt);
+				input_txt = context + input_txt;
+				Tensor input = trainData.loadByTxtToIdx(input_txt);
+//				input.showDM();
+				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
+//				positions.showDM();
+//				Tensor mask = CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1);
+//				mask.showDM();
+				for(int t = 0;t<max_len;t++) {
+					network.time = input.number;
+					Tensor output = network.forward(input, positions);
+					output.syncHost();
+//					output.showDM();
+//					String txts = bpe.decode(output);
+					String txts = bpe.toText(output);
+					System.out.println("output:"+txts);
+					String nextWord = txts.substring(txts.length() - 1, input_txt.length());
+//					System.out.println("nextWord:"+nextWord);
+					input_txt += nextWord;
+					if(nextWord.equals(" ") || nextWord.equals("<pad>")) {
+						break;
+					}
+					input = trainData.loadByTxtToIdx(input_txt);
+					CNChatTokenizer.getPositions(1, input.number, positions);
+					
+//					CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
+				}
+				String[] chatList = input_txt.split(" ");
+				String current = chatList[chatList.length - 1];
+				System.out.println("chatbot:"+current);
+				context += input_txt + current;
+			}
+			scanner.close();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void gpt2_yl_qa() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = true;
+			
+			int batchSize = 16;
 			
 			int max_len = 128;
 			
 			int embedDim = 768;
 			
-			int head_num = 8;
+			int head_num = 12;
 			
 			int decoderNum = 6;
 			
@@ -274,10 +381,11 @@ public class GPTTest {
 			
 			network.learnRate = 0.001f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.0001f, LearnRateUpdate.SMART_HALF, false);
-			optimizer.lr_step = new int[] {1, 2};
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+//			optimizer.lr_step = new int[] {1, 2};
 			optimizer.trainNanoGPT(trainData);
 
+			network.RUN_MODEL = RunModel.TEST;
 			Scanner scanner = new Scanner(System.in);
 			while (true) {
 				System.out.println("请输入中文:");
@@ -745,13 +853,15 @@ public class GPTTest {
 			
 //			gpt_dp();
 			
-			yl_qa_gpt2();
+			gpt2_yl_qa();
 			
 //			gpt_ssby();
 			
 //			gpt2_gan();
 			
 //			nano_gpt_lang();
+			
+//			ch_chat_gpt2_voc();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

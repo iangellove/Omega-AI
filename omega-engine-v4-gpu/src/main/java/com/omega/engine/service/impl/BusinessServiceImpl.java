@@ -178,7 +178,7 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		FullyLayer hidden4 = new FullyLayer(inputCount, 10);
 		
-//		DropoutLayer dropout = new DropoutLayer(0.2f);
+		DropoutLayer dropout = new DropoutLayer(0.2f);
 		
 		SoftmaxWithCrossEntropyLayer softmax = new SoftmaxWithCrossEntropyLayer(10);
 
@@ -193,7 +193,7 @@ public class BusinessServiceImpl implements BusinessService {
 		netWork.addLayer(bn3);
 		netWork.addLayer(active3);
 		netWork.addLayer(hidden4);
-//		netWork.addLayer(dropout);
+		netWork.addLayer(dropout);
 		netWork.addLayer(softmax);
 		
 //		SGDOptimizer optimizer = new SGDOptimizer(netWork, 20000, 0.001d);
@@ -261,7 +261,7 @@ public class BusinessServiceImpl implements BusinessService {
 		
 		int width = 28;
 		
-		CNN netWork = new CNN(new CrossEntropyLoss(), UpdaterType.momentum);
+		CNN netWork = new CNN(new CrossEntropyLoss(), UpdaterType.adamw);
 		
 		netWork.learnRate = 0.1f;
 		
@@ -3138,8 +3138,8 @@ public class BusinessServiceImpl implements BusinessService {
 	    	
 //			bs.showImage();
 //			bs.bpNetwork_iris();
-			bs.bpNetwork_mnist();
-//			bs.cnnNetwork_mnist_demo();
+//			bs.bpNetwork_mnist();
+			bs.cnnNetwork_mnist_demo();
 //			bs.cnnNetwork_mnist();
 //			bs.cnnNetwork_cifar10();
 

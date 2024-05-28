@@ -63,7 +63,7 @@ public class MLPLayer extends Layer{
 //		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, (0.02f / (float) Math.sqrt(2 * net.decoderNum))), true);
 		
 		if(dropout) {
-			dropoutLayer = new DropoutLayer(0.2f, linear2);
+			dropoutLayer = new DropoutLayer(0.1f, linear2);
 		}
 		
 	}

@@ -99,7 +99,7 @@ public class TransformerNanoDecoder extends Layer{
 		this.ln = new LNLayer(decoderLayers.get(n_layers - 1), bias);
 		
 		if(dropout) {
-			dropoutLayer = new DropoutLayer(0.2f, src_emb);
+			dropoutLayer = new DropoutLayer(0.1f, src_emb);
 		}
 		
 		if(baseKernel == null) {
@@ -178,10 +178,10 @@ public class TransformerNanoDecoder extends Layer{
 			out1 = decoderLayers.get(i).getOutput();
 		}
 
-		this.ln.forward(out1);
-		this.output = this.ln.getOutput();
+//		this.ln.forward(out1);
+//		this.output = this.ln.getOutput();
 //		output.showDMByNumber(output.number - 1);
-//		this.output = out1;
+		this.output = out1;
 	}
 	
 	public void output(Tensor mask,Tensor positions) {
@@ -219,9 +219,9 @@ public class TransformerNanoDecoder extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		this.ln.back(delta);
-		Tensor decoderDiff = this.ln.diff;
-//		Tensor decoderDiff = delta;
+//		this.ln.back(delta);
+//		Tensor decoderDiff = this.ln.diff;
+		Tensor decoderDiff = delta;
 		
 		for(int i = n_layers - 1;i>=0;i--) {
 			decoderLayers.get(i).back(decoderDiff);

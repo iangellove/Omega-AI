@@ -25,6 +25,7 @@ import com.omega.engine.optimizer.lr.GDDecay;
 import com.omega.engine.optimizer.lr.HalfDecay;
 import com.omega.engine.optimizer.lr.LRDecay;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
+import com.omega.transformer.utils.BPETokenizer;
 import com.omega.transformer.utils.ENTokenizer;
 import com.omega.yolo.data.BaseDataLoader;
 import com.omega.yolo.data.DetectionDataLoader;
@@ -1408,6 +1409,55 @@ public abstract class Optimizer {
 //				System.out.println("ltxt:"+ltxt);
 //			}
 			
+			if(allRight) {
+				trueCount++;
+			}
+		}
+		System.out.println("max_score:"+max_score);
+		System.out.println("itxt:"+max_itxt);
+		System.out.println("ptxt:"+max_ptxt);
+		System.out.println("ltxt:"+max_ltxt);
+		error = trueCount / batchSize * 100;
+
+		return error;
+	}
+	
+	public float accuracyBatchFisrt(Tensor input,Tensor output,Tensor labelData,int time,int batchSize,BPETokenizer tokenizer,int igonre) {
+		
+		float error = 0.0f;
+		float trueCount = 0;
+		int max_score = 0;
+		String max_itxt = "";
+		String max_ptxt = "";
+		String max_ltxt = "";
+		for(int n = 0;n<batchSize;n++) {
+			boolean allRight = true;
+			int score = time;
+			List<Integer> i_ids = new ArrayList<Integer>();
+			List<Integer> p_ids = new ArrayList<Integer>();
+			List<Integer> l_ids = new ArrayList<Integer>();
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+				int inputIndex = (int) input.data[n * time + t];
+				i_ids.add(inputIndex);
+				p_ids.add(predictIndex);
+				l_ids.add(labelIndex);
+				if(labelIndex != igonre && labelIndex != predictIndex) {
+					allRight = false;
+					score--;
+				}
+			}
+			if(max_score <= score) {
+				max_score = score;
+//				max_itxt = tokenizer.decode(i_ids);
+//				max_ptxt = tokenizer.decode(p_ids);
+//				max_ltxt = tokenizer.decode(l_ids);
+				max_itxt = tokenizer.toText(i_ids);
+				max_ptxt = tokenizer.toText(p_ids);
+				max_ltxt = tokenizer.toText(l_ids);
+			}
+
 			if(allRight) {
 				trueCount++;
 			}

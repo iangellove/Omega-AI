@@ -3,14 +3,11 @@ package com.omega.transformer.utils;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.lang.ArrayUtils;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
@@ -174,7 +171,7 @@ public class CNChatTokenizer extends BaseTokenizer{
 	public Tensor loadByTxtToIdx(String txt) {
 		
 		String[] onceToken = txt.split("");
-		System.out.println(JsonUtils.toJson(onceToken));
+//		System.out.println(JsonUtils.toJson(onceToken));
 		testInput = Tensor.createTensor(testInput, txt.length(), 1, 1, 1, true);
 		testInput.clear();
 		for(int t = 0;t<txt.length();t++) {

@@ -56,6 +56,8 @@ public class FastCausalSelfAttentionLayer extends Layer{
 	
 	private Tensor attn;
 	
+	private Tensor d1;
+	
 	private Tensor oi;
 	
 	private Tensor dvaccum;
@@ -125,8 +127,8 @@ public class FastCausalSelfAttentionLayer extends Layer{
 //		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.01f, 0.01f), true);
 		
 		if(this.dropout) {
-			this.dropoutLayer = new DropoutLayer(0.2f, this.network);
-			this.dropoutLayer2 = new DropoutLayer(0.2f, oLinerLayer);
+			this.dropoutLayer = new DropoutLayer(0.1f, this.network);
+			this.dropoutLayer2 = new DropoutLayer(0.1f, oLinerLayer);
 		}
 		
 		if(baseKernel == null) {
@@ -160,6 +162,7 @@ public class FastCausalSelfAttentionLayer extends Layer{
 			this.preatt = Tensor.createTensor(this.preatt, batchSize, headNum, time, time, true);
 			// [batch_size，n_heads，len_q，len_k]
 			this.attn = Tensor.createTensor(this.attn, batchSize, headNum, time, time, true);
+			this.d1 = Tensor.createTensor(this.d1, batchSize, headNum, time, time, true);
 			// [batch_size, n_heads, len_q, dim_v]
 			this.vaccum = Tensor.createTensor(this.vaccum, batchSize, headNum, time, dk, true);
 			// [batch_size, len_q, n_heads * dim_v]
@@ -183,6 +186,7 @@ public class FastCausalSelfAttentionLayer extends Layer{
 			this.preatt = Tensor.createTensor(this.preatt, batchSize, headNum, time, time, true);
 			// [batch_size，n_heads，len_q，len_k]
 			this.attn = Tensor.createTensor(this.attn, batchSize, headNum, time, time, true);
+			this.d1 = Tensor.createTensor(this.d1, batchSize, headNum, time, time, true);
 			// [batch_size, n_heads, len_q, dim_v]
 			this.vaccum = Tensor.createTensor(this.vaccum, batchSize, headNum, time, dk, true);
 			// [batch_size, len_q, n_heads * dim_v]
@@ -247,28 +251,38 @@ public class FastCausalSelfAttentionLayer extends Layer{
 
 		attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time);
 		
-//		if(dropout) {
-//			dropoutLayer.forward(attn);
-//			attn = dropoutLayer.getOutput();
-//		}
+		Tensor tmp = attn;
+		
+		if(dropout) {
+			dropoutLayer.forward(attn);
+			d1 = dropoutLayer.getOutput();
+			tmp = d1;
+		}
 		
 //		attn.syncHost();
 //		PrintUtils.printImage(attn);
-		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, value.getGpuData(), dk, time * dk, attn.getGpuData(), time, time * time, 0.0f, vaccum.getGpuData(), dk, time * dk, batchSize * headNum);
+		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, value.getGpuData(), dk, time * dk, tmp.getGpuData(), time, time * time, 0.0f, vaccum.getGpuData(), dk, time * dk, batchSize * headNum);
 	}
 
 	public void scaledDotProductAttentionBackward() {
+		
+		Tensor tmp = attn;
+		
+		if(dropout) {
+			tmp = d1;
+		}
+		
 	    // backward into datt
 		GPUOP.getInstance().bmm(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, vt.getGpuData(), dk, time * dk, dvaccum.getGpuData(), dk, time * dk, 0.0f, dattn.getGpuData(), time, time * time, batchSize * headNum);
-	
-//		if(dropout) {
-//			dropoutLayer.back(dattn);
-//			dattn = dropoutLayer.diff;
-//		}
-		
-		// backward into dv
-		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_T, dk, time, time, 1.0f, dvaccum.getGpuData(), dk, time * dk, attn.getGpuData(), time, time * time, 0.0f, dvt.getGpuData(), dk, time * dk, batchSize * headNum);
 
+		// backward into dv
+		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_T, dk, time, time, 1.0f, dvaccum.getGpuData(), dk, time * dk, tmp.getGpuData(), time, time * time, 0.0f, dvt.getGpuData(), dk, time * dk, batchSize * headNum);
+
+		if(dropout) {
+			dropoutLayer.back(dattn);
+			dattn = dropoutLayer.diff;
+		}
+		
 		// backward into preatt
 		attentionKernel.softmax_backward(dpreatt, dattn, attn, batchSize, time, embedDim, headNum);
 		

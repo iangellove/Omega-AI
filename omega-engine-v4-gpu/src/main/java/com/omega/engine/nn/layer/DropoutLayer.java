@@ -22,7 +22,7 @@ import jcuda.runtime.JCuda;
  */
 public class DropoutLayer extends Layer {
 	
-	private float probability = 0.2f;
+	private float probability = 0.1f;
 	
 	private Tensor mask;
 	
@@ -189,9 +189,7 @@ public class DropoutLayer extends Layer {
 		 * 计算梯度
 		 */
 		this.diff();
-		if(this.network.GRADIENT_CHECK) {
-			this.gradientCheck();
-		}
+
 	}
 
 	@Override
