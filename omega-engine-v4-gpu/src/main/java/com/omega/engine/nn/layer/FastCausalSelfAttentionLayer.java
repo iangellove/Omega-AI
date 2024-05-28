@@ -56,8 +56,6 @@ public class FastCausalSelfAttentionLayer extends Layer{
 	
 	private Tensor attn;
 	
-	private Tensor d1;
-	
 	private Tensor oi;
 	
 	private Tensor dvaccum;
@@ -162,7 +160,6 @@ public class FastCausalSelfAttentionLayer extends Layer{
 			this.preatt = Tensor.createTensor(this.preatt, batchSize, headNum, time, time, true);
 			// [batch_size，n_heads，len_q，len_k]
 			this.attn = Tensor.createTensor(this.attn, batchSize, headNum, time, time, true);
-			this.d1 = Tensor.createTensor(this.d1, batchSize, headNum, time, time, true);
 			// [batch_size, n_heads, len_q, dim_v]
 			this.vaccum = Tensor.createTensor(this.vaccum, batchSize, headNum, time, dk, true);
 			// [batch_size, len_q, n_heads * dim_v]
@@ -186,7 +183,6 @@ public class FastCausalSelfAttentionLayer extends Layer{
 			this.preatt = Tensor.createTensor(this.preatt, batchSize, headNum, time, time, true);
 			// [batch_size，n_heads，len_q，len_k]
 			this.attn = Tensor.createTensor(this.attn, batchSize, headNum, time, time, true);
-			this.d1 = Tensor.createTensor(this.d1, batchSize, headNum, time, time, true);
 			// [batch_size, n_heads, len_q, dim_v]
 			this.vaccum = Tensor.createTensor(this.vaccum, batchSize, headNum, time, dk, true);
 			// [batch_size, len_q, n_heads * dim_v]
@@ -255,8 +251,7 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		
 		if(dropout) {
 			dropoutLayer.forward(attn);
-			d1 = dropoutLayer.getOutput();
-			tmp = d1;
+			tmp = dropoutLayer.getOutput();
 		}
 		
 //		attn.syncHost();
@@ -269,7 +264,7 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		Tensor tmp = attn;
 		
 		if(dropout) {
-			tmp = d1;
+			tmp = dropoutLayer.getOutput();
 		}
 		
 	    // backward into datt
