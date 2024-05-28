@@ -78,7 +78,7 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 ```
 
 #### [基于GPT2架构实现聊天机器人](#gpt-中文聊天机器人)
-##### 训练数据是一个50W日常聊天语料
+##### 训练数据：50W日常聊天语料
 ###### 备注:以下是训练数据事例，每一个回复以" "空格分隔，每一段对话以换行/n分隔，以一段对话为一条训练数据
 ```txt
 少侠好眼力	少侠啥时候来北京	遥遥无期你又没时间	
@@ -95,12 +95,14 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 ```
 ###### 模型参数
 ```java
+// gpt 124M参数量
 maxLen = 128  //最大token数
 embedDim = 768 //embeding编码维度
 headNum = 12  //多头注意力头数
 decoderNum = 12  //解码器层数
 learnRate = 0.0001f  //学习率
 epoch = 3 //循环训练次数
+dropoutRate = 0.1f
 train_data = 450000 //训练集数量
 vail_data = 50000  //验证集数量
 train_loss = 1.08f //最终训练集损失在1.0左右
@@ -109,37 +111,23 @@ vail_loss = 1.2f  //最终验证集损失在1.2左右
 ###### 推理效果图
 ![GPT2聊天机器人](images/QQ%E6%88%AA%E5%9B%BE20240514161821.png)
 
-#### [基于GPT2架构实现聊天机器人](#gpt-中文聊天机器人)
-##### 训练数据是一个50W日常聊天语料
-###### 备注:以下是训练数据事例，每一个回复以" "空格分隔，每一段对话以换行/n分隔，以一段对话为一条训练数据
-```txt
-少侠好眼力	少侠啥时候来北京	遥遥无期你又没时间	
-哥怎么这么帅	是吗？谢谢嘞	和小鲜肉一样。嫩嫩的	
-你不怕掉下去啊	这是海拔米我觉得不够高	注意安全	
-你这文案写的我有点感动是怎么回事	哭没得	没有咧	
-都考上	小仙女决定满足你这个愿望	因为我有魔法棒	
-啥时候看演唱会	上海站好像延期了，不知延到啥时候本来是五月中旬	靠你了	
-大哥难道是求婚啦！	不不不大哥还没有这么速度呢随便拼着玩儿的	嘻嘻好看	
-中午老大爷遛弯去了么	对呀，哈哈。	转发这条咸鱼，今年必有好事儿发生。
-我的爱情独白就是清空我的购物车	沉迷于一夜暴富不可自拔的身家过百元的贵妇	只想发财只想发财只想发财，对脱单好无兴趣	
-自己用啊	我有	可是那张不用钱的嘢	那要是里面没钱呢	无钱再刷自己的卡	哈哈哈哈哈哈哈哈这样就很不道德了	没有没有		
-第一张是藤椒鸡吗！	嘻嘻嘻对一家好次川菜的椒麻鸡！	这几天牙疼但是一直在想这种辣辣的鸡	嘤嘤嘤就是这种时候会想吃辣	
-```
+#### [基于gpt2-medium实现医疗问答系统](#gpt-医疗问答系统)
+##### 训练数据：20W医疗问答语料
 ###### 模型参数
 ```java
-maxLen = 128  //最大token数
-embedDim = 768 //embeding编码维度
-headNum = 12  //多头注意力头数
-decoderNum = 12  //解码器层数
-learnRate = 0.0001f  //学习率
-epoch = 3 //循环训练次数
-train_data = 450000 //训练集数量
-vail_data = 50000  //验证集数量
-train_loss = 1.08f //最终训练集损失在1.0左右
-vail_loss = 1.2f  //最终验证集损失在1.2左右
+// gpt2-medium 350M参数量
+maxLen = 256  //最大token数
+embedDim = 1024 //embeding编码维度
+headNum = 16  //多头注意力头数
+decoderNum = 24  //解码器层数
+learnRate = 0.001f  //初始学习率
+epoch = 5 //循环训练次数
+dropoutRate = 0.1f
+train_loss = 1.56f //最终训练集损失在1.5左右
+vail_loss = 1.8f  //最终验证集损失在1.8左右
 ````
 ###### 推理效果图
-
+![GPT2医疗问答系统](images/qa_test.png)
 
 
 ##  功能介绍
@@ -155,7 +143,9 @@ PoolingLayer 池化层(maxpooling,meanpooling)
 
 AVGPooingLayer 全局平均池化层
 
-EmbeddingLayer 向量映射层(将高维度词向量映射成低维度向量)
+EmbeddingLayer 向量映射层(将高维度词向量映射成低维度向量)该层的输入数据为one-hot编码后的数据
+
+EmbeddingIDLayer 向量映射层(将高维度词向量映射成低维度向量)
 
 RNNLayer 循环神经网络层
 
@@ -166,6 +156,12 @@ RouteLayer 路由层
 UPSampleLayer 上采样层
 
 YoloLayer yolo层
+
+FastCausalSelfAttentionLayer 多层自注意力层
+
+MLPLayer gpt2-mlp层
+
+TransformerBlock transformer基础块
 
 #### 激活函数层
 
@@ -181,9 +177,13 @@ SigmodLayer
 
 SiLULayer
 
+GeLULayer
+
 #### 归一化层
 
-BNLayer (Batch Normalization)
+BNLayer (Batch Normalization)批归一化
+
+LNLayer (Layer Normalization)层归一化
 
 #### 正则化
 
@@ -1068,9 +1068,127 @@ public static void gan_anime() {
 	}
 ```
 
+#### gpt-中文聊天机器人
+```java
+    public static void ch_chat_gpt2() {
+		try {
+			boolean bias = false;
+			boolean dropout = true;
+			int batchSize = 32;
+			int max_len = 128;
+			int embedDim = 768;
+			int head_num = 12;
+			int decoderNum = 12;
+			String trainPath = "H:\\transformer_dataset\\gpt\\chatdata\\train-format20w.txt";
+			CNChatTokenizer trainData = new CNChatTokenizer(trainPath, max_len, batchSize);
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
+			network.learnRate = 0.0001f;
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			optimizer.lr_step = new int[] {1, 2};
+			optimizer.trainNanoGPT(trainData);
+			Scanner scanner = new Scanner(System.in);
+			String context = "";
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("clean")){
+					context = "";
+					continue;
+				}
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase() + " ";
+				System.out.println("user:"+input_txt);
+				input_txt = context + input_txt;
+				Tensor input = trainData.loadByTxtToIdx(input_txt);
+				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
+				for(int t = 0;t<max_len;t++) {
+					network.time = input.number;
+					Tensor output = network.forward(input, positions);
+					output.syncHost();
+					String txts = output2TXT(output, trainData, true);
+					String nextWord = txts.substring(txts.length() - 1, input_txt.length());
+					if(trainData.sd.get(nextWord)!=null && (trainData.sd.get(nextWord).equals("<sep>") || trainData.sd.get(nextWord).equals("<eos>"))) {
+						input_txt += nextWord;
+						break;
+					}else {
+						input_txt += nextWord;
+					}
+					input = trainData.loadByTxtToIdx(input_txt);
+					CNChatTokenizer.getPositions(1, input.number, positions);
+				}
+				String[] chatList = input_txt.split(" ");
+				String current = chatList[chatList.length - 1];
+				System.out.println("chatbot:"+current);
+				context += input_txt + current;
+			}
+			scanner.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    }
+```
+
+#### gpt-医疗问答系统
+```java
+    public static void gpt2_yl_qa() {
+		try {
+			boolean bias = false;
+			boolean dropout = true;
+			int batchSize = 16;
+			int max_len = 256;
+			int embedDim = 1024;
+			int head_num = 16;
+			int decoderNum = 24;
+			String trainPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\qaData.txt";
+			CNChatTokenizer trainData = new CNChatTokenizer(trainPath, max_len, batchSize);
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
+			network.learnRate = 0.001f;
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			optimizer.lr_step = new int[] {1, 2};
+			optimizer.trainNanoGPT(trainData);
+			network.RUN_MODEL = RunModel.TEST;
+			Scanner scanner = new Scanner(System.in);
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase() + " ";
+				System.out.println("user:"+input_txt);
+				Tensor input = trainData.loadByTxtToIdx(input_txt);
+				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
+				for(int t = 0;t<max_len;t++) {
+					network.time = input.number;
+					Tensor output = network.forward(input, positions);
+					output.syncHost();
+					String txts = output2TXT(output, trainData, true);
+					String nextWord = txts.substring(txts.length() - 1, input_txt.length());
+					if(trainData.sd.get(nextWord)!=null && (trainData.sd.get(nextWord).equals("<sep>") || trainData.sd.get(nextWord).equals("<eos>"))) {
+						input_txt += trainData.sd.get(nextWord);
+						break;
+					}else {
+						input_txt += nextWord;
+					}
+					input = trainData.loadByTxtToIdx(input_txt);
+					CNChatTokenizer.getPositions(1, input.number, positions);
+				}
+				System.out.println("chatbot:"+input_txt.split(" ")[1]);
+			}
+			scanner.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+```
+
 ## 未来可期
 
-实现rcnn、rnn、ssd、transform等算法
+实现llama2，unet，diffusion model等模型
 
 ### 训练情况可视化
 
@@ -1170,9 +1288,24 @@ http://119.3.123.193:8011/AICar
 
 9.后续版本将逐渐实现引擎对CycleGAN风格迁移,LSTM,GRU,transformer等模型支持. 
 
+#### 2024-05-20
+1.新增循环神经网络LSTM模型实现（小说生成器demo）.
+
+2.新增循环神经网络seq2seq模型实现（中英文翻译器demo）.
+
+3.新增transformer家族GPT模型支持，新增MultHeadSelfAttention（多头自注意力机制）实现FastCausalSelfAttentionLayer、MultiHeadAttentionLayer，新增MLP层实现MLPLayer，新增EmbeddingIDLayer（输入数据为id），新增Layer Normallization层等transformer系列基础层.
+
+4.新增大语言nano GPT2模型实现（莎士比亚剧本生成demo）.
+
+5.新增大语言GPT2模型实现（中文聊天机器人demo）.
+
+6.新增大语言GPT2模型实现（中文医疗问答系统demo）.
+
+7.新增BPE（byte pair encode）tokenizer编码器实现.
+
 
 ## 欢迎打扰
 
 ### QQ：465973119
 ### 技术交流QQ群：119593195
-### 电子邮箱：465973119@qq.com![输入图片说明](images/qa_test.png)
+### 电子邮箱：465973119@qq.com
