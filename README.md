@@ -1068,6 +1068,49 @@ public static void gan_anime() {
 	}
 ```
 
+#### gpt-中文小说生成器
+```java
+    public static void gpt_dp() {
+		try {
+			boolean bias = false;
+			boolean dropout = true;
+			int batchSize = 32;
+			int max_len = 64;
+			int embedDim = 512;
+			int headNum = 8;
+			int decoderNum = 6;
+			String trainPath = "H:\\transformer_dataset\\gpt\\dpcc50.txt";
+			CNTokenizer trainData = new CNTokenizer(trainPath, max_len, batchSize);
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, headNum, decoderNum, trainData.characters, max_len, embedDim, bias, dropout);
+			network.learnRate = 0.001f;
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.001f, LearnRateUpdate.GD_GECAY, false);
+			optimizer.trainNanoGPT_GEN(trainData);
+			int gen_len = 1000;
+			network.RUN_MODEL = RunModel.TEST;
+			Tensor input = null;
+			Tensor output = null;
+			String pre_txt = "萧炎";
+			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length());
+			Tensor mask = CNChatTokenizer.triu(1, network.headNum, pre_txt.length(), pre_txt.length(), 1);
+			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
+			for(int i = 0;i<gen_len;i++) {
+				network.time = input.number;
+				String txt = genTxt(input, output, network, trainData, pre_txt.length(), mask, positions);
+				if(network.time > 1) {
+					pre_txt += txt.substring(input.number - 1, input.number);
+				}else {
+					pre_txt += txt;
+				}
+				input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
+			}
+			System.out.println(pre_txt);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+```
+
 #### gpt-中文聊天机器人
 ```java
     public static void ch_chat_gpt2() {
