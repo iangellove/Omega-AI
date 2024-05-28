@@ -267,6 +267,8 @@ cifar_10 （cifar_10数据集）
 
 [自动售货机数据集sm](https://pan.baidu.com/s/10o8IZwD-WmChKtmzzg9q7w?pwd=gt8p )
 
+[大语言模型训练数据集](https://pan.baidu.com/s/1FKkg9h4awphRtQ8yZaeH3A?pwd=ywax)
+
 ## 数据集成绩
 
 iris epoch:5 bp神经网络[3层全连接层]  测试数据集准确率100%
