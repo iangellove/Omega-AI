@@ -13,7 +13,7 @@ import com.omega.engine.gpu.SoftmaxKernel;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
-import com.omega.transformer.utils.ENTokenizer;
+import com.omega.example.transformer.utils.ENTokenizer;
 
 /**
  * CausalSelfAttentionLayer

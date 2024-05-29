@@ -2,8 +2,6 @@ package com.omega.common.utils;
 
 import java.util.Vector;
 
-import org.ejml.simple.SimpleMatrix;
-
 import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
 import com.omega.engine.gpu.GPUOP;
@@ -1411,25 +1409,25 @@ public class MatrixOperation {
 	 *
 	 * @throws
 	 */
-	public static float[][] multiplicationByEjml(float[][] x,float[][] z) {
-		int m = x.length;
-		int n = z.length;
-		int k = z[0].length;
-
-		float[][] temp = MatrixUtils.zero(m,k);
-		SimpleMatrix a = new SimpleMatrix(x);
-		SimpleMatrix b = new SimpleMatrix(z);
-//		long start = System.nanoTime();
-//		System.out.println("========start["+m+","+n+","+k+"]");
-		SimpleMatrix c = a.mult(b);
-//		System.out.println("========end:"+(System.nanoTime() - start) / 1e6);
-		for(int i = 0;i<temp.length;i++) {
-			for(int j = 0;j<temp[i].length;j++) {
-				temp[i][j] = (float)c.get(i, j);
-			}
-		}
-		return temp;
-	}
+//	public static float[][] multiplicationByEjml(float[][] x,float[][] z) {
+//		int m = x.length;
+//		int n = z.length;
+//		int k = z[0].length;
+//
+//		float[][] temp = MatrixUtils.zero(m,k);
+//		SimpleMatrix a = new SimpleMatrix(x);
+//		SimpleMatrix b = new SimpleMatrix(z);
+////		long start = System.nanoTime();
+////		System.out.println("========start["+m+","+n+","+k+"]");
+//		SimpleMatrix c = a.mult(b);
+////		System.out.println("========end:"+(System.nanoTime() - start) / 1e6);
+//		for(int i = 0;i<temp.length;i++) {
+//			for(int j = 0;j<temp[i].length;j++) {
+//				temp[i][j] = (float)c.get(i, j);
+//			}
+//		}
+//		return temp;
+//	}
 	
 	/**
 	 * 
@@ -4055,60 +4053,60 @@ public class MatrixOperation {
 		return result;
 	}
 	
-	public static float[][][][] convnVailByIm2Col(float[][][][] x,float[][][][] k,int stride,boolean isBack){
-		
-		int ko = k[0].length;
-		
-		if(isBack) {
-			ko = k.length;
-		}
-		
-		int kh = k[0][0].length;
-		
-		int kw = k[0][0][0].length;
-		
-		int oHeight = ((x[0][0].length - k[0][0].length ) / stride) + 1;
-		
-		int oWidth = ((x[0][0][0].length - k[0][0][0].length) / stride) + 1;
-
-		float[][][][] result = new float[x.length][ko][oHeight][oWidth];
-		
-		Vector<Task<Object>> workers = new Vector<Task<Object>>();
-		
-		for(int bn = 0;bn<x.length;bn++) {
-			
-			final int index = bn;
-			
-			workers.add(new Task<Object>(index) {
-				@Override
-			    public Object call() throws Exception {
-
-					float[][] col = MatrixOperation.im2col(x[index], kh, kw, stride);
-					
-					float[][] colK = MatrixOperation.kernel2col(k, kh, kw);
-					
-					if(isBack) {
-						colK = MatrixOperation.kernel2colToBack(k, kh, kw);
-					}
-
-//					float[][] output = MatrixOperation.multiplicationForMatrix(col, colK);
-
-					float[][] output = MatrixOperation.multiplicationByEjml(col, colK);
-					
-//					float[][] output = MatrixOperation.multiplicationByCuda(col, colK);
-					
-					result[index] = MatrixUtils.transform(output, oHeight, oWidth);
-
-					return null;
-				}
-			});
-			
-		}
-		
-		TaskEngine.getInstance(threadNum).dispatchTask(workers);
-		
-		return result;
-	}
+//	public static float[][][][] convnVailByIm2Col(float[][][][] x,float[][][][] k,int stride,boolean isBack){
+//		
+//		int ko = k[0].length;
+//		
+//		if(isBack) {
+//			ko = k.length;
+//		}
+//		
+//		int kh = k[0][0].length;
+//		
+//		int kw = k[0][0][0].length;
+//		
+//		int oHeight = ((x[0][0].length - k[0][0].length ) / stride) + 1;
+//		
+//		int oWidth = ((x[0][0][0].length - k[0][0][0].length) / stride) + 1;
+//
+//		float[][][][] result = new float[x.length][ko][oHeight][oWidth];
+//		
+//		Vector<Task<Object>> workers = new Vector<Task<Object>>();
+//		
+//		for(int bn = 0;bn<x.length;bn++) {
+//			
+//			final int index = bn;
+//			
+//			workers.add(new Task<Object>(index) {
+//				@Override
+//			    public Object call() throws Exception {
+//
+//					float[][] col = MatrixOperation.im2col(x[index], kh, kw, stride);
+//					
+//					float[][] colK = MatrixOperation.kernel2col(k, kh, kw);
+//					
+//					if(isBack) {
+//						colK = MatrixOperation.kernel2colToBack(k, kh, kw);
+//					}
+//
+////					float[][] output = MatrixOperation.multiplicationForMatrix(col, colK);
+//
+//					float[][] output = MatrixOperation.multiplicationByEjml(col, colK);
+//					
+////					float[][] output = MatrixOperation.multiplicationByCuda(col, colK);
+//					
+//					result[index] = MatrixUtils.transform(output, oHeight, oWidth);
+//
+//					return null;
+//				}
+//			});
+//			
+//		}
+//		
+//		TaskEngine.getInstance(threadNum).dispatchTask(workers);
+//		
+//		return result;
+//	}
 	
 	public static float[][][][] convnVailByIm2ColGPU(float[][][][] x,float[][][][] k,int stride){
 		

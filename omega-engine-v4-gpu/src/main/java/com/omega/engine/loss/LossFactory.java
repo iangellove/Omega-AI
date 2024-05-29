@@ -5,10 +5,10 @@ import java.util.List;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.YoloLayer;
 import com.omega.engine.nn.network.Network;
-import com.omega.yolo.loss.YoloLoss;
-import com.omega.yolo.loss.YoloLoss2;
-import com.omega.yolo.loss.YoloLoss3;
-import com.omega.yolo.loss.YoloLoss7;
+import com.omega.example.yolo.loss.YoloLoss;
+import com.omega.example.yolo.loss.YoloLoss2;
+import com.omega.example.yolo.loss.YoloLoss3;
+import com.omega.example.yolo.loss.YoloLoss7;
 
 /**
  * LossFactory

@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.omega.common.utils.RandomUtils;
-import com.omega.yolo.utils.YoloDataLoader;
+import com.omega.example.yolo.utils.YoloDataLoader;
 
 public class TrainDataLoader {
 	

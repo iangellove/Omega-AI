@@ -25,15 +25,15 @@ import com.omega.engine.optimizer.lr.GDDecay;
 import com.omega.engine.optimizer.lr.HalfDecay;
 import com.omega.engine.optimizer.lr.LRDecay;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
-import com.omega.transformer.utils.BPETokenizer;
-import com.omega.transformer.utils.ENTokenizer;
-import com.omega.yolo.data.BaseDataLoader;
-import com.omega.yolo.data.DetectionDataLoader;
-import com.omega.yolo.model.YoloBox;
-import com.omega.yolo.model.YoloDetection;
-import com.omega.yolo.utils.YoloDataLoader;
-import com.omega.yolo.utils.YoloDecode;
-import com.omega.yolo.utils.YoloUtils;
+import com.omega.example.transformer.utils.BPETokenizer;
+import com.omega.example.transformer.utils.ENTokenizer;
+import com.omega.example.yolo.data.BaseDataLoader;
+import com.omega.example.yolo.data.DetectionDataLoader;
+import com.omega.example.yolo.model.YoloBox;
+import com.omega.example.yolo.model.YoloDetection;
+import com.omega.example.yolo.utils.YoloDataLoader;
+import com.omega.example.yolo.utils.YoloDecode;
+import com.omega.example.yolo.utils.YoloUtils;
 
 /**
  * 

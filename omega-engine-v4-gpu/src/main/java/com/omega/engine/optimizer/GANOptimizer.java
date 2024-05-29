@@ -13,7 +13,7 @@ import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
-import com.omega.gan.utils.ImageDataLoader;
+import com.omega.example.gan.utils.ImageDataLoader;
 
 public class GANOptimizer extends Optimizer {
 	

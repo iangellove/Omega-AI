@@ -21,11 +21,11 @@ import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Seq2Seq;
 import com.omega.engine.nn.network.Seq2SeqRNN;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
-import com.omega.rnn.data.IndexDataLoader;
-import com.omega.transformer.utils.CNChatTokenizer;
-import com.omega.transformer.utils.CNChatTokenizer2;
-import com.omega.transformer.utils.CNTokenizer;
-import com.omega.transformer.utils.ENTokenizer;
+import com.omega.example.rnn.data.IndexDataLoader;
+import com.omega.example.transformer.utils.CNChatTokenizer;
+import com.omega.example.transformer.utils.CNChatTokenizer2;
+import com.omega.example.transformer.utils.CNTokenizer;
+import com.omega.example.transformer.utils.ENTokenizer;
 
 import jcuda.driver.JCudaDriver;
 

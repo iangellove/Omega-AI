@@ -2,7 +2,7 @@ package com.omega.common.utils;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.nn.data.DataSet;
-import com.omega.yolo.data.ImageLoader;
+import com.omega.example.yolo.data.ImageLoader;
 
 public abstract class DataloarderTransforms {
 	

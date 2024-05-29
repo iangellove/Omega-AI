@@ -14,15 +14,10 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import javax.imageio.ImageIO;
-
-import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.madgag.gif.fmsware.AnimatedGifEncoder;
 import com.omega.engine.nn.data.ImageData;
-import com.omega.yolo.utils.OMImage;
+import com.omega.example.yolo.utils.OMImage;
 
-@Component
 public class ImageUtils {
 	
 	public static float[] mean = new float[] {0.491f, 0.482f, 0.446f};
@@ -197,37 +192,6 @@ public class ImageUtils {
         ImageIO.write(grayImage, "png", newFile);
     }
     
-	/**
-     * 图片灰度化的方法
-     * @param status 灰度化方法的种类，1表示最大值法，2表示最小值法，3表示均值法，4加权法
-     * @param imagePath 需要灰度化的图片的位置
-     * @param outPath 灰度化处理后生成的新的灰度图片的存放的位置
-     * @throws IOException
-     */
-    public void grayImage(MultipartFile file, String outPath) throws IOException {
-        BufferedImage image = ImageIO.read(file.getInputStream());
- 
-        int width = image.getWidth();
-        int height = image.getHeight();
-        
-        BufferedImage grayImage = new BufferedImage(width, height,  image.getType());
-        //BufferedImage grayImage = new BufferedImage(width, height,  BufferedImage.TYPE_BYTE_GRAY);
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < height; j++) {
-            	int argb = image.getRGB(i, j);
-				int r = (argb & 0xff0000) >> 16;
-				int g = (argb & 0xff00) >> 8;
-				int b = (argb & 0xff);
-				int gray = (int) (r * 0.3 + g * 0.59 + b * 0.11);
-                System.out.println("像素坐标：" + " x=" + i + "   y=" + j + "   rgb=" + argb + "    r,g,b=" + r + "," + g + "," + b + "   灰度值=" + gray);
-
-                grayImage.setRGB(i, j, colorToRGB(255, gray, gray, gray));
-            }
-        }
-        File newFile = new File(outPath);
-        ImageIO.write(grayImage, "png", newFile);
-    }
-	
     private static int colorToRGB(int alpha, int red, int green, int blue) {
     	 
         int newPixel = 0;
