@@ -8,7 +8,6 @@
 	<version>win-cu11.7-v1.0-alpha</version>
 	<name>omega-engine-v4-gpu</name>
 	<description>omega-engine-v4-gpu</description>
-	<packaging>pom</packaging>
 	<url>https://gitee.com/iangellove/omega-ai</url>
 
 	<properties>
@@ -41,6 +40,18 @@
 	  <developerConnection>scm:git:git@gitee.com:iangellove/omega-ai.git</developerConnection>
 	  <tag>beta1.0</tag>
 	</scm>
+	
+	 <distributionManagement>
+	    <snapshotRepository>
+	      <id>central</id>
+	      <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+	    </snapshotRepository>
+	    <repository>
+	      <id>central</id>
+	      <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+	    </repository>
+	  </distributionManagement>
+
 
 	<dependencies>
 
