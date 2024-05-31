@@ -43,11 +43,9 @@ public class BPTest {
 		InputLayer inputLayer = new InputLayer(1,1,4);
 		
 		FullyLayer hidden1 = new FullyLayer(4, 40);
-//		LNLayer ln1 = new LNLayer();
 		ReluLayer active1 = new ReluLayer();
 		
 		FullyLayer hidden2 = new FullyLayer(40, 20);
-//		LNLayer ln2 = new LNLayer();
 		ReluLayer active2 = new ReluLayer();
 		
 		FullyLayer hidden3 = new FullyLayer(20, 2);
@@ -58,10 +56,8 @@ public class BPTest {
 		
 		netWork.addLayer(inputLayer);
 		netWork.addLayer(hidden1);
-//		netWork.addLayer(ln1);
 		netWork.addLayer(active1);
 		netWork.addLayer(hidden2);
-//		netWork.addLayer(ln2);
 		netWork.addLayer(active2);
 		netWork.addLayer(hidden3);
 //		netWork.addLayer(dropout);

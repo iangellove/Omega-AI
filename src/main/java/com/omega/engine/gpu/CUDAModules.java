@@ -3,12 +3,18 @@ package com.omega.engine.gpu;
 import static jcuda.driver.JCudaDriver.cuModuleGetFunction;
 import static jcuda.driver.JCudaDriver.cuModuleLoad;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.JarURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.omega.common.utils.JarPathUtils;
 
 import jcuda.driver.CUcontext;
 import jcuda.driver.CUdevice;
@@ -33,6 +39,10 @@ public class CUDAModules {
 	public static int threadsPerDimension;
 	
 	public static cudaDeviceProp props;
+	
+	private static final String CU_PATH = "cu/";
+	
+	private static final String TMP_PATH = "/tmp/";
 	
 	public static Map<String,String> functions = new HashMap<String, String>(){
 		/**
@@ -96,23 +106,27 @@ public class CUDAModules {
 			
 		}
 		};
-	
-	
+
 	public static CUfunction getLocalFunctionByModule(String fileName,String functionName) {
+
+		String rootPath = System.getProperty("user.dir");
 		
-		String os = System.getProperty("os.name");
+		rootPath += TMP_PATH;
 		
-		if(os.contains("windows")) {
-			String path = CUDAModules.class.getResource("/cu/").getPath();
-			path = path.substring(1, path.length());
-			fileName = path + fileName;
-		}else {
-			String path = CUDAModules.class.getResource("/cu/").getPath();
-			fileName = path + fileName;
+		fileName = rootPath + CU_PATH + fileName;
+		
+		File file = new File(fileName);
+
+		if(!file.exists()) {
+			try {
+				URL url = CUDAModules.class.getProtectionDomain().getCodeSource().getLocation();
+				JarPathUtils.copyJarResources(url.getPath(), CU_PATH, rootPath, CUDAModules.class);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
-		System.out.println(fileName);
-		
 		MyCUDAModule m = CUDAModules.getModule(fileName);
 		
 		if(m.getFunctions().containsKey(functionName)) {
@@ -151,30 +165,6 @@ public class CUDAModules {
 			if(CUDAModules.modules.containsKey(ptxFileName)) {
 				return CUDAModules.modules.get(ptxFileName);
 			}
-//	        
-//	        long[] l = new long[1];
-//	        int[] count = new int[1];
-//	        JCudaDriver.cuDeviceTotalMem(l, device);
-//	        JCudaDriver.cuDeviceGetCount(count);
-//	        
-//	        CUdevprop prop = new CUdevprop();
-//	        JCudaDriver.cuDeviceGetProperties(prop, device);
-//	        
-//	        System.out.println(JsonUtils.toJson(l));
-//	        System.out.println(JsonUtils.toJson(count));
-//	        System.out.println(prop.toString());
-	        
-//        	JCudaDriver.setExceptionsEnabled(true);
-//        	
-//			// Initialize the driver and create a context for the first device.
-//
-//        	CUDAUtils instance = CUDAUtils.getInstance();
-//        	
-//        	instance.initCUDA();
-//        	
-//        	device = instance.getDevice(0);
-//        	
-//        	context = instance.getContext(device);
 
         	setContext(getContext());
         	
@@ -184,6 +174,7 @@ public class CUDAModules {
              
 	        // Load the ptx file.
 	        MyCUDAModule module = new MyCUDAModule();
+	        
 	        cuModuleLoad(module, ptxFileName);
 	        
 	        CUDAModules.modules.put(ptxFileName, module);
@@ -215,14 +206,11 @@ public class CUDAModules {
         }
         String ptxFileName = cuFileName.substring(0, endIndex+1)+"ptx";
         File ptxFile = new File(ptxFileName);
-        if (ptxFile.exists())
-        {
+        if (ptxFile.exists()) {
             return ptxFileName;
         }
-        System.out.println(ptxFileName);
         File cuFile = new File(cuFileName);
-        if (!cuFile.exists())
-        {
+        if (!cuFile.exists()) {
             throw new IOException("Input file not found: "+cuFileName);
         }
         String modelString = "-m"+System.getProperty("sun.arch.data.model");
@@ -238,8 +226,7 @@ public class CUDAModules {
         String outputMessage =
             new String(toByteArray(process.getInputStream()));
         int exitValue = 0;
-        try
-        {
+        try {
             exitValue = process.waitFor();
         }
         catch (InterruptedException e)
