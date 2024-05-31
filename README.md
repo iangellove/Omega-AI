@@ -25,24 +25,23 @@ https://developer.nvidia.com/cuda-toolkit-archive
 ```xml
 <dependency>
     <groupId>io.gitee.iangellove</groupId>
-        <artifactId>omega-engine-v4-gpu</artifactId>
-        <version>win-cu11.7-v1.0-beta</version>
+    <artifactId>omega-engine-v4-gpu</artifactId>
+    <version>win-cu11.7-v1.0-beta</version>
 </dependency>
 ```
 ##### 4.初始化GPU环境与释放显存
 ```java
-    public static void main(String[] args) {
-	try {
-            //初始化GPU环境获取Context对象
-	    CUDAModules.initContext();
-	    CNNTest cnn = new CNNTest();
-	    cnn.cnnNetwork_cifar10();
-	} finally {
-	    // TODO: handle finally clause
-            //释放所有显存
-	    CUDAMemoryManager.free();
-	}
+public static void main(String[] args) {
+    try {
+        //初始化GPU环境获取Context对象
+        CUDAModules.initContext();
+        CNNTest cnn = new CNNTest();
+        cnn.cnnNetwork_cifar10();
+    } finally {
+        //释放所有显存
+        CUDAMemoryManager.free();
     }
+}
 ```
 
 
