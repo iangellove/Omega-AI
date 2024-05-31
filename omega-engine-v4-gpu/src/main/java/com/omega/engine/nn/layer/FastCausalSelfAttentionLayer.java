@@ -75,6 +75,9 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
+		if(embedDim % headNum != 0){
+			throw new RuntimeException("embedDim % headNum must be zero.");
+		}
 		this.dk = embedDim / headNum;
 		this.bias = bias;
 		this.oChannel = 1;
@@ -93,6 +96,9 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
+		if(embedDim % headNum != 0){
+			throw new RuntimeException("embedDim % headNum must be zero.");
+		}
 		this.dk = embedDim / headNum;
 		this.bias = bias;
 		this.oChannel = 1;
