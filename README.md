@@ -22,7 +22,7 @@ nvcc --version
 ##### 2.安装CUDA与CUDNN
 https://developer.nvidia.com/cuda-toolkit-archive
 ##### 3.引入或下载与当前CUDA版本对应的omega-engine包
-[win-cu-x.x 版本包列表](#版本依赖包POM)
+[win-cu-x.x 版本包列表](#版本依赖包)
 ```xml
 <dependency>
     <groupId>io.gitee.iangellove</groupId>
@@ -1264,7 +1264,7 @@ public static void gan_anime() {
 	}
 ```
 
-## 版本依赖包POM
+## 版本依赖包
 ```xml
 <!-- windows cuda 11.7 -->
 <dependency>
