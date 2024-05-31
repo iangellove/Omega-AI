@@ -14,6 +14,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JarPathUtils;
 
 import jcuda.driver.CUcontext;
@@ -109,12 +110,10 @@ public class CUDAModules {
 
 	public static CUfunction getLocalFunctionByModule(String fileName,String functionName) {
 
-		String rootPath = System.getProperty("user.dir");
+		String rootPath = LibPaths.LIB_PATH;
 		
-		rootPath += TMP_PATH;
-		
-		fileName = rootPath + CU_PATH + fileName;
-		
+		fileName = rootPath + fileName;
+
 		File file = new File(fileName);
 
 		if(!file.exists()) {
