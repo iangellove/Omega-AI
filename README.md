@@ -12,7 +12,40 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 [https://github.com/iangellove/Omega-AI](https://github.com/iangellove/Omega-AI)
 
 ## 依赖
-由于omega-engine-1.0.3加入了jcuda支持，所以1.0.3需要安装与jcuda版本对应的cuda，我在该项目中使用的是jcuda-11.2.0版本的包，那么我cuda需要安装11.2.x版本
+由于omega-engine-v4-gpu加入了jcuda支持，所以omega-engine-v4-gpu需要安装与jcuda版本对应的cuda，如果您的机器安装的CUDA版本是11.7.x，那么对应omega-engine需要引入的jcuda 11.7.0版本。
+
+## 快速开始
+##### 1.检查当前CUDA版本
+```txt
+nvcc --version
+```
+##### 2.安装CUDA与CUDNN
+https://developer.nvidia.com/cuda-toolkit-archive
+##### 3.引入或下载与当前CUDA版本对应的omega-engine包
+[win-cu-x.x 版本包列表](#版本依赖包)
+```xml
+<dependency>
+    <groupId>io.gitee.iangellove</groupId>
+    <artifactId>omega-engine-v4-gpu</artifactId>
+    <version>win-cu11.7-v1.0-beta</version>
+</dependency>
+```
+##### 4.初始化GPU环境与释放显存
+```java
+public static void main(String[] args) {
+    try {
+        //初始化GPU环境获取Context对象
+        CUDAModules.initContext();
+        CNNTest cnn = new CNNTest();
+        cnn.cnnNetwork_cifar10();
+    } finally {
+        //释放所有显存
+        CUDAMemoryManager.free();
+    }
+}
+```
+
+
 
 ## 系统参数
 由于训练vgg16模型的参数比较庞大，所以在部署项目的时候需要对jvm内存进行调整.
@@ -1229,6 +1262,28 @@ public static void gan_anime() {
 			e.printStackTrace();
 		}
 	}
+```
+
+## 版本依赖包
+```xml
+<!-- windows cuda 11.7 -->
+<dependency>
+    <groupId>io.gitee.iangellove</groupId>
+    <artifactId>omega-engine-v4-gpu</artifactId>
+    <version>win-cu11.7-v1.0-beta</version>
+</dependency>
+<!-- windows cuda 11.8 -->
+<dependency>
+    <groupId>io.gitee.iangellove</groupId>
+    <artifactId>omega-engine-v4-gpu</artifactId>
+    <version>win-cu11.8-v1.0-beta</version>
+</dependency>
+<!-- windows cuda 12.x -->
+<dependency>
+    <groupId>io.gitee.iangellove</groupId>
+    <artifactId>omega-engine-v4-gpu</artifactId>
+    <version>win-cu12.x-v1.0-beta</version>
+</dependency>
 ```
 
 ## 未来可期
