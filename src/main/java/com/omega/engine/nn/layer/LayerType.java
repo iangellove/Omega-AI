@@ -23,6 +23,7 @@ public enum LayerType {
 	silu("silu"),
 	bn("bn"),
 	layer_norm("layer_norm"),
+	rms_norm("rms_norm"),
 	instance_normal("instance_normal"),
 	block("block"),
 	shortcut("shortcut"),
