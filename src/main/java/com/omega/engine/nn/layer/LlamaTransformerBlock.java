@@ -3,7 +3,7 @@ package com.omega.engine.nn.layer;
 import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
-import com.omega.engine.nn.layer.normalization.LNLayer;
+import com.omega.engine.nn.layer.normalization.RMSLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
@@ -12,7 +12,7 @@ import com.omega.engine.updater.UpdaterFactory;
  * @author Administrator
  *
  */
-public class TransformerBlock extends Layer{
+public class LlamaTransformerBlock extends Layer{
 	
 	private int time;
 	
@@ -23,16 +23,15 @@ public class TransformerBlock extends Layer{
 	private boolean bias = false;
 	
 	private boolean dropout = false;
-	
-//	private CausalSelfAttentionLayer attn;
-	private FastCausalSelfAttentionLayer attn;
-	private LNLayer ln1;
 
+	private LlamaCausalSelfAttentionLayer attn;
+	private RMSLayer norm1;
+	
 	/**
 	 * mlp
 	 */
-	private MLPLayer mlp;
-	private LNLayer ln2;
+	private LlamaMLPLayer mlp;
+	private RMSLayer norm2;
 	
 	private BaseKernel baseKernel;
 	
@@ -40,7 +39,7 @@ public class TransformerBlock extends Layer{
 	
 	private Tensor tmp2;
 	
-	public TransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout) {
+	public LlamaTransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout) {
 		this.headNum = headNum;
 		this.time = time;
 		this.embedDim = embedDim;
@@ -52,7 +51,7 @@ public class TransformerBlock extends Layer{
 		this.initLayers();
 	}
 	
-	public TransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout,Network network) {
+	public LlamaTransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout,Network network) {
 		this.headNum = headNum;
 		this.network = network;
 		if(this.updater == null) {
@@ -70,14 +69,13 @@ public class TransformerBlock extends Layer{
 	
 	public void initLayers() {
 
-		this.ln1 = new LNLayer(this, bias);
-		
-//		this.attn = new CausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
-		this.attn = new FastCausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
+		this.norm1 = new RMSLayer(this);
 
-		this.ln2 = new LNLayer(attn, bias);
+		this.attn = new LlamaCausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
+
+		this.norm2 = new RMSLayer(attn);
 		
-		this.mlp = new MLPLayer(embedDim, embedDim * 4, bias, network);
+		this.mlp = new LlamaMLPLayer(embedDim, embedDim * 4, bias, network);
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
@@ -114,39 +112,21 @@ public class TransformerBlock extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-//		System.out.println("in1");
-//		input.showShape();
-		ln1.forward(input);
-//		ln1.getOutput().showShape();
-//		System.out.println("in2");
-		attn.forward(ln1.getOutput());
-//		System.out.println("in3");
-		TensorOP.add(attn.getOutput(), input, tmp1);
-//		System.out.println("in4");
-		ln2.forward(tmp1);
-		
-		mlp.forward(ln2.getOutput());
-		
-		TensorOP.add(mlp.getOutput(), tmp1, tmp2);
-		
-		this.output = tmp2;
-		
-//		this.output.showShape();
+
 	}
 	
-	public void output(Tensor mask) {
+	public void output(Tensor cos,Tensor sin) {
 		// TODO Auto-generated method stub
 		
-		ln1.forward(input);
-		
-//		attn.forward(ln1.getOutput(), mask);
-		attn.forward(ln1.getOutput());
-		
+		norm1.forward(input);
+
+		attn.forward(cos, sin, norm1.getOutput());
+
 		TensorOP.add(attn.getOutput(), input, tmp1);
+
+		norm2.forward(tmp1);
 		
-		ln2.forward(tmp1);
-		
-		mlp.forward(ln2.getOutput());
+		mlp.forward(norm2.getOutput());
 		
 		TensorOP.add(mlp.getOutput(), tmp1, tmp2);
 		
@@ -162,18 +142,23 @@ public class TransformerBlock extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+
+	}
+	
+	public void diff(Tensor cos,Tensor sin) {
+		// TODO Auto-generated method stub
 		
 		mlp.back(delta);
 		
-		ln2.back(mlp.diff);
+		norm2.back(mlp.diff);
 		
-		TensorOP.add(ln2.diff, delta, ln2.diff);
+		TensorOP.add(norm2.diff, delta, norm2.diff);
 		
-		attn.back(ln2.diff);
+		attn.back(cos, sin, norm2.diff);
 		
-		ln1.back(attn.diff);
+		norm1.back(attn.diff);
 		
-		TensorOP.add(ln1.diff, ln2.diff, tmp2);
+		TensorOP.add(norm1.diff, norm2.diff, tmp2);
 		
 		this.diff = tmp2;
 		
@@ -182,59 +167,22 @@ public class TransformerBlock extends Layer{
 	@Override
 	public void forward() {
 		// TODO Auto-generated method stub
-		/**
-		 * 设置输入
-		 */
-		this.setInput();
-		/**
-		 * 参数初始化
-		 */
-		this.init();
-		/**
-		 * 计算输出
-		 */
-		this.output();
+		
 	}
 	
 	@Override
 	public void back() {
 		// TODO Auto-generated method stub
-		
-		this.initBack();
-		/**
-		 * 设置梯度
-		 */
-		this.setDelta();
-		/**
-		 * 计算梯度
-		 */
-		this.diff();
-		
-		if(this.network.GRADIENT_CHECK) {
-			this.gradientCheck();
-		}
 
 	}
 
 	@Override
 	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
-		/**
-		 * 设置输入
-		 */
-		this.setInput(input);
-		/**
-		 * 参数初始化
-		 */
-		this.init();
-		/**
-		 * 计算输出
-		 */
-		this.output();
 		
 	}
 	
-	public void forward(Tensor input,Tensor mask) {
+	public void forward(Tensor cos,Tensor sin,Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 设置输入
@@ -247,12 +195,17 @@ public class TransformerBlock extends Layer{
 		/**
 		 * 计算输出
 		 */
-		this.output(mask);
+		this.output(cos, sin);
 		
 	}
 	
 	@Override
 	public void back(Tensor delta) {
+		// TODO Auto-generated method stub
+
+	}
+	
+	public void back(Tensor cos,Tensor sin,Tensor delta) {
 		// TODO Auto-generated method stub
 
 		this.initBack();
@@ -263,7 +216,7 @@ public class TransformerBlock extends Layer{
 		/**
 		 * 计算梯度
 		 */
-		this.diff();
+		this.diff(cos, sin);
 		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
@@ -274,9 +227,9 @@ public class TransformerBlock extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		ln1.update();
+		norm1.update();
 		attn.update();
-		ln2.update();
+		norm2.update();
 		mlp.update();
 	}
 

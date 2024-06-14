@@ -8,7 +8,6 @@ import com.omega.common.task.TaskEngine;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.active.gpu.SiLUKernel;
-import com.omega.engine.nn.layer.active.gpu.SigmodKernel;
 import com.omega.engine.nn.network.Network;
 
 /**
@@ -178,7 +177,7 @@ public class SiLULayer extends ActiveFunctionLayer {
 	}
 
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 参数初始化
@@ -187,7 +186,7 @@ public class SiLULayer extends ActiveFunctionLayer {
 		/**
 		 * 设置输入
 		 */
-		this.setInput(inpnut);
+		this.setInput(input);
 		/**
 		 * 计算输出
 		 */

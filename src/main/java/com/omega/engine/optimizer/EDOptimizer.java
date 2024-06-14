@@ -13,8 +13,10 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.grad.GradClipping;
 import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.layer.gpu.RoPEKernel;
 import com.omega.engine.nn.network.GPT;
 import com.omega.engine.nn.network.GPT2;
+import com.omega.engine.nn.network.Llama2;
 import com.omega.engine.nn.network.NanoGPT;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
@@ -31,7 +33,7 @@ import jcuda.driver.JCudaDriver;
 
 public class EDOptimizer extends Optimizer {
 
-	private float clamp_val = -100;
+//	private float clamp_val = -100;
 	
 	public EDOptimizer(Network network, int batchSize, int trainTime, float error,LearnRateUpdate learnRateUpdate, boolean warmUp) throws Exception {
 		super(network, batchSize, trainTime, error, warmUp);
@@ -1470,6 +1472,252 @@ public class EDOptimizer extends Optimizer {
 				
 //				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
 
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(this.lr_step);
+
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void trainLlama2_GEN(CNTokenizer trainingData) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Llama2 network = (Llama2) this.network;
+			
+			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
+
+			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
+			
+			Tensor[] cs = RoPEKernel.getCosAndSin(network.time, network.embedDim, network.headNum);
+			
+			Tensor cos = cs[0];
+			
+			Tensor sin = cs[1];
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = MathUtils.randomInts(trainingData.trainData.length - network.time,this.batchSize);
+				
+				Tensor output = null;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+					
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadData(indexs[it], input, label);
+					
+					/**
+					 * forward
+					 */
+					output = network.forward(cos, sin, input);
+					
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, label);
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label);
+
+					/**
+					 * back
+					 */
+					network.back(cos, sin, this.lossDiff);
+
+					/**
+					 * update
+					 */
+					this.network.update();
+
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
+					}
+
+					output.syncHost();
+
+					int time = output.number / batchSize;
+					float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab);
+
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+					
+				}
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(this.lr_step);
+
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void trainLlama2(CNChatTokenizer trainingData) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Llama2 network = (Llama2) this.network;
+			
+			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
+
+			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
+
+			Tensor[] cs = RoPEKernel.getCosAndSin(network.time, network.embedDim, network.headNum);
+			
+			Tensor cos = cs[0];
+			
+			Tensor sin = cs[1];
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+
+				int[][] indexs = MathUtils.randomInts(trainingData.trainData.size(),this.batchSize);
+				
+				Tensor output = null;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+					
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadTrainData(indexs[it], input, label);
+					
+					/**
+					 * forward
+					 */
+					output = network.forward(cos, sin, input);
+					
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, label, trainingData.dictionary.get("<pad>"));
+
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label, trainingData.dictionary.get("<pad>"));
+
+					/**
+					 * back
+					 */
+					network.back(cos, sin, this.lossDiff);
+
+					/**
+					 * update
+					 */
+					this.network.update();
+
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
+					}
+
+					output.syncHost();
+
+					int time = output.number / batchSize;
+					float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
+
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+					
+//					if(it != 0 && it % 200 == 0) {
+//						vail_chat(network, input, output, label, positions, trainingData);
+//						network.RUN_MODEL = RunModel.TRAIN;
+//					}
+
+				}
+				
 				/**
 				 * update learning rate
 				 */

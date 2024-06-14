@@ -6,16 +6,16 @@ import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.LayerType;
+import com.omega.engine.nn.layer.LlamaTransformerDecoder;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
-import com.omega.engine.nn.layer.TransformerNanoDecoder;
 import com.omega.engine.updater.UpdaterType;
 
 /**
- * Recurrent Neural Networks
+ * Llama-2
  * @author Administrator
  *
  */
-public class NanoLLAMA extends Network {
+public class Llama2 extends Network {
 
 	public int vocabSize;
 	
@@ -31,11 +31,11 @@ public class NanoLLAMA extends Network {
 	
 	private InputLayer inputLayer;
 	
-	private TransformerNanoDecoder decoder;
+	private LlamaTransformerDecoder decoder;
 	
 	private FullyLayer fullyLayer;
 	
-	public NanoLLAMA(LossType lossType,UpdaterType updater,int headNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout) {
+	public Llama2(LossType lossType,UpdaterType updater,int headNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.bias = bias;
 		this.dropout = dropout;
@@ -46,14 +46,14 @@ public class NanoLLAMA extends Network {
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.decoder = new TransformerNanoDecoder(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, this.bias, this.dropout, this);
+		this.decoder = new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, this.bias, this.dropout, this);
 		this.fullyLayer = new FullyLayer(embedDim, vocabSize, false, this);
 		this.addLayer(inputLayer);
 		this.addLayer(decoder);
 		this.addLayer(fullyLayer);
 	}
 	
-	public NanoLLAMA(LossType lossType,UpdaterType updater,int headNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout,boolean cudnn) {
+	public Llama2(LossType lossType,UpdaterType updater,int headNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout,boolean cudnn) {
 		this.CUDNN = cudnn;
 		this.lossFunction = LossFactory.create(lossType);
 		this.bias = bias;
@@ -65,7 +65,7 @@ public class NanoLLAMA extends Network {
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.decoder = new TransformerNanoDecoder(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, this.bias, this.dropout, this);
+		this.decoder = new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, this.bias, this.dropout, this);
 		this.fullyLayer = new FullyLayer(embedDim, vocabSize, false, this);
 		this.addLayer(inputLayer);
 		this.addLayer(decoder);
@@ -121,7 +121,7 @@ public class NanoLLAMA extends Network {
 		return this.getOutput();
 	}
 	
-	public Tensor forward(Tensor input,Tensor positions) {
+	public Tensor forward(Tensor cos,Tensor sin,Tensor input) {
 //		System.out.println("en_time:"+en_time+",de_time:"+de_time);
 		/**
 		 * 设置输入数据
@@ -130,31 +130,20 @@ public class NanoLLAMA extends Network {
 		
 		inputLayer.forward();
 		
-		decoder.forward(input, positions);
+		decoder.forward(cos, sin, input);
 		
 		fullyLayer.forward(decoder.getOutput());
 		
-		return this.getOutput();
-	}
-	
-	public Tensor forward(Tensor input,Tensor positions,Tensor mask) {
-//		System.out.println("en_time:"+en_time+",de_time:"+de_time);
-		/**
-		 * 设置输入数据
-		 */
-		this.setInputData(input);
-		
-		inputLayer.forward();
-		
-		decoder.forward(input, mask, positions);
-		
-		fullyLayer.forward(decoder.getOutput());
-
 		return this.getOutput();
 	}
 	
 	@Override
 	public void back(Tensor lossDiff) {
+		// TODO Auto-generated method stub
+
+	}
+	
+	public void back(Tensor cos,Tensor sin,Tensor lossDiff) {
 		// TODO Auto-generated method stub
 //		lossDiff.showDMByNumber(0);
 		/**
@@ -165,7 +154,7 @@ public class NanoLLAMA extends Network {
 		
 		this.fullyLayer.back(lossDiff);
 		
-		this.decoder.back(this.fullyLayer.diff);
+		this.decoder.back(cos, sin, this.fullyLayer.diff);
 		
 	}
 

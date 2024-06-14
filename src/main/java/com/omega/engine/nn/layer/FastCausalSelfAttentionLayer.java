@@ -113,8 +113,9 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		this.qkvLinerLayer = new FullyLayer(embedDim, 3 * embedDim, bias, this.network);
 //		NanoGPT net = (NanoGPT) this.network;
 		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, RandomUtils.uniform(this.embedDim * 3 * this.embedDim, 0.0f, 0.02f), true);
-//		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, true);
-//		float[] data = RandomUtils.order(embedDim * 3 * embedDim, 0.1f, 0.1f);
+//		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, RandomUtils.order(this.embedDim * 3 * this.embedDim, 0.01f, 0.01f), true);
+//		
+//		float[] data = RandomUtils.order(embedDim * 3 * embedDim, 0.01f, 0.01f);
 //		for(int r = 0;r<embedDim;r++) {
 //			for(int c = 0;c<embedDim * 3;c++) {
 //				int batch = c / embedDim;
@@ -122,7 +123,9 @@ public class FastCausalSelfAttentionLayer extends Layer{
 //				this.qkvLinerLayer.weight.data[r * embedDim * 3 + c] = data[batch * embedDim * embedDim + r * embedDim + col];
 //			}
 //		}
+//		
 //		this.qkvLinerLayer.weight.hostToDevice();
+
 //		PrintUtils.printImage(this.qkvLinerLayer.weight);
 //		this.qkvLinerLayer.weight.showDM();
 		this.oLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
@@ -224,10 +227,19 @@ public class FastCausalSelfAttentionLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 //		System.out.println("in");
+//		this.input.showDM();
 		this.qkvLinerLayer.forward(this.input);
-
-		attentionKernel.permute(this.qkvLinerLayer.getOutput(), qt, kt, vt, batchSize, time, headNum, dk);
 		
+//		System.err.println("-------------------------");
+//		this.qkvLinerLayer.getOutput().showDM();
+//		System.err.println("-------------------------");
+		
+		attentionKernel.permute(this.qkvLinerLayer.getOutput(), qt, kt, vt, batchSize, time, headNum, dk);
+//		
+//		qt.showDM();
+//		kt.showDM();
+//		vt.showDM();
+//		
 		scaledDotProductAttention(qt, kt, vt);
 		
 		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);

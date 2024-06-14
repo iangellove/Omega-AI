@@ -196,13 +196,15 @@ public class RMSKernel extends BaseKernel{
 					Pointer.to(new int[] {W})
 	            );
 			
+			int shared_mem_size = (W + 1) * Sizeof.FLOAT;
+			
 			checkCUDA(cuLaunchKernel(backward_function,
 					B, 1, 1,      // Grid dimension
 					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
-					0, null,               // Shared memory size and stream
+					shared_mem_size, null,               // Shared memory size and stream
 					backwardParameters, null // Kernel- and extra parameters
 				));
-
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -228,9 +230,9 @@ public class RMSKernel extends BaseKernel{
 
 			CUDAModules.initContext();
 			
-			int N = 2;
-	    	int T = 1;
-	    	int W = 5;
+			int N = 4;
+	    	int T = 2;
+	    	int W = 128;
 
 	    	float[] data = RandomUtils.order(N * T * W, 0.1f, 0.1f);
 	    	
@@ -252,13 +254,13 @@ public class RMSKernel extends BaseKernel{
 	    	RMSLayer rms = new RMSLayer(tf);
 	    	rms.gamma = gamma;
 	    	rms.diffGamma = dgamma;
-	    	input.showDM();
+//	    	input.showDM();
 	    	for(int i = 0;i<10;i++) {
 	    		rms.forward(input);
-	    		rms.getOutput().showDM();
+	    		rms.getOutput().showDMByNumber(0);
 	    		rms.back(delta);
-	    		rms.diff.showDM();
-	    		rms.diffGamma.showDM();
+	    		rms.diff.showDMByNumber(0);
+	    		rms.diffGamma.showDMByNumber(0);
 	    	}
 			
 		} catch (Exception e) {

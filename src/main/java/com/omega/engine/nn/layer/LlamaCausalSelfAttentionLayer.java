@@ -6,9 +6,11 @@ import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
+import com.omega.engine.nn.layer.gpu.RoPEKernel;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
@@ -18,7 +20,7 @@ import com.omega.engine.updater.UpdaterFactory;
  * @author Administrator
  *
  */
-public class LLAMACausalSelfAttentionLayer extends Layer{
+public class LlamaCausalSelfAttentionLayer extends Layer{
 	
 	private int time;
 	
@@ -30,7 +32,10 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 	
 	private boolean bias = false;
 	
-	private FullyLayer qkvLinerLayer;
+	private FullyLayer qLinerLayer;
+	private FullyLayer kLinerLayer;
+	private FullyLayer vLinerLayer;
+//	private FullyLayer qkvLinerLayer;
 	
 	private FullyLayer oLinerLayer;
 	
@@ -41,6 +46,11 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 	private BaseKernel baseKernel;
 	
 	private AttentionKernel attentionKernel;
+	
+	private RoPEKernel ropeKernel;
+	
+	private Tensor rq;
+	private Tensor rk;
 	
 	private Tensor qt;
 	private Tensor kt;
@@ -63,18 +73,12 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 	private Tensor dattn;
 	
 	private Tensor dpreatt;
-	
-	private Tensor dqkv;
-	
+
 	private int batchSize = 1;
 	
 	private boolean dropout = false;
 	
-	private Tensor cosCached;
-	
-	private Tensor sinCached;
-	
-	public LLAMACausalSelfAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout) {
+	public LlamaCausalSelfAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout) {
 		this.bias = bias;
 		this.time = time;
 		this.embedDim = embedDim;
@@ -91,7 +95,7 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 		this.initLayers();
 	}
 	
-	public LLAMACausalSelfAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout,Network network) {
+	public LlamaCausalSelfAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout,Network network) {
 		this.bias = bias;
 		this.network = network;
 		if(this.updater == null) {
@@ -113,27 +117,26 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 	}
 	
 	public void initLayers() {
-
-		this.qkvLinerLayer = new FullyLayer(embedDim, 3 * embedDim, bias, this.network);
-//		NanoGPT net = (NanoGPT) this.network;
-		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, RandomUtils.uniform(this.embedDim * 3 * this.embedDim, 0.0f, 0.02f), true);
-//		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, true);
-//		float[] data = RandomUtils.order(embedDim * 3 * embedDim, 0.1f, 0.1f);
-//		for(int r = 0;r<embedDim;r++) {
-//			for(int c = 0;c<embedDim * 3;c++) {
-//				int batch = c / embedDim;
-//				int col = c % embedDim;
-//				this.qkvLinerLayer.weight.data[r * embedDim * 3 + c] = data[batch * embedDim * embedDim + r * embedDim + col];
-//			}
-//		}
-//		this.qkvLinerLayer.weight.hostToDevice();
-//		PrintUtils.printImage(this.qkvLinerLayer.weight);
-//		this.qkvLinerLayer.weight.showDM();
+		
+		this.qLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
+		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+//		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.01f, 0.01f), true);
+//		this.qLinerLayer.weight.showDM();
+		
+		this.kLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
+		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+//		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.01f, this.embedDim * this.embedDim * 0.01f + 0.01f), true);
+//		this.kLinerLayer.weight.showDM();
+		
+		this.vLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
+		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+//		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.01f, 2 * this.embedDim * this.embedDim * 0.01f + 0.01f), true);
+//		this.vLinerLayer.weight.showDM();
+		
 		this.oLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
 		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
-//		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, (float)(0.02f / Math.sqrt(2 * net.decoderNum))), true);
 //		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.01f, 0.01f), true);
-		
+
 		if(this.dropout) {
 			this.dropoutLayer = new DropoutLayer(0.1f, this.network);
 			this.dropoutLayer2 = new DropoutLayer(0.1f, oLinerLayer);
@@ -147,34 +150,15 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 			attentionKernel = new AttentionKernel();
 		}
 		
-//		System.out.println(JsonUtils.toJson(this.inputLayer.weight.syncHost()));
-//		System.out.println(JsonUtils.toJson(this.inputLayer.bias.syncHost()));
-//		System.out.println(JsonUtils.toJson(this.selfLayer.weight.syncHost()));
-//		System.out.println(JsonUtils.toJson(this.selfLayer.bias.syncHost()));
+		if(ropeKernel == null) {
+			ropeKernel = new RoPEKernel();
+		}
 		
 	}
 	
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
-		this.number = this.network.number;
-		this.time = this.network.time;
-		this.batchSize = number / time;
-
-		if(this.preatt == null || this.preatt.number != this.batchSize || this.preatt.width != this.time) {
-			// [batch_size，time，head_num，d_k]
-			this.qt = Tensor.createTensor(this.qt, batchSize, headNum, time, dk, true);
-			this.kt = Tensor.createTensor(this.kt, batchSize, headNum, time, dk, true);
-			this.vt = Tensor.createTensor(this.vt, batchSize, headNum, time, dk, true);
-			// [batch_size，n_heads，len_q，len_k]
-			this.preatt = Tensor.createTensor(this.preatt, batchSize, headNum, time, time, true);
-			// [batch_size，n_heads，len_q，len_k]
-			this.attn = Tensor.createTensor(this.attn, batchSize, headNum, time, time, true);
-			// [batch_size, n_heads, len_q, dim_v]
-			this.vaccum = Tensor.createTensor(this.vaccum, batchSize, headNum, time, dk, true);
-			// [batch_size, len_q, n_heads * dim_v]
-			this.oi = Tensor.createTensor(this.oi, batchSize, time, headNum, dk, true);
-		}
 
 	}
 	
@@ -186,6 +170,8 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 		
 		if(this.preatt == null || this.preatt.number != this.batchSize || this.preatt.width != this.time) {
 			// [batch_size，time，head_num，d_k]
+			this.rq = Tensor.createTensor(this.rq, batchSize, time, headNum, dk, true);
+			this.rk = Tensor.createTensor(this.rk, batchSize, time, headNum, dk, true);
 			this.qt = Tensor.createTensor(this.qt, batchSize, headNum, time, dk, true);
 			this.kt = Tensor.createTensor(this.kt, batchSize, headNum, time, dk, true);
 			this.vt = Tensor.createTensor(this.vt, batchSize, headNum, time, dk, true);
@@ -198,7 +184,17 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 			// [batch_size, len_q, n_heads * dim_v]
 			this.oi = Tensor.createTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
 		}
-
+		
+		this.qt.viewOrg();
+		this.kt.viewOrg();
+		this.vt.viewOrg();
+		this.rq.viewOrg();
+		this.rk.viewOrg();
+		if(this.qLinerLayer.getOutput() != null) {
+			this.qLinerLayer.getOutput().viewOrg();
+			this.kLinerLayer.getOutput().viewOrg();
+			this.vLinerLayer.getOutput().viewOrg();
+		}
 	}
 	
 	@Override
@@ -211,9 +207,7 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 			this.dvt = Tensor.createTensor(this.dvt, batchSize, headNum, time, dk, true);
 			this.dattn = Tensor.createTensor(this.dattn, batchSize, headNum, time, time, true);
 			this.dpreatt = Tensor.createTensor(this.dpreatt, batchSize, headNum, time, time, true);
-			this.dqkv = Tensor.createTensor(this.dqkv, number, 1, 1, 3 * embedDim, true);
 		}else {
-			this.dqkv.clearGPU();
 			this.dvaccum.clearGPU();
 		}
 	}
@@ -227,15 +221,29 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-//		System.out.println("in");
-		this.qkvLinerLayer.forward(this.input);
 
-		attentionKernel.permute(this.qkvLinerLayer.getOutput(), qt, kt, vt, batchSize, time, headNum, dk);
+	}
+	
+	public void output(Tensor cos,Tensor sin) {
+		// TODO Auto-generated method stub
+//		System.out.println("in");
+//		this.input.showDM();
+		this.qLinerLayer.forward(this.input);
+		this.kLinerLayer.forward(this.input);
+		this.vLinerLayer.forward(this.input);
 		
+		Tensor query = this.qLinerLayer.getOutput().view(batchSize, time, headNum, dk);
+		Tensor key = this.kLinerLayer.getOutput().view(batchSize, time, headNum, dk);
+		Tensor value = this.vLinerLayer.getOutput().view(batchSize, time, headNum, dk);
+
 		/**
 		 * apply RoPE
 		 */
+		ropeKernel.forward(cos, sin, query, key, rq, rk);
 		
+		TensorOP.permute(rq, qt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(rk, kt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
 		
 		scaledDotProductAttention(qt, kt, vt);
 		
@@ -250,6 +258,7 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 			this.output = dropoutLayer2.getOutput();
 		}
 		
+//		this.output.showDMByNumber(0);
 	}
 	
 	public void scaledDotProductAttention(Tensor query,Tensor key,Tensor value) {
@@ -268,9 +277,7 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 			dropoutLayer.forward(attn);
 			tmp = dropoutLayer.getOutput();
 		}
-		
-//		attn.syncHost();
-//		PrintUtils.printImage(attn);
+
 		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, value.getGpuData(), dk, time * dk, tmp.getGpuData(), time, time * time, 0.0f, vaccum.getGpuData(), dk, time * dk, batchSize * headNum);
 	}
 
@@ -312,6 +319,11 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+
+	}
+	
+	public void diff(Tensor cos,Tensor sin) {
+		// TODO Auto-generated method stub
 		
 		if(dropout) {
 			dropoutLayer2.back(delta);
@@ -323,56 +335,57 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 		attentionKernel.unpermute_backward(dvaccum, oi, batchSize, time, headNum, dk);
 		
 		scaledDotProductAttentionBackward();
+
+		qt.view(this.qLinerLayer.getOutput().shape());
+		kt.view(this.kLinerLayer.getOutput().shape());
+		vt.view(this.vLinerLayer.getOutput().shape());
 		
-		attentionKernel.permute_backward(dqkv, dqt, dkt, dvt, batchSize, time, headNum, dk);
+		TensorOP.permute(dqt, qt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(dkt, kt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(dvt, vt, new int[] {0, 2, 1, 3});
 		
-		this.qkvLinerLayer.back(dqkv);
+		/**
+		 * RoPE backward
+		 */
+		ropeKernel.backward(cos, sin, qt, kt, rq, rk);
 		
-		this.diff = this.qkvLinerLayer.diff;
+		Tensor queryDelta = rq.view(batchSize * time, 1, 1, headNum * dk);
+		Tensor keyDelta = rk.view(batchSize * time, 1, 1, headNum * dk);
+		Tensor valueDelta = vt.view(batchSize * time, 1, 1, headNum * dk);
+		
+		this.qLinerLayer.back(queryDelta);
+		this.kLinerLayer.back(keyDelta);
+		this.vLinerLayer.back(valueDelta);
+		
+		TensorOP.add(this.qLinerLayer.diff, this.kLinerLayer.diff, this.qLinerLayer.diff);
+		TensorOP.add(this.qLinerLayer.diff, this.vLinerLayer.diff, this.qLinerLayer.diff);
+
+		this.diff = this.qLinerLayer.diff;
+		
+//		this.diff.showDMByNumber(0);
 		
 	}
 
 	@Override
 	public void forward() {
 		// TODO Auto-generated method stub
-		/**
-		 * 参数初始化
-		 */
-		this.init();
-		/**
-		 * 设置输入
-		 */
-		this.setInput();
-		/**
-		 * 计算输出
-		 */
-		this.output();
+
 	}
 	
 	@Override
 	public void back() {
 		// TODO Auto-generated method stub
 		
-		this.initBack();
-		/**
-		 * 设置梯度
-		 */
-		this.setDelta();
-		/**
-		 * 计算梯度
-		 */
-		this.diff();
-		
-		if(this.network.GRADIENT_CHECK) {
-			this.gradientCheck();
-		}
-
 	}
 
 	@Override
 	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
-		
+
+	}
+	
+	public void forward(Tensor cos,Tensor sin,Tensor input) {
+		// TODO Auto-generated method stub
 		/**
 		 * 参数初始化
 		 */
@@ -384,12 +397,17 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 		/**
 		 * 计算输出
 		 */
-		this.output();
+		this.output(cos, sin);
 		
 	}
 	
 	@Override
 	public void back(Tensor delta) {
+		// TODO Auto-generated method stub
+
+	}
+	
+	public void back(Tensor cos,Tensor sin,Tensor delta) {
 		// TODO Auto-generated method stub
 
 		this.initBack();
@@ -400,7 +418,7 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 		/**
 		 * 计算梯度
 		 */
-		this.diff();
+		this.diff(cos, sin);
 		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
@@ -411,7 +429,9 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		qkvLinerLayer.update();
+		qLinerLayer.update();
+		kLinerLayer.update();
+		vLinerLayer.update();
 		oLinerLayer.update();
 	}
 
@@ -489,13 +509,19 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 		
 		Tensor delta = new Tensor(batchSize * time, 1, 1, embedDim, delta_data, true);
 		
-		LLAMACausalSelfAttentionLayer mal = new LLAMACausalSelfAttentionLayer(embedDim, headNum, time, false, false, tf);
+		LlamaCausalSelfAttentionLayer mal = new LlamaCausalSelfAttentionLayer(embedDim, headNum, time, false, false, tf);
+		
+		Tensor[] cs = RoPEKernel.getCosAndSin(time, embedDim, headNum);
+		
+		Tensor cos = cs[0];
+		
+		Tensor sin = cs[1];
 		
 //		mal.forward(input);
 		
 		for(int i = 0;i<10;i++) {
 
-			mal.forward(input);
+			mal.forward(cos, sin, input);
 			
 //			input.showDM();
 			
@@ -505,7 +531,7 @@ public class LLAMACausalSelfAttentionLayer extends Layer{
 			
 			mal.getOutput().showDM();
 			
-			mal.back(delta);
+			mal.back(cos, sin, delta);
 //			delta.showDM();
 			mal.diff.showDM();
 //			delta.copyData(tmp);

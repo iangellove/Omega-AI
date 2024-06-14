@@ -5,9 +5,8 @@ import java.util.List;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
-import com.omega.engine.nn.layer.normalization.LNLayer;
+import com.omega.engine.nn.layer.normalization.RMSLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
@@ -16,7 +15,7 @@ import com.omega.engine.updater.UpdaterFactory;
  * @author Administrator
  *
  */
-public class TransformerNanoDecoder extends Layer{
+public class LlamaTransformerDecoder extends Layer{
 	
 	private int time;
 	
@@ -33,18 +32,13 @@ public class TransformerNanoDecoder extends Layer{
 	private int n_layers = 6;
 	
 	private EmbeddingIDLayer src_emb;
-	private EmbeddingIDLayer pos_emb;
-	private List<TransformerBlock> decoderLayers;
-	private LNLayer ln;
-
+	private List<LlamaTransformerBlock> decoderLayers;
+	private RMSLayer norm;
 	private DropoutLayer dropoutLayer;
 	
 	private BaseKernel baseKernel;
 	
-	private Tensor positions;
-
-
-	public TransformerNanoDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout) {
+	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout) {
 		this.headNum = headNum;
 		this.n_layers = n_layers;
 		this.vocab_size = vocab_size;
@@ -61,7 +55,7 @@ public class TransformerNanoDecoder extends Layer{
 		this.initLayers();
 	}
 	
-	public TransformerNanoDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout,Network network) {
+	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout,Network network) {
 		this.headNum = headNum;
 		this.n_layers = n_layers;
 		this.network = network;
@@ -86,18 +80,15 @@ public class TransformerNanoDecoder extends Layer{
 		
 		this.src_emb = new EmbeddingIDLayer(vocab_size, embedDim, network);
 		this.src_emb.weight = new Tensor(1, 1, src_emb.width, src_emb.oWidth, RandomUtils.uniform(this.src_emb.width * this.src_emb.oWidth, 0.0f, 0.02f), true);
-		
-		this.pos_emb = new EmbeddingIDLayer(time, embedDim, network);
-		this.pos_emb.weight = new Tensor(1, 1, pos_emb.width, pos_emb.oWidth, RandomUtils.uniform(this.pos_emb.width * this.pos_emb.oWidth, 0.0f, 0.02f), true);
-		
-		decoderLayers = new ArrayList<TransformerBlock>();
+
+		decoderLayers = new ArrayList<LlamaTransformerBlock>();
 		
 		for(int i = 0;i<n_layers;i++) {
-			TransformerBlock decoderLayer = new TransformerBlock(headNum, time, embedDim, bias, dropout, network);
+			LlamaTransformerBlock decoderLayer = new LlamaTransformerBlock(headNum, time, embedDim, bias, dropout, network);
 			decoderLayers.add(decoderLayer);
 		}
 		
-		this.ln = new LNLayer(decoderLayers.get(n_layers - 1), bias);
+		this.norm = new RMSLayer(decoderLayers.get(n_layers - 1));
 		
 		if(dropout) {
 			dropoutLayer = new DropoutLayer(0.1f, src_emb);
@@ -106,7 +97,7 @@ public class TransformerNanoDecoder extends Layer{
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
 		}
-
+		
 	}
 	
 	@Override
@@ -132,66 +123,13 @@ public class TransformerNanoDecoder extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 
-		src_emb.forward(input);
-		
-		pos_emb.forward(positions);
-		
-		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
-		
-		Tensor out1 = src_emb.getOutput();
-		
-		if(dropout) {
-			this.dropoutLayer.forward(out1);
-			out1 = dropoutLayer.getOutput();
-		}
-		
-		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).forward(out1);
-			out1 = decoderLayers.get(i).getOutput();
-		}
-
-		this.ln.forward(out1);
-		this.output = this.ln.getOutput();
-//		this.output = decoderOutput;
-		
 	}
 	
-	public void output(Tensor positions) {
-		// TODO Auto-generated method stub
-
-		src_emb.forward(input);
-		
-		pos_emb.forward(positions);
-
-		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
-		
-		Tensor out1 = src_emb.getOutput();
-		
-		if(dropout) {
-			this.dropoutLayer.forward(out1);
-			out1 = dropoutLayer.getOutput();
-		}
-
-		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).forward(out1);
-			out1 = decoderLayers.get(i).getOutput();
-		}
-
-		this.ln.forward(out1);
-		this.output = this.ln.getOutput();
-//		output.showDMByNumber(output.number - 1);
-//		this.output = out1;
-	}
-	
-	public void output(Tensor mask,Tensor positions) {
+	public void output(Tensor cos,Tensor sin) {
 		// TODO Auto-generated method stub
 	
 		src_emb.forward(input);
 
-		pos_emb.forward(positions);
-
-		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
-		
 		Tensor out1 = src_emb.getOutput();
 
 		if(dropout) {
@@ -200,13 +138,12 @@ public class TransformerNanoDecoder extends Layer{
 		}
 		
 		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).forward(out1, mask);
+			decoderLayers.get(i).forward(cos, sin, out1);
 			out1 = decoderLayers.get(i).getOutput();
 		}
 
-		this.ln.forward(out1);
-		this.output = this.ln.getOutput();
-//		this.output = decoderOutput;
+		this.norm.forward(out1);
+		this.output = this.norm.getOutput();
 	}
 	
 	@Override
@@ -218,12 +155,16 @@ public class TransformerNanoDecoder extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		this.ln.back(delta);
-		Tensor decoderDiff = this.ln.diff;
-//		Tensor decoderDiff = delta;
+
+	}
+	
+	public void diff(Tensor cos,Tensor sin) {
+		// TODO Auto-generated method stub
+		this.norm.back(delta);
+		Tensor decoderDiff = this.norm.diff;
 		
 		for(int i = n_layers - 1;i>=0;i--) {
-			decoderLayers.get(i).back(decoderDiff);
+			decoderLayers.get(i).back(cos, sin, decoderDiff);
 			decoderDiff = decoderLayers.get(i).diff;
 		}
 		
@@ -234,8 +175,6 @@ public class TransformerNanoDecoder extends Layer{
 		
 		src_emb.back(decoderDiff);
 
-		pos_emb.back(decoderDiff);
-		
 		this.diff = this.src_emb.diff;
 		
 	}
@@ -243,59 +182,22 @@ public class TransformerNanoDecoder extends Layer{
 	@Override
 	public void forward() {
 		// TODO Auto-generated method stub
-		/**
-		 * 设置输入
-		 */
-		this.setInput();
-		/**
-		 * 参数初始化
-		 */
-		this.init();
-		/**
-		 * 计算输出
-		 */
-		this.output();
+
 	}
 	
 	@Override
 	public void back() {
 		// TODO Auto-generated method stub
 		
-		this.initBack();
-		/**
-		 * 设置梯度
-		 */
-		this.setDelta();
-		/**
-		 * 计算梯度
-		 */
-		this.diff();
-		
-		if(this.network.GRADIENT_CHECK) {
-			this.gradientCheck();
-		}
-
 	}
 
 	@Override
 	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
-		/**
-		 * 设置输入
-		 */
-		this.setInput(input);
-		/**
-		 * 参数初始化
-		 */
-		this.init();
-		/**
-		 * 计算输出
-		 */
-		this.output();
 		
 	}
 	
-	public void forward(Tensor input,Tensor positions) {
+	public void forward(Tensor cos,Tensor sin,Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 设置输入
@@ -308,29 +210,17 @@ public class TransformerNanoDecoder extends Layer{
 		/**
 		 * 计算输出
 		 */
-		this.output(positions);
-		
-	}
-	
-	public void forward(Tensor input,Tensor mask,Tensor positions) {
-		// TODO Auto-generated method stub
-		/**
-		 * 设置输入
-		 */
-		this.setInput(input);
-		/**
-		 * 参数初始化
-		 */
-		this.init();
-		/**
-		 * 计算输出
-		 */
-		this.output(mask, positions);
+		this.output(cos, sin);
 		
 	}
 	
 	@Override
 	public void back(Tensor delta) {
+		// TODO Auto-generated method stub
+
+	}
+	
+	public void back(Tensor cos,Tensor sin,Tensor delta) {
 		// TODO Auto-generated method stub
 
 		this.initBack();
@@ -341,7 +231,7 @@ public class TransformerNanoDecoder extends Layer{
 		/**
 		 * 计算梯度
 		 */
-		this.diff();
+		this.diff(cos, sin);
 		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
@@ -353,8 +243,7 @@ public class TransformerNanoDecoder extends Layer{
 	public void update() {
 		// TODO Auto-generated method stub
 		src_emb.update();
-		pos_emb.update();
-		ln.update();
+		norm.update();
 		for(int i = 0;i<n_layers;i++) {
 			decoderLayers.get(i).update();
 		}

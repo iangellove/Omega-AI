@@ -273,6 +273,7 @@ public class TransformerDecoder extends Layer{
 		// TODO Auto-generated method stub
 		src_emb.update();
 		pos_emb.update();
+		ln.update();
 		for(int i = 0;i<n_layers;i++) {
 			decoderLayers.get(i).update();
 		}

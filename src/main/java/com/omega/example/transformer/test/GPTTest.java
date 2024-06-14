@@ -842,9 +842,9 @@ public class GPTTest {
 			
 //			ch_chat_gpt2();
 			
-//			gpt_dp();
+			gpt_dp();
 			
-			gpt2_yl_qa();
+//			gpt2_yl_qa();
 			
 //			gpt_ssby();
 			
