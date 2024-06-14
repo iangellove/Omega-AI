@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.nn.layer.active.SiLULayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
@@ -23,8 +24,12 @@ public class LlamaMLPLayer extends Layer{
 	private FullyLayer linear1;
 	private SiLULayer active;
 	private FullyLayer linear2;
+	
+	private FullyLayer linear3;
 
 	private DropoutLayer dropoutLayer;
+	
+	private Tensor tmp;
 	
 	public LlamaMLPLayer(int embedDim,int nChannel,boolean bias) {
 		this.embedDim = embedDim;
@@ -61,6 +66,8 @@ public class LlamaMLPLayer extends Layer{
 //		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, 0.02f), true);
 //		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, (0.02f / (float) Math.sqrt(2 * net.decoderNum))), true);
 		
+		this.linear3 = new FullyLayer(embedDim, nChannel, bias, network);
+		
 		if(dropout) {
 			dropoutLayer = new DropoutLayer(0.1f, linear2);
 		}
@@ -71,6 +78,9 @@ public class LlamaMLPLayer extends Layer{
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
+		if(this.tmp == null || this.number != this.tmp.number){
+			this.tmp = Tensor.createTensor(this.tmp, number, oChannel, oHeight, nChannel, true);
+		}
 	}
 	
 	@Override
@@ -92,8 +102,12 @@ public class LlamaMLPLayer extends Layer{
 		linear1.forward(input);
 
 		active.forward(linear1.getOutput());
-
-		linear2.forward(active.getOutput());
+		
+		linear3.forward(input);
+		
+		TensorOP.mul(active.getOutput(), linear3.getOutput(), tmp);
+		
+		linear2.forward(tmp);
 		
 		if(dropout) {
 			dropoutLayer.forward(linear2.getOutput());
@@ -119,10 +133,19 @@ public class LlamaMLPLayer extends Layer{
 		}else {
 			this.linear2.back(this.delta);
 		}
-
-		active.back(this.linear2.diff);
+		
+		//diff l3
+		TensorOP.mul(this.linear2.diff, active.getOutput(), tmp);
+		linear3.back(tmp);
+		
+		//diff l1
+		TensorOP.mul(this.linear2.diff, linear3.getOutput(), tmp);
+		
+		active.back(tmp);
 		
 		linear1.back(active.diff);
+		
+		TensorOP.add(this.linear1.diff, this.linear3.diff, this.linear1.diff);
 		
 		this.diff = this.linear1.diff;
 		
