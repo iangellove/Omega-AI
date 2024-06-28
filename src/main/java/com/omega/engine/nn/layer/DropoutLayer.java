@@ -109,7 +109,7 @@ public class DropoutLayer extends Layer {
 		 */
 		if(this.network.RUN_MODEL == RunModel.TRAIN) {
 			if(this.mask == null || this.mask.number != this.number) {
-				this.mask = Tensor.createTensor(this.mask, number, oChannel, oHeight, oWidth, true);
+				this.mask = Tensor.createGPUTensor(this.mask, number, oChannel, oHeight, oWidth, true);
 			}
 //			JCuda.cudaDeviceSynchronize();
 //			this.mask.clearGPU();
@@ -118,7 +118,7 @@ public class DropoutLayer extends Layer {
 		}
 		
 		if(this.output == null || this.number != this.output.number) {
-			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 
 	}
@@ -127,7 +127,7 @@ public class DropoutLayer extends Layer {
 	public void initBack() {
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number) {
-			this.diff = Tensor.createTensor(this.diff, number, channel, height, width, true);
+			this.diff = Tensor.createGPUTensor(this.diff, number, channel, height, width, true);
 		}
 	}
 

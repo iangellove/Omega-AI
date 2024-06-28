@@ -127,6 +127,26 @@ public class Tensor implements Serializable{
 		}
 	}
 	
+	public Tensor(int number,int channel,int height,int width,boolean hasGPU,boolean onlyGPU) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		if(!onlyGPU) {
+			this.data = new float[this.dataLength];
+		}
+		this.orgShape = new int[] {number, channel, height, width};
+		this.setHasGPU(hasGPU);
+		if(hasGPU) {
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+			if(!onlyGPU) {
+				JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+				JCuda.cudaDeviceSynchronize();
+			}
+		}
+	}
+	
 	public Tensor(int number,int channel,int height,int width,boolean hasGPU,Graph g) {
 		this.g = g;
 		this.number = number;
@@ -229,6 +249,16 @@ public class Tensor implements Serializable{
 		return t;
 	}
 	
+	public static Tensor createGPUTensor(Tensor t,int number,int channel,int height,int width,boolean hasGPU) {
+		if(t == null) {
+			t = new Tensor(number, channel, height, width, hasGPU, true);
+		}else {
+			t.resize(number, channel, height, width, true);
+			t.orgShape = new int[] {number, channel, height, width};
+		}
+		return t;
+	}
+	
 	public void resize(int number,int channel,int height,int width) {
 		this.number = number;
 		this.channel = channel;
@@ -236,6 +266,23 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = new float[this.dataLength];
+		if(hasGPU) {
+			if(gpuData != null) {
+				CUDAMemoryManager.free(gpuData);
+			}
+			gpuData = CUDAMemoryManager.getPointer(dataLength);
+		}
+	}
+	
+	public void resize(int number,int channel,int height,int width,boolean onlyGPU) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		if(!onlyGPU) {
+			this.data = new float[this.dataLength];
+		}
 		if(hasGPU) {
 			if(gpuData != null) {
 				CUDAMemoryManager.free(gpuData);
@@ -431,6 +478,9 @@ public class Tensor implements Serializable{
 	}
 	
 	public float[] syncHost() {
+		if(data == null) {
+			this.data = new float[this.dataLength];
+		}
 		JCuda.cudaMemcpy(Pointer.to(data), gpuData, this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
 		return data;
 	}

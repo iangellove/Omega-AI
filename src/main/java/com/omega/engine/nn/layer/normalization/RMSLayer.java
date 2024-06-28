@@ -112,15 +112,16 @@ public class RMSLayer extends NormalizationLayer {
 		
 		if(this.gamma == null) {
 			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
-			if(network != null) {
-				this.diffGamma = this.network.createParamterGrad(1, 1, 1, this.meanNum, true);
-			}else {
-				this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
-			}
+//			if(network != null) {
+//				this.diffGamma = this.network.createParamterGrad(1, 1, 1, this.meanNum, true);
+//			}else {
+//				this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+//			}
+			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
 		}
 		
 		if(this.output == null || this.number != this.output.number) {
-			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 		
 	}
@@ -146,15 +147,16 @@ public class RMSLayer extends NormalizationLayer {
 		
 		if(this.gamma == null) {
 			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
-			if(network != null) {
-				this.diffGamma = this.network.createParamterGrad(1, 1, 1, meanNum, true);
-			}else {
-				this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
-			}
+//			if(network != null) {
+//				this.diffGamma = this.network.createParamterGrad(1, 1, 1, meanNum, true);
+//			}else {
+//				this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+//			}
+			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
 		}
 		
 		if(this.output == null || this.number != this.output.number) {
-			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 		
 	}
@@ -167,13 +169,13 @@ public class RMSLayer extends NormalizationLayer {
 	@Override
 	public void initBack() {
 		if(this.diff == null) {
-			this.diff = new Tensor(input.number, input.channel, input.height, input.width, true);
+			this.diff = new Tensor(input.number, input.channel, input.height, input.width, true, true);
 		}
 	}
 	
 	public void initBack(Tensor diff) {
 		if(this.diff == null) {
-			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true);
+			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true, true);
 		}
 	}
 

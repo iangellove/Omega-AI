@@ -108,6 +108,10 @@ public abstract class Optimizer {
 	
 	public int[] lr_step;
 	
+	public int warmUpTime = 0;
+	
+	public int lrDecayIters = 0;
+	
 	public abstract void train(BaseData trainingData);
 	
 	public abstract void train(BaseData trainingData,BaseData testData);
@@ -215,6 +219,84 @@ public abstract class Optimizer {
 				}else {
 					this.network.learnRate = this.trainIndex * this.network.learnRate / lrStartTime;
 				}
+				break;
+			case COSINE_ANNEALING:
+				this.network.learnRate = (float) (min_lr + 0.5d * (max_lr - min_lr) * (Math.cos(this.trainIndex * Math.PI / this.trainMax) + 1.0d));
+//				System.out.println(this.trainMax);
+				break;
+			case RANDOM:
+				this.network.learnRate = (float) Math.pow(RandomUtils.getInstance().nextFloat(), power) * this.lr;
+				break;
+			case POLY:
+				float t = batchIndex * 1.0f / trainTime / dataSize * batchSize;
+				this.network.learnRate = (float) (this.lr * Math.pow((1.0f - t), power));
+				break;
+			case STEP:
+				this.network.learnRate = (float) (this.lr * Math.pow(this.scale, batchIndex / step));
+				break;
+			case EXP:
+				this.network.learnRate = (float) (this.lr * Math.pow(this.gama, batchIndex));
+				break;
+			case SIG:
+				this.network.learnRate = (float) (this.lr / (1.0f + Math.pow(Math.E, this.gama * (batchIndex - step))));
+				break;
+			case HALF:
+				if(counter % 10 == 0) {
+					this.network.learnRate = HalfDecay.decayedLR(this.network.learnRate);
+				}
+				break;
+			case SMART_HALF:
+
+				if(this.learnRateUpdate == LearnRateUpdate.SMART_HALF) {
+					
+					if(lr_step != null) {
+						
+						for(int index:lr_step) {
+							if(index == this.trainIndex) {
+								this.network.learnRate = this.network.learnRate * 0.1f;
+							}
+						}
+						
+					}else if(this.trainIndex % 200 == 0){
+						
+						this.network.learnRate = this.network.learnRate * 0.5f;
+						
+					}
+					
+				}
+				
+				break;
+			default:
+				break;
+			}
+			
+		}
+		
+	}
+	
+	public void updateLR(int[] lr_step,int step) {
+		int it = (trainIndex - 1) * this.dataSize + step;
+		if(warmUp && it < warmUpTime) {
+			this.network.learnRate = this.lr * it / warmUpTime;
+		}else {
+			if(it > lrDecayIters) {
+				this.network.learnRate = this.min_lr;
+			}
+			switch (this.learnRateUpdate) {
+			case LR_DECAY:
+				this.network.learnRate = LRDecay.decayedLR(this.max_lr, this.network.learnRate, this.trainIndex, 5);
+				break;
+			case GD_GECAY:
+				this.network.learnRate = GDDecay.decayedLR(this.max_lr, this.trainIndex);
+				break;
+			case NONE:
+				break;
+			case CONSTANT:
+				break;
+			case COSINE:
+				double decay_ratio = (it - warmUpTime) * 1.0d / (lrDecayIters - warmUpTime) * 1.0d;
+				double coeff = 0.5d * (1.0d + Math.cos(Math.PI * decay_ratio));
+				this.network.learnRate = (float) (this.min_lr + coeff * (this.lr - this.min_lr));
 				break;
 			case COSINE_ANNEALING:
 				this.network.learnRate = (float) (min_lr + 0.5d * (max_lr - min_lr) * (Math.cos(this.trainIndex * Math.PI / this.trainMax) + 1.0d));

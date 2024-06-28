@@ -134,24 +134,24 @@ public class TransformerBlock extends Layer{
 //		this.output.showShape();
 	}
 	
-	public void output(Tensor mask) {
-		// TODO Auto-generated method stub
-		
-		ln1.forward(input);
-		
-//		attn.forward(ln1.getOutput(), mask);
-		attn.forward(ln1.getOutput());
-		
-		TensorOP.add(attn.getOutput(), input, tmp1);
-		
-		ln2.forward(tmp1);
-		
-		mlp.forward(ln2.getOutput());
-		
-		TensorOP.add(mlp.getOutput(), tmp1, tmp2);
-		
-		this.output = tmp2;
-	}
+//	public void output(Tensor mask) {
+//		// TODO Auto-generated method stub
+//		
+//		ln1.forward(input);
+//		
+////		attn.forward(ln1.getOutput(), mask);
+//		attn.forward(ln1.getOutput());
+//		
+//		TensorOP.add(attn.getOutput(), input, tmp1);
+//		
+//		ln2.forward(tmp1);
+//		
+//		mlp.forward(ln2.getOutput());
+//		
+//		TensorOP.add(mlp.getOutput(), tmp1, tmp2);
+//		
+//		this.output = tmp2;
+//	}
 	
 	@Override
 	public Tensor getOutput() {
@@ -234,22 +234,22 @@ public class TransformerBlock extends Layer{
 		
 	}
 	
-	public void forward(Tensor input,Tensor mask) {
-		// TODO Auto-generated method stub
-		/**
-		 * 设置输入
-		 */
-		this.setInput(input);
-		/**
-		 * 参数初始化
-		 */
-		this.init();
-		/**
-		 * 计算输出
-		 */
-		this.output(mask);
-		
-	}
+//	public void forward(Tensor input,Tensor mask) {
+//		// TODO Auto-generated method stub
+//		/**
+//		 * 设置输入
+//		 */
+//		this.setInput(input);
+//		/**
+//		 * 参数初始化
+//		 */
+//		this.init();
+//		/**
+//		 * 计算输出
+//		 */
+//		this.output(mask);
+//		
+//	}
 	
 	@Override
 	public void back(Tensor delta) {

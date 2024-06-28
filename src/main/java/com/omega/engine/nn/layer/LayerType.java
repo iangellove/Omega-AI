@@ -35,10 +35,12 @@ public enum LayerType {
 	mutli_head_attention("mutli_head_attention"),
 	poswise_feed_forward("poswise_feed_forward"),
 	mlp("mlp"),
+	feed_forward("feed_forward"),
 	transformer_decoder("transformer_decoder"),
 	transformer_block("transformer_block"),
 	lstm("lstm"),
 	embedding("embedding"),
+	rope("rope"),
 	dropout("dropout");
 	
 	private String key;

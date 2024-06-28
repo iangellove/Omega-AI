@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.gpu.cudnn.FullyCudnnKernel;
@@ -92,7 +93,7 @@ public class FullyLayer extends Layer{
 	public void initBack() {
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number){
-			this.diff = new Tensor(number, channel, height, width, true);
+			this.diff = new Tensor(number, channel, height, width, true, true);
 		}
 	}
 
@@ -102,7 +103,7 @@ public class FullyLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		if(this.output == null || this.number != this.output.number){
-			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 	}
 	
@@ -111,7 +112,7 @@ public class FullyLayer extends Layer{
 		initKernel();
 		this.number = input.number;
 		if(this.output == null || this.number != this.output.number){
-			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 	}
 	
@@ -127,18 +128,20 @@ public class FullyLayer extends Layer{
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.order(this.width * this.oWidth, 0.1f, 0.01f), true);
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.val(this.width * this.oWidth, 0.1f), true);
 //		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.heRandom(this.width * this.oWidth, this.width * this.oWidth));
-		if(this.network!=null){
-			this.diffW = this.network.createParamterGrad(1, 1, width, oWidth, true);
-		}else {
-			this.diffW = new Tensor(1, 1, width, oWidth, true);
-		}
+//		if(this.network!=null){
+//			this.diffW = this.network.createParamterGrad(1, 1, width, oWidth, true);
+//		}else {
+//			this.diffW = new Tensor(1, 1, width, oWidth, true, true);
+//		}
+		this.diffW = new Tensor(1, 1, width, oWidth, true, true);
 		if(hasBias){
-			this.bias = new Tensor(1, 1, 1, oWidth, RandomUtils.kaimingUniformBias(oWidth, this.width), true);
-			if(this.network != null){
-				this.diffB = this.network.createParamterGrad(1, 1, 1, oWidth, true);
-			}else {
-				this.diffB = new Tensor(1, 1, 1, oWidth, true);
-			}
+			this.bias = new Tensor(1, 1, 1, oWidth, MatrixUtils.one(oWidth), true);
+//			if(this.network != null){
+//				this.diffB = this.network.createParamterGrad(1, 1, 1, oWidth, true);
+//			}else {
+//				this.diffB = new Tensor(1, 1, 1, oWidth, true);
+//			}
+			this.diffB = new Tensor(1, 1, 1, oWidth, true);
 		}
 	}
 	

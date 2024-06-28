@@ -572,11 +572,11 @@ public class GPTTest {
 			
 			boolean bias = false;
 			
-			boolean dropout = true;
+			boolean dropout = false;
 			
 			int batchSize = 32;
 			
-			int max_len = 64;
+			int max_len = 128;
 			
 			int embedDim = 128;
 			
@@ -610,15 +610,13 @@ public class GPTTest {
 			
 			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length());
 			
-			Tensor mask = CNChatTokenizer.triu(1, network.headNum, pre_txt.length(), pre_txt.length(), 1);
-			
 			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
 			
 			for(int i = 0;i<gen_len;i++) {
 				network.time = input.number;
 //				System.out.println(input.number);
 //				input.showDM();
-				String txt = genTxt(input, output, network, trainData, pre_txt.length(), mask, positions);
+				String txt = genTxt(input, output, network, trainData, pre_txt.length(), positions);
 //				System.out.println("output txt="+txt);
 				if(network.time > 1) {
 					pre_txt += txt.substring(input.number - 1, input.number);
@@ -682,14 +680,12 @@ public class GPTTest {
 			
 			Tensor positions = CNChatTokenizer.getPositions(1, pre_txt.length());
 			
-			Tensor mask = CNChatTokenizer.triu(1, network.headNum, pre_txt.length(), pre_txt.length(), 1);
-			
 			input = createTxtData(input, pre_txt, trainData.characters, trainData.dictionary, max_len);
 			input.shape();
 			positions.shape();
 			for(int i = 0;i<gen_len;i++) {
 				network.time = input.number;
-				String txt = genTxt(input, output, network, trainData, pre_txt.length(), mask, positions);
+				String txt = genTxt(input, output, network, trainData, pre_txt.length(), positions);
 				System.out.println("output txt="+txt);
 				if(network.time > 1) {
 					pre_txt += txt.substring(input.number - 1, input.number);
@@ -785,15 +781,15 @@ public class GPTTest {
 		return input;
 	}
 	
-	public static String genTxt(Tensor input,Tensor output,Tensor softmaxOut,NanoGPT network,CNTokenizer trainData,int maxLength,Tensor mask, Tensor positions) {
+	public static String genTxt(Tensor input,Tensor output,Tensor softmaxOut,NanoGPT network,CNTokenizer trainData,int maxLength, Tensor positions) {
 
 		CNChatTokenizer.getPositions(1, maxLength, positions);
-		
-		CNChatTokenizer.triu(1, network.headNum, maxLength, maxLength, 1, mask);
-		
+//		
+//		CNChatTokenizer.triu(1, network.headNum, maxLength, maxLength, 1, mask);
+//		
 		network.time = maxLength;
 
-		output = network.forward(input, positions, mask);
+		output = network.forward(input, positions);
 //		output.syncHost();
 		softmaxOut = Tensor.createTensor(softmaxOut,input.number, input.channel, input.height, input.width, true);
 		kernel.softmax_out(output, softmaxOut);
@@ -802,15 +798,15 @@ public class GPTTest {
 		return output2TXT(softmaxOut, trainData);
 	}
 	
-	public static String genTxt(Tensor input,Tensor output,NanoGPT network,CNTokenizer trainData,int time,Tensor mask, Tensor positions) {
+	public static String genTxt(Tensor input,Tensor output,NanoGPT network,CNTokenizer trainData,int time, Tensor positions) {
 
 		CNChatTokenizer.getPositions(1, input.number, positions);
 		
-		CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
+//		CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
 		
 		network.time = input.number;
 
-		output = network.forward(input, positions, mask);
+		output = network.forward(input, positions);
 		output.syncHost();
 //		output.showDMByNumber(0);
 		return output2TXT(output, trainData);

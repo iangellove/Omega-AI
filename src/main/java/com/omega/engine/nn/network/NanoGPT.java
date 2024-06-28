@@ -136,22 +136,22 @@ public class NanoGPT extends Network {
 		
 		return this.getOutput();
 	}
-	
-	public Tensor forward(Tensor input,Tensor positions,Tensor mask) {
-//		System.out.println("en_time:"+en_time+",de_time:"+de_time);
-		/**
-		 * 设置输入数据
-		 */
-		this.setInputData(input);
-		
-		inputLayer.forward();
-		
-		decoder.forward(input, mask, positions);
-		
-		fullyLayer.forward(decoder.getOutput());
-
-		return this.getOutput();
-	}
+//	
+//	public Tensor forward(Tensor input,Tensor positions,Tensor mask) {
+////		System.out.println("en_time:"+en_time+",de_time:"+de_time);
+//		/**
+//		 * 设置输入数据
+//		 */
+//		this.setInputData(input);
+//		
+//		inputLayer.forward();
+//		
+//		decoder.forward(input, mask, positions);
+//		
+//		fullyLayer.forward(decoder.getOutput());
+//
+//		return this.getOutput();
+//	}
 	
 	@Override
 	public void back(Tensor lossDiff) {

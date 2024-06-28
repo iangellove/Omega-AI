@@ -163,7 +163,7 @@ public class TransformerDecoder2 extends Layer{
 		Tensor decoderOutput = src_emb.getOutput();
 		
 		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).forward(decoderOutput, mask);
+			decoderLayers.get(i).forward(decoderOutput);
 			decoderOutput = decoderLayers.get(i).getOutput();
 		}
 

@@ -1,7 +1,6 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.layer.active.GeluLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;

@@ -170,19 +170,19 @@ public class LlamaCausalSelfAttentionLayer extends Layer{
 		
 		if(this.preatt == null || this.preatt.number != this.batchSize || this.preatt.width != this.time) {
 			// [batch_size，time，head_num，d_k]
-			this.rq = Tensor.createTensor(this.rq, batchSize, time, headNum, dk, true);
-			this.rk = Tensor.createTensor(this.rk, batchSize, time, headNum, dk, true);
-			this.qt = Tensor.createTensor(this.qt, batchSize, headNum, time, dk, true);
-			this.kt = Tensor.createTensor(this.kt, batchSize, headNum, time, dk, true);
-			this.vt = Tensor.createTensor(this.vt, batchSize, headNum, time, dk, true);
+			this.rq = Tensor.createGPUTensor(this.rq, batchSize, time, headNum, dk, true);
+			this.rk = Tensor.createGPUTensor(this.rk, batchSize, time, headNum, dk, true);
+			this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
+			this.kt = Tensor.createGPUTensor(this.kt, batchSize, headNum, time, dk, true);
+			this.vt = Tensor.createGPUTensor(this.vt, batchSize, headNum, time, dk, true);
 			// [batch_size，n_heads，len_q，len_k]
-			this.preatt = Tensor.createTensor(this.preatt, batchSize, headNum, time, time, true);
+			this.preatt = Tensor.createGPUTensor(this.preatt, batchSize, headNum, time, time, true);
 			// [batch_size，n_heads，len_q，len_k]
-			this.attn = Tensor.createTensor(this.attn, batchSize, headNum, time, time, true);
+			this.attn = Tensor.createGPUTensor(this.attn, batchSize, headNum, time, time, true);
 			// [batch_size, n_heads, len_q, dim_v]
-			this.vaccum = Tensor.createTensor(this.vaccum, batchSize, headNum, time, dk, true);
+			this.vaccum = Tensor.createGPUTensor(this.vaccum, batchSize, headNum, time, dk, true);
 			// [batch_size, len_q, n_heads * dim_v]
-			this.oi = Tensor.createTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
+			this.oi = Tensor.createGPUTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
 		}
 		
 		this.qt.viewOrg();
@@ -201,12 +201,12 @@ public class LlamaCausalSelfAttentionLayer extends Layer{
 	public void initBack() {
 		// TODO Auto-generated method stub
 		if(this.dvaccum == null){
-			this.dvaccum = Tensor.createTensor(this.dvaccum, batchSize, headNum, time, dk, true);
-			this.dqt = Tensor.createTensor(this.dqt, batchSize, headNum, time, dk, true);
-			this.dkt = Tensor.createTensor(this.dkt, batchSize, headNum, time, dk, true);
-			this.dvt = Tensor.createTensor(this.dvt, batchSize, headNum, time, dk, true);
-			this.dattn = Tensor.createTensor(this.dattn, batchSize, headNum, time, time, true);
-			this.dpreatt = Tensor.createTensor(this.dpreatt, batchSize, headNum, time, time, true);
+			this.dvaccum = Tensor.createGPUTensor(this.dvaccum, batchSize, headNum, time, dk, true);
+			this.dqt = Tensor.createGPUTensor(this.dqt, batchSize, headNum, time, dk, true);
+			this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, time, dk, true);
+			this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, time, dk, true);
+			this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
+			this.dpreatt = Tensor.createGPUTensor(this.dpreatt, batchSize, headNum, time, time, true);
 		}else {
 			this.dvaccum.clearGPU();
 		}

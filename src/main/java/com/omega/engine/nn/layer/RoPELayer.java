@@ -166,7 +166,7 @@ public class RoPELayer extends Layer {
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.dropout;
+		return LayerType.rope;
 	}
 
 	@Override

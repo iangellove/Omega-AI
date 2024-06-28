@@ -50,7 +50,7 @@ public class EmbeddingIDLayer extends Layer{
 	public void initBack() {
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number){
-			this.diff = new Tensor(number, channel, height, width, true);
+			this.diff = new Tensor(number, channel, height, width, true, true);
 		}
 	}
 
@@ -59,7 +59,7 @@ public class EmbeddingIDLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		if(this.output == null || this.number != this.output.number){
-			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 	}
 	
@@ -67,7 +67,7 @@ public class EmbeddingIDLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = input.number;
 		if(this.output == null || this.number != this.output.number){
-			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 	}
 	
@@ -78,7 +78,7 @@ public class EmbeddingIDLayer extends Layer{
 			kernel = new EmbeddingKernel();
 		}
 		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_uniform(this.width * this.oWidth, this.width, this.paramsInit), true);
-		this.diffW = new Tensor(1, 1, width, oWidth, true);
+		this.diffW = new Tensor(1, 1, width, oWidth, true, true);
 	}
 	
 	@Override

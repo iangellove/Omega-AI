@@ -31,6 +31,8 @@ public class LlamaMLPLayer extends Layer{
 	
 	private Tensor tmp;
 	
+	private int multiple_of = 32;
+	
 	public LlamaMLPLayer(int embedDim,int nChannel,boolean bias) {
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
@@ -38,6 +40,9 @@ public class LlamaMLPLayer extends Layer{
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
+		this.nChannel = 4 * embedDim;
+		this.nChannel = 2 * nChannel / 3;
+		this.nChannel = multiple_of * ((this.nChannel + multiple_of - 1) / multiple_of);
 		this.initLayers();
 	}
 	
@@ -52,6 +57,9 @@ public class LlamaMLPLayer extends Layer{
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
+		this.nChannel = 4 * embedDim;
+		this.nChannel = 2 * nChannel / 3;
+		this.nChannel = multiple_of * ((this.nChannel + multiple_of - 1) / multiple_of);
 		this.initLayers();
 	}
 	
@@ -79,7 +87,7 @@ public class LlamaMLPLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
 		if(this.tmp == null || this.number != this.tmp.number){
-			this.tmp = Tensor.createTensor(this.tmp, number, oChannel, oHeight, nChannel, true);
+			this.tmp = Tensor.createGPUTensor(this.tmp, number, oChannel, oHeight, nChannel, true);
 		}
 	}
 	
@@ -234,6 +242,7 @@ public class LlamaMLPLayer extends Layer{
 		// TODO Auto-generated method stub
 		linear1.update();
 		linear2.update();
+		linear3.update();
 	}
 
 	@Override
@@ -245,7 +254,7 @@ public class LlamaMLPLayer extends Layer{
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.mlp;
+		return LayerType.feed_forward;
 	}
 
 	@Override

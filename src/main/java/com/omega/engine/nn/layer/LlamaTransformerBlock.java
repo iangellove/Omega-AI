@@ -75,7 +75,7 @@ public class LlamaTransformerBlock extends Layer{
 
 		this.norm2 = new RMSLayer(attn);
 		
-		this.mlp = new LlamaMLPLayer(embedDim, embedDim * 4, bias, network);
+		this.mlp = new LlamaMLPLayer(embedDim, embedDim, bias, network);
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
@@ -92,8 +92,8 @@ public class LlamaTransformerBlock extends Layer{
 //			if(this.tmp1 == null) {
 //				System.out.println(number+":"+embedDim);
 //			}
-			this.tmp1 = Tensor.createTensor(this.tmp1, number, 1, 1, embedDim, true);
-			this.tmp2 = Tensor.createTensor(this.tmp2, number, 1, 1, embedDim, true);
+			this.tmp1 = Tensor.createGPUTensor(this.tmp1, number, 1, 1, embedDim, true);
+			this.tmp2 = Tensor.createGPUTensor(this.tmp2, number, 1, 1, embedDim, true);
 		}
 	}
 	

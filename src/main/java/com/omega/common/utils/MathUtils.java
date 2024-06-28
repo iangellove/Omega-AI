@@ -111,7 +111,7 @@ public class MathUtils {
 	 * @param length
 	 * @return
 	 */
-	public static int[][] sortInt(int length,int batchSize) {
+	public static int[][] sortInts(int length,int batchSize) {
 		
 		int itc = new BigDecimal(length).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_DOWN).intValue();
 		

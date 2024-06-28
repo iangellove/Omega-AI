@@ -111,6 +111,14 @@
         </dependency>
         <!-- 可选配置 -->
         
+        <!-- https://mvnrepository.com/artifact/ai.djl.sentencepiece/sentencepiece -->
+		<dependency>
+		    <groupId>ai.djl.sentencepiece</groupId>
+		    <artifactId>sentencepiece</artifactId>
+		    <version>0.28.0</version>
+		</dependency>
+
+        
 	</dependencies>
 
 

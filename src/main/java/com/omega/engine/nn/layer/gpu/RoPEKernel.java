@@ -399,5 +399,18 @@ public class RoPEKernel extends BaseKernel{
     	Tensor sin_t = new Tensor(1, 1, t.length, freqs.length, sin, true);
     	return new Tensor[] {cos_t, sin_t};
     }
+    
+    public static void getCosAndSin(int time,int dim,int headNum,Tensor[] pos) {
+    	int headSize = dim / headNum;
+    	float[] freqs = freqs(0, headSize, 2);
+    	float[] t = MatrixUtils.order(time, 0, 1);
+    	float[] o = outer(t, freqs);
+    	float[] cos = MatrixOperation.cos(o);
+    	float[] sin = MatrixOperation.sin(o);
+    	Tensor cos_t = pos[0];
+    	Tensor sin_t = pos[1];
+    	cos_t = Tensor.createTensor(cos_t, 1, 1, t.length, freqs.length, cos, true);
+    	sin_t = Tensor.createTensor(sin_t, 1, 1, t.length, freqs.length, sin, true);
+    }
 
 }

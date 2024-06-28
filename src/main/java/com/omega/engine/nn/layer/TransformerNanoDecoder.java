@@ -183,31 +183,31 @@ public class TransformerNanoDecoder extends Layer{
 //		this.output = out1;
 	}
 	
-	public void output(Tensor mask,Tensor positions) {
-		// TODO Auto-generated method stub
-	
-		src_emb.forward(input);
-
-		pos_emb.forward(positions);
-
-		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
-		
-		Tensor out1 = src_emb.getOutput();
-
-		if(dropout) {
-			this.dropoutLayer.forward(out1);
-			out1 = dropoutLayer.getOutput();
-		}
-		
-		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).forward(out1, mask);
-			out1 = decoderLayers.get(i).getOutput();
-		}
-
-		this.ln.forward(out1);
-		this.output = this.ln.getOutput();
-//		this.output = decoderOutput;
-	}
+//	public void output(Tensor mask,Tensor positions) {
+//		// TODO Auto-generated method stub
+//	
+//		src_emb.forward(input);
+//
+//		pos_emb.forward(positions);
+//
+//		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
+//		
+//		Tensor out1 = src_emb.getOutput();
+//
+//		if(dropout) {
+//			this.dropoutLayer.forward(out1);
+//			out1 = dropoutLayer.getOutput();
+//		}
+//		
+//		for(int i = 0;i<n_layers;i++) {
+//			decoderLayers.get(i).forward(out1, mask);
+//			out1 = decoderLayers.get(i).getOutput();
+//		}
+//
+//		this.ln.forward(out1);
+//		this.output = this.ln.getOutput();
+////		this.output = decoderOutput;
+//	}
 	
 	@Override
 	public Tensor getOutput() {
@@ -312,22 +312,22 @@ public class TransformerNanoDecoder extends Layer{
 		
 	}
 	
-	public void forward(Tensor input,Tensor mask,Tensor positions) {
-		// TODO Auto-generated method stub
-		/**
-		 * 设置输入
-		 */
-		this.setInput(input);
-		/**
-		 * 参数初始化
-		 */
-		this.init();
-		/**
-		 * 计算输出
-		 */
-		this.output(mask, positions);
-		
-	}
+//	public void forward(Tensor input,Tensor mask,Tensor positions) {
+//		// TODO Auto-generated method stub
+//		/**
+//		 * 设置输入
+//		 */
+//		this.setInput(input);
+//		/**
+//		 * 参数初始化
+//		 */
+//		this.init();
+//		/**
+//		 * 计算输出
+//		 */
+//		this.output(mask, positions);
+//		
+//	}
 	
 	@Override
 	public void back(Tensor delta) {

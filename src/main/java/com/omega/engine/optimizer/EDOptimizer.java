@@ -27,6 +27,7 @@ import com.omega.example.rnn.data.IndexDataLoader;
 import com.omega.example.transformer.utils.CNChatTokenizer;
 import com.omega.example.transformer.utils.CNChatTokenizer2;
 import com.omega.example.transformer.utils.CNTokenizer;
+import com.omega.example.transformer.utils.CNWikiTokenizer;
 import com.omega.example.transformer.utils.ENTokenizer;
 
 import jcuda.driver.JCudaDriver;
@@ -925,7 +926,7 @@ public class EDOptimizer extends Optimizer {
 
 			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
 			
-			Tensor mask = ENTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
+//			Tensor mask = ENTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
 			
 			Tensor positions = ENTokenizer.getPositions(batchSize, network.time);
 			
@@ -971,7 +972,7 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * forward
 					 */
-					output = network.forward(input, positions, mask);
+					output = network.forward(input, positions);
 //					output.showDMByNumber(0);
 //					label.showDMByNumber(0);
 					/**
@@ -1361,8 +1362,6 @@ public class EDOptimizer extends Optimizer {
 
 			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
 			
-			Tensor mask = CNChatTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
-
 			Tensor positions = CNChatTokenizer.getPositions(batchSize, network.time);
 			
 			for(int i = 0;i<this.trainTime;i++) {
@@ -1400,7 +1399,7 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * forward
 					 */
-					output = network.forward(input, positions, mask);
+					output = network.forward(input, positions);
 					
 					/**
 					 * loss
@@ -1464,10 +1463,10 @@ public class EDOptimizer extends Optimizer {
 
 					this.batchIndex++;
 					
-					if(it != 0 && it % 200 == 0) {
-						vail_gen(network, input, output, label, mask, positions, trainingData);
-						network.RUN_MODEL = RunModel.TRAIN;
-					}
+//					if(it != 0 && it % 200 == 0) {
+//						vail_gen(network, input, output, label, positions, trainingData);
+//						network.RUN_MODEL = RunModel.TRAIN;
+//					}
 				}
 				
 //				showOutputAndLabel(trainingData, inputEncoder, output, label, this.batchSize);
@@ -1736,6 +1735,136 @@ public class EDOptimizer extends Optimizer {
 		}
 	}
 	
+	public void trainLlama2_wiki(CNWikiTokenizer trainingData) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Llama2 network = (Llama2) this.network;
+			
+			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
+
+			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
+
+			Tensor[] cs = RoPEKernel.getCosAndSin(network.time, network.embedDim, network.headNum);
+			
+			Tensor cos = cs[0];
+			
+			Tensor sin = cs[1];
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+
+//				int[][] indexs = MathUtils.randomInts(trainingData.trainData.size(),this.batchSize);
+				
+				int[][] indexs = MathUtils.sortInts(trainingData.trainData.size(),this.batchSize);
+				
+				Tensor output = null;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+					
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadTrainData(indexs[it], input, label);
+					
+					/**
+					 * forward
+					 */
+					output = network.forward(cos, sin, input);
+					
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, label, trainingData.dictionary.get("<pad>"));
+
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label, trainingData.dictionary.get("<pad>"));
+
+					/**
+					 * back
+					 */
+					network.back(cos, sin, this.lossDiff);
+
+					/**
+					 * update
+					 */
+					this.network.update();
+
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
+					}
+
+					output.syncHost();
+					
+					if(it % 20 == 0) {
+						int time = output.number / batchSize;
+						float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
+					}
+
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+					
+//					if(it != 0 && it % 200 == 0) {
+//						vail_chat(network, input, output, label, positions, trainingData);
+//						network.RUN_MODEL = RunModel.TRAIN;
+//					}
+
+					/**
+					 * update learning rate
+					 */
+					this.updateLR(this.lr_step, it);
+
+				}
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
 	@Override
 	public void train(BaseData trainingData, BaseData testData) {
 		// TODO Auto-generated method stub
@@ -1903,7 +2032,7 @@ public class EDOptimizer extends Optimizer {
 		return txt;
 	}
 	
-	public void vail_gen(NanoGPT network,Tensor input,Tensor output,Tensor label,Tensor mask,Tensor positions,CNTokenizer trainingData) {
+	public void vail_gen(NanoGPT network,Tensor input,Tensor output,Tensor label,Tensor positions,CNTokenizer trainingData) {
 		network.RUN_MODEL = RunModel.TEST;
 		int[][] vailIndexs = MathUtils.randomInts(trainingData.vailData.length - network.time,this.batchSize);
 		
@@ -1924,7 +2053,7 @@ public class EDOptimizer extends Optimizer {
 			/**
 			 * forward
 			 */
-			output = network.forward(input, positions, mask);
+			output = network.forward(input, positions);
 			
 			/**
 			 * loss

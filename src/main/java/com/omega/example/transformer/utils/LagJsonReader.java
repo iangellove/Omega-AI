@@ -1,0 +1,112 @@
+package com.omega.example.transformer.utils;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import com.omega.common.utils.JsonUtils;
+
+public class LagJsonReader {
+	
+	private final static String[] _patterns = new String[]{"\\'", "\\\"", "\\.", "<br />", "\\,", "\\(", "\\)", "\\!", "\\?", "\\;", "\\:", "\\s+", "\\r", "\n"};
+
+	private final static String[] _replacements = new String[] {" '  ", "", " . ", " ", " , ", " ( ", " ) ", " ! ", " ? ", " ", " ", " ","",""};
+	
+	// 读取json文件并解析为对象
+	public static List<Map<String,String>> readJsonFileSamll(String path) {
+		
+		List<Map<String,String>> mapList = new ArrayList<Map<String,String>>(); 
+		
+		try {
+			String jsonString = new String(Files.readAllBytes(Paths.get(path)));
+			mapList = JsonUtils.gson.fromJson(jsonString, mapList.getClass());
+			return mapList;
+        } catch (IOException e) {
+           e.printStackTrace();
+        }
+    	
+	    return null;
+	}
+	
+
+	public static List<Map<String,String>> readJsonFile(String path) {
+		
+		List<Map<String,String>> mapList = new ArrayList<Map<String,String>>(); 
+		
+		try {
+		    FileReader fileReader = new FileReader(path);
+		    BufferedReader bufferedReader = new BufferedReader(fileReader);
+		    StringBuilder stringBuilder = new StringBuilder();
+		    String line;
+		    
+		    while ((line = bufferedReader.readLine()) != null) {
+		    	System.out.println(line);
+		        stringBuilder.append(line);
+		    }
+		    bufferedReader.close();
+		    String json = stringBuilder.toString();
+		    mapList = JsonUtils.gson.fromJson(json, mapList.getClass());
+		    return mapList;
+		} catch (IOException e) {
+		    e.printStackTrace();
+		}
+    	
+	    return null;
+	}
+	
+	public static void loadDataForJson(String dataPath,String txtPath) {
+		
+		List<Map<String, String>> list = LagJsonReader.readJsonFileSamll(dataPath);
+		
+		String strTmp = "";
+		try {
+			FileWriter fileWriter = new FileWriter(txtPath);
+	        BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+
+			for(int i = 0;i<list.size();i++) {
+				strTmp = list.get(i).get("completion");
+				for(int p = 0;p<_patterns.length;p++) {
+	        		strTmp = strTmp.replaceAll(_patterns[p], _replacements[p]);
+	        	}	
+				if(!strTmp.equals(" ") && !strTmp.equals("")) {
+					bufferedWriter.write(strTmp);
+					if(i < list.size() - 1) {
+						bufferedWriter.newLine();
+					}
+	        	}
+			}
+			
+			bufferedWriter.close();
+            fileWriter.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	
+	public static void main(String[] args) {
+		
+//		List<Map<String,String>> mapList = readJsonFile("H:\\transformer_dataset\\563w_baidubaike.json\\563w_baidubaike.json");
+		
+//		List<Map<String,String>> mapList = readJsonFileSamll("H:\\transformer_dataset\\wikipedia-cn-20230720-filtered.json");
+
+//		System.out.println(JsonUtils.toJson(mapList.get(0)));
+		
+		String dataPath = "H:\\transformer_dataset\\wikipedia-cn-20230720-filtered.json";
+		
+		String txtPath = "H:\\transformer_dataset\\wikipedia-cn-20230720-filtered.txt";
+		
+		loadDataForJson(dataPath, txtPath);
+		
+	}
+	
+}
