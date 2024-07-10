@@ -429,10 +429,39 @@ public class GPUOP {
 
         Pointer alphaP = Pointer.to(new float[]{ alpha });
         Pointer betaP = Pointer.to(new float[]{ beta });
-        
         int status = JCublas2.cublasSgemmStridedBatched(handle, transa, transb, m, n, k, alphaP, A, lda,
         		strideA, B, ldb, strideB, betaP, C, ldc, strideC, batchCount);
         checkCUBLASResult(status);
+
+    }
+    
+    public void bmmEX(int transa, 
+            int transb, 
+            int m, 
+            int n, 
+            int k, 
+            float alpha, /** host or device pointer */
+            Pointer A, 
+            int lda, 
+            long strideA, /** purposely signed */
+            Pointer B, 
+            int ldb, 
+            long strideB, 
+            float beta, /** host or device pointer */
+            Pointer C, 
+            int ldc, 
+            long strideC, 
+            int batchCount) {
+
+        Pointer alphaP = Pointer.to(new float[]{ alpha });
+        Pointer betaP = Pointer.to(new float[]{ beta });
+        
+        int status = JCublas2.cublasGemmStridedBatchedEx(handle, transa, transb, m, n, k, alphaP, A, cudaDataType.CUDA_R_32F,
+        		lda, strideA, B, cudaDataType.CUDA_R_32F, ldb, strideB, betaP, C, cudaDataType.CUDA_R_32F, ldc, strideC,
+        		batchCount, cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT);
+        
+        checkCUBLASResult(status);
+
     }
     
     /**

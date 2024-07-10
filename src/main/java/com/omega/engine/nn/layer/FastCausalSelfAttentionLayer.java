@@ -212,8 +212,8 @@ public class FastCausalSelfAttentionLayer extends Layer{
 			this.dpreatt = Tensor.createTensor(this.dpreatt, batchSize, headNum, time, time, true);
 			this.dqkv = Tensor.createTensor(this.dqkv, number, 1, 1, 3 * embedDim, true);
 		}else {
-			this.dqkv.clearGPU();
-			this.dvaccum.clearGPU();
+//			this.dqkv.clearGPU();
+//			this.dvaccum.clearGPU();
 		}
 	}
 
@@ -261,9 +261,9 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		
 		GPUOP.getInstance().bmm(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, key.getGpuData(), dk, time * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), time, time * time, batchSize * headNum);
 
-		attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
+//		attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
 
-		attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time);
+		attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time, d_k);
 		
 		Tensor tmp = attn;
 		
@@ -297,7 +297,8 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		}
 		
 		// backward into preatt
-		attentionKernel.softmax_backward(dpreatt, dattn, attn, batchSize, time, embedDim, headNum);
+		float d_k = (float) (1.0f / Math.sqrt(dk));
+		attentionKernel.softmax_backward(dpreatt, dattn, attn, batchSize, time, embedDim, headNum, d_k);
 		
 		// backward into q
 		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, kt.getGpuData(), dk, time * dk, dpreatt.getGpuData(), time, time * time, 0.0f, dqt.getGpuData(), dk, time * dk, batchSize * headNum);

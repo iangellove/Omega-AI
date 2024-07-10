@@ -16,15 +16,17 @@ import com.omega.engine.loss.gpu.CrossEntropyKernel;
  * @diff: - ∑ y * (1 / f(x))
  *
  */
-public class CrossEntropyLoss2 extends LossFunction {
+public class CrossEntropyLossIdx extends LossFunction {
 
-	public final LossType lossType = LossType.softmax_with_cross_entropy;
+	public final LossType lossType = LossType.softmax_with_cross_entropy_idx;
 	
-	private static CrossEntropyLoss2 instance;
+	private static CrossEntropyLossIdx instance;
 	
 //	private Tensor output;
 	
 	private Tensor loss;
+	
+	private Tensor probs;
 	
 	private Tensor diff;
 	
@@ -32,13 +34,13 @@ public class CrossEntropyLoss2 extends LossFunction {
 	
 	private CrossEntropyKernel crossEntropyKernel;
 	
-	public CrossEntropyLoss2() {
+	public CrossEntropyLossIdx() {
 		initKernel();
 	}
 	
-	public static CrossEntropyLoss2 operation() {
+	public static CrossEntropyLossIdx operation() {
 		if(instance == null) {
-			instance = new CrossEntropyLoss2();
+			instance = new CrossEntropyLossIdx();
 		}
 		return instance;
 	}
@@ -46,6 +48,7 @@ public class CrossEntropyLoss2 extends LossFunction {
 	public void init(Tensor input) {
 		if(loss == null || loss.number != input.number) {
 			this.loss = new Tensor(input.number, 1, 1, 1, true);
+			this.probs = new Tensor(input.number, input.channel, input.height, input.width, true);
 //			this.output = new Tensor(input.number, input.channel, input.height, input.width, true);
 			this.diff = new Tensor(input.number, input.channel, input.height, input.width, true);
 		}
@@ -75,7 +78,11 @@ public class CrossEntropyLoss2 extends LossFunction {
 		 * log(exp(xi)/sum(exp(X))) = (xi - max) - log(sum(exp(xi - max)))
 		 * 该操作为了防止上溢出与下溢出情况导致nan与inf出现.
 		 */
-		crossEntropyKernel.forward(x, label, loss);
+//		crossEntropyKernel.softmax(x, probs);
+//		
+//		crossEntropyKernel.crossentropy(probs, label, loss);
+		
+		crossEntropyKernel.forwardIDX2(x, label, probs, loss, -99999);
 		
 		return loss;
 	}
@@ -87,7 +94,9 @@ public class CrossEntropyLoss2 extends LossFunction {
 		/**
 		 * diff(x) = softmax(x) - label
 		 */
-		crossEntropyKernel.backward(x, label, diff);
+//		crossEntropyKernel.crossentropy_backward(probs, label, diff);
+		
+		crossEntropyKernel.backwardIDX2(probs, label, diff, -99999);
 		
 		return diff;
 	}
@@ -95,9 +104,8 @@ public class CrossEntropyLoss2 extends LossFunction {
 	public static void main(String[] args) {
 		float[] x = MatrixUtils.order(20, 0.01f, 0.1f);
 		Tensor xt = new Tensor(2, 1, 1, 10, x, true);
-		float[] label = new float[] {0,1,0,0,0,0,0,0,0,0,
-				0,0,0,0,0,0,0,0,1,0};
-		Tensor labelt = new Tensor(2, 1, 1, 10, label, true);
+		float[] label = new float[] {1, 8};
+		Tensor labelt = new Tensor(2, 1, 1, 1, label, true);
 		
 		float max = MatrixOperation.max(x);
 		
@@ -107,7 +115,7 @@ public class CrossEntropyLoss2 extends LossFunction {
 		
 		PrintUtils.printImage(MatrixOperation.subtraction(tmp, ln));
 		
-		Tensor loss = CrossEntropyLoss2.operation().loss(xt, labelt);
+		Tensor loss = CrossEntropyLossIdx.operation().loss(xt, labelt);
 		
 		PrintUtils.printImage(loss.syncHost());
 		
@@ -115,7 +123,7 @@ public class CrossEntropyLoss2 extends LossFunction {
 		
 		System.out.println("loss:"+JsonUtils.toJson(MatrixOperation.sum(loss.syncHost())/2));
 		
-		Tensor diff = CrossEntropyLoss2.operation().diff(xt, labelt);
+		Tensor diff = CrossEntropyLossIdx.operation().diff(xt, labelt);
 		
 		System.out.println("diff:"+JsonUtils.toJson(diff.syncHost()));
 		
@@ -153,7 +161,11 @@ public class CrossEntropyLoss2 extends LossFunction {
 		 * log(exp(xi)/sum(exp(X))) = (xi - max) - log(sum(exp(xi - max)))
 		 * 该操作为了防止上溢出与下溢出情况导致nan与inf出现.
 		 */
-		crossEntropyKernel.forward(x, label, loss);
+//		crossEntropyKernel.softmax(x, probs);
+//		
+//		crossEntropyKernel.crossentropy(probs, label, loss);
+		
+		crossEntropyKernel.forwardIDX2(x, label, probs, loss, -99999);
 		
 		return loss;
 	}
@@ -165,7 +177,9 @@ public class CrossEntropyLoss2 extends LossFunction {
 		/**
 		 * diff(x) = softmax(x) - label
 		 */
-		crossEntropyKernel.backward(x, label, diff);
+//		crossEntropyKernel.crossentropy_backward(probs, label, diff);
+		
+		crossEntropyKernel.backwardIDX2(probs, label, diff, -99999);
 		
 		return diff;
 	}
@@ -182,7 +196,15 @@ public class CrossEntropyLoss2 extends LossFunction {
 		 * log(exp(xi)/sum(exp(X))) = (xi - max) - log(sum(exp(xi - max)))
 		 * 该操作为了防止上溢出与下溢出情况导致nan与inf出现.
 		 */
-		crossEntropyKernel.forward(x, label, loss, igonre);
+//		crossEntropyKernel.softmax(x, probs);
+//		probs.showDM(0);
+//		JCuda.cudaDeviceSynchronize();
+////		probs.showDMByNumber(0);
+//		crossEntropyKernel.crossentropy_igone(probs, label, loss, igonre);
+//		JCuda.cudaDeviceSynchronize();
+//		loss.showDM();
+		
+		crossEntropyKernel.forwardIDX2(x, label, probs, loss, igonre);
 		
 		return loss;
 	}
@@ -193,7 +215,10 @@ public class CrossEntropyLoss2 extends LossFunction {
 		/**
 		 * diff(x) = softmax(x) - label
 		 */
-		crossEntropyKernel.backward(x, label, diff, igonre);
+//		probs.showDMByNumber(0);
+//		crossEntropyKernel.crossentropy_backward_igone(probs, label, diff, igonre);
+		
+		crossEntropyKernel.backwardIDX2(probs, label, diff, igonre);
 		
 		return diff;
 	}

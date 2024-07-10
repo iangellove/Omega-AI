@@ -12,8 +12,9 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.PrintUtils;
+import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 
-public class CNWikiTokenizer extends BaseTokenizer{
+public class CNWikiTokenizer2 extends BaseTokenizer{
 	
 	private float vailRatio = 0.1f;
 	
@@ -37,7 +38,7 @@ public class CNWikiTokenizer extends BaseTokenizer{
 	
 	private List<Integer[]> idxData = new ArrayList<Integer[]>();
 	
-	public SentencePieceTokenizer tokenizer;
+	public BertTokenizer tokenizer;
 	
 	public static final Map<String,String> specials_dictionary = new HashMap<String, String>(){/**
 		 * 
@@ -83,7 +84,7 @@ public class CNWikiTokenizer extends BaseTokenizer{
 	
 	private int min_len = 30;
 	
-	public CNWikiTokenizer(String dataPath,int max_len,int batchSize) {
+	public CNWikiTokenizer2(String dataPath,int max_len,int batchSize) {
 		this.dataPath = dataPath;
 		this.max_len = max_len;
 		this.batchSize = batchSize;
@@ -95,7 +96,7 @@ public class CNWikiTokenizer extends BaseTokenizer{
 		buildData();
 	}
 	
-	public CNWikiTokenizer(String dataPath,int max_len,int batchSize,boolean isBigData,int maxDataCount) {
+	public CNWikiTokenizer2(String dataPath,int max_len,int batchSize,boolean isBigData,int maxDataCount) {
 		this.dataPath = dataPath;
 		this.max_len = max_len;
 		this.batchSize = batchSize;
@@ -112,12 +113,12 @@ public class CNWikiTokenizer extends BaseTokenizer{
 		buildData();
 	}
 	
-	public CNWikiTokenizer(String dataPath,int max_len,int batchSize,SentencePieceTokenizer tokenizer,int vocab_size,int maxDataCount) {
+	public CNWikiTokenizer2(String dataPath,int max_len,int batchSize,BertTokenizer tokenizer,int maxDataCount) {
 		this.dataPath = dataPath;
 		this.max_len = max_len;
 		this.batchSize = batchSize;
 		this.tokenizer = tokenizer;
-		this.vocab_size = vocab_size;
+		this.vocab_size = tokenizer.vocab_size();
 		this.maxDataCount= maxDataCount;
 		loadTokenizerData();
 //		if(isBigData) {
@@ -352,7 +353,7 @@ public class CNWikiTokenizer extends BaseTokenizer{
 	public void loadTrainData(int[] indexs, Tensor input, Tensor label) {
 		// TODO Auto-generated method stub
 		
-		input.clear();
+//		input.clear();
 		label.clear();
 		
 		for(int i = 0;i<indexs.length;i++) {
@@ -531,28 +532,34 @@ public class CNWikiTokenizer extends BaseTokenizer{
 				int curr = onceToken[t];
 				int next = onceToken[t + 1];
 				input.data[b * max_len + t] = curr;
-				label.data[(b * max_len + t) * vocab_size + next] = 1.0f;
+				label.data[b * max_len + t] = next;
+//				label.data[(b * max_len + t) * vocab_size + next] = 1.0f;
 			}else if(t + 1 == onceToken.length){
 				int curr = onceToken[t];
 				input.data[b * max_len + t] = curr;
-				label.data[(b * max_len + t) * vocab_size + tokenizer.eos] = 1.0f;
+				label.data[b * max_len + t] = tokenizer.eos;
+//				label.data[(b * max_len + t) * vocab_size + tokenizer.eos] = 1.0f;
 			}else {
-				input.data[b * max_len + t] = tokenizer.unk;
-				label.data[(b * max_len + t) * vocab_size + tokenizer.unk] = 1.0f;
+				input.data[b * max_len + t] = tokenizer.pad;
+				label.data[b * max_len + t] = tokenizer.pad;
+//				label.data[(b * max_len + t) * vocab_size + tokenizer.pad] = 1.0f;
 			}
 		}else {
 			if(t + 1 < onceToken.length) {
 				int curr = onceToken[t];
 				int next = onceToken[t + 1];
 				input.data[b * max_len + t] = curr;
-				label.data[(b * max_len + t) * vocab_size + next] = 1.0f;
+				label.data[b * max_len + t] = next;
+//				label.data[(b * max_len + t) * vocab_size + next] = 1.0f;
 			}else if(t + 1 == onceToken.length){
 				int curr = onceToken[t];
 				input.data[b * max_len + t] = curr;
-				label.data[(b * max_len + t) * vocab_size + dictionary.get("<eos>")] = 1.0f;
+				label.data[b * max_len + t] = dictionary.get("<eos>");
+//				label.data[(b * max_len + t) * vocab_size + dictionary.get("<eos>")] = 1.0f;
 			}else {
 				input.data[b * max_len + t] = dictionary.get("<pad>");
-				label.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
+				label.data[b * max_len + t] = dictionary.get("<pad>");
+//				label.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
 			}
 		}
 		

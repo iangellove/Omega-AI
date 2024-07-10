@@ -23,6 +23,8 @@ public class LlamaTransformerDecoder extends Layer{
 	
 	private int embedDim = 0;
 	
+	private boolean flashAttention = false;
+	
 	private boolean bias = false;
 	
 	private boolean dropout = false;
@@ -55,7 +57,8 @@ public class LlamaTransformerDecoder extends Layer{
 		this.initLayers();
 	}
 	
-	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout,Network network) {
+	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention,Network network) {
+		this.flashAttention = flashAttention;
 		this.headNum = headNum;
 		this.n_layers = n_layers;
 		this.network = network;
@@ -84,7 +87,7 @@ public class LlamaTransformerDecoder extends Layer{
 		decoderLayers = new ArrayList<LlamaTransformerBlock>();
 		
 		for(int i = 0;i<n_layers;i++) {
-			LlamaTransformerBlock decoderLayer = new LlamaTransformerBlock(headNum, time, embedDim, bias, dropout, network);
+			LlamaTransformerBlock decoderLayer = new LlamaTransformerBlock(headNum, time, embedDim, bias, dropout, flashAttention, network);
 			decoderLayers.add(decoderLayer);
 		}
 		

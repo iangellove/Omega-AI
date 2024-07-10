@@ -28,9 +28,11 @@ import com.omega.example.transformer.utils.CNChatTokenizer;
 import com.omega.example.transformer.utils.CNChatTokenizer2;
 import com.omega.example.transformer.utils.CNTokenizer;
 import com.omega.example.transformer.utils.CNWikiTokenizer;
+import com.omega.example.transformer.utils.CNWikiTokenizer2;
 import com.omega.example.transformer.utils.ENTokenizer;
 
 import jcuda.driver.JCudaDriver;
+import jcuda.runtime.JCuda;
 
 public class EDOptimizer extends Optimizer {
 
@@ -1759,6 +1761,14 @@ public class EDOptimizer extends Optimizer {
 			
 			Tensor sin = cs[1];
 			
+			int pad = 0;
+			
+			if(trainingData.tokenizer != null) {
+				pad = trainingData.tokenizer.unk;
+			}else {
+				pad = trainingData.dictionary.get("<pad>");
+			}
+			
 			for(int i = 0;i<this.trainTime;i++) {
 				
 				if(this.trainIndex >= this.minTrainTime) {
@@ -1801,12 +1811,12 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * loss
 					 */
-					this.loss = network.loss(output, label, trainingData.dictionary.get("<pad>"));
+					this.loss = network.loss(output, label, pad);
 
 					/**
 					 * loss diff
 					 */
-					this.lossDiff = network.lossDiff(output, label, trainingData.dictionary.get("<pad>"));
+					this.lossDiff = network.lossDiff(output, label, pad);
 
 					/**
 					 * back
@@ -1831,7 +1841,169 @@ public class EDOptimizer extends Optimizer {
 					
 					if(it % 20 == 0) {
 						int time = output.number / batchSize;
-						float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
+						if(trainingData.tokenizer != null) {
+							float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.tokenizer, pad);
+						}else {
+							float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, pad);
+						}
+					}
+
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+					
+//					if(it != 0 && it % 200 == 0) {
+//						vail_chat(network, input, output, label, positions, trainingData);
+//						network.RUN_MODEL = RunModel.TRAIN;
+//					}
+
+					/**
+					 * update learning rate
+					 */
+					this.updateLR(this.lr_step, it);
+
+				}
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void trainLlama2_wiki(CNWikiTokenizer2 trainingData) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Llama2 network = (Llama2) this.network;
+			
+			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
+
+			Tensor label = new Tensor(batchSize , 1, 1, network.time, true);
+
+			Tensor[] cs = RoPEKernel.getCosAndSin(network.time, network.embedDim, network.headNum);
+			
+			Tensor cos = cs[0];
+			
+			Tensor sin = cs[1];
+			
+			int pad = 0;
+			
+			if(trainingData.tokenizer != null) {
+				pad = trainingData.tokenizer.pad;
+			}else {
+				pad = trainingData.dictionary.get("<pad>");
+			}
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+
+//				int[][] indexs = MathUtils.randomInts(trainingData.trainData.size(),this.batchSize);
+				
+				int[][] indexs = MathUtils.sortInts(trainingData.trainData.size(),this.batchSize);
+				
+				Tensor output = null;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+					
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+//					JCuda.cudaDeviceSynchronize();
+//					long start22 = System.nanoTime();
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadTrainData(indexs[it], input, label);
+//					JCuda.cudaDeviceSynchronize();
+//					System.out.println("loadTrainData:"+(System.nanoTime() - start22) / 1e6+"ms.");
+					/**
+					 * forward
+					 */
+					output = network.forward(cos, sin, input);
+					
+//					JCuda.cudaDeviceSynchronize();
+//					long start33 = System.nanoTime();
+					
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, label, pad);
+
+//					JCuda.cudaDeviceSynchronize();
+//					System.out.println("loss:"+(System.nanoTime() - start33) / 1e6+"ms.");
+
+//					long start44 = System.nanoTime();
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label, pad);
+//					JCuda.cudaDeviceSynchronize();
+//					System.out.println("lossDiff:"+(System.nanoTime() - start44) / 1e6+"ms.");
+					/**
+					 * back
+					 */
+					network.back(cos, sin, this.lossDiff);
+					
+//					JCuda.cudaDeviceSynchronize();
+//					long start55 = System.nanoTime();
+					/**
+					 * update
+					 */
+					this.network.update();
+					
+//					JCuda.cudaDeviceSynchronize();
+//					System.out.println("update:"+(System.nanoTime() - start55) / 1e6+"ms.");
+					
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
+					}
+
+					output.syncHost();
+					
+					if(it % 20 == 0) {
+						int time = output.number / batchSize;
+						if(trainingData.tokenizer != null) {
+							float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.tokenizer, pad);
+						}else {
+							float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, pad);
+						}
 					}
 
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";

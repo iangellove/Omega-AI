@@ -423,46 +423,120 @@ public class SoftmaxKernel extends BaseKernel{
 		
 	}
 	
+//	public static void main(String[] args) {
+//		
+//		int N = 2;
+//		int C = 5;
+//		int H = 4;
+//		int W = 4;
+//		
+//		float[] x = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
+//
+//		Tensor mask = ENTokenizer.triu(N, C, H, W, 1);
+//		mask.showDM();
+//		
+//		Tensor input = new Tensor(N, C, H, W, x, true);
+//		
+//		Tensor output = new Tensor(N, C, H, W, true);
+//		
+//		Tensor output2 = new Tensor(N, C, H, W);
+//		
+//		SoftmaxKernel k = new SoftmaxKernel();
+////		k.softmax(input, output);
+//		
+//		k.softmaxMask(input, mask, output, -1e9f);
+//		
+//		output.showDM();
+//		
+////		k.cpuForward2(input, output2);
+//		
+//		k.cpuForwardMask(input, output2, mask, -1e9f);
+//		
+//		System.out.println("output2:"+JsonUtils.toJson(output2.data));
+//		
+//		Tensor delta = new Tensor(N, C, H, W, RandomUtils.order(N * C * H * W, 0.1f, 0), true);
+//		
+//		Tensor diff = new Tensor(N, C, H, W, true);
+//
+//		k.backward_noloss(output, delta, diff);
+//		
+////		cpuBackwardNoLoss(output, delta, diff);
+//		
+//		diff.showDM();
+//		
+//	}
+	
+	public static void safeSoftmax_3pass(Tensor input,Tensor output) {
+		
+		for(int id = 0;id<input.number;id++) {
+			float max = -3.402823466e+38F;
+			float sum = 0;
+			for(int i = 0;i<input.width;i++) {
+				if(max <= input.data[id * input.width + i]) {
+					max = input.data[id * input.width + i];
+				}
+			}
+			for(int i = 0;i<input.width;i++){
+		        float e = (float) Math.exp(input.data[id * input.width + i] - max);
+		        sum += e;
+		        output.data[id * input.width + i] = e;
+		    }
+			for(int i = 0;i<input.width;i++){
+		        output.data[id * input.width + i] /= sum;
+		    }
+		}
+		
+	}
+	
+	public static void safeSoftmax_2pass(Tensor input,Tensor output) {
+		
+		for(int id = 0;id<input.number;id++) {
+			float max = -3.402823466e+38F;
+			float max_p = -3.402823466e+38F;
+			float sum = 0;
+			for(int i = 0;i<input.width;i++) {
+				if(max <= input.data[id * input.width + i]) {
+					max = input.data[id * input.width + i];
+				}
+				float e = (float) Math.exp(input.data[id * input.width + i] - max);
+				float e_p = (float) Math.exp(max_p - max);
+				sum = sum * e_p + e;
+				max_p = max;
+			}
+			for(int i = 0;i<input.width;i++){
+				float e = (float) Math.exp(input.data[id * input.width + i] - max);
+		        output.data[id * input.width + i] = e / sum;
+		    }
+		}
+		
+	}
+	
 	public static void main(String[] args) {
 		
 		int N = 2;
-		int C = 5;
-		int H = 4;
-		int W = 4;
+		int C = 1;
+		int H = 1;
+		int W = 20000;
 		
-		float[] x = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
+		float[] x = RandomUtils.gaussianRandom(N * C * H * W, 0.1f);
 
-		Tensor mask = ENTokenizer.triu(N, C, H, W, 1);
-		mask.showDM();
-		
 		Tensor input = new Tensor(N, C, H, W, x, true);
+//		input.showDM();
 		
 		Tensor output = new Tensor(N, C, H, W, true);
-		
-		Tensor output2 = new Tensor(N, C, H, W);
-		
-		SoftmaxKernel k = new SoftmaxKernel();
-//		k.softmax(input, output);
-		
-		k.softmaxMask(input, mask, output, -1e9f);
+		long start1 = System.nanoTime();
+		safeSoftmax_3pass(input, output);
+		System.out.println((System.nanoTime() - start1)/1e6+"ms");
+		output.hostToDevice();
 		
 		output.showDM();
 		
-//		k.cpuForward2(input, output2);
+		long start2 = System.nanoTime();
+		safeSoftmax_2pass(input, output);
+		System.out.println((System.nanoTime() - start2)/1e6+"ms");
+		output.hostToDevice();
 		
-		k.cpuForwardMask(input, output2, mask, -1e9f);
-		
-		System.out.println("output2:"+JsonUtils.toJson(output2.data));
-		
-		Tensor delta = new Tensor(N, C, H, W, RandomUtils.order(N * C * H * W, 0.1f, 0), true);
-		
-		Tensor diff = new Tensor(N, C, H, W, true);
-
-		k.backward_noloss(output, delta, diff);
-		
-//		cpuBackwardNoLoss(output, delta, diff);
-		
-		diff.showDM();
+		output.showDM();
 		
 	}
 	

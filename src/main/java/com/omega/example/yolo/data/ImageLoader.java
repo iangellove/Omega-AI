@@ -275,7 +275,7 @@ public class ImageLoader {
 		ImageLoaderJob job = ImageLoaderJob.getInstance(path, extName, input, label, idxSet, indexs, orgLabelData, boxes, classes, 0, input.number - 1);
 
 		ForkJobEngine.run(job);
-		
+
 	}
 	
 	public static void loadVail(String path,String extName,Tensor input,Tensor label,String[] idxSet,int[] indexs,Map<String, float[]> orgLabelData,int boxes,int classes) {

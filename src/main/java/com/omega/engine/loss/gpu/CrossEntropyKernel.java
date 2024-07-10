@@ -3,7 +3,6 @@ package com.omega.engine.loss.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
@@ -11,6 +10,7 @@ import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
+import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
 import jcuda.runtime.cudaError;
 
@@ -48,11 +48,29 @@ public class CrossEntropyKernel extends BaseKernel {
 	
 	private CUfunction log_softmax_nl_loss_igonre_function;
 	
+	private CUfunction log_softmax_nl_loss_igonre_idx_function;
+	
 	private CUfunction check_function;
 	
 	private CUfunction loss_backward_function;
 	
 	private CUfunction loss_igonre_backward_function;
+	
+	private CUfunction loss_igonre_backward_idx_function;
+	
+	private CUfunction softmax_function;
+	
+	private CUfunction cross_softmax_function;
+	
+	private CUfunction cross_softmax_back_function;
+	
+	private CUfunction cross_function;
+	
+	private CUfunction cross_igone_function;
+	
+	private CUfunction cross_backward_function;
+	
+	private CUfunction cross_igone_backward_function;
 	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
@@ -61,6 +79,16 @@ public class CrossEntropyKernel extends BaseKernel {
 	private Pointer checkParameters;
 	
 	private Pointer backKernelParameters;
+	
+	private Pointer softmaxKernelParameters;
+	
+	private Pointer crossKernelParameters;
+	
+	private Pointer crossBackwardParameters;
+	
+	private Pointer crossSoftmaxForwardParameters;
+	
+	private Pointer crossSoftmaxBackwardParameters;
 	
 	public CrossEntropyKernel() {
 		init();
@@ -94,6 +122,12 @@ public class CrossEntropyKernel extends BaseKernel {
         
 			}
 			
+			if(log_softmax_nl_loss_igonre_idx_function == null) {
+				
+				log_softmax_nl_loss_igonre_idx_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "log_softmax_nl_loss_igone_idx");
+        
+			}
+			
 			if(check_function == null) {
 				
 				check_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "check");
@@ -110,6 +144,38 @@ public class CrossEntropyKernel extends BaseKernel {
 				
 				loss_igonre_backward_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "loss_back_igonre2");
         
+			}
+			
+			if(loss_igonre_backward_idx_function == null) {
+				loss_igonre_backward_idx_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "loss_back_igonre2_idx");
+			}
+			
+			if(softmax_function == null) {
+				softmax_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "softmax_forward_kernel7");
+			}
+			
+			if(cross_function == null) {
+				cross_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "crossentropy_forward_kernel");
+			}
+			
+			if(cross_igone_function == null) {
+				cross_igone_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "crossentropy_forward_kernel_igone");
+			}
+			
+			if(cross_backward_function == null) {
+				cross_backward_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "crossentropy_softmax_backward_kernel");
+			}
+			
+			if(cross_igone_backward_function == null) {
+				cross_igone_backward_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "crossentropy_softmax_igone_backward_kernel");
+			}
+			
+			if(cross_softmax_function == null) {
+				cross_softmax_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "cross_softmax_forward_kernel");
+			}
+			
+			if(cross_softmax_back_function == null) {
+				cross_softmax_back_function = CUDAModules.getLocalFunctionByModule("CrossEntropyKernel.cu", "cross_softmax_backward_kernel");
 			}
 
 		} catch (Exception e) {
@@ -129,6 +195,150 @@ public class CrossEntropyKernel extends BaseKernel {
 	
 	public int CAFFE_GET_BLOCKS(int N) {
 	    return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
+	}
+	
+	public void softmax(Tensor input,Tensor output) {
+
+			
+			/**
+			 * float* out, const float* inp, int N, int C
+			 */
+		softmaxKernelParameters = Pointer.to(
+	                Pointer.to(output.getGpuData()),
+	                Pointer.to(input.getGpuData()),
+	                Pointer.to(new int[] {input.number}),
+	                Pointer.to(new int[] {input.width})
+	            );
+			
+		this.N = output.number;
+		
+		int grid_size = N;
+		
+		int shared_mem_size = 2 * CAFFE_CUDA_NUM_THREADS / 32 * Sizeof.FLOAT;
+		
+		cuLaunchKernel(softmax_function,
+				grid_size,  1, 1,      // Grid dimension
+				CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            shared_mem_size, null,               // Shared memory size and stream
+	            softmaxKernelParameters, null // Kernel- and extra parameters
+	        );
+		
+	}
+	
+	public void crossentropy(Tensor input,Tensor currentLabel,Tensor output) {
+
+		/**
+		 * float* losses,const float* probs, const int* targets,int B, int T, int V,const int igone
+		 */
+		crossKernelParameters = Pointer.to(
+	                Pointer.to(output.getGpuData()),
+	                Pointer.to(input.getGpuData()),
+	                Pointer.to(currentLabel.getGpuData()),
+	                Pointer.to(new int[] {currentLabel.number}),  //batch
+	                Pointer.to(new int[] {currentLabel.width}), //time
+	                Pointer.to(new int[] {input.width})  //dim_size
+	            );
+			
+		this.N = currentLabel.number;
+		
+		int grid_size = (int) Math.ceil(currentLabel.number * currentLabel.width / CAFFE_CUDA_NUM_THREADS);
+		if(grid_size <= 0) {
+			grid_size = 1;
+		}
+		cuLaunchKernel(cross_function,
+				grid_size,  1, 1,      // Grid dimension
+				CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            crossKernelParameters, null // Kernel- and extra parameters
+	        );
+		
+	}
+	
+	public void crossentropy_igone(Tensor input,Tensor currentLabel,Tensor output,int igonre) {
+		
+		/**
+		 * float* losses,const float* probs, const int* targets,int B, int T, int V,const int igone
+		 */
+		crossKernelParameters = Pointer.to(
+	                Pointer.to(output.getGpuData()),
+	                Pointer.to(input.getGpuData()),
+	                Pointer.to(currentLabel.getGpuData()),
+	                Pointer.to(new int[] {currentLabel.number}),  //batch
+	                Pointer.to(new int[] {currentLabel.width}), //time
+	                Pointer.to(new int[] {input.width}),  //dim_size
+	                Pointer.to(new int[] {igonre})
+	            );
+			
+		this.N = input.number;
+		
+		int grid_size = (int) Math.ceil(input.number / CAFFE_CUDA_NUM_THREADS);
+		
+		cuLaunchKernel(cross_igone_function,
+				grid_size,  1, 1,      // Grid dimension
+				CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            crossKernelParameters, null // Kernel- and extra parameters
+	        );
+
+	}
+	
+	public void crossentropy_backward(Tensor input,Tensor currentLabel,Tensor diff) {
+
+		/**
+		 * float* dlogits, const float* probs, const int* targets,int B, int T, int V
+		 */
+		crossBackwardParameters = Pointer.to(
+	                Pointer.to(diff.getGpuData()),
+	                Pointer.to(input.getGpuData()),
+	                Pointer.to(currentLabel.getGpuData()),
+	                Pointer.to(new int[] {input.number}),  //batch
+	                Pointer.to(new int[] {currentLabel.width}), //time
+	                Pointer.to(new int[] {input.width})  //dim_size
+	            );
+			
+		this.N = input.number;
+		
+		int grid_size = (int) Math.ceil(input.number * input.width / CAFFE_CUDA_NUM_THREADS);
+		
+		cuLaunchKernel(cross_backward_function,
+				grid_size,  1, 1,      // Grid dimension
+				CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            crossBackwardParameters, null // Kernel- and extra parameters
+	        );
+		
+	}
+	
+	public void crossentropy_backward_igone(Tensor input,Tensor currentLabel,Tensor diff,int igonre) {
+		input.showDMByNumber(0);
+		currentLabel.showDMByNumber(0);
+		input.showShape();
+		currentLabel.showShape();
+		diff.showShape();
+		/**
+		 * float* dlogits, const float* probs, const int* targets,int B, int T, int V, int igone
+		 */
+		crossBackwardParameters = Pointer.to(
+	                Pointer.to(diff.getGpuData()),
+	                Pointer.to(input.getGpuData()),
+	                Pointer.to(currentLabel.getGpuData()),
+	                Pointer.to(new int[] {currentLabel.number}),  //batch
+	                Pointer.to(new int[] {currentLabel.width}), //time
+	                Pointer.to(new int[] {input.width}),  //dim_size
+	                Pointer.to(new int[] {igonre})
+	            );
+			
+//		this.N = input.number;
+		
+		int grid_size = (int) Math.ceil(input.number * input.width / CAFFE_CUDA_NUM_THREADS);
+		
+		cuLaunchKernel(cross_igone_backward_function,
+				grid_size,  1, 1,      // Grid dimension
+				CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            crossBackwardParameters, null // Kernel- and extra parameters
+	        );
+		
 	}
 	
 	public void forward(Tensor input,Tensor currentLabel,Tensor output) {
@@ -196,6 +406,88 @@ public class CrossEntropyKernel extends BaseKernel {
 //		output.showDM();
 //		JCudaDriver.cuCtxSynchronize();
 		
+	}
+	
+	public void forwardIDX(Tensor input,Tensor currentLabel,Tensor output,int igonre) {
+
+		/**
+		 * float *input, float *label, float *output, int batch, int n
+		 */
+		log_softmax_nl_loss_kernelParameters = Pointer.to(
+                Pointer.to(input.getGpuData()),
+                Pointer.to(currentLabel.getGpuData()),
+                Pointer.to(output.getGpuData()),
+                Pointer.to(new int[] {input.number}),
+                Pointer.to(new int[] {input.width}),
+                Pointer.to(new int[] {igonre})
+            );
+		
+		this.N = output.number;
+
+		cuLaunchKernel(log_softmax_nl_loss_igonre_idx_function,
+				input.number,  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            log_softmax_nl_loss_kernelParameters, null // Kernel- and extra parameters
+	        );
+
+	}
+	
+	public void forwardIDX2(Tensor input,Tensor label,Tensor prods,Tensor output,int igonre) {
+
+		/**
+		 * float* out, const float* inp, const float* label, int igone, int N, int C
+		 */
+		crossSoftmaxForwardParameters = Pointer.to(
+				Pointer.to(output.getGpuData()),
+                Pointer.to(prods.getGpuData()),
+                Pointer.to(input.getGpuData()),
+                Pointer.to(label.getGpuData()),
+                Pointer.to(new int[] {igonre}),
+                Pointer.to(new int[] {input.number}),
+                Pointer.to(new int[] {input.width})
+            );
+		
+		this.N = input.number;
+		
+		int grid_size = N;
+		
+		int shared_mem_size = 2 * CAFFE_CUDA_NUM_THREADS / 32 * Sizeof.FLOAT;
+		
+		cuLaunchKernel(cross_softmax_function,
+				grid_size,  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            shared_mem_size, null,               // Shared memory size and stream
+	            crossSoftmaxForwardParameters, null // Kernel- and extra parameters
+	        );
+
+	}
+	
+	public void backwardIDX2(Tensor prods,Tensor label,Tensor output,int igonre) {
+
+		/**
+		 * float* out, const float* inp, const float* label, int igone, int N, int C
+		 */
+		crossSoftmaxBackwardParameters = Pointer.to(
+				Pointer.to(output.getGpuData()),
+                Pointer.to(prods.getGpuData()),
+                Pointer.to(label.getGpuData()),
+                Pointer.to(new int[] {igonre}),
+                Pointer.to(new int[] {prods.number}),
+                Pointer.to(new int[] {prods.width})
+            );
+		
+		this.N = prods.number;
+		
+		int grid_size = N;
+		
+		cuLaunchKernel(cross_softmax_back_function,
+				grid_size,  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            crossSoftmaxBackwardParameters, null // Kernel- and extra parameters
+	        );
+
 	}
 	
 	public void forwardCheck(Tensor input,Tensor currentLabel,Tensor output) {
@@ -297,7 +589,37 @@ public class CrossEntropyKernel extends BaseKernel {
 //		JCudaDriver.cuCtxSynchronize();
 		
 	}
+	
+	public void backwardIDX(Tensor input,Tensor currentLabel,Tensor diff,int igonre) {
 
+		if(backKernelParameters == null || this.BN != input.number) {
+			
+			/**
+			 * float *input, float *currentLabel, float *diff, int n, int batch
+			 */
+			backKernelParameters = Pointer.to(
+	                Pointer.to(input.getGpuData()),
+	                Pointer.to(currentLabel.getGpuData()),
+	                Pointer.to(diff.getGpuData()),
+	                Pointer.to(new int[] {input.number}),
+	                Pointer.to(new int[] {input.width}),
+	                Pointer.to(new int[] {igonre})
+	            );
+			
+			 this.BN = input.number;
+			
+		}
+		
+		cuLaunchKernel(loss_igonre_backward_idx_function,
+				input.number,  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            backKernelParameters, null // Kernel- and extra parameters
+	        );
+
+	}
+	
+	
 	public void checkCUDA(int code) {
 		if(code != cudaError.cudaSuccess) {
 			System.err.println("Error code "+code+":"+cudaError.stringFor(code));

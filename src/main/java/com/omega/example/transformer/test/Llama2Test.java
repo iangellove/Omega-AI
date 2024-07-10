@@ -15,9 +15,12 @@ import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.EDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
+import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 import com.omega.example.transformer.utils.CNChatTokenizer;
 import com.omega.example.transformer.utils.CNTokenizer;
 import com.omega.example.transformer.utils.CNWikiTokenizer;
+import com.omega.example.transformer.utils.CNWikiTokenizer2;
+import com.omega.example.transformer.utils.SentencePieceTokenizer;
 
 public class Llama2Test {
 	
@@ -121,9 +124,19 @@ public class Llama2Test {
 			
 			int decoderNum = 8;
 			
-			String trainPath = "H:\\transformer_dataset\\wikipedia-cn-20230720-filtered.json";
-
-			CNWikiTokenizer trainData = new CNWikiTokenizer(trainPath, max_len, batchSize);
+			int vocab_size = 20000;
+			
+			int maxDataCount = 1000000;
+			
+//			String trainPath = "H:\\transformer_dataset\\wikipedia-cn-20230720-filtered.json";
+			
+			String trainPath = "H:\\transformer_dataset\\wiki_idx_2w_voc.txt";
+			
+			String tokenizer_path = "H:\\transformer_dataset\\chinese_sp.model";
+	    
+			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path);
+				
+			CNWikiTokenizer trainData = new CNWikiTokenizer(trainPath, max_len, batchSize, tokenizer, vocab_size, maxDataCount);
 			
 			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
 			
@@ -166,6 +179,99 @@ public class Llama2Test {
 //					System.out.println("nextWord:"+nextWord);
 					
 					if(trainData.sd.get(nextWord)!=null && trainData.sd.get(nextWord).equals("<eos>")) {
+						input_txt += trainData.sd.get(nextWord);
+						break;
+					}else {
+						input_txt += nextWord;
+					}
+					input = trainData.loadByTxtToIdx(input_txt);
+					RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
+					
+//					CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
+				}
+				
+				System.out.println("chatbot:"+input_txt);
+			}
+			scanner.close();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void llama2_cn_wiki_smallvocab() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			boolean flashAttention = false;
+			
+			int batchSize = 4;
+			
+			int max_len = 512;
+			
+			int embedDim = 512;
+			
+			int head_num = 8;
+			
+			int decoderNum = 8;
+			
+			int maxDataCount = 1000000;
+			
+			String trainPath = "H:\\transformer_dataset\\wiki_idx_smallvocab.txt";
+			
+			String tokenizer_path = "H:\\transformer_dataset\\vocab.txt";
+	    
+			BertTokenizer tokenizer = new BertTokenizer(tokenizer_path, true, true);
+				
+			CNWikiTokenizer2 trainData = new CNWikiTokenizer2(trainPath, max_len, batchSize, tokenizer, maxDataCount);
+			
+			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
+			
+			network.learnRate = 3e-4f;
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.COSINE, false);
+			optimizer.lr = 3e-4f;
+			optimizer.min_lr = 1e-5f;
+			optimizer.setWarmUp(true);
+			optimizer.warmUpTime = 1000;
+			optimizer.lrDecayIters = 30000;
+			optimizer.trainLlama2_wiki(trainData);
+
+			network.RUN_MODEL = RunModel.TEST;
+			Scanner scanner = new Scanner(System.in);
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase();
+				System.out.println("user:"+input_txt);
+				Tensor input = trainData.loadByTxtToIdx(input_txt);
+//				input.showDM();
+				Tensor[] pos = RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum);
+//				positions.showDM();
+//				Tensor mask = CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1);
+//				mask.showDM();
+				for(int t = 0;t<max_len;t++) {
+					network.time = input.number;
+					Tensor cos = pos[0];
+					Tensor sin = pos[1];
+					Tensor output = network.forward(cos, sin, input);
+					output.syncHost();
+//					output.showDM();
+					String txts = output2WikiTXT(output, trainData, true);
+//					System.out.println("output:"+txts);
+					String nextWord = txts.substring(txts.length() - 1, input_txt.length());
+//					System.out.println("nextWord:"+nextWord);
+					
+					if(trainData.sd.get(nextWord)!=null && trainData.sd.get(nextWord).equals(tokenizer.cls_token)) {
 						input_txt += trainData.sd.get(nextWord);
 						break;
 					}else {
@@ -362,17 +468,53 @@ public class Llama2Test {
 	
 	public static String output2WikiTXT(Tensor output,CNWikiTokenizer trainData,boolean format) {
 		String txt = "";
-		for(int i = 0;i<output.number;i++) {
-			int charIndex = pickTopN(output.getByNumber(i), 1);
-			String c = trainData.vocab[charIndex];
-			txt += c;
-		}
-//		System.out.println("output txt:"+txt);
-		if(format) {
-			for(String key:trainData.specials_dictionary.keySet()) {
-				txt = txt.replaceAll(key, trainData.specials_dictionary.get(key));
+		if(trainData.tokenizer != null) {
+			int[] idx = new int[output.number];
+			for(int i = 0;i<output.number;i++) {
+				int charIndex = pickTopN(output.getByNumber(i), 1);
+				idx[i] = charIndex;
+			}
+			txt = trainData.tokenizer.decode(idx);
+		}else {
+			for(int i = 0;i<output.number;i++) {
+				int charIndex = pickTopN(output.getByNumber(i), 1);
+				String c = trainData.vocab[charIndex];
+				txt += c;
+			}
+//			System.out.println("output txt:"+txt);
+			if(format) {
+				for(String key:trainData.specials_dictionary.keySet()) {
+					txt = txt.replaceAll(key, trainData.specials_dictionary.get(key));
+				}
 			}
 		}
+		
+		return txt;
+	}
+	
+	public static String output2WikiTXT(Tensor output,CNWikiTokenizer2 trainData,boolean format) {
+		String txt = "";
+		if(trainData.tokenizer != null) {
+			int[] idx = new int[output.number];
+			for(int i = 0;i<output.number;i++) {
+				int charIndex = pickTopN(output.getByNumber(i), 1);
+				idx[i] = charIndex;
+			}
+			txt = trainData.tokenizer.decode(idx);
+		}else {
+			for(int i = 0;i<output.number;i++) {
+				int charIndex = pickTopN(output.getByNumber(i), 1);
+				String c = trainData.vocab[charIndex];
+				txt += c;
+			}
+//			System.out.println("output txt:"+txt);
+			if(format) {
+				for(String key:trainData.specials_dictionary.keySet()) {
+					txt = txt.replaceAll(key, trainData.specials_dictionary.get(key));
+				}
+			}
+		}
+		
 		return txt;
 	}
 	
@@ -453,7 +595,9 @@ public class Llama2Test {
 			
 //			llama2_dp();
 			
-			llama2_cn_wiki();
+//			llama2_cn_wiki();
+			
+			llama2_cn_wiki_smallvocab();
 			
 //			llama2_cn_baike();
 			

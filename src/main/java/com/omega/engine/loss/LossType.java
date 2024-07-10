@@ -9,6 +9,7 @@ public enum LossType {
 	
 	cross_entropy,
 	softmax_with_cross_entropy,
+	softmax_with_cross_entropy_idx,
 	multiLabel_soft_margin,
 	detection,
 	yolo,

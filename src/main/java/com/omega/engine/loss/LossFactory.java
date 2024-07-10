@@ -36,6 +36,8 @@ public class LossFactory {
 			return new CrossEntropyLoss();
 		case softmax_with_cross_entropy:
 			return new CrossEntropyLoss2();
+		case softmax_with_cross_entropy_idx:
+			return new CrossEntropyLossIdx();
 		case yolo:
 			return new YoloLoss(1);
 		case yolov3:
@@ -69,6 +71,8 @@ public class LossFactory {
 			return new CrossEntropyLoss();
 		case softmax_with_cross_entropy:
 			return new CrossEntropyLoss2();
+		case softmax_with_cross_entropy_idx:
+			return new CrossEntropyLossIdx();
 		case yolo:
 			return new YoloLoss(classNum);
 		case yolov3:
@@ -99,6 +103,8 @@ public class LossFactory {
 				break;
 			case softmax_with_cross_entropy:
 				losses[i] = new CrossEntropyLoss2();
+			case softmax_with_cross_entropy_idx:
+				losses[i] = new CrossEntropyLossIdx();
 				break;
 			case yolo:
 				losses[i] = new YoloLoss(1);
@@ -146,6 +152,9 @@ public class LossFactory {
 				break;
 			case softmax_with_cross_entropy:
 				losses[i] = new CrossEntropyLoss2();
+				break;
+			case softmax_with_cross_entropy_idx:
+				losses[i] = new CrossEntropyLossIdx();
 				break;
 			case yolo:
 				losses[i] = new YoloLoss(classNum);

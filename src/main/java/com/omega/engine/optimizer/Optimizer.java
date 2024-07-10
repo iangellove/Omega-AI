@@ -25,8 +25,10 @@ import com.omega.engine.optimizer.lr.GDDecay;
 import com.omega.engine.optimizer.lr.HalfDecay;
 import com.omega.engine.optimizer.lr.LRDecay;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
+import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 import com.omega.example.transformer.utils.BPETokenizer;
 import com.omega.example.transformer.utils.ENTokenizer;
+import com.omega.example.transformer.utils.SentencePieceTokenizer;
 import com.omega.example.yolo.data.BaseDataLoader;
 import com.omega.example.yolo.data.DetectionDataLoader;
 import com.omega.example.yolo.model.YoloBox;
@@ -1499,6 +1501,99 @@ public abstract class Optimizer {
 		System.out.println("itxt:"+max_itxt);
 		System.out.println("ptxt:"+max_ptxt);
 		System.out.println("ltxt:"+max_ltxt);
+		error = trueCount / batchSize * 100;
+
+		return error;
+	}
+	
+	public float accuracyBatchFisrt(Tensor input,Tensor output,Tensor labelData,int time,int batchSize,SentencePieceTokenizer tokenizer,int igonre) {
+		float error = 0.0f;
+		float trueCount = 0;
+		int max_score = 0;
+		int[] itxt = new int[time];
+		int[] ptxt = new int[time];
+		int[] ltxt = new int[time];
+		int[] maxIdx_i = new int[time];
+		int[] maxIdx_p = new int[time];
+		int[] maxIdx_l = new int[time];
+		for(int n = 0;n<batchSize;n++) {
+			boolean allRight = true;
+			int score = time;
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+				int inputIndex = (int) input.data[n * time + t];
+				itxt[t] = inputIndex;
+				ptxt[t] = predictIndex;
+				ltxt[t] = labelIndex;
+				if(labelIndex != igonre && labelIndex != predictIndex) {
+					allRight = false;
+					score--;
+				}
+			}
+			
+			if(max_score <= score) {
+				max_score = score;
+				maxIdx_i = itxt;
+				maxIdx_p = ptxt;
+				maxIdx_l = ltxt;
+			}
+
+			if(allRight) {
+				trueCount++;
+			}
+		}
+		System.out.println("max_score:"+max_score);
+		System.out.println("itxt:"+tokenizer.decode(maxIdx_i));
+		System.out.println("ptxt:"+tokenizer.decode(maxIdx_p));
+		System.out.println("ltxt:"+tokenizer.decode(maxIdx_l));
+		error = trueCount / batchSize * 100;
+
+		return error;
+	}
+	
+	public float accuracyBatchFisrt(Tensor input,Tensor output,Tensor labelData,int time,int batchSize,BertTokenizer tokenizer,int igonre) {
+		float error = 0.0f;
+		float trueCount = 0;
+		int max_score = 0;
+		int[] itxt = new int[time];
+		int[] ptxt = new int[time];
+		int[] ltxt = new int[time];
+		int[] maxIdx_i = new int[time];
+		int[] maxIdx_p = new int[time];
+		int[] maxIdx_l = new int[time];
+		for(int n = 0;n<batchSize;n++) {
+			boolean allRight = true;
+			int score = time;
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+//				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+				int labelIndex = (int) labelData.data[n * time + t];
+				int inputIndex = (int) input.data[n * time + t];
+				itxt[t] = inputIndex;
+				ptxt[t] = predictIndex;
+				ltxt[t] = labelIndex;
+				if(labelIndex != igonre && labelIndex != predictIndex) {
+					allRight = false;
+					score--;
+				}
+			}
+			
+			if(max_score <= score) {
+				max_score = score;
+				maxIdx_i = itxt;
+				maxIdx_p = ptxt;
+				maxIdx_l = ltxt;
+			}
+
+			if(allRight) {
+				trueCount++;
+			}
+		}
+		System.out.println("max_score:"+max_score);
+		System.out.println("itxt:"+tokenizer.decode(maxIdx_i));
+		System.out.println("ptxt:"+tokenizer.decode(maxIdx_p));
+		System.out.println("ltxt:"+tokenizer.decode(maxIdx_l));
 		error = trueCount / batchSize * 100;
 
 		return error;
