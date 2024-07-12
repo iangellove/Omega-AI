@@ -12,6 +12,7 @@ import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
 import com.omega.engine.nn.layer.gpu.RoPEKernel;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
 
@@ -268,9 +269,14 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, key.getGpuData(), dk, time * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), time, time * time, batchSize * headNum);
 
 //		attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
-
-		attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time, d_k);
 		
+		if(network.RUN_MODEL == RunModel.TEST) {
+			attentionKernel.softmax_test_forward(preatt, attn, batchSize, headNum, time, d_k);
+//			attn.showDM();
+		}else {
+			attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time, d_k);
+		}
+
 		Tensor tmp = attn;
 		
 		if(dropout) {

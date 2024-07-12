@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,15 +40,15 @@ public class LagJsonReader {
 	public static List<Map<String,String>> readJsonFile(String path) {
 		
 		List<Map<String,String>> mapList = new ArrayList<Map<String,String>>(); 
-		
+		String line = null;
 		try {
 		    FileReader fileReader = new FileReader(path);
 		    BufferedReader bufferedReader = new BufferedReader(fileReader);
 		    StringBuilder stringBuilder = new StringBuilder();
-		    String line;
+		    
 		    
 		    while ((line = bufferedReader.readLine()) != null) {
-		    	System.out.println(line);
+//		    	System.out.println(line);
 		        stringBuilder.append(line);
 		    }
 		    bufferedReader.close();
@@ -55,6 +56,32 @@ public class LagJsonReader {
 		    mapList = JsonUtils.gson.fromJson(json, mapList.getClass());
 		    return mapList;
 		} catch (IOException e) {
+			System.out.println(line);
+		    e.printStackTrace();
+		}
+    	
+	    return null;
+	}
+	
+	public static List<Map<String,String>> readRowJsonFile(String path) {
+		
+		List<Map<String,String>> mapList = new ArrayList<Map<String,String>>(); 
+		String line = null;
+		try {
+		    FileReader fileReader = new FileReader(path);
+		    BufferedReader bufferedReader = new BufferedReader(fileReader);
+		    StringBuilder stringBuilder = new StringBuilder();
+		    Map<String,String> once = new HashMap<String,String>();
+		    while ((line = bufferedReader.readLine()) != null) {
+//		    	System.out.println(line);
+		    	once = JsonUtils.gson.fromJson(line, HashMap.class);
+		    	mapList.add(once);
+		    }
+		    bufferedReader.close();
+
+		    return mapList;
+		} catch (IOException e) {
+			System.out.println(line);
 		    e.printStackTrace();
 		}
     	

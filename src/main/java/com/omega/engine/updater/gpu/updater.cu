@@ -28,6 +28,29 @@ __global__ void adamw(float *diffW, float *weight,float *mw,float *vw,float beta
 	weight[i] = weight[i] - learnRate * mhat / (sqrt(vhat) + ETA);
 }
 
+__device__ inline float lerp(float start, float end, float weight) {
+    return fma(weight, end, fma(-weight, start, start));
+}
+
+extern "C"
+__global__ void adamw_kernel(float* weight, const float* diffW, float* mw, float* vw, int n,
+                              float learnRate, float beta1, float beta2, float beta1_correction, float beta2_correction, float eps, float weight_decay) {
+   int i = blockIdx.x * blockDim.x + threadIdx.x;
+   if (i >= n) return;  // guard
+   float grad = diffW[i];
+   float m = mw[i];
+   float v = vw[i];
+   // update the first moment (momentum)
+   m = lerp(grad, m, beta1);
+   mw[i] = m;
+   // update the second moment (RMSprop)
+   v = lerp(grad * grad, v, beta2);
+   vw[i] = v;
+   m /= beta1_correction;  // m_hat
+   v /= beta2_correction;  // v_hat
+   weight[i] -= learnRate * (m / (sqrtf(v) + eps) + weight_decay * weight[i]);
+}
+
 extern "C"
 __global__ void adamwr(float *diffW, float *weight,float *mw,float *vw,float beta1,float beta2,float learnRate, float weight_decay, int n, int batch, int t)
 {

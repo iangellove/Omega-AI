@@ -451,6 +451,7 @@ __global__ void cross_softmax_forward_kernel(float* loss,float* out, const float
     }
 	
 	int tx = label[idx];
+	loss[idx] = 0;
     const float* x = inp + idx * C; // input
     float* y = out + idx * C; // output
 
@@ -533,14 +534,16 @@ __global__ void cross_softmax_forward_kernel(float* loss,float* out, const float
         for (int u = 0; u < UNROLL_FACTOR; u++) {
             if (i + u*blockDim.x < C) {
             	y[i + u*blockDim.x] = reg_array[u] / sum;
-            	if(i + u*blockDim.x == tx && tx != igone){
-            		loss[idx] = -logf(y[tx]);
-            	}
             }
         }
         
     }
     
+    if(tx == igone){
+		loss[idx] = 0;
+	}else{
+		loss[idx] = -logf(y[tx]);
+	}
 }
 
 extern "C"
@@ -557,19 +560,27 @@ __global__ void cross_softmax_backward_kernel(float* out, const float* inp, cons
     const float* x = inp + idx * C; // input
     float* y = out + idx * C; // output
 	
-    // divide the whole row by the sum
-    for (int i = tid; i < C; i += blockDim.x * UNROLL_FACTOR) {
-        #pragma unroll
-        for (int u = 0; u < UNROLL_FACTOR; u++) {
-            if (i + u*blockDim.x < C) {
-            	float indicator = i + u*blockDim.x == tx ? 1.0f : 0.0f;
-            	if(i + u*blockDim.x == igone){
-            		y[i + u*blockDim.x] = 0;
-            	}else{
-            		y[i + u*blockDim.x] = x[i + u*blockDim.x] - indicator;
-            	}
-            }
-        }
-    }
+	if(tx == igone){
+		// divide the whole row by the sum
+	    for (int i = tid; i < C; i += blockDim.x * UNROLL_FACTOR) {
+	        #pragma unroll
+	        for (int u = 0; u < UNROLL_FACTOR; u++) {
+	            if (i + u*blockDim.x < C) {
+	            	y[i + u*blockDim.x] = 0;
+	            }
+	        }
+	    }
+	}else{
+		// divide the whole row by the sum
+	    for (int i = tid; i < C; i += blockDim.x * UNROLL_FACTOR) {
+	        #pragma unroll
+	        for (int u = 0; u < UNROLL_FACTOR; u++) {
+	            if (i + u*blockDim.x < C) {
+	            	float indicator = i + u*blockDim.x == tx ? 1.0f : 0.0f;
+	            	y[i + u*blockDim.x] = x[i + u*blockDim.x] - indicator;
+	            }
+	        }
+	    }
+	}
 
 }

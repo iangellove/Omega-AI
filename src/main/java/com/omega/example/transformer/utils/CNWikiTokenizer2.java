@@ -328,6 +328,50 @@ public class CNWikiTokenizer2 extends BaseTokenizer{
 		return testInput;
 	}
 	
+	public Tensor loadByTxtToIdx(String txt,int maxLen) {
+		
+		if(tokenizer != null){
+			int[] idx = tokenizer.encode(txt);
+			testInput = Tensor.createTensor(testInput, maxLen, 1, 1, 1, true);
+			for(int t = 0;t<idx.length;t++) {
+				testInput.data[t] = idx[t];
+			}
+		}else {
+			String[] onceToken = txt.split("");
+//			System.out.println(JsonUtils.toJson(onceToken));
+			testInput = Tensor.createTensor(testInput, maxLen, 1, 1, 1, true);
+//			testInput.clear();
+			for(int t = 0;t<txt.length();t++) {
+				testInput.data[t] = dictionary.get(onceToken[t]);
+			}
+		}
+		
+		testInput.hostToDevice();
+		return testInput;
+	}
+	
+	public Tensor loadByTxtToIdx(int[] idxs,int maxLen) {
+		
+		testInput = Tensor.createTensor(testInput, maxLen, 1, 1, 1, true);
+		for(int t = 0;t<idxs.length;t++) {
+			testInput.data[t] = idxs[t];
+		}
+		
+		testInput.hostToDevice();
+		return testInput;
+	}
+	
+	public Tensor loadByTxtToIdx(int[] idxs) {
+		System.out.println(idxs.length);
+		testInput = Tensor.createTensor(testInput, idxs.length, 1, 1, 1, true);
+		for(int t = 0;t<idxs.length;t++) {
+			testInput.data[t] = idxs[t];
+		}
+		
+		testInput.hostToDevice();
+		return testInput;
+	}
+	
 	public void loadData(int[] indexs, Tensor input, Tensor label) {
 		// TODO Auto-generated method stub
 		

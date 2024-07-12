@@ -281,9 +281,7 @@ public abstract class Optimizer {
 		if(warmUp && it < warmUpTime) {
 			this.network.learnRate = this.lr * it / warmUpTime;
 		}else {
-			if(it > lrDecayIters) {
-				this.network.learnRate = this.min_lr;
-			}
+			
 			switch (this.learnRateUpdate) {
 			case LR_DECAY:
 				this.network.learnRate = LRDecay.decayedLR(this.max_lr, this.network.learnRate, this.trainIndex, 5);
@@ -296,6 +294,9 @@ public abstract class Optimizer {
 			case CONSTANT:
 				break;
 			case COSINE:
+				if(it > lrDecayIters) {
+					this.network.learnRate = this.min_lr;
+				}
 				double decay_ratio = (it - warmUpTime) * 1.0d / (lrDecayIters - warmUpTime) * 1.0d;
 				double coeff = 0.5d * (1.0d + Math.cos(Math.PI * decay_ratio));
 				this.network.learnRate = (float) (this.min_lr + coeff * (this.lr - this.min_lr));
@@ -1460,22 +1461,13 @@ public abstract class Optimizer {
 		float error = 0.0f;
 		float trueCount = 0;
 		int max_score = 0;
-		String max_itxt = "";
-		String max_ptxt = "";
-		String max_ltxt = "";
+		int max_index = 0;
 		for(int n = 0;n<batchSize;n++) {
 			boolean allRight = true;
 			int score = time;
-			String itxt = "";
-			String ptxt = "";
-			String ltxt = "";
 			for(int t = 0;t<time;t++) {
 				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
 				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
-				int inputIndex = (int) input.data[n * time + t];
-				ptxt += vocab[predictIndex];
-				ltxt += vocab[labelIndex];
-				itxt += vocab[inputIndex];
 				if(labelIndex != igonre && labelIndex != predictIndex) {
 					allRight = false;
 					score--;
@@ -1483,19 +1475,23 @@ public abstract class Optimizer {
 			}
 			if(max_score <= score) {
 				max_score = score;
-				max_itxt = itxt;
-				max_ptxt = ptxt;
-				max_ltxt = ltxt;
+				max_index = n;
 			}
-//			if(n == 0) {
-//				System.out.println("itxt:"+itxt);
-//				System.out.println("ptxt:"+ptxt);
-//				System.out.println("ltxt:"+ltxt);
-//			}
-			
+
 			if(allRight) {
 				trueCount++;
 			}
+		}
+		String max_itxt = "";
+		String max_ptxt = "";
+		String max_ltxt = "";
+		for(int t = 0;t<time;t++) {
+			int predictIndex = MatrixOperation.maxIndex(output.getByNumber(max_index * time + t));
+			int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(max_index * time + t));
+			int inputIndex = (int) input.data[max_index * time + t];
+			max_ptxt += vocab[predictIndex];
+			max_ltxt += vocab[labelIndex];
+			max_itxt += vocab[inputIndex];
 		}
 		System.out.println("max_score:"+max_score);
 		System.out.println("itxt:"+max_itxt);
@@ -1510,22 +1506,17 @@ public abstract class Optimizer {
 		float error = 0.0f;
 		float trueCount = 0;
 		int max_score = 0;
+		int max_index = 0;
 		int[] itxt = new int[time];
 		int[] ptxt = new int[time];
 		int[] ltxt = new int[time];
-		int[] maxIdx_i = new int[time];
-		int[] maxIdx_p = new int[time];
-		int[] maxIdx_l = new int[time];
+
 		for(int n = 0;n<batchSize;n++) {
 			boolean allRight = true;
 			int score = time;
 			for(int t = 0;t<time;t++) {
 				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
 				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
-				int inputIndex = (int) input.data[n * time + t];
-				itxt[t] = inputIndex;
-				ptxt[t] = predictIndex;
-				ltxt[t] = labelIndex;
 				if(labelIndex != igonre && labelIndex != predictIndex) {
 					allRight = false;
 					score--;
@@ -1534,19 +1525,26 @@ public abstract class Optimizer {
 			
 			if(max_score <= score) {
 				max_score = score;
-				maxIdx_i = itxt;
-				maxIdx_p = ptxt;
-				maxIdx_l = ltxt;
+				max_index = n;
 			}
 
 			if(allRight) {
 				trueCount++;
 			}
 		}
+		for(int t = 0;t<time;t++) {
+			int predictIndex = MatrixOperation.maxIndex(output.getByNumber(max_index * time + t));
+//			int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+			int labelIndex = (int) labelData.data[max_index * time + t];
+			int inputIndex = (int) input.data[max_index * time + t];
+			itxt[t] = inputIndex;
+			ptxt[t] = predictIndex;
+			ltxt[t] = labelIndex;
+		}
 		System.out.println("max_score:"+max_score);
-		System.out.println("itxt:"+tokenizer.decode(maxIdx_i));
-		System.out.println("ptxt:"+tokenizer.decode(maxIdx_p));
-		System.out.println("ltxt:"+tokenizer.decode(maxIdx_l));
+		System.out.println("itxt:"+tokenizer.decode(itxt));
+		System.out.println("ptxt:"+tokenizer.decode(ptxt));
+		System.out.println("ltxt:"+tokenizer.decode(ltxt));
 		error = trueCount / batchSize * 100;
 
 		return error;
@@ -1555,13 +1553,12 @@ public abstract class Optimizer {
 	public float accuracyBatchFisrt(Tensor input,Tensor output,Tensor labelData,int time,int batchSize,BertTokenizer tokenizer,int igonre) {
 		float error = 0.0f;
 		float trueCount = 0;
-		int max_score = 0;
+		int max_score = -9999;
+		int max_index = 0;
 		int[] itxt = new int[time];
 		int[] ptxt = new int[time];
 		int[] ltxt = new int[time];
-		int[] maxIdx_i = new int[time];
-		int[] maxIdx_p = new int[time];
-		int[] maxIdx_l = new int[time];
+		
 		for(int n = 0;n<batchSize;n++) {
 			boolean allRight = true;
 			int score = time;
@@ -1569,10 +1566,6 @@ public abstract class Optimizer {
 				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
 //				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
 				int labelIndex = (int) labelData.data[n * time + t];
-				int inputIndex = (int) input.data[n * time + t];
-				itxt[t] = inputIndex;
-				ptxt[t] = predictIndex;
-				ltxt[t] = labelIndex;
 				if(labelIndex != igonre && labelIndex != predictIndex) {
 					allRight = false;
 					score--;
@@ -1581,19 +1574,28 @@ public abstract class Optimizer {
 			
 			if(max_score <= score) {
 				max_score = score;
-				maxIdx_i = itxt;
-				maxIdx_p = ptxt;
-				maxIdx_l = ltxt;
+				max_index = n;
 			}
 
 			if(allRight) {
 				trueCount++;
 			}
 		}
+		
+		for(int t = 0;t<time;t++) {
+			int predictIndex = MatrixOperation.maxIndex(output.getByNumber(max_index * time + t));
+//			int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+			int labelIndex = (int) labelData.data[max_index * time + t];
+			int inputIndex = (int) input.data[max_index * time + t];
+			itxt[t] = inputIndex;
+			ptxt[t] = predictIndex;
+			ltxt[t] = labelIndex;
+		}
 		System.out.println("max_score:"+max_score);
-		System.out.println("itxt:"+tokenizer.decode(maxIdx_i));
-		System.out.println("ptxt:"+tokenizer.decode(maxIdx_p));
-		System.out.println("ltxt:"+tokenizer.decode(maxIdx_l));
+		System.out.println("itxt:"+tokenizer.decode(itxt));
+		System.out.println("ptxt:"+tokenizer.decode(ptxt));
+		System.out.println("ltxt:"+tokenizer.decode(ltxt));
+
 		error = trueCount / batchSize * 100;
 
 		return error;

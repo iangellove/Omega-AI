@@ -1,7 +1,9 @@
 package com.omega.example.transformer.tokenizer.bertTokenizer;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.omega.common.utils.JsonUtils;
 import com.omega.example.transformer.utils.LagJsonReader;
 
 
@@ -286,6 +289,132 @@ public class BertTokenizer implements Tokenizer {
     	
     }
 	
+	public void encodeMedicalDataset(String dataPath,String outputPath) {
+    	
+    	try {
+    		
+        	List<Map<String, String>> list = LagJsonReader.readRowJsonFile(dataPath);
+    		
+    		String strTmp = "";
+    		
+    		File file = new File(outputPath);
+    		FileWriter writer = new FileWriter(file);
+           
+    		for(int i = 0;i<list.size();i++) {
+    			strTmp = list.get(i).get("text");	
+    			for(int p = 0;p<_patterns.length;p++) {
+            		strTmp = strTmp.replaceAll(_patterns[p], _replacements[p]);
+    			}
+    			if(!strTmp.equals(" ") && !strTmp.equals("")) {
+    				String idxStr = "";
+    				int[] idx = encode(strTmp);
+    				for(int id:idx) {
+    					idxStr += id + " ";
+    				}
+    				writer.write(idxStr + "\n");
+            	}
+    			System.out.println(i);
+    		}
+        	
+    		 writer.close();
+
+             System.out.println("Data has been written to the file.");
+             
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+	
+	public void encodeBaiKeDataset(String dataPath,String outputPath) {
+
+		try {
+			Map<String,Object> once = new HashMap<String,Object>();
+			File file = new File(outputPath);
+    		FileWriter writer = new FileWriter(file);
+           
+		    FileReader fileReader = new FileReader(dataPath);
+		    BufferedReader bufferedReader = new BufferedReader(fileReader);
+		    String line;
+		    String strTmp = "";
+		    int i = 0;
+		    while ((line = bufferedReader.readLine()) != null) {
+		    	once = JsonUtils.gson.fromJson(line, HashMap.class);
+		    	List<Map<String,Object>> sections = (List<Map<String, Object>>) once.get("sections");
+		    	if(once.get("summary") != null && !once.get("summary").toString().equals("")) {
+	    			strTmp = once.get("title").toString() + "： " +  once.get("summary").toString();
+	    		}else {
+	    			if(sections.size() > 0) {
+	    				strTmp = once.get("title").toString();
+			    	}
+	    		}
+
+		    	for(Map<String,Object> os:sections) {
+	    			String content = os.get("content").toString();
+	    			strTmp += os.get("title").toString() + "：" + content + "。";
+	    		}
+		    	
+		    	for(int p = 0;p<_patterns.length;p++) {
+		    		strTmp = strTmp.replaceAll(_patterns[p], _replacements[p]);
+	        	}	
+		    	
+				if(!strTmp.equals(" ") && !strTmp.equals("")) {
+					strTmp.replaceAll(" ", "");
+	        	}
+				
+    			for(int p = 0;p<_patterns.length;p++) {
+            		strTmp = strTmp.replaceAll(_patterns[p], _replacements[p]);
+    			}
+    			if(!strTmp.equals(" ") && !strTmp.equals("")) {
+    				String idxStr = "";
+    				int[] idx = encode(strTmp);
+    				for(int id:idx) {
+    					idxStr += id + " ";
+    				}
+    				writer.write(idxStr + "\n");
+            	}
+    			System.out.println(i);
+    			i++;
+		    }
+		    bufferedReader.close();
+		    writer.close();
+		} catch (IOException e) {
+		    e.printStackTrace();
+		}
+
+        System.out.println("Data has been written to the file.");
+         
+    }
+	
+	public void mergeData(String[] paths,String outpath) throws IOException {
+
+		File file = new File(outpath);
+		FileWriter writer = new FileWriter(file);
+       
+		for(String path:paths) {
+
+			try (FileReader fileReader = new FileReader(path);
+				 BufferedReader bufferedReader = new BufferedReader(fileReader);){
+			    String line;
+			    int i = 0;
+			    while ((line = bufferedReader.readLine()) != null) {
+			    	writer.write(line + "\n");
+			    	System.out.println(i);
+			    	i++;
+			    }
+			    bufferedReader.close();
+			    
+			} catch (Exception e) {
+				// TODO: handle exception
+			}
+			
+		}
+		
+		writer.close();
+		
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -296,11 +425,27 @@ public class BertTokenizer implements Tokenizer {
 			
 			BertTokenizer tokenizer = new BertTokenizer(vocab_file, do_lower_case, tokenize_chinese_chars);
 			
-			String datasetPath = "H:\\transformer_dataset\\wikipedia-cn-20230720-filtered.json";
-			String outputPath = "H:\\transformer_dataset\\wiki_idx_smallvocab.txt";
+//			String datasetPath = "H:\\transformer_dataset\\wikipedia-cn-20230720-filtered.json";
+//			String outputPath = "H:\\transformer_dataset\\wiki_idx_smallvocab.txt";
 			
-			tokenizer.encodeDataset(datasetPath, outputPath);		
-					
+//			String datasetPath = "H:\\transformer_dataset\\train_encyclopedia.json";
+//			String outputPath = "H:\\transformer_dataset\\medical_idx_smallvocab.txt";
+			
+//			String datasetPath = "H:\\transformer_dataset\\563w_baidubaike.json";
+//			String outputPath = "H:\\transformer_dataset\\baike_idx_smallvocab.txt";
+			
+//			tokenizer.encodeBaiKeDataset(datasetPath, outputPath);		
+			
+			String[] paths = new String[] {
+					"H:\\transformer_dataset\\wiki_idx_smallvocab.txt",
+					"H:\\transformer_dataset\\medical_idx_smallvocab.txt",
+					"H:\\transformer_dataset\\baike_idx_smallvocab.txt"
+			};
+			
+			String outpath = "H:\\transformer_dataset\\wbm_idx_smallvocab.txt";
+			
+			tokenizer.mergeData(paths, outpath);
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

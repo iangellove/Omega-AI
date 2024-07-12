@@ -81,7 +81,7 @@ public class CrossEntropyLossIdx extends LossFunction {
 //		crossEntropyKernel.softmax(x, probs);
 //		
 //		crossEntropyKernel.crossentropy(probs, label, loss);
-		
+//		System.out.println("in");
 		crossEntropyKernel.forwardIDX2(x, label, probs, loss, -99999);
 		
 		return loss;

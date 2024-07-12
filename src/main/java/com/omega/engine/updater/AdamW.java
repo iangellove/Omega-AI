@@ -82,7 +82,7 @@ public class AdamW extends Updater {
 		
 		kernel.setParams(params);
 
-		kernel.updateGama(layer.diffGamma, layer.gamma, layer.network, layer.learnRate);
+		kernel.updateGamma(layer.diffGamma, layer.gamma, layer.network, layer.learnRate);
 		layer.diffGamma.clearGPU();
 		
 		if(layer.beta != null) {

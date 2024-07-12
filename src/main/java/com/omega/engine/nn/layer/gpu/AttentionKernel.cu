@@ -264,7 +264,7 @@ __device__ float warpReduceSum(float val) {
 }
 
 extern "C"
-__global__ void softmax_forward_kernel4(float* out, const float* inp, int N, int C) {
+__global__ void softmax_forward_kernel4(float* out, float scale, const float* inp, int N, int C) {
     // out is (N, C) just like inp. Each row of inp will get softmaxed.
     // same as kernel3, but can handle any block size (multiple of 32)
     // each row of C elements is handled by block_size threads
@@ -292,7 +292,7 @@ __global__ void softmax_forward_kernel4(float* out, const float* inp, int N, int
     // first, thread coarsening by directly accessing global memory in series
     float maxval = -INFINITY;
     for (int i = tid; i < C; i += blockDim.x) {
-        maxval = fmaxf(maxval, x[i]);
+        maxval = fmaxf(maxval, x[i] * scale);
     }
     // now within-warp reductions for maxval
     maxval = warpReduceMax(maxval);
@@ -317,7 +317,7 @@ __global__ void softmax_forward_kernel4(float* out, const float* inp, int N, int
     // compute expf and write the result to global memory
     for (int i = tid; i < C; i += blockDim.x) {
         // subtract max for numerical stability
-        out[idx * C + i] = expf(x[i] - offset);
+        out[idx * C + i] = expf(x[i] * scale - offset);
     }
 
     // okay now we calculated exp(x - max(x))
@@ -327,7 +327,7 @@ __global__ void softmax_forward_kernel4(float* out, const float* inp, int N, int
     x = out + idx * C;
     float sumval = 0.0f;
     for (int i = tid; i < C; i += blockDim.x) {
-        sumval += x[i];
+        sumval += x[i] * scale;
     }
     // within-warp reduction for sumval
     sumval = warpReduceSum(sumval);
@@ -350,7 +350,7 @@ __global__ void softmax_forward_kernel4(float* out, const float* inp, int N, int
 
     // divide the whole row by the sum
     for (int i = tid; i < C; i += blockDim.x) {
-        out[idx * C + i] = x[i] / sum;
+        out[idx * C + i] = x[i] * scale / sum;
     }
 }
 
@@ -462,7 +462,7 @@ __global__ void softmax_forward_kernel5(float* out, float inv_temperature, const
     // fuses the multiplication by scale inside attention
     // directly autoregressive, so we only compute the lower triangular part
     // uses the online softmax algorithm
-    assert(T % 4  == 0);
+    //assert(T % 4  == 0);
     namespace cg = cooperative_groups;
     cg::thread_block block = cg::this_thread_block();
     cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
