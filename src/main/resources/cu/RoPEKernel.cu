@@ -46,3 +46,55 @@ __global__ void rope_backward(float* delta, float* diff,float* c_cos,float* c_si
     diff[i + 0] = d0*cos_theta + d1*sin_theta;
     diff[i + 1] = d1*cos_theta - d0*sin_theta;
 }
+
+extern "C"
+__global__ void rope_all_norm(const float* q,const float* k, float* qo, float* ko,float* c_cos,float* c_sin, int ncols, int T,int headSize) {
+    const int col = 2*(blockDim.y*blockIdx.y + threadIdx.y);
+    if (col >= ncols) {
+        return;
+    }
+	
+	const int row = blockDim.x*blockIdx.x + threadIdx.x;
+    const int i = row*ncols + col;
+    const int t = row % T;
+	const int ai = t * (ncols / headSize / 2) + col / 2 % headSize;
+	
+    float cos_theta = c_cos[ai];
+    float sin_theta = c_sin[ai];
+
+    const float q0 = q[i + 0];
+    const float q1 = q[i + 1];
+    const float k0 = k[i + 0];
+    const float k1 = k[i + 1];
+
+    qo[i + 0] = q0*cos_theta - q1*sin_theta;
+    qo[i + 1] = q0*sin_theta + q1*cos_theta;
+    ko[i + 0] = k0*cos_theta - k1*sin_theta;
+    ko[i + 1] = k0*sin_theta + k1*cos_theta;
+}
+
+extern "C"
+__global__ void rope_all_backward(float* deltaQ,float* deltaK, float* diffQ, float* diffK,float* c_cos,float* c_sin, int ncols, int T,int headSize) {
+    const int col = 2*(blockDim.y*blockIdx.y + threadIdx.y);
+    if (col >= ncols) {
+        return;
+    }
+	
+	const int row = blockDim.x*blockIdx.x + threadIdx.x;
+    const int i = row*ncols + col;
+    const int t = row % T;
+	const int ai = t * (ncols / headSize / 2) + col / 2 % headSize;
+	
+    float cos_theta = c_cos[ai];
+    float sin_theta = c_sin[ai];
+
+    const float dq0 = deltaQ[i + 0];
+    const float dq1 = deltaQ[i + 1];
+    const float dk0 = deltaK[i + 0];
+    const float dk1 = deltaK[i + 1];
+
+    diffQ[i + 0] = dq0*cos_theta + dq1*sin_theta;
+    diffQ[i + 1] = dq1*cos_theta - dq0*sin_theta;
+    diffK[i + 0] = dk0*cos_theta + dk1*sin_theta;
+    diffK[i + 1] = dk1*cos_theta - dk0*sin_theta;
+}
