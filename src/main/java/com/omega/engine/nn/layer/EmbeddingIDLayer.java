@@ -1,9 +1,13 @@
 package com.omega.engine.nn.layer;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.layer.gpu.EmbeddingKernel;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
@@ -241,5 +245,17 @@ public class EmbeddingIDLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		ModelUtils.saveParams(outputStream, weight);
 
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		ModelUtils.loadParams(inputStream, weight);
+
+	}
+	
 }

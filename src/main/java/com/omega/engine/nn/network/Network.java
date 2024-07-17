@@ -207,7 +207,7 @@ public abstract class Network {
 	
 	public void update() {
 		
-//		this.train_time += 1;
+		this.train_time += 1;
 		
 		for(int i = layerCount - 1;i>=0;i--) {
 			

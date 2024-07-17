@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.nn.layer.active.SiLULayer;
@@ -278,5 +281,17 @@ public class LlamaMLPLayer extends Layer{
 	public static void main(String[] args) {
 		
 	}
-
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		linear1.saveModel(outputStream);
+		linear3.saveModel(outputStream);
+		linear2.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		linear1.loadModel(inputStream);
+		linear3.loadModel(inputStream);
+		linear2.loadModel(inputStream);
+	}
+	
 }

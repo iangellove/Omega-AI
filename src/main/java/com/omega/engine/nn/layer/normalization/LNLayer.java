@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer.normalization;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.layer.Layer;
@@ -7,6 +10,7 @@ import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.normalization.gpu.LNKernel;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
@@ -112,11 +116,12 @@ public class LNLayer extends NormalizationLayer {
 		
 		if(this.gamma == null) {
 			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
-			if(network != null) {
-				this.diffGamma = this.network.createParamterGrad(1, 1, 1, this.meanNum, true);
-			}else {
-				this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
-			}
+			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+//			if(network != null) {
+//				this.diffGamma = this.network.createParamterGrad(1, 1, 1, this.meanNum, true);
+//			}else {
+//				this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+//			}
 		}
 		
 		if(this.beta == null && hasBias) {
@@ -384,5 +389,20 @@ public class LNLayer extends NormalizationLayer {
 		// TODO Auto-generated method stub
 		
 	}
-
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		ModelUtils.saveParams(outputStream, gamma);
+		if(hasBias) {
+			ModelUtils.saveParams(outputStream, beta);
+		}
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		init();
+		ModelUtils.loadParams(inputStream, gamma);
+		if(hasBias) {
+			ModelUtils.loadParams(inputStream, beta);
+		}
+	}
+	
 }

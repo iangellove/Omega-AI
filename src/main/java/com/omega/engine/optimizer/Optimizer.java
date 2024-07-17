@@ -1502,6 +1502,57 @@ public abstract class Optimizer {
 		return error;
 	}
 	
+	public float accuracyBatchFisrt(Tensor input,float[] tmpInput,Tensor output,Tensor labelData,float[] tmpLabel,int time,int batchSize,BertTokenizer tokenizer,int igonre) {
+		float error = 0.0f;
+		float trueCount = 0;
+		int max_score = -9999;
+		int max_index = 0;
+		int[] itxt = new int[time];
+		int[] ptxt = new int[time];
+		int[] ltxt = new int[time];
+		
+		for(int n = 0;n<batchSize;n++) {
+			boolean allRight = true;
+			int score = time;
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+//				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+				int labelIndex = (int) tmpLabel[n * time + t];
+				if(labelIndex != igonre && labelIndex != predictIndex) {
+					allRight = false;
+					score--;
+				}
+			}
+			
+			if(max_score <= score) {
+				max_score = score;
+				max_index = n;
+			}
+
+			if(allRight) {
+				trueCount++;
+			}
+		}
+		
+		for(int t = 0;t<time;t++) {
+			int predictIndex = MatrixOperation.maxIndex(output.getByNumber(max_index * time + t));
+//			int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+			int labelIndex = (int) tmpLabel[max_index * time + t];
+			int inputIndex = (int) tmpInput[max_index * time + t];
+			itxt[t] = inputIndex;
+			ptxt[t] = predictIndex;
+			ltxt[t] = labelIndex;
+		}
+		System.out.println("max_score:"+max_score);
+		System.out.println("itxt:"+tokenizer.decode(itxt));
+		System.out.println("ptxt:"+tokenizer.decode(ptxt));
+		System.out.println("ltxt:"+tokenizer.decode(ltxt));
+
+		error = trueCount / batchSize * 100;
+
+		return error;
+	}
+	
 	public float accuracyBatchFisrt(Tensor input,Tensor output,Tensor labelData,int time,int batchSize,SentencePieceTokenizer tokenizer,int igonre) {
 		float error = 0.0f;
 		float trueCount = 0;
@@ -1686,6 +1737,101 @@ public abstract class Optimizer {
 			if(allRight) {
 				trueCount++;
 			}
+		}
+		System.out.println("max_score:"+max_score);
+		System.out.println("itxt:"+max_itxt);
+		System.out.println("ptxt:"+max_ptxt);
+		System.out.println("ltxt:"+max_ltxt);
+		error = trueCount / batchSize * 100;
+
+		return error;
+	}
+	
+	public float accuracyIdx(Tensor input,Tensor output,Tensor labelData,int time,int batchSize,String[] vocab) {
+		
+		float error = 0.0f;
+		float trueCount = 0;
+		int max_score = 0;
+		int max_index = 0;
+		String max_itxt = "";
+		String max_ptxt = "";
+		String max_ltxt = "";
+		
+		for(int n = 0;n<batchSize;n++) {
+			boolean allRight = true;
+			int score = time;
+			
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+				int labelIndex = (int) labelData.data[n * time + t];
+				if(labelIndex != predictIndex) {
+					allRight = false;
+					score--;
+				}
+			}
+			if(max_score <= score) {
+				max_score = score;
+				max_index = n;
+
+			}
+			
+			if(allRight) {
+				trueCount++;
+			}
+		}
+		for(int t = 0;t<time;t++) {
+			int predictIndex = MatrixOperation.maxIndex(output.getByNumber(max_index * time + t));
+			int labelIndex = (int) labelData.data[max_index * time + t];
+			int inputIndex = (int) input.data[max_index * time + t];
+			max_ptxt += vocab[predictIndex];
+			max_ltxt += vocab[labelIndex];
+			max_itxt += vocab[inputIndex];
+		}
+		System.out.println("max_score:"+max_score);
+		System.out.println("itxt:"+max_itxt);
+		System.out.println("ptxt:"+max_ptxt);
+		System.out.println("ltxt:"+max_ltxt);
+		error = trueCount / batchSize * 100;
+
+		return error;
+	}
+	
+	public float accuracyIdx(Tensor input,Tensor output,Tensor labelData,int time,int batchSize,String[] vocab,int igonre) {
+		
+		float error = 0.0f;
+		float trueCount = 0;
+		int max_score = 0;
+		int max_index = 0;
+		for(int n = 0;n<batchSize;n++) {
+			boolean allRight = true;
+			int score = time;
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+				int labelIndex = (int) labelData.data[n * time + t];
+				if(labelIndex != igonre && labelIndex != predictIndex) {
+					allRight = false;
+					score--;
+				}
+			}
+			if(max_score <= score) {
+				max_score = score;
+				max_index = n;
+			}
+
+			if(allRight) {
+				trueCount++;
+			}
+		}
+		String max_itxt = "";
+		String max_ptxt = "";
+		String max_ltxt = "";
+		for(int t = 0;t<time;t++) {
+			int predictIndex = MatrixOperation.maxIndex(output.getByNumber(max_index * time + t));
+			int labelIndex = (int) labelData.data[max_index * time + t];
+			int inputIndex = (int) input.data[max_index * time + t];
+			max_ptxt += vocab[predictIndex];
+			max_ltxt += vocab[labelIndex];
+			max_itxt += vocab[inputIndex];
 		}
 		System.out.println("max_score:"+max_score);
 		System.out.println("itxt:"+max_itxt);

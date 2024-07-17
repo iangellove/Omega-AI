@@ -344,7 +344,7 @@ public class AttentionKernel extends BaseKernel{
 	 * @param B
 	 * @param T
 	 */
-	public void softmax_test_forward(Tensor input,Tensor output,int B,int NH,int T,float scale) {
+	public void softmax_test_forward(Tensor input,Tensor output,int B,int NH,int T) {
 		
 		try {
 			
@@ -354,9 +354,9 @@ public class AttentionKernel extends BaseKernel{
 	         */ 
 			softmaxForwardParameters = Pointer.to(
 	        		Pointer.to(output.getGpuData()),
-	        	    Pointer.to(new float[]{scale}),
+//	        	    Pointer.to(new float[]{scale}),
 	        	    Pointer.to(input.getGpuData()),
-	                Pointer.to(new int[]{B * NH}),
+	                Pointer.to(new int[]{B * NH * T}),
 	                Pointer.to(new int[]{T})
 	            );
 	        

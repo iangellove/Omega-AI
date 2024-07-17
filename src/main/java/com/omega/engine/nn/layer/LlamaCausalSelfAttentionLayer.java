@@ -3,6 +3,9 @@ package com.omega.engine.nn.layer;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
@@ -271,8 +274,8 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 //		attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
 		
 		if(network.RUN_MODEL == RunModel.TEST) {
-			attentionKernel.softmax_test_forward(preatt, attn, batchSize, headNum, time, d_k);
-//			attn.showDM();
+			attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
+			attentionKernel.softmax_test_forward(preatt, attn, batchSize, headNum, time);
 		}else {
 			attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time, d_k);
 		}
@@ -557,5 +560,19 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		}
 		return true;
 	}
-
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		qLinerLayer.saveModel(outputStream);
+		kLinerLayer.saveModel(outputStream);
+		vLinerLayer.saveModel(outputStream);
+		oLinerLayer.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		qLinerLayer.loadModel(inputStream);
+		kLinerLayer.loadModel(inputStream);
+		vLinerLayer.loadModel(inputStream);
+		oLinerLayer.loadModel(inputStream);
+	}
+	
 }

@@ -181,6 +181,49 @@ public class CNChatTokenizer extends BaseTokenizer{
 		return testInput;
 	}
 	
+	public Tensor loadByTxtToIdx(int[] idx) {
+
+//		System.out.println(JsonUtils.toJson(onceToken));
+		testInput = Tensor.createTensor(testInput, idx.length, 1, 1, 1, true);
+		testInput.clear();
+		for(int t = 0;t<idx.length;t++) {
+			formatNotHeadToIdx(t, idx, testInput);
+		}
+		testInput.hostToDevice();
+		return testInput;
+	}
+	
+	public int[] encode(String txt) {
+		String[] onceToken = txt.split("");
+		int[] idx = new int[onceToken.length];
+		for(int i = 0;i<idx.length;i++) {
+			if(onceToken[i].equals(" ")) {
+				idx[i] = 3;
+			}else if(!dictionary.containsKey(onceToken[i])) {
+				idx[i] = 0;
+			}else {
+				idx[i] = dictionary.get(onceToken[i]);
+			}
+		}
+		return idx;
+	}
+	
+	public String decode(int[] idx) {
+		String txt = "";
+		for(int i = 0;i<idx.length;i++) {
+			txt += vocab[idx[i]];
+		}
+		return txt;
+	}
+	
+	public String decode(int[] idx,int skip) {
+		String txt = "";
+		for(int i = skip;i<idx.length;i++) {
+			txt += vocab[idx[i]];
+		}
+		return txt;
+	}
+	
 	public void loadData(int[] indexs, Tensor input, Tensor label) {
 		// TODO Auto-generated method stub
 		
@@ -214,6 +257,28 @@ public class CNChatTokenizer extends BaseTokenizer{
 //			System.out.println(onceToken.length);
 			for(int t = 0;t<max_len;t++) {
 				formatNotHeadToIdx(i, t, onceToken, input, label);
+			}
+		}
+
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+		label.hostToDevice();
+		
+	}
+	
+	public void loadTrainIdx(int[] indexs, Tensor input, Tensor label) {
+		// TODO Auto-generated method stub
+		
+		input.clear();
+		label.clear();
+		
+		for(int i = 0;i<indexs.length;i++) {
+			String[] onceToken = trainData.get(indexs[i]);
+//			System.out.println(onceToken.length);
+			for(int t = 0;t<max_len;t++) {
+				formatNotHead2Idx(i, t, onceToken, input, label);
 			}
 		}
 
@@ -341,6 +406,16 @@ public class CNChatTokenizer extends BaseTokenizer{
 		}
 	}
 	
+	public void formatNotHeadToIdx(int t,int[] onceToken,Tensor input) {
+		if((t + 1) < onceToken.length) {
+			input.data[t] = onceToken[t];
+		}else if((t + 1) == onceToken.length){
+			input.data[t] = onceToken[t];
+		}else {
+			input.data[t] = dictionary.get("<pad>");
+		}
+	}
+	
 	public void format(int b,int t,String[] onceToken,Tensor input,Tensor label) {
 		if(t == 0){
 			String curr = onceToken[t];
@@ -397,6 +472,22 @@ public class CNChatTokenizer extends BaseTokenizer{
 		}else {
 			input.data[b * max_len + t] = dictionary.get("<pad>");
 			label.data[(b * max_len + t) * vocab_size + 0] = 1.0f;
+		}
+	}
+	
+	public void formatNotHead2Idx(int b,int t,String[] onceToken,Tensor input,Tensor label) {
+		if((t + 1) < onceToken.length) {
+			String curr = onceToken[t];
+			String next = onceToken[t + 1];
+			input.data[b * max_len + t] = dictionary.get(curr);
+			label.data[b * max_len + t] = dictionary.get(next);
+		}else if((t + 1) == onceToken.length){
+			String curr = onceToken[t];
+			input.data[b * max_len + t] = dictionary.get(curr);
+			label.data[b * max_len + t] = dictionary.get("<sep>");
+		}else {
+			input.data[b * max_len + t] = dictionary.get("<pad>");
+			label.data[b * max_len + t] = dictionary.get("<pad>");
 		}
 	}
 	

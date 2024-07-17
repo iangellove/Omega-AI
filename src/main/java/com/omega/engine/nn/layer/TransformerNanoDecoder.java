@@ -1,5 +1,7 @@
 package com.omega.engine.nn.layer;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -388,6 +390,27 @@ public class TransformerNanoDecoder extends Layer{
 	public void backTemp() {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		src_emb.saveModel(outputStream);
+		System.out.println("src_emb save success...");
+		pos_emb.saveModel(outputStream);
+		System.out.println("pos_emb save success...");
+		for(int i = 0;i<n_layers;i++) {
+			decoderLayers.get(i).saveModel(outputStream);
+		}
+		ln.saveModel(outputStream);
+		System.out.println("ln save success...");
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		src_emb.loadModel(inputStream);
+		pos_emb.loadModel(inputStream);
+		for(int i = 0;i<n_layers;i++) {
+			decoderLayers.get(i).loadModel(inputStream);
+		}
+		ln.loadModel(inputStream);
 	}
 	
 }

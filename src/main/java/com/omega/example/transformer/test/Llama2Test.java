@@ -22,6 +22,7 @@ import com.omega.example.transformer.utils.CNTokenizer;
 import com.omega.example.transformer.utils.CNWikiTokenizer;
 import com.omega.example.transformer.utils.CNWikiTokenizer2;
 import com.omega.example.transformer.utils.CNWikiTokenizer3;
+import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.transformer.utils.SentencePieceTokenizer;
 
 public class Llama2Test {
@@ -310,6 +311,8 @@ public class Llama2Test {
 			String trainPath = "H:\\transformer_dataset\\wbm_idx_smallvocab.txt";
 			
 			String tokenizer_path = "H:\\transformer_dataset\\vocab.txt";
+			
+			String model_path = "H:\\model\\llama2-92m-chinese.model";
 	    
 			BertTokenizer tokenizer = new BertTokenizer(tokenizer_path, true, true);
 				
@@ -327,6 +330,8 @@ public class Llama2Test {
 			optimizer.warmUpTime = 1000;
 			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
 			optimizer.trainLlama2_chinese(trainData);
+			
+			ModelUtils.saveModel(network, model_path);
 			
 			network.RUN_MODEL = RunModel.TEST;
 			Scanner scanner = new Scanner(System.in);
@@ -349,6 +354,7 @@ public class Llama2Test {
 					Tensor cos = pos[0];
 					Tensor sin = pos[1];
 					Tensor output = network.forward(cos, sin, input);
+					output.syncHost();
 					int nextIDX = output2NextIDX(output, idx.length - 1);
 					idx = Arrays.copyOf(idx, idx.length + 1);
 					idx[idx.length - 1] = nextIDX;

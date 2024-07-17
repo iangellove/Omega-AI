@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.active.GeluLayer;
 import com.omega.engine.nn.network.Network;
@@ -241,6 +244,16 @@ public class MLPLayer extends Layer{
 	public void backTemp() {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		linear1.saveModel(outputStream);
+		linear2.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		linear1.loadModel(inputStream);
+		linear2.loadModel(inputStream);
 	}
 	
 	public static void main(String[] args) {

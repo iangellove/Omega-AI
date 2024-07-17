@@ -490,7 +490,7 @@ public class GPUOP {
         
         int status = JCublas2.cublasGemmStridedBatchedEx(handle, transa, transb, m, n, k, alphaP, A, cudaDataType.CUDA_R_32F,
         		lda, strideA, B, cudaDataType.CUDA_R_32F, ldb, strideB, betaP, C, cudaDataType.CUDA_R_32F, ldc, strideC,
-        		batchCount, cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT);
+        		batchCount, cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         
         checkCUBLASResult(status);
 

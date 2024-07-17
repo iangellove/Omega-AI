@@ -138,6 +138,26 @@ public class CNTokenizer extends BaseTokenizer{
 		
 	}
 	
+	public void loadIDXData(int[] indexs, Tensor input, Tensor label) {
+		// TODO Auto-generated method stub
+		
+		input.clear();
+		label.clear();
+
+		for(int i = 0;i<indexs.length;i++) {
+			for(int t = 0;t<time;t++) {
+				formatIdx(i, indexs[i], t, trainData, input, label);
+			}
+		}
+		
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+		label.hostToDevice();
+		
+	}
+	
 	public void loadDataVail(int[] indexs, Tensor input, Tensor label) {
 		// TODO Auto-generated method stub
 		
@@ -169,6 +189,14 @@ public class CNTokenizer extends BaseTokenizer{
 			input.data[b * time + t] = dictionary.get(curr);
 			label.data[(b * time + t) * characters + dictionary.get(next)] = 1.0f;
 		}
+	}
+	
+	public void formatIdx(int b,int i,int t,Character[] dataset,Tensor input,Tensor label) {
+		char curr = dataset[i + t];
+		char next = dataset[i + t + 1];
+
+		input.data[b * time + t] = dictionary.get(curr);
+		label.data[b * time + t] = dictionary.get(next);
 	}
 	
 	public void format(int b,int i,int t,Tensor input,Tensor label) {

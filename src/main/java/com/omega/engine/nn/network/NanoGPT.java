@@ -1,5 +1,8 @@
 package com.omega.engine.nn.network;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
@@ -223,6 +226,18 @@ public class NanoGPT extends Network {
 	public Tensor lossDiff(Tensor output, Tensor label,int igonre) {
 		// TODO Auto-generated method stub
 		return this.lossFunction.diff(output, label, igonre);
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		decoder.saveModel(outputStream);
+		System.out.println("decoder save success...");
+		fullyLayer.saveModel(outputStream);
+		System.out.println("fullyLayer save success...");
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		decoder.loadModel(inputStream);
+		fullyLayer.loadModel(inputStream);
 	}
 	
 }

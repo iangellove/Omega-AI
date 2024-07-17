@@ -133,32 +133,61 @@ public class CNWikiTokenizer3 extends BaseTokenizer{
     	}
 	}
 	
-	public void loadData(Tensor input,Tensor label) {
-		
-		if(loadDataStatus) {
+	public void loadData(Tensor input,Tensor label, float[] tmpInput, float[] tmpLabel) {
+//		System.out.println(loadDataStatus);
+		if(this.loadDataStatus) {
 			input.hostToDevice();
 			label.hostToDevice();
+			input.syncHost(tmpInput);
+			label.syncHost(tmpLabel);
 			JCuda.cudaDeviceSynchronize();
-		}
-		
-		CompletableFuture.supplyAsync(()-> {
-			try {
-				loadDataStatus = false;
-				for(int b = 0;b<batchSize;b++) {
-					int[] onceToken = readIdx();
-					for(int t = 0;t<max_len;t++) {
-						formatNotHeadToIdx(b, t, onceToken, input, label);
+			
+			CompletableFuture.supplyAsync(()-> {
+				try {
+					this.loadDataStatus = false;
+					for(int b = 0;b<batchSize;b++) {
+						int[] onceToken = readIdx();
+						for(int t = 0;t<max_len;t++) {
+							formatNotHeadToIdx(b, t, onceToken, input, label);
+						}
 					}
+				} catch (Exception e) {
+					// TODO: handle exception
+					e.printStackTrace();
 				}
-			} catch (Exception e) {
-				// TODO: handle exception
+				return "success";
+			}).thenAccept(status->{
+				loadDataStatus = true;
+			});
+			
+		}else {
+
+			CompletableFuture.supplyAsync(()-> {
+				try {
+					this.loadDataStatus = false;
+					for(int b = 0;b<batchSize;b++) {
+						int[] onceToken = readIdx();
+						for(int t = 0;t<max_len;t++) {
+							formatNotHeadToIdx(b, t, onceToken, input, label);
+						}
+					}
+				} catch (Exception e) {
+					// TODO: handle exception
+					e.printStackTrace();
+				}
+				return "success";
+			}).thenAccept(status->{
+				loadDataStatus = true;
+			});
+			
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			return "success";
-		}).thenAccept(status->{
-			loadDataStatus = true;
-		});
-		
+		}
+
 	}
 	
 	public String decode(Tensor output) {

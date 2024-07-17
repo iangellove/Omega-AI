@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
@@ -23,6 +24,7 @@ import com.omega.example.transformer.utils.CNChatTokenizer;
 import com.omega.example.transformer.utils.CNChatTokenizer2;
 import com.omega.example.transformer.utils.CNTokenizer;
 import com.omega.example.transformer.utils.ENTokenizer;
+import com.omega.example.transformer.utils.ModelUtils;
 
 public class GPTTest {
 	
@@ -352,7 +354,7 @@ public class GPTTest {
 			
 			boolean bias = false;
 			
-			boolean dropout = true;
+			boolean dropout = false;
 			
 			int batchSize = 16;
 			
@@ -365,17 +367,26 @@ public class GPTTest {
 			int decoderNum = 6;
 			
 			String trainPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\qaData.txt";
+			
+//			String model_path = "H:\\model\\nanogpt-110m-qa.model";
+			String model_path = "H:\\model\\nanogpt-110m-qa-20240717.model";
 
 			CNChatTokenizer trainData = new CNChatTokenizer(trainPath, max_len, batchSize);
 			
-			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
 			
-			network.learnRate = 0.001f;
+			network.learnRate = 0.0005f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.SMART_HALF, false);
-//			optimizer.lr_step = new int[] {1, 2};
+			ModelUtils.loadModel(network, model_path);
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			optimizer.lr_step = new int[] {1, 2};
 			optimizer.trainNanoGPT(trainData);
-
+			
+			String out_model_path = "H:\\model\\nanogpt-110m-qa-2024071711.model";
+			
+			ModelUtils.saveModel(network, out_model_path);
+			
 			network.RUN_MODEL = RunModel.TEST;
 			Scanner scanner = new Scanner(System.in);
 			while (true) {
@@ -415,6 +426,75 @@ public class GPTTest {
 				}
 				
 				System.out.println("chatbot:"+input_txt.split(" ")[1]);
+			}
+			scanner.close();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void gpt2_yl_qa_predict() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			int batchSize = 16;
+			
+			int max_len = 128;
+			
+			int embedDim = 768;
+			
+			int head_num = 12;
+			
+			int decoderNum = 6;
+			
+			String trainPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\qaData.txt";
+
+			String model_path = "H:\\model\\nanogpt-110m-qa-2024071711.model";
+
+			CNChatTokenizer trainData = new CNChatTokenizer(trainPath, max_len, batchSize);
+			
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
+			
+			ModelUtils.loadModel(network, model_path);
+			
+			network.RUN_MODEL = RunModel.TEST;
+			Scanner scanner = new Scanner(System.in);
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase() + " ";
+				System.out.println("user:"+input_txt);
+				int[] idx = trainData.encode(input_txt);
+				int startLen = idx.length;
+//				System.out.println("idx:"+JsonUtils.toJson(idx));
+				Tensor input = trainData.loadByTxtToIdx(idx);
+//				input.showDM();
+				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
+				for(int t = 0;t<max_len - idx.length;t++) {
+					network.time = input.number;
+					Tensor output = network.forward(input, positions);
+					output.syncHost();
+					int nextIDX = output2NextIDX(output, idx.length - 1);
+					idx = Arrays.copyOf(idx, idx.length + 1);
+					idx[idx.length - 1] = nextIDX;
+					if(nextIDX == trainData.dictionary.get("<eos>").intValue() || nextIDX == trainData.dictionary.get("<sep>").intValue()) {
+						break;
+					}
+					input = trainData.loadByTxtToIdx(idx);
+					CNChatTokenizer.getPositions(1, input.number, positions);
+				}
+				System.out.println("chatbot:"+trainData.decode(idx, startLen - 1));
+//				System.out.println("chatbot:"+input_txt.split(" ")[1]);
 			}
 			scanner.close();
 			
@@ -822,6 +902,13 @@ public class GPTTest {
 		return txt;
 	}
 	
+	public static int output2NextIDX(Tensor output,int nextTokenIdx) {
+		if(nextTokenIdx < output.number) {
+			return pickTopN(output.getByNumber(nextTokenIdx), 1);
+		}
+		return 0;
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -838,9 +925,11 @@ public class GPTTest {
 			
 //			ch_chat_gpt2();
 			
-			gpt_dp();
+//			gpt_dp();
 			
 //			gpt2_yl_qa();
+			
+			gpt2_yl_qa_predict();
 			
 //			gpt_ssby();
 			

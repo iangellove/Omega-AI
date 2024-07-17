@@ -1,5 +1,7 @@
 package com.omega.engine.nn.layer;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +10,7 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.normalization.RMSLayer;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
@@ -279,6 +282,30 @@ public class LlamaTransformerDecoder extends Layer{
 	@Override
 	public void backTemp() {
 		// TODO Auto-generated method stub
+		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		src_emb.saveModel(outputStream);
+		
+		for(int i = 0;i<n_layers;i++) {
+			decoderLayers.get(i).saveModel(outputStream);
+		}
+		
+		norm.saveModel(outputStream);
+		
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		src_emb.loadModel(inputStream);
+		
+		for(int i = 0;i<n_layers;i++) {
+			decoderLayers.get(i).loadModel(inputStream);
+		}
+		
+		norm.loadModel(inputStream);
 		
 	}
 	

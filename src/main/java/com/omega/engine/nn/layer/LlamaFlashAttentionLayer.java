@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
@@ -489,6 +492,18 @@ public class LlamaFlashAttentionLayer extends LlamaAttentionLayer{
 			}
 		}
 		return true;
+	}
+
+	@Override
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

@@ -1,5 +1,8 @@
 package com.omega.engine.nn.network;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
@@ -9,8 +12,6 @@ import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.LlamaTransformerDecoder;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
 import com.omega.engine.updater.UpdaterType;
-
-import jcuda.runtime.JCuda;
 
 /**
  * Llama-2
@@ -225,6 +226,16 @@ public class Llama2 extends Network {
 	public Tensor lossDiff(Tensor output, Tensor label,int igonre) {
 		// TODO Auto-generated method stub
 		return this.lossFunction.diff(output, label, igonre);
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		decoder.saveModel(outputStream);
+		fullyLayer.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		decoder.loadModel(inputStream);
+		fullyLayer.loadModel(inputStream);
 	}
 	
 }

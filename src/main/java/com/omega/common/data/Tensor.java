@@ -478,11 +478,15 @@ public class Tensor implements Serializable{
 	}
 	
 	public float[] syncHost() {
-		if(data == null) {
+		if(data == null || data.length != this.dataLength) {
 			this.data = new float[this.dataLength];
 		}
 		JCuda.cudaMemcpy(Pointer.to(data), gpuData, this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
 		return data;
+	}
+	
+	public void syncHost(float[] tmp) {
+		JCuda.cudaMemcpy(Pointer.to(tmp), gpuData, this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
 	}
 	
 	public void hostToDevice() {

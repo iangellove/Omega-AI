@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
@@ -269,6 +272,20 @@ public class LlamaTransformerBlock extends Layer{
 	public void backTemp() {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		norm1.saveModel(outputStream);
+		attn.saveModel(outputStream);
+		norm2.saveModel(outputStream);
+		mlp.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		norm1.loadModel(inputStream);
+		attn.loadModel(inputStream);
+		norm2.loadModel(inputStream);
+		mlp.loadModel(inputStream);
 	}
 	
 }

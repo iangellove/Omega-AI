@@ -1074,7 +1074,7 @@ public class EDOptimizer extends Optimizer {
 			
 			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
 
-			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
+			Tensor label = new Tensor(batchSize * network.time, 1, 1, 1, true);
 			
 //			Tensor mask = CNChatTokenizer.triu(batchSize, network.headNum, network.time, network.time, 1);
 
@@ -1107,50 +1107,37 @@ public class EDOptimizer extends Optimizer {
 
 					this.lossDiff.clear();
 					
+					
+					
 					/**
 					 * 读取训练数据
 					 */
-					trainingData.loadTrainData(indexs[it], input, label);
-					
+					trainingData.loadTrainIdx(indexs[it], input, label);
+
 					/**
 					 * forward
 					 */
 					output = network.forward(input, positions);
-					
+
 					/**
 					 * loss
 					 */
 					this.loss = network.loss(output, label, trainingData.dictionary.get("<pad>"));
-//					this.loss = network.loss(output, label);
+
 					/**
 					 * loss diff
 					 */
 					this.lossDiff = network.lossDiff(output, label, trainingData.dictionary.get("<pad>"));
-//					this.lossDiff = network.lossDiff(output, label);
-//					lossDiff.showDMByNumber(0);
-					
-//					System.out.println(JsonUtils.toJson(output.syncHost()));
-					
-//					GradClipping.gradClipping(this.lossDiff, 1e-7f);
 
 					/**
 					 * back
 					 */
 					this.network.back(this.lossDiff);
-					
-//					/**
-//					 * grad clipping
-//					 */
-//					this.gradClipping(this.network);
-					
-//					this.network.clipGradNorm(1.0f);
-					
+
 					/**
 					 * update
 					 */
-//					if(it<indexs.length - 1){
-						this.network.update();
-//					}
+					this.network.update();
 
 					/**
 					 * current time error
@@ -1169,24 +1156,25 @@ public class EDOptimizer extends Optimizer {
 //					System.out.println(JsonUtils.toJson(output.shape()));
 //					System.out.println(JsonUtils.toJson(label.shape()));
 					int time = output.number / batchSize;
-					float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
-					
+					if(it % 20 == 0) {
+						float error = this.accuracyIdx(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
+					}
 //					if(error > 99) {
 //						break;
 //					}
 					
-					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
 					System.out.println(msg);
 
 					this.batchIndex++;
 					
-					if(it != 0 && it % 200 == 0) {
-						vail_chat(network, input, output, label, positions, trainingData);
-						network.RUN_MODEL = RunModel.TRAIN;
-					}
+//					if(it != 0 && it % 200 == 0) {
+//						vail_chat(network, input, output, label, positions, trainingData);
+//						network.RUN_MODEL = RunModel.TRAIN;
+//					}
 					
-//					if(it != 0 && it % 500 == 0) {
+//					if(it != 0 && it % 200 == 0) {
 //						break;
 //					}
 					
@@ -1546,7 +1534,7 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * 读取训练数据
 					 */
-					trainingData.loadData(indexs[it], input, label);
+					trainingData.loadIDXData(indexs[it], input, label);
 					
 					/**
 					 * forward
@@ -1584,7 +1572,7 @@ public class EDOptimizer extends Optimizer {
 					output.syncHost();
 
 					int time = output.number / batchSize;
-					float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab);
+					float error = this.accuracyIdx(input, output, label, time, batchSize, trainingData.vocab);
 
 					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
@@ -2052,8 +2040,12 @@ public class EDOptimizer extends Optimizer {
 			Llama2 network = (Llama2) this.network;
 			
 			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
+			
+			float[] tmpInput = new float[batchSize * network.time];
 
 			Tensor label = new Tensor(batchSize , 1, 1, network.time, true);
+			
+			float[] tmpLabel = new float[batchSize * network.time];
 
 			Tensor[] cs = RoPEKernel.getCosAndSin(network.time, network.embedDim, network.headNum);
 			
@@ -2063,7 +2055,7 @@ public class EDOptimizer extends Optimizer {
 			
 			int pad = trainingData.tokenizer.pad;
 			
-			trainingData.loadData(input, label);
+			trainingData.loadData(input, label, tmpInput, tmpLabel);
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				
@@ -2096,7 +2088,7 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * 读取训练数据
 					 */
-					trainingData.loadData(input, label);
+					trainingData.loadData(input, label, tmpInput, tmpLabel);
 //					trainingData.loadTrainData(indexs[it], input, label);
 //					JCuda.cudaDeviceSynchronize();
 //					System.out.println("loadTrainData:"+(System.nanoTime() - start22) / 1e6+"ms.");
@@ -2152,7 +2144,7 @@ public class EDOptimizer extends Optimizer {
 					if(it % 20 == 0) {
 						int time = output.number / batchSize;
 						if(trainingData.tokenizer != null) {
-							float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.tokenizer, pad);
+							float error = this.accuracyBatchFisrt(input, tmpInput, output, label, tmpLabel, time, batchSize, trainingData.tokenizer, pad);
 						}else {
 							float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, pad);
 						}
