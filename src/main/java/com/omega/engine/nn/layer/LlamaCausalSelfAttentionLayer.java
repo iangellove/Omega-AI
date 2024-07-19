@@ -170,7 +170,7 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		// TODO Auto-generated method stub
 		this.number = input.number;
 		this.time = this.network.time;
-		this.batchSize = number / time;
+		this.batchSize = this.number / time;
 		
 		if(this.preatt == null || this.preatt.number != this.batchSize || this.preatt.width != this.time) {
 			// [batch_size，time，head_num，d_k]
@@ -243,7 +243,7 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		/**
 		 * apply RoPE
 		 */
-		ropeKernel.forward(cos, sin, query, key, rq, rk);
+		ropeKernel.forwardAll32(query, key, rq, rk);
 		
 		TensorOP.permute(rq, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(rk, kt, new int[] {0, 2, 1, 3});
@@ -349,7 +349,7 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		qt.view(this.qLinerLayer.getOutput().shape());
 		kt.view(this.kLinerLayer.getOutput().shape());
 		vt.view(this.vLinerLayer.getOutput().shape());
-		
+
 		TensorOP.permute(dqt, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(dkt, kt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(dvt, vt, new int[] {0, 2, 1, 3});
@@ -357,7 +357,8 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		/**
 		 * RoPE backward
 		 */
-		ropeKernel.backward(cos, sin, qt, kt, rq, rk);
+
+		ropeKernel.backwardAll32(qt, kt, rq, rk);
 		
 		Tensor queryDelta = rq.view(batchSize * time, 1, 1, headNum * dk);
 		Tensor keyDelta = rk.view(batchSize * time, 1, 1, headNum * dk);

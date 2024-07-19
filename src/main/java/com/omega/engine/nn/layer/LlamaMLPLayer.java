@@ -44,7 +44,7 @@ public class LlamaMLPLayer extends Layer{
 		this.oHeight = 1;
 		this.oWidth = embedDim;
 		this.nChannel = 4 * embedDim;
-		this.nChannel = 2 * nChannel / 3;
+		this.nChannel = (int)(2 * nChannel / 3);
 		this.nChannel = multiple_of * ((this.nChannel + multiple_of - 1) / multiple_of);
 		this.initLayers();
 	}
@@ -61,7 +61,7 @@ public class LlamaMLPLayer extends Layer{
 		this.oHeight = 1;
 		this.oWidth = embedDim;
 		this.nChannel = 4 * embedDim;
-		this.nChannel = 2 * nChannel / 3;
+		this.nChannel = (int)(2 * nChannel / 3);
 		this.nChannel = multiple_of * ((this.nChannel + multiple_of - 1) / multiple_of);
 		this.initLayers();
 	}

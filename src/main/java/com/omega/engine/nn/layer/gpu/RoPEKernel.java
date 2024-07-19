@@ -38,12 +38,18 @@ public class RoPEKernel extends BaseKernel{
 	 */
 	private CUfunction forward_function;
 	private CUfunction forward_all_function;
+	
+	private CUfunction forward_32_function;
 	/**
 	 * 反向传播方法
 	 */
 	private CUfunction backward_function;
 	private CUfunction backward_all_function;
+
+	private CUfunction backward_32_function;
 	
+	private CUfunction forward_all_32_function;
+	private CUfunction backward_all_32_function;
 	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
@@ -76,7 +82,23 @@ public class RoPEKernel extends BaseKernel{
 			if(backward_all_function == null) {
 				backward_all_function = CUDAModules.getLocalFunctionByModule("RoPEKernel.cu", "rope_all_backward");
 			}
+			
+			if(forward_32_function == null) {
+				forward_32_function = CUDAModules.getLocalFunctionByModule("RoPEKernel.cu", "rope_f32");
+			}
 
+			if(backward_32_function == null) {
+				backward_32_function = CUDAModules.getLocalFunctionByModule("RoPEKernel.cu", "rope_backward_f32");
+			}
+			
+			if(forward_all_32_function == null) {
+				forward_all_32_function = CUDAModules.getLocalFunctionByModule("RoPEKernel.cu", "rope_all_f32");
+			}
+
+			if(backward_all_32_function == null) {
+				backward_all_32_function = CUDAModules.getLocalFunctionByModule("RoPEKernel.cu", "rope_all_backward_f32");
+			}
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -119,7 +141,7 @@ public class RoPEKernel extends BaseKernel{
 					Pointer.to(sin.getGpuData()),
 					Pointer.to(new int[] {ncol}),
 					Pointer.to(new int[] {input.channel}),
-					Pointer.to(new int[] {input.height})
+					Pointer.to(new int[] {input.width})
 	            );
 			
 			int[] block_dims = new int[] {1, 256, 1};
@@ -163,7 +185,7 @@ public class RoPEKernel extends BaseKernel{
 					Pointer.to(sin.getGpuData()),
 					Pointer.to(new int[] {ncol}),
 					Pointer.to(new int[] {q.channel}),
-					Pointer.to(new int[] {q.height})
+					Pointer.to(new int[] {q.width})
 	            );
 			
 			int[] block_dims = new int[] {1, 256, 1};
@@ -173,6 +195,92 @@ public class RoPEKernel extends BaseKernel{
 			int[] block_nums = new int[] {nrow, num_blocks_x, 1};
 			
 			checkCUDA(cuLaunchKernel(forward_all_function,
+					block_nums[0], block_nums[1], block_nums[2],      // Grid dimension
+					block_dims[0], block_dims[1], block_dims[2],      // Block dimension
+					0, null,               // Shared memory size and stream
+					forwardParameters, null // Kernel- and extra parameters
+				));
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void forward32(Tensor input, Tensor output) {
+		
+		try {
+			
+			int nrow = input.number * input.channel;
+			
+			int ncol = input.height * input.width;
+			
+			float theta_scale = (float) Math.pow(10000.0d, -2.0d/ncol);
+			
+			/**
+			 * const float * x, float * dst, const int ncols, const int T, const float theta_scale
+			 */
+			forwardParameters = Pointer.to(
+					Pointer.to(input.getGpuData()),
+					Pointer.to(output.getGpuData()),
+					Pointer.to(new int[] {ncol}),
+					Pointer.to(new int[] {input.channel}),
+					Pointer.to(new float[] {theta_scale})
+	            );
+			
+			int[] block_dims = new int[] {1, 2*256, 1};
+			
+			int num_blocks_x = (ncol + 2*256 - 1) / (2*256);
+			
+			int[] block_nums = new int[] {nrow, num_blocks_x, 1};
+			
+			checkCUDA(cuLaunchKernel(forward_32_function,
+					block_nums[0], block_nums[1], block_nums[2],      // Grid dimension
+					block_dims[0], block_dims[1], block_dims[2],      // Block dimension
+					0, null,               // Shared memory size and stream
+					forwardParameters, null // Kernel- and extra parameters
+				));
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void forwardAll32(Tensor q, Tensor k,Tensor qo,Tensor ko) {
+		
+		try {
+			
+			int nrow = q.number * q.channel;
+			
+			int ncol = q.height * q.width;
+			
+			float theta_scale = (float) Math.pow(10000.0d, -2.0d/ncol);
+			
+			/**
+			 * const float * q,const float * k, float * rq, float * rk, const int ncols, const int T, const float theta_scale
+			 */
+			forwardParameters = Pointer.to(
+					Pointer.to(q.getGpuData()),
+					Pointer.to(k.getGpuData()),
+					Pointer.to(qo.getGpuData()),
+					Pointer.to(ko.getGpuData()),
+					Pointer.to(new int[] {ncol}),
+					Pointer.to(new int[] {q.channel}),
+					Pointer.to(new float[] {theta_scale})
+	            );
+			
+			int[] block_dims = new int[] {1, 2*256, 1};
+			
+			int num_blocks_x = (ncol + 2*256 - 1) / (2*256);
+			
+			int[] block_nums = new int[] {nrow, num_blocks_x, 1};
+			
+			checkCUDA(cuLaunchKernel(forward_all_32_function,
 					block_nums[0], block_nums[1], block_nums[2],      // Grid dimension
 					block_dims[0], block_dims[1], block_dims[2],      // Block dimension
 					0, null,               // Shared memory size and stream
@@ -206,7 +314,7 @@ public class RoPEKernel extends BaseKernel{
 					Pointer.to(sin.getGpuData()),
 					Pointer.to(new int[] {ncol}),
 					Pointer.to(new int[] {delta.channel}),
-					Pointer.to(new int[] {delta.height})
+					Pointer.to(new int[] {delta.width})
 	            );
 			
 			int[] block_dims = new int[] {1, 256, 1};
@@ -250,7 +358,7 @@ public class RoPEKernel extends BaseKernel{
 					Pointer.to(sin.getGpuData()),
 					Pointer.to(new int[] {ncol}),
 					Pointer.to(new int[] {deltaQ.channel}),
-					Pointer.to(new int[] {deltaQ.height})
+					Pointer.to(new int[] {deltaQ.width})
 	            );
 			
 			int[] block_dims = new int[] {1, 256, 1};
@@ -266,6 +374,92 @@ public class RoPEKernel extends BaseKernel{
 					backwardParameters, null // Kernel- and extra parameters
 				));
 
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backward32(Tensor delta, Tensor diff) {
+		
+		try {
+			
+			int nrow = delta.number * delta.channel;
+			
+			int ncol = delta.height * delta.width;
+			
+			float theta_scale = (float) Math.pow(10000.0d, -2.0d/ncol);
+			
+			/**
+			 * const float * x, float * dst, const int ncols, const int T, const float theta_scale
+			 */
+			backwardParameters = Pointer.to(
+					Pointer.to(delta.getGpuData()),
+					Pointer.to(diff.getGpuData()),
+					Pointer.to(new int[] {ncol}),
+					Pointer.to(new int[] {delta.channel}),
+					Pointer.to(new float[] {theta_scale})
+	            );
+			
+			int[] block_dims = new int[] {1, 2*256, 1};
+			
+			int num_blocks_x = (ncol + 2*256 - 1) / (2*256);
+			
+			int[] block_nums = new int[] {nrow, num_blocks_x, 1};
+			
+			checkCUDA(cuLaunchKernel(backward_32_function,
+					block_nums[0], block_nums[1], block_nums[2],      // Grid dimension
+					block_dims[0], block_dims[1], block_dims[2],      // Block dimension
+					0, null,               // Shared memory size and stream
+					backwardParameters, null // Kernel- and extra parameters
+				));
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backwardAll32(Tensor deltaQ, Tensor deltaK,Tensor diffQ,Tensor diffK) {
+		
+		try {
+			
+			int nrow = deltaQ.number * deltaQ.channel;
+			
+			int ncol = deltaQ.height * deltaQ.width;
+			
+			float theta_scale = (float) Math.pow(10000.0d, -2.0d/ncol);
+			
+			/**
+			 * float* deltaQ,float* deltaK, float* diffQ, float* diffK, const int ncols, const int T, const float theta_scale
+			 */
+			backwardParameters = Pointer.to(
+					Pointer.to(deltaQ.getGpuData()),
+					Pointer.to(deltaK.getGpuData()),
+					Pointer.to(diffQ.getGpuData()),
+					Pointer.to(diffK.getGpuData()),
+					Pointer.to(new int[] {ncol}),
+					Pointer.to(new int[] {deltaQ.channel}),
+					Pointer.to(new float[] {theta_scale})
+	            );
+			
+			int[] block_dims = new int[] {1, 2*256, 1};
+			
+			int num_blocks_x = (ncol + 2*256 - 1) / (2*256);
+			
+			int[] block_nums = new int[] {nrow, num_blocks_x, 1};
+			
+			checkCUDA(cuLaunchKernel(backward_all_32_function,
+					block_nums[0], block_nums[1], block_nums[2],      // Grid dimension
+					block_dims[0], block_dims[1], block_dims[2],      // Block dimension
+					0, null,               // Shared memory size and stream
+					backwardParameters, null // Kernel- and extra parameters
+				));
+			
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -291,7 +485,7 @@ public class RoPEKernel extends BaseKernel{
 
 			CUDAModules.initContext();
 			
-			int N = 1;
+			int N = 3;
 	    	int T = 5;
 	    	int HN = 2;
 	    	int W = 4;
@@ -315,43 +509,43 @@ public class RoPEKernel extends BaseKernel{
 	    	
 	    	RoPELayer rope = new RoPELayer(tf);
 
-	    	input.showDM();
-	    	cos.showDM();
-	    	sin.showDM();
-	    	Tensor op1 = new Tensor(N, T, HN, W, true);
-	    	for(int b = 0;b<N;b++) {
-	    		for(int t = 0;t<T;t++){
-	    			for(int h = 0;h<HN;h++) {
-	    				for(int d = 0;d<W/2;d++) {
-	    					int index = b * T * HN * W + t * HN * W + h * W + d * 2;
-	    					float xr = input.data[index];
-	    	    			float xi = input.data[index + 1];
-	    	    			float cos_th = cos.data[t * W / 2 + d];
-	    	    			float sin_th = sin.data[t * W / 2 + d];
-	    	    			op1.data[index] = xr * cos_th - xi * sin_th;
-	    	    			op1.data[index + 1] = xr * sin_th + xi * cos_th;
-	    				}
-	    			}
-	    		}
-	    	}
-	    	System.out.println("cpu-output:"+JsonUtils.toJson(op1.data));
-	    	Tensor op2 = new Tensor(N, T, HN, W, true);
-	    	for(int b = 0;b<N;b++) {
-	    		for(int t = 0;t<T;t++){
-	    			for(int h = 0;h<HN;h++) {
-	    				for(int d = 0;d<W/2;d++) {
-	    					int index = b * T * HN * W + t * HN * W + h * W + d * 2;
-	    					float dr = delta.data[index];
-	    	    			float di = delta.data[index + 1];
-	    	    			float cos_th = cos.data[t * W / 2 + d];
-	    	    			float sin_th = sin.data[t * W / 2 + d];
-	    	    			op2.data[index] = dr * cos_th + di * sin_th;
-	    	    			op2.data[index + 1] = di * cos_th - dr * sin_th;
-	    				}
-	    			}
-	    		}
-	    	}
-	    	System.out.println("cpu-diff:"+JsonUtils.toJson(op2.data));
+//	    	input.showDM();
+//	    	cos.showDM();
+//	    	sin.showDM();
+//	    	Tensor op1 = new Tensor(N, T, HN, W, true);
+//	    	for(int b = 0;b<N;b++) {
+//	    		for(int t = 0;t<T;t++){
+//	    			for(int h = 0;h<HN;h++) {
+//	    				for(int d = 0;d<W/2;d++) {
+//	    					int index = b * T * HN * W + t * HN * W + h * W + d * 2;
+//	    					float xr = input.data[index];
+//	    	    			float xi = input.data[index + 1];
+//	    	    			float cos_th = cos.data[t * W / 2 + d];
+//	    	    			float sin_th = sin.data[t * W / 2 + d];
+//	    	    			op1.data[index] = xr * cos_th - xi * sin_th;
+//	    	    			op1.data[index + 1] = xr * sin_th + xi * cos_th;
+//	    				}
+//	    			}
+//	    		}
+//	    	}
+//	    	System.out.println("cpu-output:"+JsonUtils.toJson(op1.data));
+//	    	Tensor op2 = new Tensor(N, T, HN, W, true);
+//	    	for(int b = 0;b<N;b++) {
+//	    		for(int t = 0;t<T;t++){
+//	    			for(int h = 0;h<HN;h++) {
+//	    				for(int d = 0;d<W/2;d++) {
+//	    					int index = b * T * HN * W + t * HN * W + h * W + d * 2;
+//	    					float dr = delta.data[index];
+//	    	    			float di = delta.data[index + 1];
+//	    	    			float cos_th = cos.data[t * W / 2 + d];
+//	    	    			float sin_th = sin.data[t * W / 2 + d];
+//	    	    			op2.data[index] = dr * cos_th + di * sin_th;
+//	    	    			op2.data[index + 1] = di * cos_th - dr * sin_th;
+//	    				}
+//	    			}
+//	    		}
+//	    	}
+//	    	System.out.println("cpu-diff:"+JsonUtils.toJson(op2.data));
 	    	for(int i = 0;i<10;i++) {
 	    		rope.forward(cos, sin, input);
 	    		rope.getOutput().showDM();

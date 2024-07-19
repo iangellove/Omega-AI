@@ -10,10 +10,18 @@ import com.omega.engine.nn.network.NanoGPT;
 public class ModelUtils {
 	
 	public static void saveModel(Llama2 model,String outpath) {
-		
-		try(RandomAccessFile file = new RandomAccessFile(outpath, "r")){
+		File file = new File(outpath);
+		if(!file.exists()) {
+			try {
+				file.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		try(RandomAccessFile rFile = new RandomAccessFile(file, "rw")){
 			System.out.println("start save model...");
-			model.saveModel(file);
+			model.saveModel(rFile);
 			System.out.println("model save success...");
 		}catch (Exception e) {
 			// TODO: handle exception

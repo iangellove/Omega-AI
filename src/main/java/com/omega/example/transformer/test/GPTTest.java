@@ -480,7 +480,7 @@ public class GPTTest {
 				Tensor input = trainData.loadByTxtToIdx(idx);
 //				input.showDM();
 				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
-				for(int t = 0;t<max_len - idx.length;t++) {
+				for(int t = 0;t<max_len - startLen;t++) {
 					network.time = input.number;
 					Tensor output = network.forward(input, positions);
 					output.syncHost();
@@ -493,7 +493,7 @@ public class GPTTest {
 					input = trainData.loadByTxtToIdx(idx);
 					CNChatTokenizer.getPositions(1, input.number, positions);
 				}
-				System.out.println("chatbot:"+trainData.decode(idx, startLen - 1));
+				System.out.println("chatbot:"+trainData.decode(idx, startLen));
 //				System.out.println("chatbot:"+input_txt.split(" ")[1]);
 			}
 			scanner.close();

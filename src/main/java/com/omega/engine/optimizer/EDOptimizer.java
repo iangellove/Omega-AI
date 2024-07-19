@@ -1496,7 +1496,7 @@ public class EDOptimizer extends Optimizer {
 			
 			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
 
-			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
+			Tensor label = new Tensor(batchSize * network.time, 1, 1, 1, true);
 			
 			Tensor[] cs = RoPEKernel.getCosAndSin(network.time, network.embedDim, network.headNum);
 			
@@ -1616,7 +1616,7 @@ public class EDOptimizer extends Optimizer {
 			
 			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
 
-			Tensor label = new Tensor(batchSize * network.time, 1, 1, network.vocabSize, true);
+			Tensor label = new Tensor(batchSize * network.time, 1, 1, 1, true);
 
 			Tensor[] cs = RoPEKernel.getCosAndSin(network.time, network.embedDim, network.headNum);
 			
@@ -1654,7 +1654,7 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * 读取训练数据
 					 */
-					trainingData.loadTrainData(indexs[it], input, label);
+					trainingData.loadTrainIdx(indexs[it], input, label);
 					
 					/**
 					 * forward
@@ -1693,18 +1693,16 @@ public class EDOptimizer extends Optimizer {
 					output.syncHost();
 
 					int time = output.number / batchSize;
-					float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
-
-					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					if(it % 20 == 0) {
+						float error = this.accuracyIdx(input, output, label, time, batchSize, trainingData.vocab, trainingData.dictionary.get("<pad>"));
+					}
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
 					System.out.println(msg);
 
 					this.batchIndex++;
-					
-//					if(it != 0 && it % 200 == 0) {
-//						vail_chat(network, input, output, label, positions, trainingData);
-//						network.RUN_MODEL = RunModel.TRAIN;
-//					}
 
 				}
 				

@@ -99,7 +99,7 @@ public class RoPELayer extends Layer {
 	
 	public void output(Tensor cos,Tensor sin) {
 		// TODO Auto-generated method stub
-		kernel.forward(cos, sin, input, output);
+		kernel.forward32(input, output);
 	}
 
 	@Override
@@ -116,7 +116,7 @@ public class RoPELayer extends Layer {
 	
 	public void diff(Tensor cos,Tensor sin) {
 		// TODO Auto-generated method stub
-		kernel.backward(cos, sin, delta, diff);
+		kernel.backward32(delta, diff);
 	}
 
 	@Override
