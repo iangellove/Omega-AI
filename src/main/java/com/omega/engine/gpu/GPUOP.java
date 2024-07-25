@@ -356,8 +356,8 @@ public class GPUOP {
             Pointer alphaP = Pointer.to(new float[]{ alpha });
             Pointer betaP = Pointer.to(new float[]{ beta });
             
-            int status = JCublas2.cublasGemmEx(handle, transa, transb, m, n, k, alphaP, A, cudaDataType.CUDA_R_32F,
-            		lda, B, cudaDataType.CUDA_R_32F, ldb, betaP, C, cudaDataType.CUDA_R_32F, ldc,
+            int status = JCublas2.cublasGemmEx(handle, transb, transa, n, m, k, alphaP, B, cudaDataType.CUDA_R_32F,
+            		ldb, A, cudaDataType.CUDA_R_32F, lda, betaP, C, cudaDataType.CUDA_R_32F, ldc,
             		cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT_TENSOR_OP);
             checkCUBLASResult(status);
 //            cudaDeviceSynchronize();

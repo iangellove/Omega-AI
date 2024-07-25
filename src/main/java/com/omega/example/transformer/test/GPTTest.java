@@ -11,18 +11,22 @@ import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.gpu.SoftmaxKernel;
 import com.omega.engine.loss.LossType;
+import com.omega.engine.nn.layer.gpu.RoPEKernel;
 import com.omega.engine.nn.network.GPT;
 import com.omega.engine.nn.network.GPT2;
+import com.omega.engine.nn.network.Llama2;
 import com.omega.engine.nn.network.NanoGPT;
 import com.omega.engine.nn.network.RNN;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.EDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
+import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 import com.omega.example.transformer.utils.BPETokenizer;
 import com.omega.example.transformer.utils.CNChatTokenizer;
 import com.omega.example.transformer.utils.CNChatTokenizer2;
 import com.omega.example.transformer.utils.CNTokenizer;
+import com.omega.example.transformer.utils.CNWikiTokenizer3;
 import com.omega.example.transformer.utils.ENTokenizer;
 import com.omega.example.transformer.utils.ModelUtils;
 
@@ -587,6 +591,91 @@ public class GPTTest {
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 300, 0.001f, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {20,50,80};
 			optimizer.trainNanoGPT(trainData);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void gpt2_chinese_smallvocab() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			boolean flashAttention = false;
+			
+			int batchSize = 8;
+			
+			int max_len = 256;
+			
+			int embedDim = 512;
+			
+			int head_num = 8;
+			
+			int decoderNum = 8;
+			
+			String trainPath = "H:\\transformer_dataset\\wbm_idx_smallvocab.txt";
+			
+			String tokenizer_path = "H:\\transformer_dataset\\vocab.txt";
+			
+			BertTokenizer tokenizer = new BertTokenizer(tokenizer_path, true, true);
+				
+			CNWikiTokenizer3 trainData = new CNWikiTokenizer3(trainPath, max_len, batchSize, 6250865, tokenizer);
+			
+			NanoGPT network = new NanoGPT(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
+			
+			network.learnRate = 3e-4f;
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.COSINE, false);
+			optimizer.lr_step = new int[] {1, 2};
+			optimizer.lr = 3e-4f;
+			optimizer.min_lr = 1e-5f;
+			optimizer.setWarmUp(true);
+			optimizer.warmUpTime = 1000;
+			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
+			optimizer.trainLlama2_chinese(trainData);
+
+			String model_path = "H:\\model\\llama2-92m-chinese.model";
+	    
+			ModelUtils.saveModel(network, model_path);
+			
+			network.RUN_MODEL = RunModel.TEST;
+			Scanner scanner = new Scanner(System.in);
+			
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase();
+				System.out.println("user:"+input_txt);
+				int[] idx = tokenizer.encode(input_txt);
+				Tensor input = trainData.loadByTxtToIdx(idx);
+//				input.showDM();
+				Tensor positions = CNChatTokenizer.getPositions(1, input.number);
+
+				for(int t = 0;t<max_len - idx.length;t++) {
+					network.time = input.number;
+					Tensor output = network.forward(input, positions);
+					output.syncHost();
+					int nextIDX = output2NextIDX(output, idx.length - 1);
+					idx = Arrays.copyOf(idx, idx.length + 1);
+					idx[idx.length - 1] = nextIDX;
+					if(nextIDX == tokenizer.eos) {
+						break;
+					}
+					input = trainData.loadByTxtToIdx(idx);
+					CNChatTokenizer.getPositions(1, input.number, positions);
+				}
+				System.out.println("chatbot:"+tokenizer.decode(idx));
+			}
+			scanner.close();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

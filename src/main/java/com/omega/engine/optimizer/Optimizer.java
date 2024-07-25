@@ -1553,6 +1553,57 @@ public abstract class Optimizer {
 		return error;
 	}
 	
+	public float accuracyBatchFisrt(Tensor input,float[] tmpInput,Tensor output,Tensor labelData,float[] tmpLabel,int time,int batchSize,SentencePieceTokenizer tokenizer,int igonre) {
+		float error = 0.0f;
+		float trueCount = 0;
+		int max_score = -9999;
+		int max_index = 0;
+		int[] itxt = new int[time];
+		int[] ptxt = new int[time];
+		int[] ltxt = new int[time];
+		
+		for(int n = 0;n<batchSize;n++) {
+			boolean allRight = true;
+			int score = time;
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+//				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+				int labelIndex = (int) tmpLabel[n * time + t];
+				if(labelIndex != igonre && labelIndex != predictIndex) {
+					allRight = false;
+					score--;
+				}
+			}
+			
+			if(max_score <= score) {
+				max_score = score;
+				max_index = n;
+			}
+
+			if(allRight) {
+				trueCount++;
+			}
+		}
+		
+		for(int t = 0;t<time;t++) {
+			int predictIndex = MatrixOperation.maxIndex(output.getByNumber(max_index * time + t));
+//			int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+			int labelIndex = (int) tmpLabel[max_index * time + t];
+			int inputIndex = (int) tmpInput[max_index * time + t];
+			itxt[t] = inputIndex;
+			ptxt[t] = predictIndex;
+			ltxt[t] = labelIndex;
+		}
+		System.out.println("max_score:"+max_score);
+		System.out.println("itxt:"+tokenizer.decode(itxt));
+		System.out.println("ptxt:"+tokenizer.decode(ptxt));
+		System.out.println("ltxt:"+tokenizer.decode(ltxt));
+
+		error = trueCount / batchSize * 100;
+
+		return error;
+	}
+	
 	public float accuracyBatchFisrt(Tensor input,Tensor output,Tensor labelData,int time,int batchSize,SentencePieceTokenizer tokenizer,int igonre) {
 		float error = 0.0f;
 		float trueCount = 0;

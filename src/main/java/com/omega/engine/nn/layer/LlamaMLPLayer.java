@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.nn.layer.active.SiLULayer;
 import com.omega.engine.nn.network.Network;
@@ -69,15 +70,30 @@ public class LlamaMLPLayer extends Layer{
 	public void initLayers() {
 //		NanoGPT net = (NanoGPT) this.network;
 		this.linear1 = new FullyLayer(embedDim, nChannel, bias, network);
+//		this.linear1.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.01f, 0.02f), true);
+//		this.linear1.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.order(this.embedDim * nChannel, 0.001f, 0.001f), true);
+//		Tensor qw = new Tensor(1, 1, embedDim, nChannel, true);
+//		TensorOP.permute(this.linear1.weight, qw, new int[] {0, 1, 3, 2});
+//		this.linear1.weight = qw;
 //		this.linear1.weight = new Tensor(1, 1, embedDim, nChannel, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, 0.02f), true);
 
 		this.active = new SiLULayer(linear1);
 		
 		this.linear2 = new FullyLayer(nChannel, embedDim, bias, network);
+//		this.linear2.weight = new Tensor(1, 1, embedDim, nChannel, RandomUtils.uniform(this.nChannel * embedDim, 0.01f, 0.02f), true);
+//		this.linear2.weight = new Tensor(1, 1, embedDim, nChannel, RandomUtils.order(this.nChannel * embedDim, 0.001f, 0.001f), true);
+//		Tensor w2 = new Tensor(1, 1, nChannel, embedDim, true);
+//		TensorOP.permute(this.linear2.weight, w2, new int[] {0, 1, 3, 2});
+//		this.linear2.weight = w2;
 //		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, 0.02f), true);
 //		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, (0.02f / (float) Math.sqrt(2 * net.decoderNum))), true);
 		
 		this.linear3 = new FullyLayer(embedDim, nChannel, bias, network);
+//		this.linear3.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.01f, 0.02f), true);
+//		this.linear3.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.order(this.embedDim * nChannel, 0.001f, 0.001f), true);
+//		Tensor w3 = new Tensor(1, 1, embedDim, nChannel, true);
+//		TensorOP.permute(this.linear3.weight, w3, new int[] {0, 1, 3, 2});
+//		this.linear3.weight = w3;
 		
 		if(dropout) {
 			dropoutLayer = new DropoutLayer(0.1f, linear2);
@@ -111,7 +127,7 @@ public class LlamaMLPLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		linear1.forward(input);
-
+		
 		active.forward(linear1.getOutput());
 		
 		linear3.forward(input);

@@ -478,7 +478,7 @@ public class CrossEntropyKernel extends BaseKernel {
             );
 		
 		this.N = prods.number;
-		
+
 		int grid_size = N;
 		
 		cuLaunchKernel(cross_softmax_back_function,
@@ -487,7 +487,26 @@ public class CrossEntropyKernel extends BaseKernel {
 	            0, null,               // Shared memory size and stream
 	            crossSoftmaxBackwardParameters, null // Kernel- and extra parameters
 	        );
-
+		
+//		backwardCPU(prods, label, igonre);
+		
+	}
+	
+	public void backwardCPU(Tensor prods,Tensor label,int igonre) {
+		int C = prods.width;
+		float[] p = prods.syncHost();
+		float[] l = label.syncHost();
+		float[] o = new float[prods.getDataLength()];
+		for(int b = 0;b<label.number;b++) {
+			float idx = l[b];
+			System.out.println(idx);
+			for(int c = 0;c<C;c++) {
+				System.out.println(p[b * C + c]);
+				float indicator = c == idx ? 1.0f : 0.0f;
+				o[b * C + c] = (p[b * C + c] - indicator) / label.number;
+			}
+		}
+		System.out.println(JsonUtils.toJson(o));
 	}
 	
 	public void forwardCheck(Tensor input,Tensor currentLabel,Tensor output) {

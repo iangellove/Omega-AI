@@ -123,13 +123,14 @@ public class FullyLayer extends Layer{
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub
-		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_uniform(this.width * this.oWidth, this.width, this.paramsInit), true);
-//		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_normal(this.width * this.oWidth, this.width, this.paramsInit), true);
+//		this.weight = new Tensor(1, 1, oWidth, width, RandomUtils.kaiming_uniform(this.width * this.oWidth, this.width, this.paramsInit), true);
+		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_normal(this.width * this.oWidth, this.width, this.paramsInit), true);
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.xavierReluRandom(this.width * this.oWidth, this.width, this.oWidth), true);
 //		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaimingNormalRandom(this.width * this.oWidth, 0, this.oWidth), true);
 //		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaimingUniformRandom(this.width * this.oWidth, 0, this.oWidth), true);
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.xavierRandom(this.width * this.oWidth, this.width, this.oWidth));
-//		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.order(this.width * this.oWidth, 0.1f, 0.01f), true);
+//		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.order(this.width * this.oWidth, 0.001f, 0.001f), true);
+//		this.weight = new Tensor(1, 1, oWidth, width,RandomUtils.order(this.width * this.oWidth, 0.001f, 0.001f), true);
 //		this.weight = new Tensor(1, 1, width, oWidth,RandomUtils.val(this.width * this.oWidth, 0.1f), true);
 //		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.heRandom(this.width * this.oWidth, this.width * this.oWidth));
 //		if(this.network!=null){
@@ -138,6 +139,7 @@ public class FullyLayer extends Layer{
 //			this.diffW = new Tensor(1, 1, width, oWidth, true, true);
 //		}
 		this.diffW = new Tensor(1, 1, width, oWidth, true, true);
+//		this.diffW = new Tensor(1, 1, oWidth, width, true, true);
 		if(hasBias){
 			this.bias = new Tensor(1, 1, 1, oWidth, MatrixUtils.one(oWidth), true);
 //			if(this.network != null){
@@ -276,7 +278,6 @@ public class FullyLayer extends Layer{
 //					weight.getGpuData(), this.width, 0, diff.getGpuData(), this.width);
 			GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData(), weight.getGpuData(), diff.getGpuData(),
 					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
-			
 		}
 
 		if(hasBias) {
@@ -299,12 +300,10 @@ public class FullyLayer extends Layer{
 		 * number * ow
 		 * m = w,k = number,n = ow
 		 */
+//		GPUOP.getInstance().multiplyFloatEX(cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, this.oWidth, this.width, this.number, 1,
+//				input.getGpuData(), this.oWidth, delta.getGpuData(), this.width, 0, diffW.getGpuData(), this.width);
 		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, input.getGpuData(), delta.getGpuData(), diffW.getGpuData(),
 				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
-
-		if(hasBias) {
-			kernel.backwardBias(diffB, delta);
-		}
 
 		/**
 		 * diff = delta * weightT
@@ -312,9 +311,15 @@ public class FullyLayer extends Layer{
 		 * w * ow
 		 * m = number,k = ow,n = w
 		 */
+//		GPUOP.getInstance().multiplyFloatEX(cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, this.number, this.width, this.oWidth, 1, delta.getGpuData(), this.oWidth,
+//				weight.getGpuData(), this.width, 0, diff.getGpuData(), this.width);
 		GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData(), weight.getGpuData(), diff.getGpuData(),
 				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
 		
+		if(hasBias) {
+			kernel.backwardBias(diffB, delta);
+		}
+
 	}
 	
 	public void diff(int batch,int step) {

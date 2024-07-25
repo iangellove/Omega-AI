@@ -13,7 +13,7 @@ __global__ void rope_norm(const float* x, float* dst,float* c_cos,float* c_sin, 
 	const int row = blockDim.x*blockIdx.x + threadIdx.x;
     const int i = row*ncols + col;
     const int t = row % T;
-	const int ai = t * (ncols / headSize / 2) + col / 2 % headSize;
+	const int ai = t * (headSize / 2) + (col / 2) % (headSize / 2);
 	
     float cos_theta = c_cos[ai];
     float sin_theta = c_sin[ai];
@@ -35,7 +35,7 @@ __global__ void rope_backward(float* delta, float* diff,float* c_cos,float* c_si
 	const int row = blockDim.x*blockIdx.x + threadIdx.x;
     const int i = row*ncols + col;
     const int t = row % T;
-	const int ai = t * (ncols / headSize / 2) + col / 2 % headSize;
+	const int ai = t * (headSize / 2) + (col / 2) % (headSize / 2);
 	
     float cos_theta = c_cos[ai];
     float sin_theta = c_sin[ai];
@@ -57,7 +57,7 @@ __global__ void rope_all_norm(const float* q,const float* k, float* qo, float* k
 	const int row = blockDim.x*blockIdx.x + threadIdx.x;
     const int i = row*ncols + col;
     const int t = row % T;
-	const int ai = t * (ncols / headSize / 2) + col / 2 % headSize;
+	const int ai = t * (headSize / 2) + (col / 2) % (headSize / 2);
 	
     float cos_theta = c_cos[ai];
     float sin_theta = c_sin[ai];
@@ -83,7 +83,7 @@ __global__ void rope_all_backward(float* deltaQ,float* deltaK, float* diffQ, flo
 	const int row = blockDim.x*blockIdx.x + threadIdx.x;
     const int i = row*ncols + col;
     const int t = row % T;
-	const int ai = t * (ncols / headSize / 2) + col / 2 % headSize;
+	const int ai = t * (headSize / 2) + (col / 2) % (headSize / 2);
 	
     float cos_theta = c_cos[ai];
     float sin_theta = c_sin[ai];

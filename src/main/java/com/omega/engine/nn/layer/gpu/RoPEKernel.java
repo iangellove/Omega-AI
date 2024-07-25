@@ -495,7 +495,7 @@ public class RoPEKernel extends BaseKernel{
 	    	
 	    	Tensor input = new Tensor(N, T, HN, W, data, true);
 	    	
-	    	Tensor[] cs = getCosAndSin(N * T, HN * W, 2);
+	    	Tensor[] cs = getCosAndSin(T, HN * W, HN);
 	    	
 	    	Tensor cos = cs[0];
 	    	
@@ -510,42 +510,42 @@ public class RoPEKernel extends BaseKernel{
 	    	RoPELayer rope = new RoPELayer(tf);
 
 //	    	input.showDM();
-//	    	cos.showDM();
-//	    	sin.showDM();
-//	    	Tensor op1 = new Tensor(N, T, HN, W, true);
-//	    	for(int b = 0;b<N;b++) {
-//	    		for(int t = 0;t<T;t++){
-//	    			for(int h = 0;h<HN;h++) {
-//	    				for(int d = 0;d<W/2;d++) {
-//	    					int index = b * T * HN * W + t * HN * W + h * W + d * 2;
-//	    					float xr = input.data[index];
-//	    	    			float xi = input.data[index + 1];
-//	    	    			float cos_th = cos.data[t * W / 2 + d];
-//	    	    			float sin_th = sin.data[t * W / 2 + d];
-//	    	    			op1.data[index] = xr * cos_th - xi * sin_th;
-//	    	    			op1.data[index + 1] = xr * sin_th + xi * cos_th;
-//	    				}
-//	    			}
-//	    		}
-//	    	}
-//	    	System.out.println("cpu-output:"+JsonUtils.toJson(op1.data));
-//	    	Tensor op2 = new Tensor(N, T, HN, W, true);
-//	    	for(int b = 0;b<N;b++) {
-//	    		for(int t = 0;t<T;t++){
-//	    			for(int h = 0;h<HN;h++) {
-//	    				for(int d = 0;d<W/2;d++) {
-//	    					int index = b * T * HN * W + t * HN * W + h * W + d * 2;
-//	    					float dr = delta.data[index];
-//	    	    			float di = delta.data[index + 1];
-//	    	    			float cos_th = cos.data[t * W / 2 + d];
-//	    	    			float sin_th = sin.data[t * W / 2 + d];
-//	    	    			op2.data[index] = dr * cos_th + di * sin_th;
-//	    	    			op2.data[index + 1] = di * cos_th - dr * sin_th;
-//	    				}
-//	    			}
-//	    		}
-//	    	}
-//	    	System.out.println("cpu-diff:"+JsonUtils.toJson(op2.data));
+	    	cos.showDM();
+	    	sin.showDM();
+	    	Tensor op1 = new Tensor(N, T, HN, W, true);
+	    	for(int b = 0;b<N;b++) {
+	    		for(int t = 0;t<T;t++){
+	    			for(int h = 0;h<HN;h++) {
+	    				for(int d = 0;d<W/2;d++) {
+	    					int index = b * T * HN * W + t * HN * W + h * W + d * 2;
+	    					float xr = input.data[index];
+	    	    			float xi = input.data[index + 1];
+	    	    			float cos_th = cos.data[t * W / 2 + d];
+	    	    			float sin_th = sin.data[t * W / 2 + d];
+	    	    			op1.data[index] = xr * cos_th - xi * sin_th;
+	    	    			op1.data[index + 1] = xr * sin_th + xi * cos_th;
+	    				}
+	    			}
+	    		}
+	    	}
+	    	System.out.println("cpu-output:"+JsonUtils.toJson(op1.data));
+	    	Tensor op2 = new Tensor(N, T, HN, W, true);
+	    	for(int b = 0;b<N;b++) {
+	    		for(int t = 0;t<T;t++){
+	    			for(int h = 0;h<HN;h++) {
+	    				for(int d = 0;d<W/2;d++) {
+	    					int index = b * T * HN * W + t * HN * W + h * W + d * 2;
+	    					float dr = delta.data[index];
+	    	    			float di = delta.data[index + 1];
+	    	    			float cos_th = cos.data[t * W / 2 + d];
+	    	    			float sin_th = sin.data[t * W / 2 + d];
+	    	    			op2.data[index] = dr * cos_th + di * sin_th;
+	    	    			op2.data[index + 1] = di * cos_th - dr * sin_th;
+	    				}
+	    			}
+	    		}
+	    	}
+	    	System.out.println("cpu-diff:"+JsonUtils.toJson(op2.data));
 	    	for(int i = 0;i<10;i++) {
 	    		rope.forward(cos, sin, input);
 	    		rope.getOutput().showDM();
@@ -595,6 +595,9 @@ public class RoPEKernel extends BaseKernel{
     }
     
     public static void getCosAndSin(int time,int dim,int headNum,Tensor[] pos) {
+    	if(pos == null) {
+    		pos = new Tensor[2];
+    	}
     	int headSize = dim / headNum;
     	float[] freqs = freqs(0, headSize, 2);
     	float[] t = MatrixUtils.order(time, 0, 1);

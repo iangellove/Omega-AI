@@ -15,6 +15,7 @@ public enum NetworkType {
 	SEQ2SEQ("SEQ2SEQ"),
 	TTANSFORMER("TTANSFORMER"),
 	GPT("GPT"),
+	LLAMA("LLAMA"),
 	YOLO("YOLO");
 	
 	NetworkType(String key){

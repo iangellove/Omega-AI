@@ -82,6 +82,7 @@ public class EmbeddingIDLayer extends Layer{
 			kernel = new EmbeddingKernel();
 		}
 		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_uniform(this.width * this.oWidth, this.width, this.paramsInit), true);
+//		this.weight = new Tensor(1, 1, width, oWidth, MatrixUtils.order(this.width * this.oWidth, 0.001f, 0.001f), true);
 		this.diffW = new Tensor(1, 1, width, oWidth, true, true);
 	}
 	
@@ -92,7 +93,7 @@ public class EmbeddingIDLayer extends Layer{
 		
 		if(this.input != null) {
 
-			kernel.forward(input, weight, output);
+			kernel.forward(input, this.weight, output);
 
 		}
 		

@@ -1,5 +1,6 @@
 #define BLOCK 1024 
 #define BlockSize 256
+#define BlockSize32 32
 
 #include <float.h>
 #include <cooperative_groups.h>
@@ -540,7 +541,7 @@ __global__ void softmax_autoregressive_backward_kernel7(float* dpreatt, const fl
     }
 
     float local_sum = 0;
-    for(int t2 = block.thread_rank(); t2 <= t; t2 += BlockSize) {
+    for(int t2 = block.thread_rank(); t2 <= t; t2 += BlockSize32) {
         local_sum += att_bth[t2] * datt_bth[t2];
     }
 
@@ -548,7 +549,7 @@ __global__ void softmax_autoregressive_backward_kernel7(float* dpreatt, const fl
     block.sync();
     local_sum = cg::reduce(warp, block_acc[warp.thread_rank()], cg::plus<float>{});
 
-    for (int t3 = block.thread_rank(); t3 <= t; t3 += BlockSize) {
+    for (int t3 = block.thread_rank(); t3 <= t; t3 += BlockSize32) {
         float acc = att_bth[t3] * (datt_bth[t3] - local_sum);
         dpreatt_bth[t3] = scale * acc;
     }
@@ -583,7 +584,7 @@ __global__ void softmax_autoregressive_backward_kernel8(float* dpreatt, const fl
         float* dpreatt_bth = dpreatt + t * T;
 
         float local_sum = 0;
-        for (int t2 = block.thread_rank(); t2 <= t; t2 += BlockSize) {
+        for (int t2 = block.thread_rank(); t2 <= t; t2 += BlockSize32) {
             local_sum += att_bth[t2] * datt_bth[t2];
         }
 
@@ -591,7 +592,7 @@ __global__ void softmax_autoregressive_backward_kernel8(float* dpreatt, const fl
         block.sync();
         local_sum = cg::reduce(warp, block_acc[warp.thread_rank()], cg::plus<float>{});
 
-        for (int t3 = block.thread_rank(); t3 <= t; t3 += BlockSize) {
+        for (int t3 = block.thread_rank(); t3 <= t; t3 += BlockSize32) {
             // don't touch the cache. Some parts will still be here from the previous loop, and
             // we want to exploit those.
             float acc = __ldcs(att_bth + t3) * (__ldcs(datt_bth + t3) - local_sum);

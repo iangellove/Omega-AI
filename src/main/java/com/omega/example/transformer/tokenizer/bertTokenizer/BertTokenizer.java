@@ -436,13 +436,21 @@ public class BertTokenizer implements Tokenizer {
 			
 //			tokenizer.encodeBaiKeDataset(datasetPath, outputPath);		
 			
+//			String[] paths = new String[] {
+//					"H:\\transformer_dataset\\wiki_idx_smallvocab.txt",
+//					"H:\\transformer_dataset\\medical_idx_smallvocab.txt",
+//					"H:\\transformer_dataset\\baike_idx_smallvocab.txt"
+//			};
+//			
+//			String outpath = "H:\\transformer_dataset\\wbm_idx_smallvocab.txt";
+			
 			String[] paths = new String[] {
-					"H:\\transformer_dataset\\wiki_idx_smallvocab.txt",
-					"H:\\transformer_dataset\\medical_idx_smallvocab.txt",
-					"H:\\transformer_dataset\\baike_idx_smallvocab.txt"
+					"H:\\transformer_dataset\\wiki_idx_chatglm_vocab.txt",
+					"H:\\transformer_dataset\\medical_idx_chatglm_vocab.txt",
+					"H:\\transformer_dataset\\baike_idx_chatglm_vocab.txt"
 			};
 			
-			String outpath = "H:\\transformer_dataset\\wbm_idx_smallvocab.txt";
+			String outpath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.txt";
 			
 			tokenizer.mergeData(paths, outpath);
 			

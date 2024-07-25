@@ -5,9 +5,12 @@ import java.util.Map;
 import java.util.Scanner;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
+import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.gpu.RoPEKernel;
 import com.omega.engine.nn.network.Llama2;
@@ -21,10 +24,72 @@ import com.omega.example.transformer.utils.CNTokenizer;
 import com.omega.example.transformer.utils.CNWikiTokenizer;
 import com.omega.example.transformer.utils.CNWikiTokenizer2;
 import com.omega.example.transformer.utils.CNWikiTokenizer3;
+import com.omega.example.transformer.utils.CNWikiTokenizer4;
 import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.transformer.utils.SentencePieceTokenizer;
 
 public class Llama2Test {
+	
+	public static void test_llama2() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			int batchSize = 2;
+			
+			int max_len = 4;
+			
+			int embedDim = 12;
+
+			int decoderNum = 4;
+			
+			int head_num = 2;
+			
+			
+			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, 100, max_len, embedDim, bias, dropout, false);
+			
+			Tensor x = new Tensor(batchSize * max_len, 1, 1, 1, MatrixUtils.order(batchSize * max_len, 1, 1), true);
+			
+			Tensor y = new Tensor(batchSize * max_len, 1, 1, 1, MatrixUtils.order(batchSize * max_len, 1, 1), true);
+			
+			Tensor[] cs = RoPEKernel.getCosAndSin(network.time, network.embedDim, network.headNum);
+			
+			Tensor cos = cs[0];
+			
+			Tensor sin = cs[1];
+			
+			cos.showDM();
+			sin.showDM();
+			
+			CUDAModules.initCUDAFunctions();
+			
+			Tensor output = network.forward(cos, sin, x);
+			
+			System.err.println("output:");
+			output.showDM();
+			
+			Tensor loss = network.loss(output, y, -1);
+			
+			System.err.println("loss:");
+			loss.showDM();
+			float lossV = MatrixOperation.sum(loss.syncHost()) / (batchSize * max_len);
+			System.out.println(lossV);
+			Tensor lossDiff = network.lossDiff(output, y, -1);
+
+			System.err.println("lossDiff:");
+			lossDiff.showDM();
+			
+			network.back(cos, sin, lossDiff);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
 	
 	public static void llama2_yl_qa() {
 		
@@ -50,22 +115,23 @@ public class Llama2Test {
 			
 			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
 			
-			network.learnRate = 0.0001f;
+			network.learnRate = 0.001f;
 			
-			String model_path = "H:\\model\\llama2-110m-qa-20240718.model";
-			
-			ModelUtils.loadModel(network, model_path);
+//			String model_path = "H:\\model\\llama2-110m-qa.model";
+//			
+//			ModelUtils.loadModel(network, model_path);
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.0001f, LearnRateUpdate.SMART_HALF, false);
 			optimizer.lr_step = new int[] {1, 2};
 			optimizer.trainLlama2(trainData);
 			
-			String out_model_path = "H:\\model\\llama2-110m-qa-20240718.model";
+			String out_model_path = "H:\\model\\llama2-110m-qa.model";
 			
 			ModelUtils.saveModel(network, out_model_path);
 			
 			network.RUN_MODEL = RunModel.TEST;
 			Scanner scanner = new Scanner(System.in);
+
 			while (true) {
 				System.out.println("请输入中文:");
 				String input_txt = scanner.nextLine();
@@ -93,8 +159,7 @@ public class Llama2Test {
 						break;
 					}
 					input = trainData.loadByTxtToIdx(idx);
-//					RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
-
+					RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
 				}
 				
 				System.out.println("chatbot:"+trainData.decode(idx, startLen));
@@ -108,7 +173,7 @@ public class Llama2Test {
 		
 	}
 	
-	public static void llama2_cn_wiki() {
+	public static void llama2_yl_qa_predict() {
 		
 		try {
 			
@@ -116,9 +181,85 @@ public class Llama2Test {
 			
 			boolean dropout = false;
 			
+			int batchSize = 16;
+			
+			int max_len = 128;
+			
+			int embedDim = 768;
+			
+			int head_num = 12;
+			
+			int decoderNum = 6;
+			
+			String trainPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\qaData.txt";
+
+			CNChatTokenizer trainData = new CNChatTokenizer(trainPath, max_len, batchSize);
+			
+			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
+			
+			network.learnRate = 0.0001f;
+			
+			String model_path = "H:\\model\\llama2-110m-qa.model";
+			
+			ModelUtils.loadModel(network, model_path);
+			
+			network.RUN_MODEL = RunModel.TEST;
+			Scanner scanner = new Scanner(System.in);
+
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase() + " ";
+				System.out.println("user:"+input_txt);
+				int[] idx = trainData.encode(input_txt);
+				int startLen = idx.length;
+				Tensor input = trainData.loadByTxtToIdx(idx);
+
+				Tensor[] pos = RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum);
+
+				for(int t = 0;t<max_len - startLen;t++) {
+					network.time = input.number;
+					Tensor cos = pos[0];
+					Tensor sin = pos[1];
+					Tensor output = network.forward(cos, sin, input);
+					output.syncHost();
+					int nextIDX = output2NextIDX(output, idx.length - 1);
+					idx = Arrays.copyOf(idx, idx.length + 1);
+					idx[idx.length - 1] = nextIDX;
+					if(nextIDX == trainData.dictionary.get("<eos>").intValue() || nextIDX == trainData.dictionary.get("<sep>").intValue()) {
+						break;
+					}
+					input = trainData.loadByTxtToIdx(idx);
+					RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
+				}
+				
+				System.out.println("chatbot:"+trainData.decode(idx, startLen));
+			}
+			scanner.close();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void llama2_wiki_chatglm_vocab() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			boolean flashAttention = false;
+			
 			int batchSize = 4;
 			
-			int max_len = 512;
+			int max_len = 256;
 			
 			int embedDim = 512;
 			
@@ -126,34 +267,34 @@ public class Llama2Test {
 			
 			int decoderNum = 8;
 			
-			int vocab_size = 20000;
+			String trainPath = "H:\\transformer_dataset\\wiki_idx_chatglm_voc.txt";
 			
-			int maxDataCount = 1000000;
+			String tokenizer_path = "H:\\transformer_dataset\\tokenizer.model";
 			
-//			String trainPath = "H:\\transformer_dataset\\wikipedia-cn-20230720-filtered.json";
+			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path, 64793);
 			
-			String trainPath = "H:\\transformer_dataset\\wiki_idx_2w_voc.txt";
+			CNWikiTokenizer4 trainData = new CNWikiTokenizer4(trainPath, max_len, batchSize, 254547, tokenizer);
 			
-			String tokenizer_path = "H:\\transformer_dataset\\chinese_sp.model";
-	    
-			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path);
-				
-			CNWikiTokenizer trainData = new CNWikiTokenizer(trainPath, max_len, batchSize, tokenizer, vocab_size, maxDataCount);
-			
-			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, false);
+			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
 			
 			network.learnRate = 3e-4f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.0001f, LearnRateUpdate.COSINE, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.COSINE, false);
+			optimizer.lr_step = new int[] {1, 2};
 			optimizer.lr = 3e-4f;
 			optimizer.min_lr = 1e-5f;
 			optimizer.setWarmUp(true);
 			optimizer.warmUpTime = 1000;
-			optimizer.lrDecayIters = 30000;
-			optimizer.trainLlama2_wiki(trainData);
+			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
+			optimizer.trainLlama2_chinese(trainData);
 
+			String model_path = "H:\\model\\llama2-92m-chinese.model";
+	    
+			ModelUtils.saveModel(network, model_path);
+			
 			network.RUN_MODEL = RunModel.TEST;
 			Scanner scanner = new Scanner(System.in);
+			
 			while (true) {
 				System.out.println("请输入中文:");
 				String input_txt = scanner.nextLine();
@@ -162,37 +303,27 @@ public class Llama2Test {
 				}
 				input_txt = input_txt.toLowerCase();
 				System.out.println("user:"+input_txt);
-				Tensor input = trainData.loadByTxtToIdx(input_txt);
-//				input.showDM();
+				int[] idx = tokenizer.encode(input_txt);
+				Tensor input = trainData.loadByTxtToIdx(idx);
+				input.showDM();
 				Tensor[] pos = RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum);
-//				positions.showDM();
-//				Tensor mask = CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1);
-//				mask.showDM();
-				for(int t = 0;t<max_len;t++) {
+
+				for(int t = 0;t<max_len - idx.length;t++) {
 					network.time = input.number;
 					Tensor cos = pos[0];
 					Tensor sin = pos[1];
 					Tensor output = network.forward(cos, sin, input);
 					output.syncHost();
-//					output.showDM();
-					String txts = output2WikiTXT(output, trainData, true);
-//					System.out.println("output:"+txts);
-					String nextWord = txts.substring(txts.length() - 1, input_txt.length());
-//					System.out.println("nextWord:"+nextWord);
-					
-					if(trainData.sd.get(nextWord)!=null && trainData.sd.get(nextWord).equals("<eos>")) {
-						input_txt += trainData.sd.get(nextWord);
+					int nextIDX = output2NextIDX(output, idx.length - 1);
+					idx = Arrays.copyOf(idx, idx.length + 1);
+					idx[idx.length - 1] = nextIDX;
+					if(nextIDX == tokenizer.eos) {
 						break;
-					}else {
-						input_txt += nextWord;
 					}
-					input = trainData.loadByTxtToIdx(input_txt);
+					input = trainData.loadByTxtToIdx(idx);
 					RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
-					
-//					CNChatTokenizer.triu(1, network.headNum, input.number, input.number, 1, mask);
 				}
-				
-				System.out.println("chatbot:"+input_txt);
+				System.out.println("chatbot:"+tokenizer.decode(idx));
 			}
 			scanner.close();
 			
@@ -311,8 +442,6 @@ public class Llama2Test {
 			
 			String tokenizer_path = "H:\\transformer_dataset\\vocab.txt";
 			
-			String model_path = "H:\\model\\llama2-92m-chinese.model";
-	    
 			BertTokenizer tokenizer = new BertTokenizer(tokenizer_path, true, true);
 				
 			CNWikiTokenizer3 trainData = new CNWikiTokenizer3(trainPath, max_len, batchSize, 6250865, tokenizer);
@@ -329,7 +458,176 @@ public class Llama2Test {
 			optimizer.warmUpTime = 1000;
 			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
 			optimizer.trainLlama2_chinese(trainData);
+
+			String model_path = "H:\\model\\llama2-92m-chinese.model";
+	    
+			ModelUtils.saveModel(network, model_path);
 			
+			network.RUN_MODEL = RunModel.TEST;
+			Scanner scanner = new Scanner(System.in);
+			
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase();
+				System.out.println("user:"+input_txt);
+				int[] idx = tokenizer.encode(input_txt);
+				Tensor input = trainData.loadByTxtToIdx(idx);
+				input.showDM();
+				Tensor[] pos = RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum);
+
+				for(int t = 0;t<max_len - idx.length;t++) {
+					network.time = input.number;
+					Tensor cos = pos[0];
+					Tensor sin = pos[1];
+					Tensor output = network.forward(cos, sin, input);
+					output.syncHost();
+					int nextIDX = output2NextIDX(output, idx.length - 1);
+					idx = Arrays.copyOf(idx, idx.length + 1);
+					idx[idx.length - 1] = nextIDX;
+					if(nextIDX == tokenizer.eos) {
+						break;
+					}
+					input = trainData.loadByTxtToIdx(idx);
+					RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
+				}
+				System.out.println("chatbot:"+tokenizer.decode(idx));
+			}
+			scanner.close();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void llama2_chinese_smallvocab_predict() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			boolean flashAttention = false;
+			
+			int batchSize = 8;
+			
+			int max_len = 256;
+			
+			int embedDim = 512;
+			
+			int head_num = 8;
+			
+			int decoderNum = 8;
+			
+			String trainPath = "/omega/dataset/wbm_idx_smallvocab.txt";
+			
+			String tokenizer_path = "/omega/dataset/vocab.txt";
+			
+			BertTokenizer tokenizer = new BertTokenizer(tokenizer_path, true, true);
+				
+			CNWikiTokenizer3 trainData = new CNWikiTokenizer3(trainPath, max_len, batchSize, 6250865, tokenizer);
+			
+			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
+			
+			network.learnRate = 3e-4f;
+
+			String model_path = "/omega/model/llama2-92m-chinese.model";
+	    
+			ModelUtils.loadModel(network, model_path);
+			
+			network.RUN_MODEL = RunModel.TEST;
+			Scanner scanner = new Scanner(System.in);
+			
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase();
+				System.out.println("user:"+input_txt);
+				int[] idx = tokenizer.encode(input_txt);
+
+				int startLen = idx.length;
+				Tensor input = trainData.loadByTxtToIdx(idx);
+
+				Tensor[] pos = RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum);
+
+				for(int t = 0;t<max_len - startLen;t++) {
+					network.time = input.number;
+					Tensor cos = pos[0];
+					Tensor sin = pos[1];
+					Tensor output = network.forward(cos, sin, input);
+					output.syncHost();
+					int nextIDX = output2NextIDX(output, idx.length - 1);
+					idx = Arrays.copyOf(idx, idx.length + 1);
+					idx[idx.length - 1] = nextIDX;
+					if(nextIDX == tokenizer.eos) {
+						break;
+					}
+					input = trainData.loadByTxtToIdx(idx);
+					RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
+				}
+				System.out.println("chatbot:"+tokenizer.decode(idx));
+			}
+			scanner.close();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void llama2_chinese_chatglm_vocab() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			boolean flashAttention = false;
+			
+			int batchSize = 8;
+			
+			int max_len = 256;
+			
+			int embedDim = 512;
+			
+			int head_num = 8;
+			
+			int decoderNum = 8;
+			
+			String trainPath = "H:\\transformer_dataset\\wbm_idx_smallvocab.txt";
+			
+			String tokenizer_path = "H:\\transformer_dataset\\tokenizer.model";
+			
+			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path, 64793);
+			
+			CNWikiTokenizer4 trainData = new CNWikiTokenizer4(trainPath, max_len, batchSize, 6250865, tokenizer);
+			
+			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
+			
+			network.learnRate = 3e-4f;
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.COSINE, false);
+			optimizer.lr_step = new int[] {1, 2};
+			optimizer.lr = 3e-4f;
+			optimizer.min_lr = 1e-5f;
+			optimizer.setWarmUp(true);
+			optimizer.warmUpTime = 1000;
+			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
+			optimizer.trainLlama2_chinese(trainData);
+
+			String model_path = "H:\\model\\llama2-92m-chinese.model";
+	    
 			ModelUtils.saveModel(network, model_path);
 			
 			network.RUN_MODEL = RunModel.TEST;
@@ -764,19 +1062,23 @@ public class Llama2Test {
 
 			CUDAModules.initContext();
 			
-			llama2_yl_qa();
+//			llama2_yl_qa();
 			
-//			llama2_dp();
+//			llama2_yl_qa_predict();
+			
+			llama2_dp();
 			
 //			llama2_dp_predict();
 			
-//			llama2_cn_wiki();
+//			llama2_wiki_chatglm_vocab();
 			
 //			llama2_cn_wiki_smallvocab();
 			
 //			llama2_cn_baike();
 			
 //			llama2_chinese_smallvocab();
+			
+//			test_llama2();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

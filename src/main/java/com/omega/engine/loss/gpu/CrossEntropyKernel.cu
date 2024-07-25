@@ -577,7 +577,7 @@ __global__ void cross_softmax_backward_kernel(float* out, const float* inp, cons
 	        for (int u = 0; u < UNROLL_FACTOR; u++) {
 	            if (i + u*blockDim.x < C) {
 	            	float indicator = i + u*blockDim.x == tx ? 1.0f : 0.0f;
-	            	y[i + u*blockDim.x] = x[i + u*blockDim.x] - indicator;
+	            	y[i + u*blockDim.x] = (x[i + u*blockDim.x] - indicator) / N;
 	            }
 	        }
 	    }

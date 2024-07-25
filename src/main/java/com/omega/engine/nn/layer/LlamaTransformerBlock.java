@@ -142,6 +142,8 @@ public class LlamaTransformerBlock extends Layer{
 		TensorOP.add(mlp.getOutput(), tmp1, tmp2);
 		
 		this.output = tmp2;
+//		System.err.println("---------------------------------");
+//		this.output.showDM();
 	}
 	
 	@Override
@@ -159,11 +161,15 @@ public class LlamaTransformerBlock extends Layer{
 	public void diff(Tensor cos,Tensor sin) {
 		// TODO Auto-generated method stub
 		
-		mlp.back(delta);
+//		delta.showDM();
 		
+		mlp.back(delta);
+
 		norm2.back(mlp.diff);
 		
 		TensorOP.add(norm2.diff, delta, norm2.diff);
+		
+//		norm2.diff.showDM();
 		
 		attn.back(cos, sin, norm2.diff);
 		
@@ -172,7 +178,8 @@ public class LlamaTransformerBlock extends Layer{
 		TensorOP.add(norm1.diff, norm2.diff, tmp2);
 		
 		this.diff = tmp2;
-		
+//		System.err.println("diff:");
+//		diff.showDM();
 	}
 
 	@Override

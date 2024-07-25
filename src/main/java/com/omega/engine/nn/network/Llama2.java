@@ -108,7 +108,7 @@ public class Llama2 extends Network {
 	@Override
 	public NetworkType getNetworkType() {
 		// TODO Auto-generated method stub
-		return NetworkType.GPT;
+		return NetworkType.LLAMA;
 	}
 
 	@Override
@@ -136,11 +136,17 @@ public class Llama2 extends Network {
 		inputLayer.forward();
 //		JCuda.cudaDeviceSynchronize();
 //		long start = System.nanoTime();
+//		System.err.println("input:");
+//		input.showDM();
 		decoder.forward(cos, sin, input);
+//		System.err.println("decoder:");
+//		decoder.getOutput().showDM();
 //		JCuda.cudaDeviceSynchronize();
 //		System.out.println("forward1:"+(System.nanoTime() - start) / 1e6+"ms.");
 //		long start2 = System.nanoTime();
 		fullyLayer.forward(decoder.getOutput());
+//		System.err.println("fullyLayer:");
+//		fullyLayer.getOutput().showDM();
 //		JCuda.cudaDeviceSynchronize();
 //		System.out.println("forward2:"+(System.nanoTime() - start2) / 1e6+"ms.");
 		return this.getOutput();
@@ -160,9 +166,12 @@ public class Llama2 extends Network {
 		 * 将误差值输入到最后一层
 		 */
 		this.setLossDiff(lossDiff);
+		
 //		JCuda.cudaDeviceSynchronize();
 //		long start2 = System.nanoTime();
 		this.fullyLayer.back(lossDiff);
+//		System.err.println("---fully:");
+//		this.fullyLayer.diff.showDM();
 //		JCuda.cudaDeviceSynchronize();
 //		System.out.println("backward2:"+(System.nanoTime() - start2) / 1e6+"ms.");
 //		JCuda.cudaDeviceSynchronize();

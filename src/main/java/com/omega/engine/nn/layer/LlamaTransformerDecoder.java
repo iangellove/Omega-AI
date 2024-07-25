@@ -86,6 +86,7 @@ public class LlamaTransformerDecoder extends Layer{
 		
 		this.src_emb = new EmbeddingIDLayer(vocab_size, embedDim, network);
 		this.src_emb.weight = new Tensor(1, 1, src_emb.width, src_emb.oWidth, RandomUtils.uniform(this.src_emb.width * this.src_emb.oWidth, 0.0f, 0.02f), true);
+//		this.src_emb.weight = new Tensor(1, 1, src_emb.width, src_emb.oWidth, RandomUtils.order(this.src_emb.width * this.src_emb.oWidth, 0.001f, 0.001f), true);
 
 		decoderLayers = new ArrayList<LlamaTransformerBlock>();
 		
@@ -137,7 +138,7 @@ public class LlamaTransformerDecoder extends Layer{
 		src_emb.forward(input);
 
 		Tensor out1 = src_emb.getOutput();
-
+		
 		if(dropout) {
 			this.dropoutLayer.forward(out1);
 			out1 = dropoutLayer.getOutput();
@@ -147,7 +148,7 @@ public class LlamaTransformerDecoder extends Layer{
 			decoderLayers.get(i).forward(cos, sin, out1);
 			out1 = decoderLayers.get(i).getOutput();
 		}
-
+		
 		this.norm.forward(out1);
 		this.output = this.norm.getOutput();
 	}
@@ -166,6 +167,7 @@ public class LlamaTransformerDecoder extends Layer{
 	
 	public void diff(Tensor cos,Tensor sin) {
 		// TODO Auto-generated method stub
+		
 		this.norm.back(delta);
 		Tensor decoderDiff = this.norm.diff;
 		
@@ -178,7 +180,8 @@ public class LlamaTransformerDecoder extends Layer{
 			this.dropoutLayer.back(decoderDiff);
 			decoderDiff = dropoutLayer.diff;
 		}
-		
+//		System.err.println("decoderDiff:");
+//		decoderDiff.showDM();
 		src_emb.back(decoderDiff);
 
 		this.diff = this.src_emb.diff;
