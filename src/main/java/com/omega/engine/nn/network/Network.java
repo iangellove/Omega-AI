@@ -68,11 +68,11 @@ public abstract class Network {
 	 */
 	public int number = 0;
 	
-	public int channel = 0;
+	private int channel = 0;
 	
-	public int height = 0;
+	private int height = 0;
 	
-	public int width = 0;
+	private int width = 0;
 	
 	public int oChannel = 0;
 	
@@ -274,6 +274,30 @@ public abstract class Network {
 //				pGrad.showDM();
 			}
 		}
+	}
+
+	public int getChannel() {
+		return channel;
+	}
+
+	public void setChannel(int channel) {
+		this.channel = channel;
+	}
+
+	public int getHeight() {
+		return height;
+	}
+
+	public void setHeight(int height) {
+		this.height = height;
+	}
+
+	public int getWidth() {
+		return width;
+	}
+
+	public void setWidth(int width) {
+		this.width = width;
 	}
 	
 }

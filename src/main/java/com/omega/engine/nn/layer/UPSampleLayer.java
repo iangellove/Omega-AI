@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer;
 import com.omega.common.data.Tensor;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.gpu.UpSampleKernel;
+import com.omega.engine.nn.network.Network;
 
 /**
  * 上采用层
@@ -18,6 +19,22 @@ public class UPSampleLayer extends Layer {
 	private BaseKernel baseKernel;
 	
 	public UPSampleLayer(int channel,int height,int width,int stride) {
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.oChannel = channel;
+		this.stride = stride;
+		this.oHeight = this.height * stride;
+		this.oWidth = this.width * stride;
+		if(this.stride < 0) {
+			this.stride = -stride;
+			oHeight = this.height / stride;
+			oWidth = this.width / stride;
+		}
+	}
+	
+	public UPSampleLayer(int channel,int height,int width,int stride,Network network) {
+		this.network = network;
 		this.channel = channel;
 		this.height = height;
 		this.width = width;

@@ -111,15 +111,15 @@ public class LossFactory {
 				break;
 			case yolov2:
 				YoloLayer yolo2 = (YoloLayer) outputs.get(i);
-				losses[i] = new YoloLoss2(yolo2.class_number, yolo2.bbox_num, yolo2.anchors, yolo2.network.height, yolo2.network.width, yolo2.maxBox, yolo2.total, yolo2.ignoreThresh, yolo2.truthThresh);
+				losses[i] = new YoloLoss2(yolo2.class_number, yolo2.bbox_num, yolo2.anchors, yolo2.network.getHeight(), yolo2.network.getWidth(), yolo2.maxBox, yolo2.total, yolo2.ignoreThresh, yolo2.truthThresh);
 				break;
 			case yolov3:
 				YoloLayer yolo = (YoloLayer) outputs.get(i);
-				losses[i] = new YoloLoss3(yolo.class_number, yolo.bbox_num, yolo.mask, yolo.anchors, yolo.network.height, yolo.network.width, yolo.maxBox, yolo.total, yolo.ignoreThresh, yolo.truthThresh);
+				losses[i] = new YoloLoss3(yolo.class_number, yolo.bbox_num, yolo.mask, yolo.anchors, yolo.network.getHeight(), yolo.network.getWidth(), yolo.maxBox, yolo.total, yolo.ignoreThresh, yolo.truthThresh);
 				break;
 			case yolov7:
 				YoloLayer yolo7 = (YoloLayer) outputs.get(i);
-				losses[i] = new YoloLoss7(yolo7.class_number, yolo7.bbox_num, yolo7.mask, yolo7.anchors, yolo7.network.height, yolo7.network.width, yolo7.maxBox, yolo7.total, yolo7.ignoreThresh, yolo7.truthThresh);
+				losses[i] = new YoloLoss7(yolo7.class_number, yolo7.bbox_num, yolo7.mask, yolo7.anchors, yolo7.network.getHeight(), yolo7.network.getWidth(), yolo7.maxBox, yolo7.total, yolo7.ignoreThresh, yolo7.truthThresh);
 				break;
 			case multiLabel_soft_margin:
 				losses[i] = new MultiLabelSoftMargin();
@@ -161,15 +161,15 @@ public class LossFactory {
 				break;
 			case yolov2:
 				YoloLayer yolo2 = (YoloLayer) outputs.get(i);
-				losses[i] = new YoloLoss2(yolo2.class_number, yolo2.bbox_num, yolo2.anchors, yolo2.network.height, yolo2.network.width, yolo2.maxBox, yolo2.total, yolo2.ignoreThresh, yolo2.truthThresh);
+				losses[i] = new YoloLoss2(yolo2.class_number, yolo2.bbox_num, yolo2.anchors, yolo2.network.getHeight(), yolo2.network.getWidth(), yolo2.maxBox, yolo2.total, yolo2.ignoreThresh, yolo2.truthThresh);
 				break;
 			case yolov3:
 				YoloLayer yolo3 = (YoloLayer) outputs.get(i);
-				losses[i] = new YoloLoss3(yolo3.class_number, yolo3.bbox_num, yolo3.mask, yolo3.anchors, yolo3.network.height, yolo3.network.width, yolo3.maxBox, yolo3.total, yolo3.ignoreThresh, yolo3.truthThresh);
+				losses[i] = new YoloLoss3(yolo3.class_number, yolo3.bbox_num, yolo3.mask, yolo3.anchors, yolo3.network.getHeight(), yolo3.network.getWidth(), yolo3.maxBox, yolo3.total, yolo3.ignoreThresh, yolo3.truthThresh);
 				break;
 			case yolov7:
 				YoloLayer yolo7 = (YoloLayer) outputs.get(i);
-				losses[i] = new YoloLoss7(yolo7.class_number, yolo7.bbox_num, yolo7.mask, yolo7.anchors, yolo7.network.height, yolo7.network.width, yolo7.maxBox, yolo7.total, yolo7.ignoreThresh, yolo7.truthThresh);
+				losses[i] = new YoloLoss7(yolo7.class_number, yolo7.bbox_num, yolo7.mask, yolo7.anchors, yolo7.network.getHeight(), yolo7.network.getWidth(), yolo7.maxBox, yolo7.total, yolo7.ignoreThresh, yolo7.truthThresh);
 				break;
 			case multiLabel_soft_margin:
 				losses[i] = new MultiLabelSoftMargin();

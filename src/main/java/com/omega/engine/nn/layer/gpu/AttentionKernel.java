@@ -105,7 +105,7 @@ public class AttentionKernel extends BaseKernel{
 			
 			if(softmax_backward_function == null) {
 //				softmax_backward_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_autoregressive_backward_kernel");
-				softmax_backward_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_autoregressive_backward_kernel7");
+				softmax_backward_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_autoregressive_backward_kernel8");
 			}
 			
 			if(softmax_test_backward_function == null) {
@@ -418,7 +418,7 @@ public class AttentionKernel extends BaseKernel{
 //			int num_blocks = get_number_of_blocks(32/8*T, block_size);
 //	        int num_blocks = get_number_of_blocks(T, block_size);
 		    checkCUDA(cuLaunchKernel(softmax_backward_function,
-		    		T,  B * NH, 1,      // Grid dimension
+		    		T / 4,  B * NH, 1,      // Grid dimension
 		    		block_size, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            softmaxBackwardParameters, null // Kernel- and extra parameters

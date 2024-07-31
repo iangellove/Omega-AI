@@ -1223,7 +1223,7 @@ public class YoloImageUtils {
 			File file = new File(filePath);
 			
 			if(file.exists()) {
-				float[] once = IU().getImageDataToGray(file, true, false);
+				float[] once = IU().getImageDataToGray(file, true);
 				System.arraycopy(once, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
 			}
 			
@@ -1254,10 +1254,49 @@ public class YoloImageUtils {
 		return null;
 	}
 	
-	public static void loadImgDataResize(String filePath,Tensor out,int idx) {
+	public static float[] loadImgDataToArray(String filePath, boolean norm) {
 		
 		try {
 			
+			File file = new File(filePath);
+			
+			if(file.exists()) {
+				
+				float[] data =  IU().getImageData(file, norm, norm);
+				
+				return data;
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public static float[] loadImgDataToGrayArray(String filePath, boolean norm) {
+		
+		try {
+			
+			File file = new File(filePath);
+			
+			if(file.exists()) {
+				
+				float[] data =  IU().getImageDataToGray(file, norm);
+				
+				return data;
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public static void loadImgDataResize(String filePath,Tensor out,int idx) {
+		
+		try {
 			float[] sized = ImageLoader.resized(filePath, out.height, out.width);
 			System.arraycopy(sized, 0, out.data, idx * out.channel * out.height * out.width, out.channel * out.height * out.width);
 			

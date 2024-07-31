@@ -2207,7 +2207,7 @@ public class EDOptimizer extends Optimizer {
 			
 			Tensor sin = cs[1];
 			
-			int pad = trainingData.tokenizer.pad;
+			int pad = -1;
 			
 			trainingData.loadData(input, label, tmpInput, tmpLabel);
 			

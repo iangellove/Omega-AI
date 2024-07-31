@@ -516,6 +516,16 @@ public class Tensor implements Serializable{
 	    System.out.println(JsonUtils.toJson(this.getByNumber(number)));
 	}
 	
+	public void checkDMByNumber(int number) {
+		syncHost();
+	    System.out.println(MatrixUtils.isZero(this.getByNumber(number)));
+	}
+	
+	public void checkDMZero() {
+		syncHost();
+	    System.out.println(MatrixUtils.isZero(data));
+	}
+	
 	public void showDMByOffset(int start,int len) {
 		syncHost();
 	    System.out.println(JsonUtils.toJson(this.getByNumber(number)));

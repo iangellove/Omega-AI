@@ -4,6 +4,7 @@ import com.omega.common.data.Tensor;
 import com.omega.engine.gpu.cudnn.PoolingCudnnKernel;
 import com.omega.engine.nn.layer.gpu.PoolingBaseKernel;
 import com.omega.engine.nn.layer.gpu.PoolingKernel;
+import com.omega.engine.nn.network.Network;
 import com.omega.engine.pooling.PoolingType;
 
 /**
@@ -27,6 +28,18 @@ public class PoolingLayer extends Layer {
 	private PoolingBaseKernel kernel;
 	
 	public PoolingLayer(int channel,int width,int height,int pWidth,int pHeight,int stride,PoolingType poolingType) {
+		this.channel = channel;
+		this.width = width;
+		this.height = height;
+		this.pWidth = pWidth;
+		this.pHeight = pHeight;
+		this.stride = stride;
+		this.poolingType = poolingType;
+		initParam();
+	}
+	
+	public PoolingLayer(int channel,int width,int height,int pWidth,int pHeight,int stride,PoolingType poolingType,Network network) {
+		this.network = network;
 		this.channel = channel;
 		this.width = width;
 		this.height = height;

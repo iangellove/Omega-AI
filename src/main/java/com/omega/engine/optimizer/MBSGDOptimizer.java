@@ -104,7 +104,7 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
 			
@@ -244,7 +244,7 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
 			
@@ -398,7 +398,7 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
 			
@@ -531,7 +531,7 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
 			
@@ -564,9 +564,9 @@ public class MBSGDOptimizer extends Optimizer {
 					
 //					System.out.println(JsonUtils.toJson(label.data));
 					
-					input.hostToDevice();
-					
-					label.hostToDevice();
+//					input.hostToDevice();
+//					
+//					label.hostToDevice();
 
 					/**
 					 * forward
@@ -656,7 +656,7 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = trainingData.initLabelTensor();
 			
@@ -767,7 +767,7 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
 			
@@ -894,7 +894,7 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
 			
@@ -1013,7 +1013,7 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
 			
@@ -1139,7 +1139,7 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = trainingData.initLabelTensor();
 			
@@ -1246,11 +1246,11 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize);
 			
-			Tensor vail_input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor vail_input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				
@@ -1364,11 +1364,11 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize, true);
 			
-			Tensor vail_input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor vail_input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor vail_label = new Tensor(batchSize, 1, 1, valiData.labelSize, true);
 			
@@ -1484,11 +1484,11 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = trainingData.initLabelTensor();
 			
-			Tensor vail_input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor vail_input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			for(int i = 0;i<this.trainTime;i++) {
 				
@@ -1620,7 +1620,7 @@ public class MBSGDOptimizer extends Optimizer {
 				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
 			}
 			
-			Tensor input = new Tensor(trainingData.time * batchSize, this.network.channel, this.network.height, this.network.width, true);
+			Tensor input = new Tensor(trainingData.time * batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			Tensor label = trainingData.initLabelTensor();
 			
@@ -1715,6 +1715,115 @@ public class MBSGDOptimizer extends Optimizer {
 
 					this.batchIndex++;
 				}
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(this.lr_step);
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void trainSeg(BaseDataLoader trainingData) {
+		// TODO Auto-generated method stub
+
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
+			
+			Tensor label = new Tensor(batchSize, 1, this.network.getHeight(), this.network.getWidth(), true);
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = trainingData.shuffle();
+
+				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				float train_loss = 0.0f;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+
+					long start = System.nanoTime();
+
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					trainingData.loadData(indexs[it], input, label);
+					
+					/**
+					 * forward
+					 */
+					Tensor output = this.network.forward(input);
+					
+					/**
+					 * loss
+					 */
+					this.loss = this.network.loss(output, label);
+					
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = this.network.lossDiff(output, label);
+					
+					/**
+					 * back
+					 */
+					this.network.back(this.lossDiff);
+					
+					/**
+					 * update
+					 */
+					this.network.update();
+
+					JCudaDriver.cuCtxSynchronize();
+					
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / this.batchSize;
+					}
+
+					train_loss += this.currentError;
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+					
+					this.batchIndex++;
+				}
+				
+				System.out.println("training["+this.trainIndex+"] train loss:{"+train_loss/indexs.length+"} ");
 				
 				/**
 				 * update learning rate

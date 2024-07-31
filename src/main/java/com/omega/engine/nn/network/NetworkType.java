@@ -16,6 +16,7 @@ public enum NetworkType {
 	TTANSFORMER("TTANSFORMER"),
 	GPT("GPT"),
 	LLAMA("LLAMA"),
+	UNET("UNET"),
 	YOLO("YOLO");
 	
 	NetworkType(String key){

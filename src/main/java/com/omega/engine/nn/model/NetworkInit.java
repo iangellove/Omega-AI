@@ -36,9 +36,9 @@ public class NetworkInit implements Serializable{
 	private List<LayerInit> layers = new ArrayList<LayerInit>();
 	
 	public NetworkInit(Network network) {
-		this.channel = network.channel;
-		this.height = network.height;
-		this.width = network.width;
+		this.channel = network.getChannel();
+		this.height = network.getHeight();
+		this.width = network.getWidth();
 		this.oChannel = network.oChannel;
 		this.oHeight = network.oHeight;
 		this.oWidth = network.oWidth;

@@ -53,9 +53,9 @@ public class CNN extends Network {
 		
 		Layer inputLayer = layerList.get(0);
 		Layer outputLayer = layerList.get(layerList.size() - 1);
-		this.channel = inputLayer.channel;
-		this.height = inputLayer.height;
-		this.width = inputLayer.width;
+		this.setChannel(inputLayer.channel);
+		this.setHeight(inputLayer.height);
+		this.setWidth(inputLayer.width);
 		this.oChannel = outputLayer.oChannel;
 		this.oHeight = outputLayer.oHeight;
 		this.oWidth = outputLayer.oWidth;

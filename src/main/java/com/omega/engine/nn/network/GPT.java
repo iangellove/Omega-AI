@@ -56,9 +56,9 @@ public class GPT extends Network {
 		}
 		
 		this.layerCount = layerList.size();
-		this.channel = layerList.get(0).channel;
-		this.height = layerList.get(0).height;
-		this.width = layerList.get(0).width;
+		this.setChannel(layerList.get(0).channel);
+		this.setHeight(layerList.get(0).height);
+		this.setWidth(layerList.get(0).width);
 		
 		this.oChannel = this.getLastLayer().oChannel;
 		this.oHeight = this.getLastLayer().oHeight;

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
@@ -77,6 +78,8 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 	private Tensor dattn;
 	
 	private Tensor dpreatt;
+	
+//	private Tensor dpreatt2;
 
 	private int batchSize = 1;
 	
@@ -224,6 +227,7 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 			this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, time, dk, true);
 			this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
 			this.dpreatt = Tensor.createGPUTensor(this.dpreatt, batchSize, headNum, time, time, true);
+//			this.dpreatt2 = Tensor.createGPUTensor(this.dpreatt2, batchSize, headNum, time, time, true);
 		}else {
 //			this.dvaccum.clearGPU();
 		}
@@ -325,11 +329,12 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		}
 		
 		// backward into preatt
-		float d_k = (float) (1.0f / Math.sqrt(dk));
+//		float d_k = (float) (1.0f / Math.sqrt(dk));
 //		attentionKernel.softmax_backward(dpreatt, dattn, attn, batchSize, time, embedDim, headNum, d_k);
 		attentionKernel.softmax_test_backward(dpreatt, dattn, attn, batchSize, time, embedDim, headNum);
 //		System.err.println("dpreatt:");
-//		dpreatt.showDMByNumber(0);
+//		System.err.println("error:"+MatrixUtils.check(dpreatt.syncHost(), dpreatt2.syncHost()));
+//		dpreatt.checkDMZero();
 		// backward into q
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, kt.getGpuData(), dk, time * dk, dpreatt.getGpuData(), time, time * time, 0.0f, dqt.getGpuData(), dk, time * dk, batchSize * headNum);
 		

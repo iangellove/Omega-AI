@@ -77,8 +77,8 @@ public class GANOptimizer extends Optimizer {
 			float dlr = this.netD.learnRate;
 			float glr = this.netG.learnRate;
 			
-			Tensor inputD = new Tensor(batchSize, this.netD.channel, this.netD.height, this.netD.width, true);
-			Tensor inputG = new Tensor(batchSize, this.netG.channel, this.netG.height, this.netG.width, true);
+			Tensor inputD = new Tensor(batchSize, this.netD.getChannel(), this.netD.getHeight(), this.netD.getWidth(), true);
+			Tensor inputG = new Tensor(batchSize, this.netG.getChannel(), this.netG.getHeight(), this.netG.getWidth(), true);
 			
 			float[] trueData = MatrixUtils.one(batchSize * 1);
 			
@@ -169,8 +169,8 @@ public class GANOptimizer extends Optimizer {
 			float dlr = this.netD.learnRate;
 			float glr = this.netG.learnRate;
 			
-			Tensor inputD = new Tensor(batchSize, this.netD.channel, this.netD.height, this.netD.width, true);
-			Tensor inputG = new Tensor(batchSize, this.netG.channel, this.netG.height, this.netG.width, true);
+			Tensor inputD = new Tensor(batchSize, this.netD.getChannel(), this.netD.getHeight(), this.netD.getWidth(), true);
+			Tensor inputG = new Tensor(batchSize, this.netG.getChannel(), this.netG.getHeight(), this.netG.getWidth(), true);
 			
 			float[] trueData = MatrixUtils.one(batchSize * 1);
 			
@@ -268,9 +268,9 @@ public class GANOptimizer extends Optimizer {
 			Graph gd2 = new Graph();
 			Graph gg = new Graph();
 			
-			Tensor inputD = new Tensor(batchSize, this.netD.channel, this.netD.height, this.netD.width, true);
+			Tensor inputD = new Tensor(batchSize, this.netD.getChannel(), this.netD.getHeight(), this.netD.getWidth(), true);
 
-			Tensor inputG = new Tensor(batchSize, this.netG.channel, this.netG.height, this.netG.width, true);
+			Tensor inputG = new Tensor(batchSize, this.netG.getChannel(), this.netG.getHeight(), this.netG.getWidth(), true);
 			
 			float[] trueData = MatrixUtils.one(batchSize * 1);
 			

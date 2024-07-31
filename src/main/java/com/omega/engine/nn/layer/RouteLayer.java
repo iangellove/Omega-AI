@@ -27,7 +27,7 @@ public class RouteLayer extends Layer{
 		this.oWidth = first.oWidth;
 		for(Layer layer:layers) {
 			if(layer.oHeight != this.oHeight || layer.oWidth != this.oWidth) {
-				throw new RuntimeException("input size must be all same in the route layer.");
+				throw new RuntimeException("input size must be all same in the route layer.["+layer.oHeight+":"+this.oHeight+"]");
 			}
 			this.oChannel += layer.oChannel;
 		}

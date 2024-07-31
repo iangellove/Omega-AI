@@ -69,9 +69,9 @@ public class Yolo extends OutputsNetwork{
 		
 		Layer inputLayer = layerList.get(0);
 
-		this.channel = inputLayer.channel;
-		this.height = inputLayer.height;
-		this.width = inputLayer.width;
+		this.setChannel(inputLayer.channel);
+		this.setHeight(inputLayer.height);
+		this.setWidth(inputLayer.width);
 		
 		if(this.outputNum > 1) {
 

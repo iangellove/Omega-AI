@@ -73,15 +73,15 @@ public class BCEWithLogitsLossKernel extends BaseKernel {
                 Pointer.to(input.getGpuData()),
                 Pointer.to(currentLabel.getGpuData()),
                 Pointer.to(output.getGpuData()),
-                Pointer.to(new int[] {input.number}),
-                Pointer.to(new int[] {input.width}),
+                Pointer.to(new int[] {input.number * input.channel}),
+                Pointer.to(new int[] {input.width * input.height}),
                 Pointer.to(new float[] {eta})
             );
 		
 		this.N = output.number;
 
 		cuLaunchKernel(loss_function,
-				input.number, 1, 1,    // Grid dimension
+				input.number * input.channel, 1, 1,    // Grid dimension
 				CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
 	            loss_kernelParameters, null // Kernel- and extra parameters
@@ -100,12 +100,12 @@ public class BCEWithLogitsLossKernel extends BaseKernel {
                 Pointer.to(input.getGpuData()),
                 Pointer.to(currentLabel.getGpuData()),
                 Pointer.to(diff.getGpuData()),
-                Pointer.to(new int[] {input.number}),
-                Pointer.to(new int[] {input.width})
+                Pointer.to(new int[] {input.number * input.channel}),
+                Pointer.to(new int[] {input.width * input.height})
             );
 
 		cuLaunchKernel(loss_backward_function,
-				input.number,  1, 1,      // Grid dimension
+				input.number * input.channel,  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
 	            backKernelParameters, null // Kernel- and extra parameters

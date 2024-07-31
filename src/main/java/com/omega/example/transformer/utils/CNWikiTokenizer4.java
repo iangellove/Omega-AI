@@ -8,7 +8,6 @@ import java.util.concurrent.CompletableFuture;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.PrintUtils;
-import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 
 import jcuda.runtime.JCuda;
 
@@ -212,7 +211,7 @@ public class CNWikiTokenizer4 extends BaseTokenizer{
 	}
 	
 	public Tensor loadByTxtToIdx(int[] idxs) {
-		System.out.println(idxs.length);
+//		System.out.println(idxs.length);
 		testInput = Tensor.createTensor(testInput, idxs.length, 1, 1, 1, true);
 		for(int t = 0;t<idxs.length;t++) {
 			testInput.data[t] = idxs[t];
@@ -235,7 +234,10 @@ public class CNWikiTokenizer4 extends BaseTokenizer{
 	}
 	
 	public Tensor loadByTxtToIdx(int[] idxs,int maxLen) {
-		
+		if(testInput != null) {
+			testInput.clear();
+			testInput.clearGPU();
+		}
 		testInput = Tensor.createTensor(testInput, maxLen, 1, 1, 1, true);
 		for(int t = 0;t<idxs.length;t++) {
 			testInput.data[t] = idxs[t];

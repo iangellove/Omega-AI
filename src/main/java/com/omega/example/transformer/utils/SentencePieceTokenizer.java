@@ -31,6 +31,8 @@ public class SentencePieceTokenizer extends BaseTokenizer{
     
     public int voc_size;
     
+    private SpVocabulary voc;
+    
     private final String[] _patterns = new String[]{"\\'", "\\\"", "\\.", "<br />", "\\,", "\\(", "\\)", "\\!", "\\?", "\\;", "\\:", "\\s+", "\\r", "\n"};
 
 	private final String[] _replacements = new String[] {" '  ", "", " . ", " ", " , ", " ( ", " ) ", " ! ", " ? ", " ", " ", " ","",""};
@@ -44,7 +46,7 @@ public class SentencePieceTokenizer extends BaseTokenizer{
 //        for(int i = 0;i<20000;i++) {
 //        	System.out.println(i+":"+voc.getToken(i));
 //        }
-        
+//        System.out.println(voc.getToken(52773));
         unk = (int) voc.getIndex("<unk>");
         bos = (int) voc.getIndex("<s>");
         eos = (int) voc.getIndex("</s>");
@@ -58,9 +60,27 @@ public class SentencePieceTokenizer extends BaseTokenizer{
         SpVocabulary voc = SpVocabulary.from(model);
         this.voc_size = voc_size;
         tokenizer = model.getProcessor();
-//        for(int i = 0;i<20000;i++) {
+//        for(int i = 0;i<voc_size;i++) {
 //        	System.out.println(i+":"+voc.getToken(i));
 //        }
+        
+        unk = (int) voc.getIndex("<unk>");
+        bos = (int) voc.getIndex("<s>");
+        eos = (int) voc.getIndex("</s>");
+        pad = (int) voc.getIndex("<pad>");
+        System.out.println("UNK ID: "+unk+" | BOS ID: "+bos+" | EOS ID: "+eos+" | PAD ID: "+pad);
+    }
+    
+    public SentencePieceTokenizer(String path,int voc_size,Map<Integer,String> map) throws IOException {
+        System.out.println("Loading SentencePiece model from " + path);
+        SpTokenizer model = new SpTokenizer(Paths.get(path));
+        SpVocabulary voc = SpVocabulary.from(model);
+        this.voc_size = voc_size;
+        tokenizer = model.getProcessor();
+        for(int i = 0;i<voc_size;i++) {
+        	map.put(i, voc.getToken(i));
+//        	System.out.println(i+":"+voc.getToken(i));
+        }
         
         unk = (int) voc.getIndex("<unk>");
         bos = (int) voc.getIndex("<s>");
@@ -275,15 +295,15 @@ public class SentencePieceTokenizer extends BaseTokenizer{
     	try {
 			SentencePieceTokenizer t = new SentencePieceTokenizer(tokenizer_path);
 			
-//			String txt = "中国社会科学院语言研究所是中国社会科学院下设的一个汉语语言研究机构。";
-//			
-//			String[] tokens = t.tokenize(txt);
-//			
-//			System.out.println(JsonUtils.toJson(tokens));
-//			
-//			int[] idx = t.encode(txt);
-//			
-//			System.out.println(JsonUtils.toJson(idx));
+			String txt = "中国社会科学院语言研究所是中国社会科学院下设的一个汉语语言研究机构。";
+			
+			String[] tokens = t.tokenize(txt);
+			
+			System.out.println(JsonUtils.toJson(tokens));
+			
+			int[] idx = t.encode(txt);
+			
+			System.out.println(JsonUtils.toJson(idx));
 //			
 //			String outText = t.decode(idx);
 //			
@@ -299,10 +319,10 @@ public class SentencePieceTokenizer extends BaseTokenizer{
 //			
 //			t.encodeMedicalDataset(datasetPath, outputPath);
 			
-			String datasetPath = "H:\\transformer_dataset\\563w_baidubaike.json";
-			String outputPath = "H:\\transformer_dataset\\baike_idx_chatglm_vocab.txt";
-			
-			t.encodeBaiKeDataset(datasetPath, outputPath);
+//			String datasetPath = "H:\\transformer_dataset\\563w_baidubaike.json";
+//			String outputPath = "H:\\transformer_dataset\\baike_idx_chatglm_vocab.txt";
+//			
+//			t.encodeBaiKeDataset(datasetPath, outputPath);
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -310,5 +330,13 @@ public class SentencePieceTokenizer extends BaseTokenizer{
 		}
 
     }
+
+	public SpVocabulary getVoc() {
+		return voc;
+	}
+
+	public void setVoc(SpVocabulary voc) {
+		this.voc = voc;
+	}
     
 }

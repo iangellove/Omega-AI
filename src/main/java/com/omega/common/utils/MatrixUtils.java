@@ -1156,5 +1156,19 @@ public class MatrixUtils {
 		}
 	}
 	
+	public static float check(float[] a,float[] b) {
+		float error = 0.0f;
+		int count = 0;
+		for(int i = 0;i<a.length;i++) {
+			float t = Math.abs(a[i] - b[i]);
+			error += t;
+			if(t > 0) {
+				count++;
+			}
+		}
+		System.out.println(count);
+		return error;
+	}
+	
 	
 }

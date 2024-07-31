@@ -265,7 +265,7 @@ __device__ float warpReduceSum(float val) {
 }
 
 extern "C"
-__global__ void softmax_forward_kernel4(float* out, float scale, const float* inp, int N, int C) {
+__global__ void softmax_forward_kernel4(float* out, const float* inp, int N, int C) {
     // out is (N, C) just like inp. Each row of inp will get softmaxed.
     // same as kernel3, but can handle any block size (multiple of 32)
     // each row of C elements is handled by block_size threads
@@ -293,7 +293,7 @@ __global__ void softmax_forward_kernel4(float* out, float scale, const float* in
     // first, thread coarsening by directly accessing global memory in series
     float maxval = -INFINITY;
     for (int i = tid; i < C; i += blockDim.x) {
-        maxval = fmaxf(maxval, x[i] * scale);
+        maxval = fmaxf(maxval, x[i]);
     }
     // now within-warp reductions for maxval
     maxval = warpReduceMax(maxval);
@@ -318,7 +318,7 @@ __global__ void softmax_forward_kernel4(float* out, float scale, const float* in
     // compute expf and write the result to global memory
     for (int i = tid; i < C; i += blockDim.x) {
         // subtract max for numerical stability
-        out[idx * C + i] = expf(x[i] * scale - offset);
+        out[idx * C + i] = expf(x[i] - offset);
     }
 
     // okay now we calculated exp(x - max(x))
@@ -328,7 +328,7 @@ __global__ void softmax_forward_kernel4(float* out, float scale, const float* in
     x = out + idx * C;
     float sumval = 0.0f;
     for (int i = tid; i < C; i += blockDim.x) {
-        sumval += x[i] * scale;
+        sumval += x[i];
     }
     // within-warp reduction for sumval
     sumval = warpReduceSum(sumval);
@@ -351,7 +351,7 @@ __global__ void softmax_forward_kernel4(float* out, float scale, const float* in
 
     // divide the whole row by the sum
     for (int i = tid; i < C; i += blockDim.x) {
-        out[idx * C + i] = x[i] * scale / sum;
+        out[idx * C + i] = x[i] / sum;
     }
 }
 

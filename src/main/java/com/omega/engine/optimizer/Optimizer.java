@@ -1148,7 +1148,7 @@ public abstract class Optimizer {
 		
 		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
 		
-		Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+		Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 		
 		Yolo net = (Yolo) this.network;
 		
@@ -1164,7 +1164,7 @@ public abstract class Optimizer {
 				
 				YoloLayer layer = (YoloLayer) net.outputLayers.get(i);
 
-				YoloDetection[][] dets = YoloUtils.getYoloDetections(output[i], layer.anchors, layer.mask, layer.bbox_num, layer.outputs, layer.class_number, this.network.height, this.network.width, 0.5f);
+				YoloDetection[][] dets = YoloUtils.getYoloDetections(output[i], layer.anchors, layer.mask, layer.bbox_num, layer.outputs, layer.class_number, this.network.getHeight(), this.network.getWidth(), 0.5f);
 				
 				for(int j = 0;j<dets.length;j++) {
 					
@@ -1199,7 +1199,7 @@ public abstract class Optimizer {
 		
 		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
 		
-		Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+		Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 		
 		Yolo net = (Yolo) this.network;
 		
@@ -1215,7 +1215,7 @@ public abstract class Optimizer {
 				
 				YoloLayer layer = (YoloLayer) net.outputLayers.get(i);
 				
-				YoloDetection[][] dets = YoloUtils.getYoloDetectionsV7(output[i], layer.anchors, layer.mask, layer.bbox_num, layer.outputs, layer.class_number, this.network.height, this.network.width, 0.5f);
+				YoloDetection[][] dets = YoloUtils.getYoloDetectionsV7(output[i], layer.anchors, layer.mask, layer.bbox_num, layer.outputs, layer.class_number, this.network.getHeight(), this.network.getWidth(), 0.5f);
 				
 				for(int j = 0;j<dets.length;j++) {
 					
@@ -1350,7 +1350,7 @@ public abstract class Optimizer {
 		
 		int itc = new BigDecimal(testData.number).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
 		
-		Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width, true);
+		Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 		
 		for(int pageIndex = 0;pageIndex<itc;pageIndex++) {
 			

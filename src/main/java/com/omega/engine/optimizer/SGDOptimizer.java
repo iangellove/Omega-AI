@@ -38,7 +38,7 @@ public class SGDOptimizer extends Optimizer {
 		
 		try {
 			
-			Tensor input = new Tensor(batchSize, this.network.channel, this.network.height, this.network.width);
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth());
 			
 			Tensor label = new Tensor(batchSize, 1, 1, trainingData.labelSize);
 			

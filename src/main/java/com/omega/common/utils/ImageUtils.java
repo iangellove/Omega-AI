@@ -550,7 +550,7 @@ public class ImageUtils {
 		return color;
 	}
 	
-	public float[] getImageDataToGray(File file,boolean normalization,boolean meanStd) throws Exception {
+	public float[] getImageDataToGray(File file,boolean normalization) throws Exception {
 
 		BufferedImage bi = null;
 		try {
@@ -585,10 +585,12 @@ public class ImageUtils {
 				
 				int grayInt = (int) (r * 0.3 + g * 0.59 + b * 0.11);
 				
-				if(meanStd) {
-					color[i * height + j] = (float) ((grayInt * 1.0f / n) - mean[0]) / std[0];
+				color[j * width + i] = grayInt * 1.0f / n;
+				
+				if(color[j * width + i] >= 0.5f) {
+					color[j * width + i] = 1.0f;
 				}else {
-					color[i * height + j] = grayInt * 1.0f / n;
+					color[j * width + i] = 0.0f;
 				}
 				
 			}
@@ -656,6 +658,35 @@ public class ImageUtils {
 			}
 		}
 		return bufferedImage;
+	}
+	
+	public BufferedImage convertGrayImage(int[][] rgbValue){
+		int height = rgbValue.length;
+		int width = rgbValue[0].length;
+//		System.out.println(width + ":" + height);
+		BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+		for(int y=0;y<height;y++){
+			for(int x=0;x<width;x++){
+				bufferedImage.setRGB(x, y, rgbValue[y][x]);
+			}
+		}
+		return bufferedImage;
+	}
+	
+	public boolean createGrayImage(String path,String extName,int[][] rgbValue){
+
+		BufferedImage bufferedImage = this.convertGrayImage(rgbValue);
+//		System.out.println(extName);
+		File outputfile = new File(path);
+		try {
+			System.out.println(ImageIO.write(bufferedImage, extName, outputfile));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
 	}
 	
 	public boolean createRGBImage(String path,String extName,int[][] rgb) {

@@ -3,6 +3,7 @@ package com.omega.example.transformer.utils;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
@@ -492,7 +493,7 @@ public class BPETokenizer {
 	
 	public static void main(String[] args) {
 
-		String dataPath = "H:\\transformer_dataset\\gpt\\50w.txt";
+//		String dataPath = "H:\\transformer_dataset\\gpt\\50w.txt";
 //		
 //		Map<Integer,String> vocab = bpe(dataPath, 5000);
 //		
@@ -500,7 +501,7 @@ public class BPETokenizer {
 //		System.out.println(vocab.size());
 		
 //		String txt = "唉想起下午的测试，萧炎轻叹了一口气，懒懒的抽回手掌，双手枕着脑袋，眼神有些恍惚十五年了呢低低的自喃声，忽然毫无边际的从少年嘴中轻吐了出来。在萧炎的心中，有一个仅有他自己知道的秘密：他并不是这个世界的人，或者说，萧炎的灵魂，并不属于这个世界，他来自一个名叫地球的蔚蓝星球，至于为什么会来到这里，这种离奇经过，他也无法解释，不过在生活了一段时间之后，他还是后知后觉的明白了过来：他穿越了！随着年龄的增长，对这块大陆，萧炎也是有了些模糊的了解";
-		String txt = "你好吗，你好呀，我的朋友";
+//		String txt = "你好吗，你好呀，我的朋友";
 		
 //		BPETokenizer tokenizer = new BPETokenizer();
 //		
@@ -515,30 +516,47 @@ public class BPETokenizer {
 //		
 //		System.out.println(tokenizer.decode(codes));
 		
-		String vocabPath = "H:\\transformer_dataset\\gpt\\50w_vocab.json";
-		
-		String decoderPath = "H:\\transformer_dataset\\gpt\\50w_decode_vocab.json";
-		
-		BPETokenizer t = new BPETokenizer(vocabPath, decoderPath);
-		
-		List<Integer> codes = t.encode(txt);
-		System.out.println("txt encode:"+JsonUtils.toJson(codes));
-		System.out.println(t.decode(codes));
-		
-		Map<Integer,String> decodeVocab = t.decodeVocab();
-		System.out.println(JsonUtils.toJson(decodeVocab));
-		byte[] bt = new byte[] {233-255,145-255};
-		try {
-			System.out.println(new String(bt, "utf-8"));
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		String vocabPath = "H:\\transformer_dataset\\gpt\\50w_vocab.json";
+//		
+//		String decoderPath = "H:\\transformer_dataset\\gpt\\50w_decode_vocab.json";
+//		
+//		BPETokenizer t = new BPETokenizer(vocabPath, decoderPath);
+//		
+//		List<Integer> codes = t.encode(txt);
+//		System.out.println("txt encode:"+JsonUtils.toJson(codes));
+//		System.out.println(t.decode(codes));
+//		
+//		Map<Integer,String> decodeVocab = t.decodeVocab();
+//		System.out.println(JsonUtils.toJson(decodeVocab));
+//		byte[] bt = new byte[] {233-255,145-255};
+//		try {
+//			System.out.println(new String(bt, "utf-8"));
+//		} catch (UnsupportedEncodingException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 //		List<Integer> sort = Collections.synchronizedList(new ArrayList<Integer>(10));
 //		IntStream.range(0, 10).parallel().forEach(action->{
 //			sort.add(action,action);
 //		});
 //		System.out.println(JsonUtils.toJson(sort));
+		
+		String tokenizer_path = "H:\\transformer_dataset\\tokenizer.model";
+		
+		try {
+			Map<Integer, String> vocab = new HashMap<Integer, String>();
+			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path, 64789, vocab);
+			
+			System.out.println(JsonUtils.toJson(vocab));
+			
+			
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
 	}
 	
 }
