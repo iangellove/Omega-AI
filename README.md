@@ -167,6 +167,8 @@ vail_loss = 1.8f  //最终验证集损失在1.8左右
 ##### 预训练权重文件： https://pan.baidu.com/s/1DobIvoYH_Yr8cv60VjCRng?pwd=euvp
 ##### 微调训练数据（SFT）：shibing624/medical,HuatuoGPT-sft-data-v1,DISC-Med-SFT,ChatMed
 ##### 微调权重文件：https://pan.baidu.com/s/1dve8XEk2o0lcoL36MdPhQg?pwd=wptj
+##### tokenizer（SentencePiece）：https://pan.baidu.com/s/1Wx6Bcchd2UodU3YtEzWaYw?pwd=ehew 
+##### 预处理后数据集：[数据集下载](https://pan.baidu.com/s/1m-Of8dwOQ5kYuLZVYpw3qA?pwd=7c92)
 ###### 模型参数
 ```java
 // llama2-chatglm 92M参数量
