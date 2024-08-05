@@ -164,7 +164,9 @@ vail_loss = 1.8f  //最终验证集损失在1.8左右
 
 #### [基于llama2-medium实现医疗问答系统](#llama2-医疗问答系统)
 ##### 预训练数据：Wiki中文百科,BaiduBaiKe,shibing624/medica
+##### 预训练权重文件： https://pan.baidu.com/s/1DobIvoYH_Yr8cv60VjCRng?pwd=euvp
 ##### 微调训练数据（SFT）：shibing624/medical,HuatuoGPT-sft-data-v1,DISC-Med-SFT,ChatMed
+##### 微调权重文件：https://pan.baidu.com/s/1dve8XEk2o0lcoL36MdPhQg?pwd=wptj
 ###### 模型参数
 ```java
 // llama2-chatglm 92M参数量
