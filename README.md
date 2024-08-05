@@ -179,7 +179,7 @@ dropoutRate = 0.0f
 train_loss = 2.0f //最终训练集损失在2.0左右
 ````
 ###### 推理效果图
-![Llama2医疗问答系统](images/qa_test.png)
+![Llama2医疗问答系统](images/llama2-medical.png)
 
 ##  功能介绍
 #### 支持的网络层类型：
@@ -1277,6 +1277,41 @@ public static void gan_anime() {
 				System.out.println("chatbot:"+input_txt.split(" ")[1]);
 			}
 			scanner.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+```
+
+#### llama2-医疗问答系统
+```java
+    public static void llama2_chinese_chatglm_vocab() {
+		try {
+			boolean bias = false;
+			boolean dropout = false;
+			boolean flashAttention = false;
+			int batchSize = 8;			
+			int max_len = 512;
+			int embedDim = 512;
+			int head_num = 8;
+			int decoderNum = 8;
+			String trainPath = "H:\\transformer_dataset\\wbm_idx_smallvocab.txt";
+			String tokenizer_path = "H:\\transformer_dataset\\tokenizer.model";
+			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path, 64793);
+			CNWikiTokenizer4 trainData = new CNWikiTokenizer4(trainPath, max_len, batchSize, 6250865, tokenizer);
+			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
+			network.learnRate = 3e-4f;
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.COSINE, false);
+			optimizer.lr_step = new int[] {1, 2};
+			optimizer.lr = 3e-4f;
+			optimizer.min_lr = 1e-5f;
+			optimizer.setWarmUp(true);
+			optimizer.warmUpTime = 1000;
+			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
+			optimizer.trainLlama2_chinese(trainData);
+			String model_path = "H:\\model\\llama2-92m-chinese.model";
+			ModelUtils.saveModel(network, model_path);
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
