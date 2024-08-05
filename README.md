@@ -162,6 +162,24 @@ vail_loss = 1.8f  //最终验证集损失在1.8左右
 ###### 推理效果图
 ![GPT2医疗问答系统](images/qa_test.png)
 
+#### [基于llama2-medium实现医疗问答系统](#llama2-医疗问答系统)
+##### 预训练数据：Wiki中文百科,BaiduBaiKe,shibing624/medica
+##### 微调训练数据（SFT）：shibing624/medical,HuatuoGPT-sft-data-v1,DISC-Med-SFT,ChatMed
+###### 模型参数
+```java
+// llama2-chatglm 92M参数量
+maxLen = 512  //最大token数
+embedDim = 512 //embeding编码维度
+headNum = 8  //多头注意力头数
+decoderNum = 8  //解码器层数
+maxLearnRate = 0.0003f  //最大学习率
+minLearnRate = 0.0001f  //最小学习率
+epoch = 1 //循环训练次数
+dropoutRate = 0.0f
+train_loss = 2.0f //最终训练集损失在2.0左右
+````
+###### 推理效果图
+![Llama2医疗问答系统](images/qa_test.png)
 
 ##  功能介绍
 #### 支持的网络层类型：
