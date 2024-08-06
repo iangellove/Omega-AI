@@ -1300,7 +1300,7 @@ public static void gan_anime() {
 			int embedDim = 512;
 			int head_num = 8;
 			int decoderNum = 8;
-			String trainPath = "H:\\transformer_dataset\\wbm_idx_smallvocab.txt";
+			String trainPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.txt";
 			String tokenizer_path = "H:\\transformer_dataset\\tokenizer.model";
 			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path, 64793);
 			CNWikiTokenizer4 trainData = new CNWikiTokenizer4(trainPath, max_len, batchSize, 6250865, tokenizer);
