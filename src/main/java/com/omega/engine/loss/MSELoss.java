@@ -59,7 +59,10 @@ public class MSELoss extends LossFunction {
 		// TODO Auto-generated method stub
 		init(x);
 //		x.showDM();
+//		x.showDMByOffset(0, 100);
+//		label.showDMByOffset(0, 100);
 		kernel.forward(x, label, loss);
+//		loss.showDMByOffset(0, 4);
 //		loss.showDM();
 //		x.setRequiresGrad(true);
 //		Graph.start();

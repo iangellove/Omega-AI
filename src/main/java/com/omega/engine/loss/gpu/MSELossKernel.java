@@ -3,7 +3,6 @@ package com.omega.engine.loss.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.lib.LibPaths;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAModules;
 
@@ -63,7 +62,7 @@ public class MSELossKernel extends BaseKernel {
 	}
 	
 	public void forward(Tensor input,Tensor currentLabel,Tensor output) {
-
+		
 		/**
 		 * float *input, float *label, float *output, int batch, int n
 		 */
@@ -72,7 +71,7 @@ public class MSELossKernel extends BaseKernel {
                 Pointer.to(currentLabel.getGpuData()),
                 Pointer.to(output.getGpuData()),
                 Pointer.to(new int[] {input.number}),
-                Pointer.to(new int[] {input.width})
+                Pointer.to(new int[] {input.channel * input.height * input.width})
             );
 		
 		this.N = output.number;
@@ -97,12 +96,12 @@ public class MSELossKernel extends BaseKernel {
                 Pointer.to(input.getGpuData()),
                 Pointer.to(currentLabel.getGpuData()),
                 Pointer.to(diff.getGpuData()),
-                Pointer.to(new int[] {input.width}),
+                Pointer.to(new int[] {input.channel * input.height * input.width}),
                 Pointer.to(new int[] {input.number})
             );
 
 		cuLaunchKernel(loss_backward_function,
-				this.CAFFE_GET_BLOCKS(diff.number * diff.width),  1, 1,      // Grid dimension
+				this.CAFFE_GET_BLOCKS(diff.number * diff.channel * diff.height * diff.width),  1, 1,      // Grid dimension
 	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 	            0, null,               // Shared memory size and stream
 	            backKernelParameters, null // Kernel- and extra parameters

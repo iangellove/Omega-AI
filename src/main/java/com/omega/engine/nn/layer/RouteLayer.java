@@ -29,6 +29,7 @@ public class RouteLayer extends Layer{
 			if(layer.oHeight != this.oHeight || layer.oWidth != this.oWidth) {
 				throw new RuntimeException("input size must be all same in the route layer.["+layer.oHeight+":"+this.oHeight+"]");
 			}
+			this.network = layer.network;
 			this.oChannel += layer.oChannel;
 		}
 	}
@@ -44,6 +45,7 @@ public class RouteLayer extends Layer{
 			if(layer.oHeight != this.oHeight || layer.oWidth != this.oWidth) {
 				throw new RuntimeException("input size must be all same in the route layer.");
 			}
+			this.network = layer.network;
 			this.oChannel += layer.oChannel;
 		}
 	}
@@ -232,15 +234,37 @@ public class RouteLayer extends Layer{
 	}
 
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
-		
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+
+		/**
+		 * 计算输出
+		 */
+		this.output();
 	}
 
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
+
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff();
 		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+
 	}
 
 	@Override

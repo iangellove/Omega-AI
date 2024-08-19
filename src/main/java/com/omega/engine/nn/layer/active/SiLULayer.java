@@ -55,7 +55,6 @@ public class SiLULayer extends ActiveFunctionLayer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-//		input.showDM();
 		kernel.forward(input, output);
 	}
 
@@ -179,6 +178,7 @@ public class SiLULayer extends ActiveFunctionLayer {
 	@Override
 	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
+		
 		/**
 		 * 参数初始化
 		 */

@@ -2,10 +2,14 @@ package com.omega.example.transformer.utils;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -259,6 +263,261 @@ public class SentencePieceTokenizer extends BaseTokenizer{
          
     }
 	
+	public void encodeFTChatData(String dataPath,String outputPath) {
+
+		try (FileInputStream fin = new FileInputStream(dataPath);
+			InputStreamReader reader = new InputStreamReader(fin);	
+		    BufferedReader buffReader = new BufferedReader(reader);){
+			File file = new File(outputPath);
+			FileWriter writer = new FileWriter(file);
+			
+			String strTmp = "";
+			int idx = 0;
+	        while((strTmp = buffReader.readLine())!=null){
+	        	if(idx > 0) {
+		        	String[] list = strTmp.split(",");
+		        	System.out.println(JsonUtils.toJson(list));
+		        	int[] idx_p = encode(list[0]);
+		        	int[] idx_a = encode(list[1]);
+		        	int[] idx_i = new int[idx_p.length + idx_a.length + 1];
+		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
+		        	idx_i[idx_p.length] = bos;
+		        	System.arraycopy(idx_a, 0, idx_i, idx_p.length + 1, idx_a.length);
+		        	String idxStr = "";
+    				for(int id:idx_i) {
+    					idxStr += id + " ";
+    				}
+    				writer.write(idxStr + "\n");
+	        	}
+	        	idx++;
+	        }
+	        buffReader.close();
+		    writer.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+        System.out.println("Data has been written to the file.");
+         
+    }
+	
+	public void encodeGPT4Dataset(String dataPath,String outputPath) {
+    	
+    	try {
+    		
+        	List<Map<String, String>> list = LagJsonReader.readJsonFileSamll(dataPath);
+    		
+    		String instruction = "";
+    		String output = "";
+    		
+    		File file = new File(outputPath);
+    		FileWriter writer = new FileWriter(file);
+           
+    		for(int i = 0;i<list.size();i++) {
+    			instruction = list.get(i).get("instruction");	
+    			output = list.get(i).get("output");	
+    			if(!instruction.equals(" ") && !instruction.equals("")) {
+    				String idxStr = "";
+    				int[] idx_p = encode(instruction);
+    				int[] idx_a = encode(output);
+    				int[] idx_i = new int[idx_p.length + idx_a.length + 1];
+		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
+		        	idx_i[idx_p.length] = bos;
+		        	System.arraycopy(idx_a, 0, idx_i, idx_p.length + 1, idx_a.length);
+    				for(int id:idx_i) {
+    					idxStr += id + " ";
+    				}
+    				writer.write(idxStr + "\n");
+            	}
+    			System.out.println(i);
+    		}
+        	
+    		 writer.close();
+
+             System.out.println("Data has been written to the file.");
+             
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+	
+	public void encodeBelleDataset(String dataPath,String outputPath) {
+    	
+    	try {
+    		
+        	List<Map<String, String>> list = LagJsonReader.readRowJsonFile(dataPath);
+    		
+    		String instruction = "";
+    		String output = "";
+    		
+    		File file = new File(outputPath);
+    		FileWriter writer = new FileWriter(file);
+           
+    		for(int i = 0;i<list.size();i++) {
+    			instruction = list.get(i).get("instruction");	
+    			output = list.get(i).get("output");	
+    			if(!instruction.equals(" ") && !instruction.equals("")) {
+    				String idxStr = "";
+    				int[] idx_p = encode(instruction);
+    				int[] idx_a = encode(output);
+    				int[] idx_i = new int[idx_p.length + idx_a.length + 1];
+		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
+		        	idx_i[idx_p.length] = bos;
+		        	System.arraycopy(idx_a, 0, idx_i, idx_p.length + 1, idx_a.length);
+    				for(int id:idx_i) {
+    					idxStr += id + " ";
+    				}
+    				writer.write(idxStr + "\n");
+            	}
+    			System.out.println(i);
+    		}
+        	
+    		 writer.close();
+
+             System.out.println("Data has been written to the file.");
+             
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+	
+	public void encodeChatMedDataset(String dataPath,String outputPath) {
+    	
+    	try {
+    		
+        	List<Map<String, String>> list = LagJsonReader.readRowJsonFile(dataPath);
+    		
+    		String instruction = "";
+    		String output = "";
+    		
+    		File file = new File(outputPath);
+    		FileWriter writer = new FileWriter(file);
+           
+    		for(int i = 0;i<list.size();i++) {
+    			instruction = list.get(i).get("query");	
+    			output = list.get(i).get("response");	
+    			if(!instruction.equals(" ") && !instruction.equals("")) {
+    				String idxStr = "";
+    				int[] idx_p = encode(instruction);
+    				int[] idx_a = encode(output);
+    				int[] idx_i = new int[idx_p.length + idx_a.length + 1];
+		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
+		        	idx_i[idx_p.length] = bos;
+		        	System.arraycopy(idx_a, 0, idx_i, idx_p.length + 1, idx_a.length);
+    				for(int id:idx_i) {
+    					idxStr += id + " ";
+    				}
+    				writer.write(idxStr + "\n");
+            	}
+    			System.out.println(i);
+    		}
+        	
+    		 writer.close();
+
+             System.out.println("Data has been written to the file.");
+             
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+	
+	public void encodeDISCDataset(String dataPath,String outputPath) {
+    	
+    	try {
+    		
+        	List<Map<String, Object>> list = LagJsonReader.readRowJsonFile2Obj(dataPath);
+    		
+    		String instruction = "";
+    		String output = "";
+    		
+    		File file = new File(outputPath);
+    		FileWriter writer = new FileWriter(file);
+           
+    		for(int i = 0;i<list.size();i++) {
+    			List<Map<String,String>> conversation = (List<Map<String, String>>) list.get(i).get("conversation");
+    			if(conversation.size() >= 2) {
+    				instruction = conversation.get(0).get("content");	
+        			output = conversation.get(1).get("content");	
+        			if(!instruction.equals(" ") && !instruction.equals("")) {
+        				String idxStr = "";
+        				int[] idx_p = encode(instruction);
+        				int[] idx_a = encode(output);
+        				int[] idx_i = new int[idx_p.length + idx_a.length + 1];
+    		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
+    		        	idx_i[idx_p.length] = bos;
+    		        	System.arraycopy(idx_a, 0, idx_i, idx_p.length + 1, idx_a.length);
+        				for(int id:idx_i) {
+        					idxStr += id + " ";
+        				}
+        				writer.write(idxStr + "\n");
+                	}
+        			System.out.println(i);
+    			}
+    		}
+        	
+    		 writer.close();
+
+             System.out.println("Data has been written to the file.");
+             
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+	
+	public void encodeHuatuoDataset(String dataPath,String outputPath) {
+    	
+    	try {
+    		
+        	List<Map<String, Object>> list = LagJsonReader.readRowJsonFile2Obj(dataPath);
+    		
+    		String instruction = "";
+    		String output = "";
+    		
+    		File file = new File(outputPath);
+    		FileWriter writer = new FileWriter(file);
+           
+    		for(int i = 0;i<list.size();i++) {
+    			List<String> conversation = (List<String>) list.get(i).get("data");
+    			if(conversation.size() >= 2) {
+    				instruction = conversation.get(0).substring(2, conversation.get(0).length());	
+    				output = conversation.get(1).substring(2, conversation.get(1).length());	
+        			if(!instruction.equals(" ") && !instruction.equals("")) {
+        				String idxStr = "";
+        				int[] idx_p = encode(instruction);
+        				int[] idx_a = encode(output);
+        				int[] idx_i = new int[idx_p.length + idx_a.length + 1];
+    		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
+    		        	idx_i[idx_p.length] = bos;
+    		        	System.arraycopy(idx_a, 0, idx_i, idx_p.length + 1, idx_a.length);
+        				for(int id:idx_i) {
+        					idxStr += id + " ";
+        				}
+        				writer.write(idxStr + "\n");
+                	}
+        			System.out.println(i);
+    			}
+    		}
+        	
+    		 writer.close();
+
+             System.out.println("Data has been written to the file.");
+             
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+	
 	public void mergeData(String[] paths,String outpath) throws IOException {
 
 		File file = new File(outpath);
@@ -295,15 +554,15 @@ public class SentencePieceTokenizer extends BaseTokenizer{
     	try {
 			SentencePieceTokenizer t = new SentencePieceTokenizer(tokenizer_path);
 			
-			String txt = "中国社会科学院语言研究所是中国社会科学院下设的一个汉语语言研究机构。";
-			
-			String[] tokens = t.tokenize(txt);
-			
-			System.out.println(JsonUtils.toJson(tokens));
-			
-			int[] idx = t.encode(txt);
-			
-			System.out.println(JsonUtils.toJson(idx));
+//			String txt = "中国社会科学院语言研究所是中国社会科学院下设的一个汉语语言研究机构。";
+//			
+//			String[] tokens = t.tokenize(txt);
+//			
+//			System.out.println(JsonUtils.toJson(tokens));
+//			
+//			int[] idx = t.encode(txt);
+//			
+//			System.out.println(JsonUtils.toJson(idx));
 //			
 //			String outText = t.decode(idx);
 //			
@@ -323,6 +582,54 @@ public class SentencePieceTokenizer extends BaseTokenizer{
 //			String outputPath = "H:\\transformer_dataset\\baike_idx_chatglm_vocab.txt";
 //			
 //			t.encodeBaiKeDataset(datasetPath, outputPath);
+			
+//			String datasetPath = "H:\\transformer_dataset\\alpaca_gpt4_data_zh.json";
+//			String outputPath = "H:\\transformer_dataset\\alpaca_gpt4_idx_chatglm_vocab.txt";
+//			
+//			t.encodeGPT4Dataset(datasetPath, outputPath);
+			
+//			String datasetPath = "H:\\transformer_dataset\\Belle_open_source_1M.json";
+//			String outputPath = "H:\\transformer_dataset\\Belle_open_source_1M_idx_chatglm_vocab.txt";
+//			
+//			t.encodeBelleDataset(datasetPath, outputPath);
+			
+//			int[] idx = new int[] {30910, 34234, 32718, 34283, 54532, 31679, 31930, 32114, 31884, 32654, 32136};
+//			
+//			String outText = t.decode(idx);
+//			
+//			System.out.println(outText);
+			
+//			String datasetPath = "H:\\transformer_dataset\\medical\\ChatMed_Consult-v0.3.json";
+//			String outputPath = "H:\\transformer_dataset\\medical\\ChatMed_idx_chatglm_vocab.txt";
+//			
+//			t.encodeChatMedDataset(datasetPath, outputPath);
+
+//			String datasetPath = "H:\\transformer_dataset\\medical\\DISC-Med-SFT_released.jsonl";
+//			String outputPath = "H:\\transformer_dataset\\medical\\DISC-Med-SFT_idx_chatglm_vocab.txt";
+//			t.encodeDISCDataset(datasetPath, outputPath);
+			
+//			String datasetPath = "H:\\transformer_dataset\\medical\\HuatuoGPT_sft_data_v1.jsonl";
+//			String outputPath = "H:\\transformer_dataset\\medical\\HuatuoGPT_idx_chatglm_vocab.txt";
+//			t.encodeHuatuoDataset(datasetPath, outputPath);
+			
+//			String[] paths = new String[] {
+//				"H:\\transformer_dataset\\alpaca_gpt4_idx_chatglm_vocab.txt",
+//				"H:\\transformer_dataset\\Belle_open_source_1M_idx_chatglm_vocab.txt"
+//			};
+//			
+//			String outputSFTPath = "H:\\transformer_dataset\\sft_data_chatglm_vocab.txt";
+//			
+//			t.mergeData(paths, outputSFTPath);
+			
+			String[] paths = new String[] {
+				"H:\\transformer_dataset\\medical\\ChatMed_idx_chatglm_vocab.txt",
+				"H:\\transformer_dataset\\medical\\DISC-Med-SFT_idx_chatglm_vocab.txt",
+				"H:\\transformer_dataset\\medical\\HuatuoGPT_idx_chatglm_vocab.txt"
+			};
+			
+			String outputSFTPath = "H:\\transformer_dataset\\medical\\medical_sft_data_chatglm_vocab.txt";
+
+			t.mergeData(paths, outputSFTPath);
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

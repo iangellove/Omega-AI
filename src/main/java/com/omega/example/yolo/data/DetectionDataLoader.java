@@ -559,6 +559,12 @@ public class DetectionDataLoader extends BaseDataLoader{
 
 	public void setStride(int stride) {
 		this.stride = stride;
+	}
+
+	@Override
+	public void loadData(int[] indexs, Tensor input) {
+		// TODO Auto-generated method stub
+		
 	} 
 	
 }

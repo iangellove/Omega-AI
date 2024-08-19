@@ -203,4 +203,24 @@ public class ImageDataLoader extends BaseDataLoader{
 		return null;
 	}
 
+	@Override
+	public void loadData(int[] indexs, Tensor input) {
+		// TODO Auto-generated method stub
+
+		/**
+		 * 加载input数据
+		 */
+		FileDataLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, dataEnhance);
+		
+		if(normalization) {
+			this.normalization(input);
+		}
+		
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+
+	}
+
 }

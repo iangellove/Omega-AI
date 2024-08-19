@@ -10,7 +10,7 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
-import com.omega.engine.nn.layer.RoPELayer;
+import com.omega.engine.nn.layer.transformer.RoPELayer;
 import com.omega.engine.nn.network.Transformer;
 
 import jcuda.Pointer;

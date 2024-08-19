@@ -1,4 +1,4 @@
-package com.omega.engine.nn.layer;
+package com.omega.engine.nn.layer.llama;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -8,6 +8,9 @@ import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.nn.layer.DropoutLayer;
+import com.omega.engine.nn.layer.FullyLayer;
+import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
 import com.omega.engine.nn.layer.gpu.FlashAttentionV2Kernel;
 import com.omega.engine.nn.layer.gpu.RoPEKernel;

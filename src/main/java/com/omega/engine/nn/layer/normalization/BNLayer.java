@@ -52,6 +52,14 @@ public class BNLayer extends NormalizationLayer {
 	
 	public BNLayer(Network network) {
 		this.network = network;
+		this.hasParams = true;
+	}
+	
+	public BNLayer(Network network,BNType bnType) {
+		this.hasParams = true;
+		this.network = network;
+		this.bnType = bnType;
+		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
 	@Override
@@ -81,6 +89,78 @@ public class BNLayer extends NormalizationLayer {
 				this.meanNum = this.channel;
 			}
 			
+		}
+		
+		if(this.gamma == null || this.beta == null) {
+			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
+			this.beta = new Tensor(1, 1, 1, meanNum, true);
+			if(network!=null) {
+				this.diffGamma = this.network.createParamterGrad(1, 1, 1, meanNum, true);
+				this.diffBeta = this.network.createParamterGrad(1, 1, 1, meanNum, true);
+			}else {
+				this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+				this.diffBeta = new Tensor(1, 1, 1, meanNum, true);
+			}
+			this.runingMean = new Tensor(1, 1, 1, this.meanNum, true);
+			this.runingVar = new Tensor(1, 1, 1, this.meanNum, true);
+		}
+
+		if(this.output == null || this.number != this.output.number) {
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+		}
+		
+		if(kernel == null) {
+			if(this.network.CUDNN) {
+				kernel = new BNCudnnKernel(this.getBnType(), channel, height, width, this.runingMean, this.runingVar);
+			}else {
+				if(this.getBnType() == BNType.fully_bn) {
+					kernel = new BNKernel3(width, 1, 1, this.runingMean, this.runingVar);
+				}else {
+					kernel = new BNKernel3(channel, height, width, this.runingMean, this.runingVar);
+				}
+			}
+		}
+		
+	}
+	
+	public void init(Tensor input) {
+
+		this.number = this.network.number;
+		
+		if(preLayer == null) {
+			preLayer = this.network.getPreLayer(this.index);
+		}
+
+		if(this.bnType == null) {
+			this.channel = input.channel;
+			this.height = input.height;
+			this.width = input.width;
+			this.oChannel = this.channel;
+			this.oHeight = this.height;
+			this.oWidth = this.width;
+			if(this.preLayer.getLayerType() == LayerType.conv) {
+				this.setBnType(BNType.conv_bn);
+				this.meanNum = this.channel;
+			}else if(this.preLayer.getLayerType() == LayerType.full){
+				this.setBnType(BNType.fully_bn);
+				this.meanNum = this.channel * this.height * this.width;
+			}else if(this.preLayer.getLayerType() == LayerType.conv_transpose) {
+				this.setBnType(BNType.conv_bn);
+				this.meanNum = this.channel;
+			}
+			
+		}else {
+			this.channel = input.channel;
+			this.height = input.height;
+			this.width = input.width;
+			this.oChannel = this.channel;
+			this.oHeight = this.height;
+			this.oWidth = this.width;
+			if(this.bnType == BNType.conv_bn) {
+				this.meanNum = this.channel;
+			}else{
+				this.meanNum = this.channel * this.height * this.width;
+			}
 		}
 		
 		if(this.gamma == null || this.beta == null) {
@@ -274,7 +354,7 @@ public class BNLayer extends NormalizationLayer {
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 
 		/**
 		 * 设置输入

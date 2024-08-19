@@ -1,9 +1,10 @@
-package com.omega.engine.nn.layer;
+package com.omega.engine.nn.layer.llama;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.nn.layer.Layer;
 
 public abstract class LlamaAttentionLayer extends Layer{
 	

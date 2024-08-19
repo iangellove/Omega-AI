@@ -88,6 +88,31 @@ public class LagJsonReader {
 	    return null;
 	}
 	
+	public static List<Map<String,Object>> readRowJsonFile2Obj(String path) {
+		
+		List<Map<String,Object>> mapList = new ArrayList<Map<String,Object>>(); 
+		String line = null;
+		try {
+		    FileReader fileReader = new FileReader(path);
+		    BufferedReader bufferedReader = new BufferedReader(fileReader);
+		    StringBuilder stringBuilder = new StringBuilder();
+		    Map<String,Object> once = new HashMap<String,Object>();
+		    while ((line = bufferedReader.readLine()) != null) {
+//		    	System.out.println(line);
+		    	once = JsonUtils.gson.fromJson(line, HashMap.class);
+		    	mapList.add(once);
+		    }
+		    bufferedReader.close();
+
+		    return mapList;
+		} catch (IOException e) {
+			System.out.println(line);
+		    e.printStackTrace();
+		}
+    	
+	    return null;
+	}
+	
 	public static void loadDataForJson(String dataPath,String txtPath) {
 		
 		List<Map<String, String>> list = LagJsonReader.readJsonFileSamll(dataPath);

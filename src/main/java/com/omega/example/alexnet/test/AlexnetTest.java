@@ -333,9 +333,9 @@ public class AlexnetTest {
 	    	
 	    	AlexnetTest alexnet = new AlexnetTest();
 	    	
-//	    	alexnet.alexNet_mnist();
+	    	alexnet.alexNet_mnist();
 	    	
-	    	alexnet.alexNet_cifar10();
+//	    	alexnet.alexNet_cifar10();
 			
 		} finally {
 			// TODO: handle finally clause

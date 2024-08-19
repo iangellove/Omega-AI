@@ -13,6 +13,7 @@ import com.omega.engine.nn.model.ConvLayerInit;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.CNN;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * 
@@ -114,6 +115,7 @@ public class ConvolutionLayer extends Layer {
 		this.stride = stride;
 		this.hasBias = hasBias;
 		this.network = network;
+		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 		this.hasParams = true;
 		this.initParam();
 	}
@@ -244,7 +246,6 @@ public class ConvolutionLayer extends Layer {
 //		long start = System.nanoTime();
 //		weight.showDM(weight.dataLength-1);
 		kernel.conv(input, weight, output);
-
 		if(this.hasBias) {
 			biasKernel.addConvBias(output, bias);
 		}
@@ -262,6 +263,50 @@ public class ConvolutionLayer extends Layer {
 	 */
 	@Override
 	public void diff() {
+		// TODO Auto-generated method stub
+
+//		long start = System.nanoTime();
+//		if(oWidth == 7) {
+//			System.out.println(JsonUtils.toJson(delta.syncHost()));
+//			
+//		}
+
+		/**
+		 * 计算deltaW
+		 * 20220816: dw = diff * im2col(input)T 
+		 * diff[knumber * oh * ow]
+		 * im2col(input)T[oh * ow * C * kh * kw]
+		 */
+		kernel.dw(input, delta, diffW);
+		
+//		System.out.println("===========");
+		/**
+		 * 计算deltaB
+		 */
+		if(this.hasBias) {
+			biasKernel.backwardConvBias(diffB, delta);
+		}
+		
+		/**
+		 * 计算diff
+		 */
+		if(PROPAGATE_DOWN || this.network.PROPAGATE_DOWN) {
+			/**
+			 * dx = col2im(a)
+			 * a = (weight)T * diff
+			 * a[c * kh * kw * oh * ow]
+			 * (weight)T[c * kh * kw * ko]
+			 * diff[ko * oh * ow]
+			 */
+			kernel.dx(delta, weight, diff);
+//			System.out.println(this.index+":"+diff.isZero()+":"+delta.isZero());
+		}
+		
+//		System.out.println("back:"+(System.nanoTime() - start) / 1e6 + "ms.");
+		
+	}
+	
+	public void diff(Tensor diff) {
 		// TODO Auto-generated method stub
 
 //		long start = System.nanoTime();
@@ -359,7 +404,7 @@ public class ConvolutionLayer extends Layer {
 			if(this.updater != null){
 				this.updater.update(this);
 			}else{
-				
+
 				for(int i = 0;i<this.weight.getDataLength();i++) {
 					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
 				}
@@ -448,6 +493,25 @@ public class ConvolutionLayer extends Layer {
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}
+	}
+	
+	public void back(Tensor delta,Tensor diff) {
+		// TODO Auto-generated method stub
+
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff(diff);
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+
 	}
 
 	@Override

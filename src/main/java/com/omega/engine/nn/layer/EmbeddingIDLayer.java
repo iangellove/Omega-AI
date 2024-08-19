@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.PrintUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.layer.gpu.EmbeddingKernel;
 import com.omega.engine.nn.network.Network;
@@ -47,7 +50,23 @@ public class EmbeddingIDLayer extends Layer{
 		this.hasParams = true;
 		this.hasBias = false;
 		this.initParam();
-
+	}
+	
+	public EmbeddingIDLayer(int num_embeddings,int embedding_dim,boolean freeze,Network network) {
+		this.network = network;
+		this.freeze = freeze;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
+		this.channel = 1;
+		this.height = 1;
+		this.width = num_embeddings;
+		this.oChannel = channel;
+		this.oHeight = height;
+		this.oWidth = embedding_dim;
+		this.hasParams = true;
+		this.hasBias = false;
+		this.initParam();
 	}
 
 	@Override
@@ -257,6 +276,60 @@ public class EmbeddingIDLayer extends Layer{
 		
 		ModelUtils.loadParams(inputStream, weight);
 
+	}
+	
+	public static float[] outer(float[] a,float[] b) {
+    	float[] o = new float[a.length * b.length];
+    	for(int i = 0;i<a.length;i++) {
+    		for(int j = 0;j<b.length;j++) {
+    			o[i * b.length + j] = a[i] * b[j];
+    		}
+    	}
+    	return o;
+	}
+	
+	public static float[] stack(float[] a,float[] b) {
+		float[] o = new float[a.length + b.length];
+		for(int i = 0;i<a.length;i++) {
+			o[i * 2] = a[i];
+			o[i * 2 + 1] = b[i];
+		}
+		return o;
+	}
+	
+	public Tensor createTimeEMB(int T,int d_model) {
+		float[] emb = MatrixUtils.order(d_model / 2, 0, (float)(- 2.0f / d_model * Math.log(10000)));
+		emb = MatrixOperation.exp(emb);
+		float[] pos = MatrixUtils.order(T, 0, 1);
+		float[] o = outer(pos, emb);
+		float[] cos = MatrixOperation.cos(o);
+    	float[] sin = MatrixOperation.sin(o);
+		float[] wd = stack(sin, cos);
+		Tensor weight = new Tensor(1, 1, T, d_model, wd, true);
+		return weight;
+	}
+	
+	public static void main(String[] args) {
+		int T = 1000;
+		int d_model = 128;
+		float[] emb = MatrixUtils.order(d_model / 2, 0, (float)(- 2.0f / d_model * Math.log(10000)));
+		emb = MatrixOperation.exp(emb);
+//		System.out.println(JsonUtils.toJson(emb));
+		float[] pos = MatrixUtils.order(T, 0, 1);
+		float[] o = outer(pos, emb);
+		float[] cos = MatrixOperation.cos(o);
+    	float[] sin = MatrixOperation.sin(o);
+//		System.out.println(JsonUtils.toJson(o));
+		
+//		System.out.println(JsonUtils.toJson(cos));
+//		System.out.println(JsonUtils.toJson(sin));
+		
+		float[] wd = stack(sin, cos);
+		
+		Tensor weight = new Tensor(1, 1, T, d_model, wd, true);
+		
+		PrintUtils.printImage(weight);
+		
 	}
 	
 }

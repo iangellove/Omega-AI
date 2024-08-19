@@ -186,6 +186,46 @@ public class MatrixUtils {
 		return temp;
 	}
 	
+	public static float[] linspace(float start,float end,int count) {
+		float step = (end - start) / count;
+		float[] output = new float[count];
+		output[0] = start;
+		for(int i = 1;i<count;i++) {
+			output[i] = output[i - 1] + step;
+		}
+		return output;
+	}
+	
+	public static float[] range(float start,float end,int step,float tmp) {
+		int count = (int) ((end - start) / step);
+		float[] output = new float[count];
+		output[0] = start + tmp;
+		for(int i = 1;i<count;i++) {
+			output[i] = output[i - 1] + step;
+		}
+		return output;
+	}
+	
+	public static float[] cumprod(float[] x) {
+		float[] output = new float[x.length];
+		for(int i = 0;i<x.length;i++) {
+			if(i == 0) {
+				output[i] = x[i];
+			}else {
+				output[i] = output[i - 1] * x[i];
+			}
+		}
+		return output;
+	}
+	
+	public static float[] gather(float[] v,int[] index) {
+		float[] output = new float[index.length];
+		for(int i = 0;i<index.length;i++) {
+			output[i] = v[index[i]];
+		}
+		return output;
+	}
+	
 	/**
 	 * 
 	 * @Title: zero

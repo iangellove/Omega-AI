@@ -237,8 +237,13 @@ public class CNWikiTokenizer3 extends BaseTokenizer{
 	public Tensor loadByTxtToIdx(int[] idxs,int maxLen) {
 		
 		testInput = Tensor.createTensor(testInput, maxLen, 1, 1, 1, true);
-		for(int t = 0;t<idxs.length;t++) {
-			testInput.data[t] = idxs[t];
+		
+		for(int t = 0;t<maxLen;t++) {
+			if(t < idxs.length) {
+				testInput.data[t] = idxs[t];
+			}else {
+				testInput.data[t] = 0;
+			}
 		}
 		
 		testInput.hostToDevice();

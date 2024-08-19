@@ -1,11 +1,14 @@
-package com.omega.engine.nn.layer;
+package com.omega.engine.nn.layer.transformer;
+
+import java.io.IOException;
+import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.ad.op.TensorOP;
-import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.nn.layer.DropoutLayer;
+import com.omega.engine.nn.layer.FullyLayer;
+import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.active.GeluLayer;
-import com.omega.engine.nn.layer.active.ReluLayer;
-import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
@@ -14,7 +17,7 @@ import com.omega.engine.updater.UpdaterFactory;
  * @author Administrator
  *
  */
-public class PoswiseFeedForwardLinearLayer extends Layer{
+public class MLPLayer extends Layer{
 	
 	private int embedDim = 0;
 	
@@ -22,30 +25,25 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	
 	private boolean bias = false;
 	
-	private boolean layer_norm = false;
+	private boolean dropout = false;
 	
 	private FullyLayer linear1;
-	private GeluLayer relu1;
+	private GeluLayer active;
 	private FullyLayer linear2;
 
-	private LNLayer lnLayer;
+	private DropoutLayer dropoutLayer;
 	
-	private BaseKernel baseKernel;
-	
-	private Tensor ro;
-
-	public PoswiseFeedForwardLinearLayer(int embedDim,int nChannel,boolean bias,boolean layer_norm) {
+	public MLPLayer(int embedDim,int nChannel,boolean bias) {
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
 		this.bias = bias;
-		this.layer_norm = layer_norm;
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
-	public PoswiseFeedForwardLinearLayer(int embedDim,int nChannel,boolean bias,boolean layer_norm,Network network) {
+	public MLPLayer(int embedDim,int nChannel,boolean bias,Network network) {
 		this.network = network;
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
@@ -53,7 +51,6 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
 		this.bias = bias;
-		this.layer_norm = layer_norm;
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
@@ -61,19 +58,18 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	}
 	
 	public void initLayers() {
-		
+//		NanoGPT net = (NanoGPT) this.network;
 		this.linear1 = new FullyLayer(embedDim, nChannel, bias, network);
+//		this.linear1.weight = new Tensor(1, 1, embedDim, nChannel, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, 0.02f), true);
 
-		this.relu1 = new GeluLayer(linear1);
+		this.active = new GeluLayer(linear1);
 		
 		this.linear2 = new FullyLayer(nChannel, embedDim, bias, network);
-
-		if(this.layer_norm) {
-			this.lnLayer = new LNLayer(this.linear2);
-		}
+//		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, 0.02f), true);
+//		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, (0.02f / (float) Math.sqrt(2 * net.decoderNum))), true);
 		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
+		if(dropout) {
+			dropoutLayer = new DropoutLayer(0.1f, linear2);
 		}
 		
 	}
@@ -82,22 +78,12 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
-		if(this.ro == null || this.ro.number != this.number) {
-			this.ro = Tensor.createTensor(this.ro, number, 1, 1, embedDim, true);
-		} 
-//		resize();
-	}
-	
-	public void resize() {
-		this.ro.viewOrg();
 	}
 	
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-//		if(this.cache_delta == null || output.number != cache_delta.number){
-//			this.cache_delta = new Tensor(number, output.channel, output.height, output.width, true);
-//		}
+
 	}
 
 	@Override
@@ -112,17 +98,15 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 		
 		linear1.forward(input);
 		
-		relu1.forward(linear1.getOutput());
+		active.forward(linear1.getOutput());
 
-		linear2.forward(relu1.getOutput());
+		linear2.forward(active.getOutput());
 		
-		TensorOP.add(linear2.getOutput(), this.input, this.ro);
-		
-		if(this.layer_norm) {
-			this.lnLayer.forward(ro);
-			this.output = this.lnLayer.getOutput();
+		if(dropout) {
+			dropoutLayer.forward(linear2.getOutput());
+			this.output = dropoutLayer.getOutput();
 		}else {
-			this.output = ro;
+			this.output = linear2.getOutput();
 		}
 
 	}
@@ -136,21 +120,21 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		if(this.layer_norm) {
-			this.lnLayer.back(delta);
-//			baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
-			this.linear2.back(this.lnLayer.diff);
+		if(this.dropout) {
+			this.dropoutLayer.back(delta);
+			this.linear2.back(this.dropoutLayer.diff);
 		}else {
 			this.linear2.back(this.delta);
 		}
 
-		relu1.back(this.linear2.diff);
+		active.back(this.linear2.diff);
 		
-		linear1.back(relu1.diff);
+		linear1.back(active.diff);
 		
-		TensorOP.add(this.linear1.diff, this.lnLayer.diff, this.linear1.diff);
-
 		this.diff = this.linear1.diff;
+		
+//		System.out.println("mlp diff:");
+//		diff.showDMByNumber(0);
 		
 	}
 
@@ -234,9 +218,6 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 		// TODO Auto-generated method stub
 		linear1.update();
 		linear2.update();
-		if(layer_norm) {
-			lnLayer.update();
-		}
 	}
 
 	@Override
@@ -248,7 +229,7 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.poswise_feed_forward;
+		return LayerType.mlp;
 	}
 
 	@Override
@@ -267,6 +248,16 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	public void backTemp() {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		linear1.saveModel(outputStream);
+		linear2.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		linear1.loadModel(inputStream);
+		linear2.loadModel(inputStream);
 	}
 	
 	public static void main(String[] args) {

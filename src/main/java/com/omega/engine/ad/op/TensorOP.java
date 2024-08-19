@@ -22,7 +22,7 @@ public class TensorOP {
 	public static void add(Tensor a,Tensor b,Tensor c,int axis) {
 		
 		if(c.isHasGPU()) {
-			OPKernel.getInstance().add_gpu(a, b, c);
+			OPKernel.getInstance().add_gpu(a, b, c, axis);
 		}else {
 			c.data = MatrixOperation.add(a.data, b.data);
 		}

@@ -157,18 +157,18 @@ public class ConvTransposeCudnnKernel extends ConvBaseKernel{
         cudnnConvolutionBwdDataAlgoPerf results[] = 
             new cudnnConvolutionBwdDataAlgoPerf[knum];
 		
-        System.out.println("Testing cudnnFindConvolutionBackwardDataAlgorithm ...");
+//        System.out.println("Testing cudnnFindConvolutionBackwardDataAlgorithm ...");
 		JCudnn.cudnnFindConvolutionBackwardDataAlgorithm(CudnnHandleManager.getHandle(), wDesc, dyDesc, convDesc, dxDesc,
 				requestedAlgoCount, returnedAlgoCountArray, results);
 		
 		returnedAlgoCount = returnedAlgoCountArray[0];    
-        for(int algoIndex = 0; algoIndex < returnedAlgoCount; ++algoIndex)
-        {
-       	 	String result = checkError(results[algoIndex].status);
-            System.out.printf("^^^^ for Algo %d: %f time requiring %d memory %s \n",  
-                results[algoIndex].algo, results[algoIndex].time, 
-                (long)results[algoIndex].memory, "["+result+"]");
-        }
+//        for(int algoIndex = 0; algoIndex < returnedAlgoCount; ++algoIndex)
+//        {
+//       	 	String result = checkError(results[algoIndex].status);
+//            System.out.printf("^^^^ for Algo %d: %f time requiring %d memory %s \n",  
+//                results[algoIndex].algo, results[algoIndex].time, 
+//                (long)results[algoIndex].memory, "["+result+"]");
+//        }
 		return results[0].algo;    
 	}
 	
@@ -181,17 +181,17 @@ public class ConvTransposeCudnnKernel extends ConvBaseKernel{
         cudnnConvolutionBwdFilterAlgoPerf results[] = 
             new cudnnConvolutionBwdFilterAlgoPerf[2 * CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT];
 		
-        System.out.println("Testing cudnnFindConvolutionBackwardFilterAlgorithm ...");
+//        System.out.println("Testing cudnnFindConvolutionBackwardFilterAlgorithm ...");
 		JCudnn.cudnnFindConvolutionBackwardFilterAlgorithm(CudnnHandleManager.getHandle(), xDesc, dyDesc, convDesc, dwDesc,
 				requestedAlgoCount, returnedAlgoCountArray, results);
 		
 		returnedAlgoCount = returnedAlgoCountArray[0];    
-        for(int algoIndex = 0; algoIndex < returnedAlgoCount; ++algoIndex){
-       	 	String result = checkError(results[algoIndex].status);
-            System.out.printf("^^^^ for Algo %d: %f time requiring %d memory %s \n",  
-                results[algoIndex].algo, results[algoIndex].time, 
-                (long)results[algoIndex].memory, "["+result+"]");
-        }
+//        for(int algoIndex = 0; algoIndex < returnedAlgoCount; ++algoIndex){
+//       	 	String result = checkError(results[algoIndex].status);
+//            System.out.printf("^^^^ for Algo %d: %f time requiring %d memory %s \n",  
+//                results[algoIndex].algo, results[algoIndex].time, 
+//                (long)results[algoIndex].memory, "["+result+"]");
+//        }
 		return results[0].algo;
 	}
 	
@@ -207,18 +207,18 @@ public class ConvTransposeCudnnKernel extends ConvBaseKernel{
 
              // New way of finding the fastest config
              // Setup for findFastest call
-             System.out.println("Testing cudnnFindConvolutionForwardAlgorithm ...");
+//             System.out.println("Testing cudnnFindConvolutionForwardAlgorithm ...");
              JCudnn.cudnnFindConvolutionForwardAlgorithm(CudnnHandleManager.getHandle(), 
             		 xDesc, wDesc, convDesc,
             		 dstDesc, requestedAlgoCount,
                  returnedAlgoCountArray, results);
              returnedAlgoCount = returnedAlgoCountArray[0];    
-             for(int algoIndex = 0; algoIndex < returnedAlgoCount; ++algoIndex){
-            	 String result = checkError(results[algoIndex].status);
-                 System.out.printf("^^^^ for Algo %d: %f time requiring %d memory %s \n",  
-                     results[algoIndex].algo, results[algoIndex].time, 
-                     (long)results[algoIndex].memory, "["+result+"]");
-             }
+//             for(int algoIndex = 0; algoIndex < returnedAlgoCount; ++algoIndex){
+//            	 String result = checkError(results[algoIndex].status);
+//                 System.out.printf("^^^^ for Algo %d: %f time requiring %d memory %s \n",  
+//                     results[algoIndex].algo, results[algoIndex].time, 
+//                     (long)results[algoIndex].memory, "["+result+"]");
+//             }
              return results[0].algo;
          } else {
              return convAlgorithm;

@@ -3,16 +3,14 @@ package com.omega.engine.nn.layer.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.PrintUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
-import jcuda.driver.JCudaDriver;
-import jcuda.jcublas.JCublas;
-import jcuda.jcublas.JCublas2;
-import jcuda.jcudnn.JCudnn;
 import jcuda.runtime.cudaError;
 
 public class AttentionKernel extends BaseKernel{
@@ -27,9 +25,13 @@ public class AttentionKernel extends BaseKernel{
 	
 	private CUfunction softmax_forward_function;
 	
+	private CUfunction softmax_unmask_forward_function;
+	
 	private CUfunction softmax_test_forward_function;
 	
 	private CUfunction softmax_backward_function;
+	
+	private CUfunction softmax_unmask_backward_function;
 	
 	private CUfunction softmax_test_backward_function;
 
@@ -98,6 +100,10 @@ public class AttentionKernel extends BaseKernel{
 				softmax_forward_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_forward_kernel5");
 			}
 			
+			if(softmax_unmask_forward_function == null) {
+				softmax_unmask_forward_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_forward_kernel5_no_mask");
+			}
+			
 			if(softmax_test_forward_function == null) {
 //				softmax_forward_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_forward_kernel"); 
 				softmax_test_forward_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_forward_kernel4");
@@ -106,6 +112,10 @@ public class AttentionKernel extends BaseKernel{
 			if(softmax_backward_function == null) {
 //				softmax_backward_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_autoregressive_backward_kernel");
 				softmax_backward_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_autoregressive_backward_kernel8");
+			}
+			
+			if(softmax_unmask_backward_function == null) {
+				softmax_unmask_backward_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_autoregressive_nomask_backward_kernel8");
 			}
 			
 			if(softmax_test_backward_function == null) {
@@ -343,6 +353,82 @@ public class AttentionKernel extends BaseKernel{
 		
 	}
 	
+	public void softmax_unmask_forward(Tensor input,Tensor output,int B,int NH,int T,float scale) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float* out, float inv_temperature, const float* inp, int N, int T
+	         * float* out, const float* inp, int N, int C
+	         */ 
+			softmaxForwardParameters = Pointer.to(
+	        		Pointer.to(output.getGpuData()),
+	        	    Pointer.to(new float[]{scale}),
+	        	    Pointer.to(input.getGpuData()),
+	                Pointer.to(new int[]{B * NH}),
+	                Pointer.to(new int[]{T})
+	            );
+	        
+//			int softmax_block_size = 256;
+//		    int grid_size = get_number_of_blocks(B * NH * T * 32, softmax_block_size);
+			int softmax_block_size = 256;
+//		    int grid_size = B * NH * T;
+		    int grid_size = (int) Math.ceil(B * NH * T * 32 / softmax_block_size);
+//		    int shared_mem_size = 2 * softmax_block_size / 32 * Sizeof.FLOAT;
+			
+		    checkCUDA(cuLaunchKernel(softmax_unmask_forward_function,
+		    		grid_size,  1, 1,      // Grid dimension
+		    		softmax_block_size, 1, 1,      // Block dimension
+		    		0, null,               // Shared memory size and stream
+		            softmaxForwardParameters, null // Kernel- and extra parameters
+		        ));
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void softmax_unmask_forward(Tensor input,Tensor output,int B,int T,float scale) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float* out, float inv_temperature, const float* inp, int N, int T
+	         * float* out, const float* inp, int N, int C
+	         */ 
+			softmaxForwardParameters = Pointer.to(
+	        		Pointer.to(output.getGpuData()),
+	        	    Pointer.to(new float[]{scale}),
+	        	    Pointer.to(input.getGpuData()),
+	                Pointer.to(new int[]{B}),
+	                Pointer.to(new int[]{T})
+	            );
+	        
+//			int softmax_block_size = 256;
+//		    int grid_size = get_number_of_blocks(B * NH * T * 32, softmax_block_size);
+			int softmax_block_size = 256;
+//		    int grid_size = B * NH * T;
+		    int grid_size = (int) Math.ceil(B * T * 32 / softmax_block_size);
+//		    int shared_mem_size = 2 * softmax_block_size / 32 * Sizeof.FLOAT;
+			
+		    checkCUDA(cuLaunchKernel(softmax_unmask_forward_function,
+		    		grid_size,  1, 1,      // Grid dimension
+		    		softmax_block_size, 1, 1,      // Block dimension
+		    		0, null,               // Shared memory size and stream
+		            softmaxForwardParameters, null // Kernel- and extra parameters
+		        ));
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	/**
 	 * N = B * NH
 	 * @param input
@@ -431,6 +517,74 @@ public class AttentionKernel extends BaseKernel{
 		
 	}
 	
+	public void softmax_unmask_backward(Tensor dpreatt,Tensor datt,Tensor att,int B,int T,int NH,float scale) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float* dpreatt, const float* datt, const float* att,
+               int B, int T, int C, float scale, int BlockSize
+	         */ 
+			int block_size = 32;
+			softmaxBackwardParameters = Pointer.to(
+	        		Pointer.to(dpreatt.getGpuData()),
+	        		Pointer.to(datt.getGpuData()),
+	        		Pointer.to(att.getGpuData()),
+	                Pointer.to(new int[]{B}),
+	                Pointer.to(new int[]{T}),
+	                Pointer.to(new float[]{scale})
+	            );
+//			int num_blocks = get_number_of_blocks(32/8*T, block_size);
+//	        int num_blocks = get_number_of_blocks(T, block_size);
+		    checkCUDA(cuLaunchKernel(softmax_unmask_backward_function,
+		    		T / 4,  B * NH, 1,      // Grid dimension
+		    		block_size, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            softmaxBackwardParameters, null // Kernel- and extra parameters
+		        ));
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void softmax_unmask_backward(Tensor dpreatt,Tensor datt,Tensor att,int B,int T,float scale) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float* dpreatt, const float* datt, const float* att,
+               int B, int T, int C, float scale, int BlockSize
+	         */ 
+			int block_size = 32;
+			softmaxBackwardParameters = Pointer.to(
+	        		Pointer.to(dpreatt.getGpuData()),
+	        		Pointer.to(datt.getGpuData()),
+	        		Pointer.to(att.getGpuData()),
+	                Pointer.to(new int[]{B}),
+	                Pointer.to(new int[]{T}),
+	                Pointer.to(new float[]{scale})
+	            );
+//			int num_blocks = get_number_of_blocks(32/8*T, block_size);
+//	        int num_blocks = get_number_of_blocks(T, block_size);
+		    checkCUDA(cuLaunchKernel(softmax_unmask_backward_function,
+		    		T / 4,  B, 1,      // Grid dimension
+		    		block_size, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            softmaxBackwardParameters, null // Kernel- and extra parameters
+		        ));
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	/**
 	 * N = B * NH
 	 * @param input
@@ -490,5 +644,40 @@ public class AttentionKernel extends BaseKernel{
 		}
 	}
 	
+	public static void main(String args[]) {
+		
+		int N = 2;
+		int NH = 3;
+		int T = 4;
+
+		float[] x_data = MatrixUtils.order(N * NH * T * T, 0.1f, 0.1f);
+		
+		Tensor x = new Tensor(N, NH, T, T, x_data, true);
+		
+		Tensor output = new Tensor(N, NH, T, T, true);
+		
+		Tensor output2 = new Tensor(N, NH, T, T, true);
+		
+		Tensor datt = new Tensor(N, NH, T, T, x_data, true);
+		
+		Tensor dpreatt = new Tensor(N, NH, T, T, true);
+		
+		AttentionKernel kernel = new AttentionKernel();
+		
+//		kernel.softmax_forward(x, output2, N, NH, T, 1);
+		
+		kernel.softmax_unmask_forward(x, output, N, NH, T, 1);
+		
+		kernel.softmax_unmask_backward(dpreatt, datt, output, N, T, NH, 1);
+		
+//		output.showDM();
+		
+//		PrintUtils.printImage(output);
+		System.err.println("======================================");
+		PrintUtils.printImage(output);
+		System.err.println("======================================");
+		PrintUtils.printImage(dpreatt);
+		
+	}
 	
 }

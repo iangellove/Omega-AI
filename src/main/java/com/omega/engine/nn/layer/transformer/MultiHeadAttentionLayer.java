@@ -1,4 +1,4 @@
-package com.omega.engine.nn.layer;
+package com.omega.engine.nn.layer.transformer;
 
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
@@ -10,6 +10,9 @@ import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.gpu.SoftmaxKernel;
+import com.omega.engine.nn.layer.FullyLayer;
+import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Transformer;

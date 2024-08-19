@@ -45,17 +45,16 @@ public abstract class ActiveFunctionLayer extends Layer {
 		
 		if(this.preLayer == null) {
 			this.preLayer = this.network.getPreLayer(this.index);
-			this.channel = preLayer.oChannel;
-			this.height = preLayer.oHeight;
-			this.width = preLayer.oWidth;
+			this.channel = input.channel;
+			this.height = input.height;
+			this.width = input.width;
 			this.oChannel = this.channel;
 			this.oHeight = this.height;
 			this.oWidth = this.width;
 		}
 		
-		if(output == null || number != output.number) {
-			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
-//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+		if(output == null || number != output.number || input.channel != this.output.channel) {
+			this.output = Tensor.createGPUTensor(this.output, number, input.channel, input.height, input.width, true);
 		}
 
 	}

@@ -17,6 +17,7 @@ public enum NetworkType {
 	GPT("GPT"),
 	LLAMA("LLAMA"),
 	UNET("UNET"),
+	DUFFSION_UNET("DUFFSION_UNET"),
 	YOLO("YOLO");
 	
 	NetworkType(String key){

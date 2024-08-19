@@ -182,4 +182,10 @@ public class VailCodeDataLoader extends BaseDataLoader{
 		return YoloImageUtils.loadImgDataToArray(filePath);
 	}
 
+	@Override
+	public void loadData(int[] indexs, Tensor input) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

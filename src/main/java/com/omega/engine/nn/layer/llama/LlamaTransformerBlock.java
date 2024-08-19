@@ -1,4 +1,4 @@
-package com.omega.engine.nn.layer;
+package com.omega.engine.nn.layer.llama;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -6,7 +6,9 @@ import java.io.RandomAccessFile;
 import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
-import com.omega.engine.nn.layer.normalization.LNLayer;
+import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.layer.LayerType;
+import com.omega.engine.nn.layer.normalization.RMSLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
@@ -15,7 +17,7 @@ import com.omega.engine.updater.UpdaterFactory;
  * @author Administrator
  *
  */
-public class TransformerBlock extends Layer{
+public class LlamaTransformerBlock extends Layer{
 	
 	private int time;
 	
@@ -27,15 +29,17 @@ public class TransformerBlock extends Layer{
 	
 	private boolean dropout = false;
 	
-//	private CausalSelfAttentionLayer attn;
-	private FastCausalSelfAttentionLayer attn;
-	private LNLayer ln1;
-
+	private boolean flashAttention = false;
+	
+	private LlamaAttentionLayer attn;
+	
+	private RMSLayer norm1;
+	
 	/**
 	 * mlp
 	 */
-	private MLPLayer mlp;
-	private LNLayer ln2;
+	private LlamaMLPLayer mlp;
+	private RMSLayer norm2;
 	
 	private BaseKernel baseKernel;
 	
@@ -43,7 +47,7 @@ public class TransformerBlock extends Layer{
 	
 	private Tensor tmp2;
 	
-	public TransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout) {
+	public LlamaTransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout) {
 		this.headNum = headNum;
 		this.time = time;
 		this.embedDim = embedDim;
@@ -55,7 +59,8 @@ public class TransformerBlock extends Layer{
 		this.initLayers();
 	}
 	
-	public TransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout,Network network) {
+	public LlamaTransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention,Network network) {
+		this.flashAttention = flashAttention;
 		this.headNum = headNum;
 		this.network = network;
 		if(this.updater == null) {
@@ -73,14 +78,17 @@ public class TransformerBlock extends Layer{
 	
 	public void initLayers() {
 
-		this.ln1 = new LNLayer(this, bias);
+		this.norm1 = new RMSLayer(this);
 		
-//		this.attn = new CausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
-		this.attn = new FastCausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
+		if(flashAttention) {
+			this.attn = new LlamaFlashAttentionLayer(embedDim, headNum, time, bias, dropout, network);
+		}else {
+			this.attn = new LlamaCausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
+		}
 
-		this.ln2 = new LNLayer(attn, bias);
+		this.norm2 = new RMSLayer(attn);
 		
-		this.mlp = new MLPLayer(embedDim, embedDim * 4, bias, network);
+		this.mlp = new LlamaMLPLayer(embedDim, embedDim, bias, network);
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
@@ -97,8 +105,8 @@ public class TransformerBlock extends Layer{
 //			if(this.tmp1 == null) {
 //				System.out.println(number+":"+embedDim);
 //			}
-			this.tmp1 = Tensor.createTensor(this.tmp1, number, 1, 1, embedDim, true);
-			this.tmp2 = Tensor.createTensor(this.tmp2, number, 1, 1, embedDim, true);
+			this.tmp1 = Tensor.createGPUTensor(this.tmp1, number, 1, 1, embedDim, true);
+			this.tmp2 = Tensor.createGPUTensor(this.tmp2, number, 1, 1, embedDim, true);
 		}
 	}
 	
@@ -117,44 +125,28 @@ public class TransformerBlock extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-//		System.out.println("in1");
-//		input.showShape();
-		ln1.forward(input);
-//		ln1.getOutput().showShape();
-//		System.out.println("in2");
-		attn.forward(ln1.getOutput());
-//		System.out.println("in3");
-		TensorOP.add(attn.getOutput(), input, tmp1);
-//		System.out.println("in4");
-		ln2.forward(tmp1);
+
+	}
+	
+	public void output(Tensor cos,Tensor sin) {
+		// TODO Auto-generated method stub
 		
-		mlp.forward(ln2.getOutput());
+		norm1.forward(input);
+
+		attn.forward(cos, sin, norm1.getOutput());
+
+		TensorOP.add(attn.getOutput(), input, tmp1);
+
+		norm2.forward(tmp1);
+		
+		mlp.forward(norm2.getOutput());
 		
 		TensorOP.add(mlp.getOutput(), tmp1, tmp2);
 		
 		this.output = tmp2;
-		
-//		this.output.showShape();
+//		System.err.println("---------------------------------");
+//		this.output.showDM();
 	}
-	
-//	public void output(Tensor mask) {
-//		// TODO Auto-generated method stub
-//		
-//		ln1.forward(input);
-//		
-////		attn.forward(ln1.getOutput(), mask);
-//		attn.forward(ln1.getOutput());
-//		
-//		TensorOP.add(attn.getOutput(), input, tmp1);
-//		
-//		ln2.forward(tmp1);
-//		
-//		mlp.forward(ln2.getOutput());
-//		
-//		TensorOP.add(mlp.getOutput(), tmp1, tmp2);
-//		
-//		this.output = tmp2;
-//	}
 	
 	@Override
 	public Tensor getOutput() {
@@ -165,62 +157,52 @@ public class TransformerBlock extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+
+	}
+	
+	public void diff(Tensor cos,Tensor sin) {
+		// TODO Auto-generated method stub
+		
+//		delta.showDM();
 		
 		mlp.back(delta);
+
+		norm2.back(mlp.diff);
 		
-		ln2.back(mlp.diff);
+		TensorOP.add(norm2.diff, delta, norm2.diff);
 		
-		TensorOP.add(ln2.diff, delta, ln2.diff);
+//		norm2.diff.showDM();
 		
-		attn.back(ln2.diff);
+		attn.back(cos, sin, norm2.diff);
 		
-		ln1.back(attn.diff);
+		norm1.back(attn.diff);
 		
-		TensorOP.add(ln1.diff, ln2.diff, tmp2);
+		TensorOP.add(norm1.diff, norm2.diff, tmp2);
 		
 		this.diff = tmp2;
-		
+//		System.err.println("diff:");
+//		diff.showDM();
 	}
 
 	@Override
 	public void forward() {
 		// TODO Auto-generated method stub
-		/**
-		 * 设置输入
-		 */
-		this.setInput();
-		/**
-		 * 参数初始化
-		 */
-		this.init();
-		/**
-		 * 计算输出
-		 */
-		this.output();
+		
 	}
 	
 	@Override
 	public void back() {
 		// TODO Auto-generated method stub
-		
-		this.initBack();
-		/**
-		 * 设置梯度
-		 */
-		this.setDelta();
-		/**
-		 * 计算梯度
-		 */
-		this.diff();
-		
-		if(this.network.GRADIENT_CHECK) {
-			this.gradientCheck();
-		}
 
 	}
 
 	@Override
 	public void forward(Tensor input) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	public void forward(Tensor cos,Tensor sin,Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 设置输入
@@ -233,29 +215,17 @@ public class TransformerBlock extends Layer{
 		/**
 		 * 计算输出
 		 */
-		this.output();
+		this.output(cos, sin);
 		
 	}
 	
-//	public void forward(Tensor input,Tensor mask) {
-//		// TODO Auto-generated method stub
-//		/**
-//		 * 设置输入
-//		 */
-//		this.setInput(input);
-//		/**
-//		 * 参数初始化
-//		 */
-//		this.init();
-//		/**
-//		 * 计算输出
-//		 */
-//		this.output(mask);
-//		
-//	}
-	
 	@Override
 	public void back(Tensor delta) {
+		// TODO Auto-generated method stub
+
+	}
+	
+	public void back(Tensor cos,Tensor sin,Tensor delta) {
 		// TODO Auto-generated method stub
 
 		this.initBack();
@@ -266,7 +236,7 @@ public class TransformerBlock extends Layer{
 		/**
 		 * 计算梯度
 		 */
-		this.diff();
+		this.diff(cos, sin);
 		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
@@ -277,9 +247,9 @@ public class TransformerBlock extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		ln1.update();
+		norm1.update();
 		attn.update();
-		ln2.update();
+		norm2.update();
 		mlp.update();
 	}
 
@@ -314,16 +284,16 @@ public class TransformerBlock extends Layer{
 	}
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
-		ln1.saveModel(outputStream);
+		norm1.saveModel(outputStream);
 		attn.saveModel(outputStream);
-		ln2.saveModel(outputStream);
+		norm2.saveModel(outputStream);
 		mlp.saveModel(outputStream);
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-		ln1.loadModel(inputStream);
+		norm1.loadModel(inputStream);
 		attn.loadModel(inputStream);
-		ln2.loadModel(inputStream);
+		norm2.loadModel(inputStream);
 		mlp.loadModel(inputStream);
 	}
 	

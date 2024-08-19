@@ -403,6 +403,15 @@ public class Tensor implements Serializable{
 		}
 	}
 	
+	public void setData(int[] data) {
+		for(int i = 0;i<data.length;i++) {
+			this.data[i] = data[i];
+		}
+		if(isHasGPU()) {
+			this.hostToDevice();
+		}
+	}
+	
 	public void copyData(float[] data) {
 		System.arraycopy(data, 0, this.data, 0, data.length);
 		if(isHasGPU()) {
@@ -417,6 +426,12 @@ public class Tensor implements Serializable{
 	public float[] getByNumber(int n) {
 		System.arraycopy(data, n * channel * height * width, getOnce(), 0, channel * height * width);
 		return this.once;
+	}
+	
+	public float[] getByOffset(int start,int len) {
+		float[] tmp = new float[len];
+		System.arraycopy(data, start, tmp, 0, len);
+		return tmp;
 	}
 	
 	public void setByNumber(int n,float[] x) {
@@ -528,7 +543,7 @@ public class Tensor implements Serializable{
 	
 	public void showDMByOffset(int start,int len) {
 		syncHost();
-	    System.out.println(JsonUtils.toJson(this.getByNumber(number)));
+	    System.out.println(JsonUtils.toJson(this.getByOffset(start, len)));
 	}
 	
 	public void showDM(int index) {

@@ -14,7 +14,9 @@ public class PrintUtils {
 	 * @param data
 	 */
 	public static void printImage(Tensor data) {
-		
+		if(data.isHasGPU()) {
+			data.syncHost();
+		}
 		for(int n = 0;n<data.number;n++) {
 			for(int c = 0;c<data.channel;c++) {
 				for(int i = 0;i<data.height;i++) {

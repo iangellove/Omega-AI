@@ -242,5 +242,11 @@ public class IndexDataLoader extends RNNDataLoader {
 		
 		return indexs;
 	}
+
+	@Override
+	public void loadData(int[] indexs, Tensor input) {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

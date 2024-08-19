@@ -290,5 +290,11 @@ public class YoloDataLoader extends BaseDataLoader{
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	public void loadData(int[] indexs, Tensor input) {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

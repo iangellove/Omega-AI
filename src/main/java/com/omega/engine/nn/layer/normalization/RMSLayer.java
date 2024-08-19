@@ -277,18 +277,18 @@ public class RMSLayer extends NormalizationLayer {
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-//		if(!this.freeze) {
-//			if(this.updater != null){
-//				this.updater.updateForBN(this);
-//			}else{
-//				for(int i = 0;i<this.gamma.dataLength;i++) {
-//					this.gamma.data[i] -= this.learnRate * this.diffGamma.data[i];
-//				}
-//				for(int i = 0;i<this.beta.dataLength;i++) {
-//					this.beta.data[i] -= this.learnRate * this.diffBeta.data[i];
-//				}
-//			}
-//		}
+		if(!this.freeze) {
+			if(this.updater != null){
+				this.updater.updateForBN(this);
+			}else{
+				for(int i = 0;i<this.gamma.dataLength;i++) {
+					this.gamma.data[i] -= this.learnRate * this.diffGamma.data[i];
+				}
+				for(int i = 0;i<this.beta.dataLength;i++) {
+					this.beta.data[i] -= this.learnRate * this.diffBeta.data[i];
+				}
+			}
+		}
 	}
 
 	@Override

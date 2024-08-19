@@ -4,6 +4,8 @@ import java.util.Arrays;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
+import com.omega.common.utils.ImageUtils;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
@@ -13,11 +15,13 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.grad.GradClipping;
 import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.network.DuffsionUNet;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.OutputsNetwork;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Yolo;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
+import com.omega.example.duffsion.utils.DuffsionImageDataLoader;
 import com.omega.example.rnn.data.OneHotDataLoader;
 import com.omega.example.rnn.data.RNNDataLoader;
 import com.omega.example.yolo.data.BaseDataLoader;
@@ -1821,6 +1825,235 @@ public class MBSGDOptimizer extends Optimizer {
 					System.out.println(msg);
 					
 					this.batchIndex++;
+				}
+				
+				System.out.println("training["+this.trainIndex+"] train loss:{"+train_loss/indexs.length+"} ");
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(this.lr_step);
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void testGaussianDiffusion(int ddim_timesteps) {
+		
+		try {
+			
+			DuffsionUNet network = (DuffsionUNet) this.network;
+			
+			float beta_1 = 1e-4f;
+			float beta_T = 0.02f;
+			int T = 1000;
+			
+			Tensor noiseInput = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
+			
+			Tensor t = new Tensor(batchSize, 1, 1, 1, true);
+			
+			RandomUtils.gaussianRandom(noiseInput);
+			
+			float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
+			float[] alphas = MatrixOperation.subtraction(1, betas);
+			float[] alphas_bar = MatrixUtils.cumprod(alphas);
+			
+			int step = T / ddim_timesteps;
+			
+			float[] ddim_timestep_seq = MatrixUtils.range(0, T, step, 1);
+			
+			float[] ddim_timestep_prev_seq = new float[ddim_timestep_seq.length];
+			
+			for(int i = 1;i<ddim_timestep_seq.length;i++) {
+				ddim_timestep_prev_seq[i] = ddim_timestep_seq[i - 1];
+			}
+			int[] t_data = new int[batchSize];
+			int[] prev_t_data = new int[batchSize];
+			for(int timestep = ddim_timesteps - 1;timestep>=0;timestep--) {
+				for(int i = 0;i<batchSize;i++) {
+					t_data[i] = (int) ddim_timestep_seq[timestep];
+					prev_t_data[i] = (int) ddim_timestep_prev_seq[timestep];
+				}
+				t.setData(t_data);
+				
+				Tensor eps = network.forward(noiseInput, t);
+				
+				float[] exsa1 = MatrixUtils.gather(alphas_bar, t_data);
+				
+				float[] exsa2 = MatrixUtils.gather(alphas_bar, prev_t_data);
+				
+				prev_mean_from_eps(noiseInput, eps, exsa1, exsa2, 1, timestep);
+				
+				noiseInput.hostToDevice();
+			}
+			
+			/**
+			 * print image
+			 */
+			showImgs("H:\\voc\\gan_anime\\duffsion_test\\", noiseInput);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void showImgs(String outputPath,Tensor input) {
+
+		ImageUtils utils = new ImageUtils();
+		
+		for(int b = 0;b<input.number;b++) {
+			float[] once = input.getByNumber(b);
+			once = MatrixOperation.multiplication(MatrixOperation.add(once, 1.0f), 255.0f/2);
+			utils.createRGBImage(outputPath + b + ".png", "png", ImageUtils.color2rgb2(once, input.channel, input.height, input.width, true), input.height, input.width, null, null);
+		}
+		
+	}
+	
+	public void prev_mean_from_eps(Tensor xt,Tensor eps,float[] alphas_bar,float[] alphas_bar_prev,float eta,int t) {
+		eps.syncHost();
+		
+		for(int b = 0;b<xt.number;b++) {
+			float sigma_t = (float) (eta * Math.sqrt(1 - alphas_bar_prev[b]) / (1 - alphas_bar[b]) * (1 - alphas_bar[b] / alphas_bar_prev[b]));
+			for(int l = 0;l<xt.getOnceSize();l++) {
+				int i = b * xt.getOnceSize() + l;
+				float pred_x0 = (float) ((xt.data[i] - Math.sqrt(1 - alphas_bar[b]) * eps.data[i]) / Math.sqrt(alphas_bar[b]));
+				float pred_dir_xt = (float) (Math.sqrt(1 - alphas_bar_prev[b] - sigma_t * sigma_t) * eps.data[i]);
+				if(t > 0) {
+					xt.data[i] = (float) (Math.sqrt(alphas_bar_prev[b]) * pred_x0 + pred_dir_xt + sigma_t * RandomUtils.randomFloat());
+				}else {
+					xt.data[i] = (float) (Math.sqrt(alphas_bar_prev[b]) * pred_x0 + pred_dir_xt + sigma_t);
+				}
+			}
+		}
+		
+	}
+	
+	public void trainGaussianDiffusion(DuffsionImageDataLoader trainingData) {
+		// TODO Auto-generated method stub
+
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			DuffsionUNet network = (DuffsionUNet) this.network;
+			
+			this.dataSize = trainingData.number;
+
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+
+			float beta_1 = 1e-4f;
+			float beta_T = 0.02f;
+			int T = 1000;
+			
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
+			
+			Tensor t = new Tensor(batchSize, 1, 1, 1, true);
+			
+			Tensor noise = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
+			
+			float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
+			float[] alphas = MatrixOperation.subtraction(1, betas);
+			float[] alphas_bar = MatrixUtils.cumprod(alphas);
+			float[] sqrt_alphas_bar = MatrixOperation.sqrt(alphas_bar);
+			float[] sqrt_one_minus_alphas_bar = MatrixOperation.sqrt(MatrixOperation.subtraction(1, alphas_bar));
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = trainingData.shuffle();
+
+				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				float train_loss = 0.0f;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+
+					long start = System.nanoTime();
+
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					int[] t_data = RandomUtils.randomInt(0, T, batchSize);
+//					System.out.println(JsonUtils.toJson(t_data));
+					t.setData(t_data);
+
+					float[] exsa1 = MatrixUtils.gather(sqrt_alphas_bar, t_data);
+					
+					float[] exsa2 = MatrixUtils.gather(sqrt_one_minus_alphas_bar, t_data);
+					
+					trainingData.loadData(indexs[it], exsa1, exsa2, input, noise);
+					
+					/**
+					 * forward
+					 */
+					Tensor output = network.forward(input, t);
+					
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, noise);
+
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, noise);
+
+					/**
+					 * back
+					 */
+					network.back(this.lossDiff);
+//					System.out.println(JsonUtils.toJson(this.loss.syncHost()));
+					/**
+					 * update
+					 */
+					network.update();
+
+					JCudaDriver.cuCtxSynchronize();
+					
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / this.batchSize;
+//						System.out.println(JsonUtils.toJson(this.loss.syncHost()));
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / this.batchSize;
+					}
+
+					train_loss += this.currentError;
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+					
+					this.batchIndex++;
+					
+					if(it > 0 && it % 100 == 0) {
+						testGaussianDiffusion(200);
+					}
+					
 				}
 				
 				System.out.println("training["+this.trainIndex+"] train loss:{"+train_loss/indexs.length+"} ");

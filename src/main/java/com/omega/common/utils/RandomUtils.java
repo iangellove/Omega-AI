@@ -37,6 +37,14 @@ public class RandomUtils {
 		return min + (int)(Math.random() * (max-min));
 	}
 	
+	public static int[] randomInt(int min,int max,int count) {
+		int[] tmp = new int[count];
+		for(int i = 0;i<count;i++) {
+			tmp[i] = min + (int)(Math.random() * (max-min));
+		}
+		return tmp;
+	}
+	
 	public static int uniformInt(int min,int max) {
 		if(max < min) {
 			int swap = min;
@@ -255,6 +263,15 @@ public class RandomUtils {
 			temp[i] = (float)(getInstance().nextGaussian() * ratio);
 		}
 		return temp;
+	}
+	
+	public static void gaussianRandom(Tensor output){
+		for(int i = 0;i<output.dataLength;i++) {
+			output.data[i] = (float)(getInstance().nextGaussian());
+		}
+		if(output.isHasGPU()) {
+			output.hostToDevice();
+		}
 	}
 	
 	/**

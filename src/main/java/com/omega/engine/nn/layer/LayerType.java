@@ -26,12 +26,15 @@ public enum LayerType {
 	silu("silu"),
 	bn("bn"),
 	layer_norm("layer_norm"),
+	group_norm("group_norm"),
 	rms_norm("rms_norm"),
 	instance_normal("instance_normal"),
 	block("block"),
 	shortcut("shortcut"),
 	avgpooling("avgpooling"),
 	upsample("upsample"),
+	duffsion_upsample("duffsion_upsample"),
+	duffsion_res_block("duffsion_res_block"),
 	route("route"),
 	yolo("yolo"),
 	rnn("rnn"),
@@ -44,7 +47,8 @@ public enum LayerType {
 	lstm("lstm"),
 	embedding("embedding"),
 	rope("rope"),
-	dropout("dropout");
+	dropout("dropout"),
+	time_embedding("time_embedding");
 	
 	private String key;
 	

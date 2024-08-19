@@ -139,6 +139,18 @@ __global__ void sum_channel_kernel(int N, float *X, float *Y,int C,int H,int W)
 }
 
 extern "C"
+__global__ void sum_height_kernel(int N, float *X, float *Y,int C,int H,int W)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+    	Y[i] = 0;
+    	for(int index = 0;index<H * W;index++){
+    		Y[i] += X[i * H * W + index];
+    	}
+    }
+}
+
+extern "C"
 __global__ void max_kernel(int N, float *X, float *Y)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;

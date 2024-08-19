@@ -10,7 +10,7 @@ import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
-import com.omega.engine.nn.layer.TransformerNanoDecoder;
+import com.omega.engine.nn.layer.transformer.TransformerNanoDecoder;
 import com.omega.engine.updater.UpdaterType;
 
 /**

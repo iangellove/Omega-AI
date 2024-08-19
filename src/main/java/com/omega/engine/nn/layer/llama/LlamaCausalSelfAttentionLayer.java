@@ -1,4 +1,4 @@
-package com.omega.engine.nn.layer;
+package com.omega.engine.nn.layer.llama;
 
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
@@ -13,6 +13,9 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.GPUOP;
+import com.omega.engine.nn.layer.DropoutLayer;
+import com.omega.engine.nn.layer.FullyLayer;
+import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
 import com.omega.engine.nn.layer.gpu.RoPEKernel;
 import com.omega.engine.nn.network.Network;
