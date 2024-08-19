@@ -2,7 +2,7 @@
 # 自己打造一个深度学习框架 for java
 
 ##  前言
-从16年开始利用空余时间研究深度学习的方面，由于工作的原因，最熟悉的编程语言就是java，所以框架的编程语言自然而然就使用了java。自己打造框架的初衷就是为了更加深入了解各个算法、模型、实现的原理和思路。
+从2016年开始利用空余时间研究深度学习的方面，由于工作的原因，最熟悉的编程语言就是java，所以框架的编程语言自然而然就使用了java。自己打造框架的初衷就是为了更加深入了解各个算法、模型、实现的原理和思路。
 ## 框架介绍
 Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经网络，实现训练或测试模型，支持多线程运算，框架目前支持BP神经网络、卷积神经网络、循环神经网络、vgg16、resnet、yolo、lstm、transformer、gpt2等模型的构建，目前引擎最新版本支持CUDA和CUDNN两种GPU加速方式，关于GPU加速的环境配置与jcuda版本jar包的对应依赖，欢迎添加QQ群([119593195]())进行技术讨论和交流，别忘了给Omega-AI项目点个star，项目需要你们的支持。
 ## 源码地址：
@@ -162,6 +162,28 @@ vail_loss = 1.8f  //最终验证集损失在1.8左右
 ###### 推理效果图
 ![GPT2医疗问答系统](images/qa_test.png)
 
+#### [基于llama2-medium实现医疗问答系统](#llama2-医疗问答系统)
+##### 预训练数据：Wiki中文百科,BaiduBaiKe,shibing624/medica
+##### 预训练权重文件： https://pan.baidu.com/s/1DobIvoYH_Yr8cv60VjCRng?pwd=euvp
+##### 微调训练数据（SFT）：shibing624/medical,HuatuoGPT-sft-data-v1,DISC-Med-SFT,ChatMed
+##### 微调权重文件：https://pan.baidu.com/s/1dve8XEk2o0lcoL36MdPhQg?pwd=wptj
+##### tokenizer（SentencePiece）：https://pan.baidu.com/s/1Wx6Bcchd2UodU3YtEzWaYw?pwd=ehew 
+##### 预处理后数据集：[数据集下载](https://pan.baidu.com/s/1m-Of8dwOQ5kYuLZVYpw3qA?pwd=7c92)
+###### 模型参数
+```java
+// llama2-chatglm 92M参数量
+maxLen = 512  //最大token数
+embedDim = 512 //embeding编码维度
+headNum = 8  //多头注意力头数
+decoderNum = 8  //解码器层数
+maxLearnRate = 0.0003f  //最大学习率
+minLearnRate = 0.0001f  //最小学习率
+epoch = 1 //循环训练次数
+dropoutRate = 0.0f
+train_loss = 2.0f //最终训练集损失在2.0左右
+````
+###### 推理效果图
+![Llama2医疗问答系统](images/llama2-medical.png)
 
 ##  功能介绍
 #### 支持的网络层类型：
@@ -1259,6 +1281,41 @@ public static void gan_anime() {
 				System.out.println("chatbot:"+input_txt.split(" ")[1]);
 			}
 			scanner.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+```
+
+#### llama2-医疗问答系统
+```java
+    public static void llama2_chinese_chatglm_vocab() {
+		try {
+			boolean bias = false;
+			boolean dropout = false;
+			boolean flashAttention = false;
+			int batchSize = 8;			
+			int max_len = 512;
+			int embedDim = 512;
+			int head_num = 8;
+			int decoderNum = 8;
+			String trainPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.txt";
+			String tokenizer_path = "H:\\transformer_dataset\\tokenizer.model";
+			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path, 64793);
+			CNWikiTokenizer4 trainData = new CNWikiTokenizer4(trainPath, max_len, batchSize, 6250865, tokenizer);
+			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
+			network.learnRate = 3e-4f;
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.COSINE, false);
+			optimizer.lr_step = new int[] {1, 2};
+			optimizer.lr = 3e-4f;
+			optimizer.min_lr = 1e-5f;
+			optimizer.setWarmUp(true);
+			optimizer.warmUpTime = 1000;
+			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
+			optimizer.trainLlama2_chinese(trainData);
+			String model_path = "H:\\model\\llama2-92m-chinese.model";
+			ModelUtils.saveModel(network, model_path);
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
