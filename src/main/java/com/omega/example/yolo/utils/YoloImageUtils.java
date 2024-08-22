@@ -1274,6 +1274,26 @@ public class YoloImageUtils {
 		return null;
 	}
 	
+	public static float[] loadImgDataToArray(String filePath, boolean norm,float[] mean,float[] std) {
+		
+		try {
+			
+			File file = new File(filePath);
+			
+			if(file.exists()) {
+				
+				float[] data =  IU().getImageData(file, norm, norm, mean, std);
+				
+				return data;
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
 	public static float[] loadImgDataToGrayArray(String filePath, boolean norm) {
 		
 		try {

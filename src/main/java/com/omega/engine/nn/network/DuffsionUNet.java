@@ -237,6 +237,7 @@ public class DuffsionUNet extends Network {
 	
 	public Tensor forward(Tensor input,Tensor t) {
 //		System.out.println("en_time:"+en_time+",de_time:"+de_time);
+//		input.showDMByOffset(0, 500);
 		/**
 		 * 设置输入数据
 		 */
@@ -333,7 +334,8 @@ public class DuffsionUNet extends Network {
 		 * 将误差值输入到最后一层
 		 */
 		this.setLossDiff(lossDiff);
-//		lossDiff.showDMByOffset(0, 100);
+//		System.err.println("lossDiff:");
+//		lossDiff.showDMByOffset(0, 96*96);
 		/**
 		 * tail backward
 		 */
@@ -475,6 +477,26 @@ public class DuffsionUNet extends Network {
 				layer.cache_delta.clearGPU();
 			}
 			
+		}
+		
+		for(int i = 0;i<downBlocks.size();i++) {
+			if(downBlocks.get(i).cache_delta != null) {
+				downBlocks.get(i).cache_delta.clearGPU();
+			}
+		}
+		
+		for(int i = 0;i<upBlocks.size();i++) {
+			if(upBlocks.get(i).cache_delta != null) {
+				upBlocks.get(i).cache_delta.clearGPU();
+			}
+		}
+		
+		if(midResBlock1.cache_delta != null) {
+			midResBlock1.cache_delta.clearGPU();
+		}
+		
+		if(midResBlock2.cache_delta != null) {
+			midResBlock2.cache_delta.clearGPU();
 		}
 		
 		JCuda.cudaDeviceSynchronize();

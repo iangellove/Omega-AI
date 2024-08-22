@@ -62,6 +62,10 @@ public class RandomUtils {
 		return (float) Math.random();
 	}
 	
+	public static float randomGaussianFloat() {
+		return (float) getInstance().nextGaussian();
+	}
+	
 	public static float uniformFloat(float min,float max) {
 		if(max < min) {
 			float swap = min;

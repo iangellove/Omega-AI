@@ -2359,6 +2359,19 @@ public class MatrixOperation {
 		return temp;
 	}
 	
+	public static void clampSelf(float[] x,float min,float max) {
+		for(int i = 0;i<x.length;i++) {
+			float val = x[i];
+			if(val < min) {
+				x[i] = min;
+			}else if(val > max) {
+				x[i] = max;
+			}else {
+				x[i] = val;
+			}
+		}
+	}
+	
 	/**
 	 * 
 	 * @Title: maximum

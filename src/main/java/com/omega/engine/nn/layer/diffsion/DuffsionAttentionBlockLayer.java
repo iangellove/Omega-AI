@@ -4,8 +4,10 @@ import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.DropoutLayer;
@@ -13,6 +15,7 @@ import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
@@ -44,11 +47,11 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	private AttentionKernel attentionKernel;
 	
 	private Tensor qt;
-//	private Tensor kt;
+	private Tensor kt;
 	private Tensor vt;
 	
 	private Tensor dqt;
-	private Tensor dk;
+	private Tensor dkt;
 	private Tensor dvt;
 	
 	private Tensor vaccum;
@@ -75,7 +78,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		this.height = height;
 		this.width = width;
 		this.bias = bias;
-		this.oChannel = 1;
+		this.oChannel = inChannel;
 		this.oHeight = height;
 		this.oWidth = width;
 		this.dropout = dropout;
@@ -92,7 +95,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		this.height = height;
 		this.width = width;
 		this.bias = bias;
-		this.oChannel = 1;
+		this.oChannel = inChannel;
 		this.oHeight = height;
 		this.oWidth = width;
 		this.dropout = dropout;
@@ -101,10 +104,14 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	
 	public void initLayers() {
 		this.qLayer = new ConvolutionLayer(inChannel, inChannel, width, height, 1, 1, 0, 1, bias, this.network);
+//		this.qLayer.weight = new Tensor(inChannel, inChannel, 1, 1, MatrixUtils.order(inChannel * inChannel, 0.01f, 0.01f), true);
 		this.kLayer = new ConvolutionLayer(inChannel, inChannel, width, height, 1, 1, 0, 1, bias, this.network);
+//		this.kLayer.weight = new Tensor(inChannel, inChannel, 1, 1, MatrixUtils.order(inChannel * inChannel, 0.01f, 0.01f), true);
 		this.vLayer = new ConvolutionLayer(inChannel, inChannel, width, height, 1, 1, 0, 1, bias, this.network);
+//		this.vLayer.weight = new Tensor(inChannel, inChannel, 1, 1, MatrixUtils.order(inChannel * inChannel, 0.01f, 0.01f), true);
 		
 		this.oLayer = new ConvolutionLayer(inChannel, inChannel, width, height, 1, 1, 0, 1, bias, this.network);
+//		this.oLayer.weight = new Tensor(inChannel, inChannel, 1, 1, MatrixUtils.order(inChannel * inChannel, 0.01f, 0.01f), true);
 		
 		if(this.dropout) {
 			this.dropoutLayer = new DropoutLayer(0.1f, this.network);
@@ -149,9 +156,11 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		this.number = input.number;
 		this.batchSize = number;
 		
-		if(this.preatt == null || this.preatt.number != this.batchSize || this.preatt.width != this.inChannel) {
+		if(this.preatt == null || this.preatt.number != this.batchSize) {
+//			System.out.println("in");
 			// [batch_size，time，head_num，d_k]
 			this.qt = Tensor.createTensor(this.qt, batchSize, height, width, inChannel, true);
+			this.kt = Tensor.createTensor(this.vt, batchSize, height, width, inChannel, true);
 			this.vt = Tensor.createTensor(this.vt, batchSize, height, width, inChannel, true);
 			// [batch_size，n_heads，len_q，len_k]
 			this.preatt = Tensor.createTensor(this.preatt, batchSize, width * height, 1, width * height, true);
@@ -179,7 +188,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		if(this.dvaccum == null){
 			this.dvaccum = Tensor.createTensor(this.dvaccum, batchSize, width * height, 1, inChannel, true);
 			this.dqt = Tensor.createTensor(this.dqt, batchSize, width * height, 1, inChannel, true);
-			this.dk = Tensor.createTensor(this.dqt, batchSize, inChannel, 1, width * height, true);
+			this.dkt = Tensor.createTensor(this.dkt, batchSize, width * height, 1, inChannel, true);
 			this.dvt = Tensor.createTensor(this.dvt, batchSize, width * height, 1, inChannel, true);
 			this.dattn = Tensor.createTensor(this.dattn, batchSize, width * height, 1, width * height, true);
 			this.dpreatt = Tensor.createTensor(this.dpreatt, batchSize, width * height, 1, width * height, true);
@@ -199,19 +208,20 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 //		System.out.println("in");
-//		this.input.showDM();
+		
 		this.qLayer.forward(this.input);
 		this.kLayer.forward(this.input);
 		this.vLayer.forward(this.input);
 
 		TensorOP.permute(this.qLayer.getOutput(), qt, new int[] {0, 2, 3, 1});
+		TensorOP.permute(this.kLayer.getOutput(), kt, new int[] {0, 2, 3, 1});
 		TensorOP.permute(this.vLayer.getOutput(), vt, new int[] {0, 2, 3, 1});
 		
 		qt.view(batchSize, height * width, 1, inChannel);
-		Tensor key = this.kLayer.getOutput().view(batchSize, inChannel, 1, height * width);
+		kt.view(batchSize, height * width, 1, inChannel);
 		vt.view(batchSize, height * width, 1, inChannel);
-		
-		scaledDotProductAttention(qt, key, vt);
+
+		scaledDotProductAttention(qt, kt, vt);
 		
 		TensorOP.permute(vaccum, oi, new int[] {0, 3, 2, 1});
 		
@@ -238,9 +248,9 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		int n = inChannel;
 		int k = inChannel;
 		
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, 1.0f, key.getGpuData(), m, n * m, query.getGpuData(), n, n * n, 0.0f, preatt.getGpuData(), m, m * n, batchSize);
-		
-		attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, inChannel, d_k);
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, m, m, n, 1.0f, key.getGpuData(), k, m * k, query.getGpuData(), k, m * k, 0.0f, preatt.getGpuData(), m, m * m, batchSize);
+
+		attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, m, d_k);
 		
 		Tensor tmp = attn;
 		
@@ -249,7 +259,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 			tmp = dropoutLayer.getOutput();
 		}
 		
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, m, n, n, 1.0f, value.getGpuData(), m, m * n, tmp.getGpuData(), n, n * n, 0.0f, vaccum.getGpuData(), m, m * n, batchSize);
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, n, m, m, 1.0f, value.getGpuData(), n, m * k, tmp.getGpuData(), m, m * m, 0.0f, vaccum.getGpuData(), k, m * k, batchSize);
 
 	}
 
@@ -261,15 +271,15 @@ public class DuffsionAttentionBlockLayer extends Layer{
 			tmp = dropoutLayer.getOutput();
 		}
 		
-		int m = inChannel;
+		int m = height * width;
 		int n = inChannel;
-		int k = height * width;
+		int k = inChannel;
 	    // backward into datt
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, m, n, k, 1.0f, vt.getGpuData(), k, n * k, dvaccum.getGpuData(), k, n * k, 0.0f, dattn.getGpuData(), n, n * n, batchSize);
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, m, m, k, 1.0f, vt.getGpuData(), k, m * k, dvaccum.getGpuData(), k, m * k, 0.0f, dattn.getGpuData(), m, m * m, batchSize);
 		
 		// backward into dv
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_T, k, m, n, 1.0f, dvaccum.getGpuData(), k, n * k, tmp.getGpuData(), n, n * n, 0.0f, dvt.getGpuData(), k, n * k, batchSize);
-		
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_T, k, m, m, 1.0f, dvaccum.getGpuData(), k, m * k, tmp.getGpuData(), m, m * m, 0.0f, dvt.getGpuData(), k, m * k, batchSize);
+
 		if(dropout) {
 			dropoutLayer.back(dattn);
 			dattn = dropoutLayer.diff;
@@ -277,13 +287,14 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		
 		// backward into preatt
 		float d_k = (float) (1.0f / Math.sqrt(inChannel));
-		attentionKernel.softmax_unmask_backward(dpreatt, dattn, attn, batchSize, inChannel, d_k);
+		attentionKernel.softmax_unmask_backward(dpreatt, dattn, attn, batchSize, m, d_k);
 		
 		// backward into q
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, m, n, n, 1.0f, key.getGpuData(), k, n * k, dpreatt.getGpuData(), k, n * k, 0.0f, dqt.getGpuData(), n, n * n, batchSize);
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, k, m, m, 1.0f, kt.getGpuData(), k, m * k, dpreatt.getGpuData(), m, m * m, 0.0f, dqt.getGpuData(), k, m * k, batchSize);
+
 		
 		// backward into k
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_T, k, m, n, 1.0f, qt.getGpuData(), k, n * k, dpreatt.getGpuData(), n, n * n, 0.0f, dk.getGpuData(), k, n * k, batchSize);
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_T, k, m, m, 1.0f, qt.getGpuData(), k, m * k, dpreatt.getGpuData(), m, m * m, 0.0f, dkt.getGpuData(), k, m * k, batchSize);
 
 	}
 
@@ -308,18 +319,17 @@ public class DuffsionAttentionBlockLayer extends Layer{
 
 		TensorOP.permute(oi, dvaccum, new int[] {0, 3, 2, 1});
 		
-		Tensor key = this.kLayer.getOutput();
-		
-		scaledDotProductAttentionBackward(qt, key, vt);
+		scaledDotProductAttentionBackward(qt, kt, vt);
 		
 		qt.view(batchSize, inChannel, 1, height * width);
 		vt.view(batchSize, inChannel, 1, height * width);
 
 		TensorOP.permute(dqt, qt, new int[] {0, 3, 2, 1});
+		TensorOP.permute(dkt, kt, new int[] {0, 3, 2, 1});
 		TensorOP.permute(dvt, vt, new int[] {0, 3, 2, 1});
 
 		Tensor queryDelta = qt.view(batchSize, inChannel, height, width);
-		Tensor keyDelta = dk.view(batchSize, inChannel, height, width);
+		Tensor keyDelta = kt.view(batchSize, inChannel, height, width);
 		Tensor valueDelta = vt.view(batchSize , inChannel, height, width);
 		
 		this.qLayer.back(queryDelta);
@@ -455,66 +465,35 @@ public class DuffsionAttentionBlockLayer extends Layer{
 
 	public static void main(String[] args) {
 		
-//		int embedDim = 4;
-//		int headNum = 2;
-//		int batchSize = 3;
-//		int time = 3;
-//		
-//		Transformer tf = new Transformer();
-//		tf.number = batchSize * time;
-//		tf.time = time;
-//		
-//		float[] data = RandomUtils.order(batchSize * time * embedDim, 0.1f, 0.1f);
-//		
-////		int[] rts = new int[] {2, 3, 3};
-////		
-////		for(int b = 0;b<batchSize;b++) {
-////			int rt = rts[b];
-////			for(int t = 0;t<time;t++) {
-////				if(t > rt) {
-////					for(int n = 0;n<embedDim;n++) {
-////						data[b * time * embedDim + t * embedDim + n] = 0;
-////					}
-////				}
-////			}
-////		}
-//		
-////		float[] maskData = new float[] {1,1,1,0,0,1,1,1,1,0,1,1,1,1,0};
-////		
-////		Tensor mask = new Tensor(batchSize, 1, time, time, maskData, true);
-//		
-//		Tensor input = new Tensor(batchSize * time, 1, 1, embedDim, data, true);
-//		
-////		input.showDM();
-//		
-//		float[] delta_data = MatrixUtils.val(batchSize * time * embedDim, 1.0f);
-//		
-////		float[] tmp = MatrixUtils.val(batchSize * time * embedDim, 1.0f);
-//		
-//		Tensor delta = new Tensor(batchSize * time, 1, 1, embedDim, delta_data, true);
-//		
-//		DuffsionSelfAttentionLayer mal = new DuffsionSelfAttentionLayer(embedDim, headNum, time, false, false, tf);
-//		
-////		mal.forward(input);
-//		
-//		for(int i = 0;i<10;i++) {
-//
-//			mal.forward(input);
-//			
-////			input.showDM();
-//			
-////			mal.getWeights().showDM();
-//			
-//			mal.getOutput().showShape();
-//			
-//			mal.getOutput().showDM();
-//			
-//			mal.back(delta);
-////			delta.showDM();
-//			mal.diff.showDM();
-////			delta.copyData(tmp);
-//		}
+		CUDAModules.initContext();
 		
+		int N = 2;
+		int C = 3;
+		int H = 4;
+		int W = 4;
+		
+		float[] data = MatrixUtils.order(N * C * H * W, 0.01f, 0.1f);
+		
+		Tensor input = new Tensor(N, C, H, W, data, true);
+		
+		float[] data2 = MatrixUtils.order(N * C * H * W, 0.01f, 0.01f);
+		
+		Tensor delta = new Tensor(N, C, H, W, data2, true);
+		
+		Transformer tf = new Transformer();
+		
+		tf.CUDNN = true;
+		tf.number = N;
+		
+		DuffsionAttentionBlockLayer mal = new DuffsionAttentionBlockLayer(C, W, H, false, false, tf);
+		
+		mal.forward(input);
+		
+		mal.getOutput().showDM();
+		
+		mal.back(delta);
+		
+		mal.diff.showDM();
 	}
 	
 	public static boolean same(Tensor a,Tensor b) {

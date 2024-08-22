@@ -29,8 +29,8 @@ public class DuffsionImageDataLoader extends BaseDataLoader{
 	
 	public boolean normalization = true;
 
-	public static float[] mean = new float[] {0.5f, 0.5f, 0.5f};
-	public static float[] std = new float[] {0.5f, 0.5f, 0.5f};
+	public static final float[] mean = new float[] {0.5f, 0.5f, 0.5f};
+	public static final float[] std = new float[] {0.5f, 0.5f, 0.5f};
 	
 	public DuffsionImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize) {
 		this.imgDirPath = imgDirPath;

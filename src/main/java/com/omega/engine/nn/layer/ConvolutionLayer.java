@@ -249,7 +249,6 @@ public class ConvolutionLayer extends Layer {
 		if(this.hasBias) {
 			biasKernel.addConvBias(output, bias);
 		}
-		
 //		System.out.println(JsonUtils.toJson(output.getByNumberAndChannel(0, 0)));
 		
 //		System.out.println(this.index+":"+(System.nanoTime() - start) / 1e6+"ms.");

@@ -4,7 +4,6 @@ import java.io.File;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
-import com.omega.common.utils.PrintUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;

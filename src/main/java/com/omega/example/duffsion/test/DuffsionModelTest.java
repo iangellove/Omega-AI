@@ -31,13 +31,13 @@ public class DuffsionModelTest {
 			
 			int[] channelMult = new int[] {1, 2, 3, 4};
 			
-			String imgDirPath = "H://voc//gan_anime//faces//";
+			String imgDirPath = "H://voc//gan_anime//faces//faces//";
 			
 			DuffsionImageDataLoader dataLoader = new DuffsionImageDataLoader(imgDirPath, imw, imh, batchSize);
 			
 			DuffsionUNet network = new DuffsionUNet(LossType.MSE, UpdaterType.adamw, T, 3, mChannel, channelMult, resBlockNum, imw, imh, bias);
 			network.CUDNN = true;
-			network.learnRate = 0.001f;
+			network.learnRate = 0.0001f;
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 50, 0.00001f, batchSize, LearnRateUpdate.GD_GECAY, false);
 			

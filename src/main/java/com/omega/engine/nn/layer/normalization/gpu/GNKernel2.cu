@@ -1,67 +1,82 @@
 #define BLOCK 1024 
-#include <cuda_runtime.h>
-#include <cooperative_groups.h>
-#include <cooperative_groups/reduce.h>
 
-struct AddFunctor {
-    inline float initial() { return static_cast<float>(0.0f); }
 
-    __device__ __forceinline__ float operator()(const float a, const float b) const {
-        return b + a;
-    }
-};
+extern "C"
+__global__ void groupnorm_forward_kernel2(const float* x, const float* gamma, const float* beta,
+    float* out, float* mean, float* var,
+    int B, int C, int img_size, int groupSize, int n_groups)
+{
+    int b = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (b >= B) return;
 
-__device__ __forceinline__ float BlockXReduce(float val, ReduceOp reducer) {
-    __syncthreads();
-    __shared__ float shared[64];
-    int block_dim_x = blockDim.x;
-    if (blockDim.x > WARP_SIZE) {
-        block_dim_x = blockDim.x / WARP_SIZE;
-        int lane = threadIdx.x % WARP_SIZE;
-        int tid = threadIdx.y * blockDim.x + threadIdx.x;
-        int wid = tid / WARP_SIZE;
-        int bid = threadIdx.y;
-        val = WarpReduce(val, reducer);
-        if (lane == 0) {
-            shared[wid] = val;
-        }
-        __syncthreads();
-        val = shared[bid * block_dim_x + lane];
-    }
+	int once = groupSize * img_size;
 
-    for (int stride = 1; stride < block_dim_x; stride <<= 1) {
-        float temp = CudaShuffleDownSync(val, stride);
-        val = reducer(val, temp);
-    }
-    if (threadIdx.x == 0) {
-        shared[threadIdx.y] = val;
-    }
-    __syncthreads();
-    return shared[threadIdx.y];
-}
-
-__device__ __forceinline__ void ReduceMeanAndVar(
-        float* mean, float* var, float x_mean, float x_var, int size) {
-    const int nc = blockIdx.x;
-    x_mean = BlockXReduce<float, AddFunctor<float>>(x_mean, AddFunctor<float>());
-    x_var = BlockXReduce<float, AddFunctor<float>>(x_var, AddFunctor<float>());
-    __syncthreads();
-    if (threadIdx.x == 0) {
-        mean[nc] = static_cast<float>(x_mean / size);
-        var[nc] = static_cast<float>(x_var / size);
-    }
+	for(int g = 0;g<n_groups;g++) {
+		float sum = 0.0f;
+		float sum2 = 0.0f;
+		for(int gs = 0;gs<once;gs++) {
+			float val = x[b * n_groups * once + g * once + gs];
+			sum += val;
+			sum2 += val * val;
+		}
+		float mean_val = sum / once;
+		float rstd = 1 / sqrtf(sum2 / once - mean_val * mean_val + 1e-5f);
+		mean[b * n_groups + g] = mean_val;
+		var[b * n_groups + g] = rstd;
+		for(int gs = 0;gs<groupSize * img_size;gs++) {
+			out[b * n_groups * once + g * once + gs] = (x[b * n_groups * once + g * once + gs] - mean_val) * rstd;
+		}
+	}
+	for(int c = 0;c<C;c++) {
+		for(int i = 0;i<img_size;i++) {
+			float x_norm = out[b * C * img_size + c * img_size + i];
+			out[b * C * img_size + c * img_size + i] = gamma[c] * x_norm + beta[c];
+		}
+	}
+	
 }
 
 extern "C"
-__global__ void ScalarGetMeanAndVar(const float* x, float* mean, float* var, int size) {
-    int i = blockIdx.x;
-    float x_mean = static_cast<float>(0);
-    float x_var = static_cast<float>(0);
-    for (int j = threadIdx.x; j < size; j += blockDim.x) {
-        float val;
-        val = x[i * size + j];
-        x_mean += val;
-        x_var += val * val;
+__global__ void groupnorm_backward_kernel1(float* dinp, float* dweight, float* dbias,
+                        const float* dout, const float* inp, const float* weight, const float* mean, const float* rstd,
+                        int B, int T, int C) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= B*T) return;
+    int b = idx / T;
+    int t = idx % T;
+
+    const float* dout_bt = dout + b * T * C + t * C;
+    const float* inp_bt = inp + b * T * C + t * C;
+    float* dinp_bt = dinp + b * T * C + t * C;
+    const float mean_bt = mean[b * T + t];
+    const float rstd_bt = rstd[b * T + t];
+
+    // first: two reduce operations
+    float dnorm_mean = 0.0f;
+    float dnorm_norm_mean = 0.0f;
+    for (int i = 0; i < C; i++) {
+        float norm_bti = (inp_bt[i] - mean_bt) * rstd_bt;
+        float dnorm_i = weight[i] * dout_bt[i];
+        dnorm_mean += dnorm_i;
+        dnorm_norm_mean += dnorm_i * norm_bti;
     }
-    ReduceMeanAndVar<float>(mean, var, x_mean, x_var, size);
+    dnorm_mean = dnorm_mean / C;
+    dnorm_norm_mean = dnorm_norm_mean / C;
+
+    // now iterate again and accumulate all the gradients
+    for (int i = 0; i < C; i++) {
+        float norm_bti = (inp_bt[i] - mean_bt) * rstd_bt;
+        float dnorm_i = weight[i] * dout_bt[i];
+        // gradient contribution to bias
+        atomicAdd(&dbias[i], dout_bt[i]);
+        // gradient contribution to weight
+        atomicAdd(&dweight[i], norm_bti * dout_bt[i]);
+        // gradient contribution to input
+        float dval = 0.0f;
+        dval += dnorm_i; // term 1
+        dval -= dnorm_mean; // term 2
+        dval -= norm_bti * dnorm_norm_mean; // term 3
+        dval *= rstd_bt; // final scale
+        dinp_bt[i] += dval;
+    }
 }

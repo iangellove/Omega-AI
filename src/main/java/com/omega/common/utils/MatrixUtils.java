@@ -187,11 +187,15 @@ public class MatrixUtils {
 	}
 	
 	public static float[] linspace(float start,float end,int count) {
-		float step = (end - start) / count;
+		float step = (end - start) / (count - 1);
 		float[] output = new float[count];
 		output[0] = start;
 		for(int i = 1;i<count;i++) {
-			output[i] = output[i - 1] + step;
+			if(i == count - 1) {
+				output[i] = end;
+			}else {
+				output[i] = output[i - 1] + step;
+			}	
 		}
 		return output;
 	}
@@ -239,6 +243,22 @@ public class MatrixUtils {
 	 * @throws
 	 */
 	public static float[] val(int size,float v) {
+		float[] temp = new float[size];
+		for(int i = 0;i<size;i++) {
+			temp[i] = v;
+		}
+		return temp;
+	}
+	
+	public static int[] valInt(int size,int v) {
+		int[] temp = new int[size];
+		for(int i = 0;i<size;i++) {
+			temp[i] = v;
+		}
+		return temp;
+	}
+	
+	public static float[] val(int size,int v) {
 		float[] temp = new float[size];
 		for(int i = 0;i<size;i++) {
 			temp[i] = v;

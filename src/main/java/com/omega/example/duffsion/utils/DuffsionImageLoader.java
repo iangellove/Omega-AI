@@ -45,6 +45,10 @@ public class DuffsionImageLoader extends RecursiveAction {
 	
 	private float[] noise;
 	
+	private float[] mean = new float[] {0.5f, 0.5f, 0.5f};
+	
+	private float[] std = new float[] {0.5f, 0.5f, 0.5f};
+	
 	public static DuffsionImageLoader getInstance(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,int start,int end) {
 		if(job == null) {
 			job = new DuffsionImageLoader(path, extName, names, indexs, batchSize, input, a, b, noise, normalization, start, end);
@@ -110,9 +114,9 @@ public class DuffsionImageLoader extends RecursiveAction {
 			if(!getNames()[getIndexs()[i]].contains(".")) {
 				filePath = getPath() + "/" + getNames()[getIndexs()[i]] + "." + extName;
 			}
-			float[] data = YoloImageUtils.loadImgDataToArray(filePath, normalization);
+			float[] data = YoloImageUtils.loadImgDataToArray(filePath, true);
 			for(int j = 0;j < data.length;j++) {
-				data[j] = data[j] * a[i] + noise[j] * b[i];
+				data[j] = data[j] * a[i] + noise[i * data.length + j] * b[i];
 			}
 			System.arraycopy(data, 0, getInput().data, i * getInput().channel * getInput().height * getInput().width, getInput().channel * getInput().height * getInput().width);
 		}

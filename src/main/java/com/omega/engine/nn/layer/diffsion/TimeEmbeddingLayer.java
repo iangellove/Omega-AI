@@ -1,12 +1,15 @@
 package com.omega.engine.nn.layer.diffsion;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.gpu.CUDAMemoryManager;
+import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.layer.EmbeddingIDLayer;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.active.SiLULayer;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.Transformer;
 
 /**
  * diffsion model TimeEmbeddingLayer
@@ -202,5 +205,48 @@ public class TimeEmbeddingLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 	}
+	
+	public static void main(String[] args) {
+    	
+	   	  try {
+
+
+	  		CUDAModules.initContext();
+	  		int N = 2;
+	  		int T = 1000;
+	  		int d_model = 64;
+	  		int dim = d_model * 4;
+	  		
+	  		float[] data = new float[] {100, 200};
+	  		
+	  		Tensor input = new Tensor(N, 1, 1, 1, data, true);
+	  		
+//	  		float[] data2 = MatrixUtils.order(N * C * H * W, 0.01f, 0.01f);
+//	  		
+//	  		Tensor delta = new Tensor(N, C, H, W, data2, true);
+	  		
+	  		Transformer tf = new Transformer();
+	  		
+	  		tf.CUDNN = true;
+	  		tf.number = 2;
+	  		
+	  		TimeEmbeddingLayer mal = new TimeEmbeddingLayer(T, d_model, dim, tf);
+	  		
+	  		mal.forward(input);
+	  		
+	  		mal.getOutput().showDM();
+	  		
+//	  		mal.back(delta);
+//	  		
+//	  		mal.diff.showDM();
+			} catch (Exception e) {
+				// TODO: handle exception
+				e.printStackTrace();
+			} finally {
+				// TODO: handle finally clause
+				CUDAMemoryManager.free();
+			}
+
+	   }
 	
 }
