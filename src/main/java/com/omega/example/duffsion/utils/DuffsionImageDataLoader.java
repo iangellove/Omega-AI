@@ -130,7 +130,7 @@ public class DuffsionImageDataLoader extends BaseDataLoader{
 	
 	public void loadData(int[] indexs,float[] a,float[] b, Tensor input, Tensor noise) {
 		// TODO Auto-generated method stub
-		RandomUtils.gaussianRandom(noise);
+		RandomUtils.gaussianRandom(noise, 0, 1);
 		
 		/**
 		 * 加载input数据

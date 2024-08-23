@@ -1153,7 +1153,7 @@ public class ImageUtils {
 						g = (int) ((data[ocount + index] * std[1] + mean[1]) * 255);
 						b = (int) ((data[ocount * 2 + index] * std[2] + mean[2]) * 255);
 					}
-					
+					System.out.println(r);
 					int orgb = colorToRGB(255, r, g, b);
 					
 					rgb[i][j] = orgb;

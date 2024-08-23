@@ -2001,27 +2001,6 @@ public class MBSGDOptimizer extends Optimizer {
 	}
 	
 
-	public void prev_mean_from_eps(Tensor xt,Tensor eps,float[] alphas_bar,float[] alphas_bar_prev,float eta,int t) {
-		eps.syncHost();
-//		xt.syncHost();
-		
-		for(int b = 0;b<xt.number;b++) {
-			float sigma_t = (float) (eta * Math.sqrt((1 - alphas_bar_prev[b]) / (1 - alphas_bar[b]) * (1 - alphas_bar[b] / alphas_bar_prev[b])));
-			for(int l = 0;l<xt.getOnceSize();l++) {
-				int i = b * xt.getOnceSize() + l;
-				float pred_x0 = (float) ((xt.data[i] - Math.sqrt(1 - alphas_bar[b]) * eps.data[i]) / Math.sqrt(alphas_bar[b]));
-				float pred_dir_xt = (float) (Math.sqrt(1 - alphas_bar_prev[b] - sigma_t * sigma_t) * eps.data[i]);
-				if(t > 0) {
-					xt.data[i] = (float) (Math.sqrt(alphas_bar_prev[b]) * pred_x0 + pred_dir_xt + sigma_t * RandomUtils.randomFloat());
-				}else {
-					xt.data[i] = (float) (Math.sqrt(alphas_bar_prev[b]) * pred_x0 + pred_dir_xt + sigma_t);
-				}
-			}
-		}
-		
-	}
-	
-	
 //	public static void main(String[] args) {
 //		
 //		try {
@@ -2047,76 +2026,121 @@ public class MBSGDOptimizer extends Optimizer {
 //		
 //	}
 	
-	public void testGaussianDiffusion(String it,int ddim_timesteps,Tensor noiseInput,Tensor noise) {
-		
-		try {
-			
-			DuffsionUNet network = (DuffsionUNet) this.network;
-			
-			float beta_1 = 1e-4f;
-			float beta_T = 0.02f;
-			int T = 1000;
-			float[] mean = new float[] {0.5f, 0.5f, 0.5f};
-			float[] std = new float[] {0.5f, 0.5f, 0.5f};
-			
-//			Tensor noiseInput = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
-			
-			Tensor t = new Tensor(batchSize, 1, 1, 1, true);
-			
-//			RandomUtils.gaussianRandom(noiseInput);
-			
-			float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
-			float[] alphas = MatrixOperation.subtraction(1, betas);
-			float[] alphas_bar = MatrixUtils.cumprod(alphas);
-			
-			int step = T / ddim_timesteps;
-			
-			float[] ddim_timestep_seq = MatrixUtils.range(0, T, step, 1);
-			
-			float[] ddim_timestep_prev_seq = new float[ddim_timestep_seq.length];
-			
-			for(int i = 1;i<ddim_timestep_seq.length;i++) {
-				ddim_timestep_prev_seq[i] = ddim_timestep_seq[i - 1];
-			}
-			int[] t_data = new int[batchSize];
-			int[] prev_t_data = new int[batchSize];
-			for(int timestep = ddim_timesteps - 1;timestep>=0;timestep--) {
-				for(int i = 0;i<batchSize;i++) {
-					t_data[i] = (int) ddim_timestep_seq[timestep];
-					prev_t_data[i] = (int) ddim_timestep_prev_seq[timestep];
-				}
-				t.setData(t_data);
-				
-				Tensor eps = noise;
-//				eps.showDMByOffset(0, 100);
-				float[] exsa1 = MatrixUtils.gather(alphas_bar, t_data);
-				
-				float[] exsa2 = MatrixUtils.gather(alphas_bar, prev_t_data);
-				
-				prev_mean_from_eps(noiseInput, eps, exsa1, exsa2, 1, timestep);
-				
-				noiseInput.hostToDevice();
-			}
-			
-			MatrixOperation.clampSelf(noiseInput.data, -1, 1);
-			
-			/**
-			 * print image
-			 */
-			showImgs("H:\\voc\\gan_anime\\duffsion_test\\", noiseInput, it);
-			
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-		
-	}
+//	public void testGaussianDiffusion(String it,int ddim_timesteps,Tensor noiseInput,Tensor noise) {
+//		
+//		try {
+//			
+//			DuffsionUNet network = (DuffsionUNet) this.network;
+//			
+//			float beta_1 = 1e-4f;
+//			float beta_T = 0.02f;
+//			int T = 1000;
+//			float[] mean = new float[] {0.5f, 0.5f, 0.5f};
+//			float[] std = new float[] {0.5f, 0.5f, 0.5f};
+//			
+////			Tensor noiseInput = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
+//			
+//			Tensor t = new Tensor(batchSize, 1, 1, 1, true);
+//			
+////			RandomUtils.gaussianRandom(noiseInput);
+//			
+//			float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
+//			float[] alphas = MatrixOperation.subtraction(1, betas);
+//			float[] alphas_bar = MatrixUtils.cumprod(alphas);
+//			
+//			int step = T / ddim_timesteps;
+//			
+//			float[] ddim_timestep_seq = MatrixUtils.range(0, T, step, 1);
+//			
+//			float[] ddim_timestep_prev_seq = new float[ddim_timestep_seq.length];
+//			
+//			for(int i = 1;i<ddim_timestep_seq.length;i++) {
+//				ddim_timestep_prev_seq[i] = ddim_timestep_seq[i - 1];
+//			}
+//			int[] t_data = new int[batchSize];
+//			int[] prev_t_data = new int[batchSize];
+//			for(int timestep = ddim_timesteps - 1;timestep>=0;timestep--) {
+//				for(int i = 0;i<batchSize;i++) {
+//					t_data[i] = (int) ddim_timestep_seq[timestep];
+//					prev_t_data[i] = (int) ddim_timestep_prev_seq[timestep];
+//				}
+//				t.setData(t_data);
+//				
+//				Tensor eps = noise;
+////				eps.showDMByOffset(0, 100);
+//				float[] exsa1 = MatrixUtils.gather(alphas_bar, t_data);
+//				
+//				float[] exsa2 = MatrixUtils.gather(alphas_bar, prev_t_data);
+//				
+//				prev_mean_from_eps(noiseInput, eps, exsa1, exsa2, 1, timestep);
+//				
+//				noiseInput.hostToDevice();
+//				
+//				if(timestep == 100) {
+//					MatrixOperation.clampSelf(noiseInput.data, -1, 1);
+//					
+//					/**
+//					 * print image
+//					 */
+//					showImgs("H:\\voc\\gan_anime\\duffsion_test\\", noiseInput, it+"_100");
+//				}
+//				
+//			}
+//			
+//			MatrixOperation.clampSelf(noiseInput.data, -1, 1);
+//			
+//			/**
+//			 * print image
+//			 */
+//			showImgs("H:\\voc\\gan_anime\\duffsion_test\\", noiseInput, it);
+//			
+//		} catch (Exception e) {
+//			// TODO: handle exception
+//			e.printStackTrace();
+//		}
+//		
+//	}
 	
+
+	public void prev_mean_from_eps(Tensor xt,Tensor t,float[] alphas_bar,float[] alphas_bar_prev,float eta,int timestep) {
+		
+		DuffsionUNet network = (DuffsionUNet) this.network;
+//		xt.showDMByOffset(0, 100);
+		Tensor eps = network.forward(xt, t);
+		float[] eps_data = eps.syncHost();
+		float[] noise = RandomUtils.gaussianRandom(eps.dataLength, 0.0f, 1.0f);
+//		System.out.println(JsonUtils.toJson(noise));
+//		xt.syncHost();
+//		eps.showDMByOffset(0, 96);
+		for(int b = 0;b<xt.number;b++) {
+			float sigma_t = (float) (eta * Math.sqrt((1.0f - alphas_bar_prev[b]) / (1.0f - alphas_bar[b]) * (1.0f - alphas_bar[b] / alphas_bar_prev[b])));
+			for(int l = 0;l<xt.getOnceSize();l++) {
+				int i = b * xt.getOnceSize() + l;
+				float pred_x0 = (float) ((xt.data[i] - Math.sqrt(1.0f - alphas_bar[b]) * eps_data[i]) / Math.sqrt(alphas_bar[b]));
+				if(pred_x0 > 1) {
+					pred_x0 = 1;
+				}else if(pred_x0 < -1){
+					pred_x0 = -1;
+				}
+				float pred_dir_xt = (float) (Math.sqrt(1.0f - alphas_bar_prev[b] - sigma_t * sigma_t) * eps_data[i]);
+//				if(t > 0) {
+//					xt.data[i] = (float) (Math.sqrt(alphas_bar_prev[b]) * pred_x0 + pred_dir_xt + sigma_t * RandomUtils.randomFloat());
+////					System.out.println( (float) (Math.sqrt(alphas_bar_prev[b]) * pred_x0 + pred_dir_xt + sigma_t));
+//				}else {
+//					xt.data[i] = (float) (Math.sqrt(alphas_bar_prev[b]) * pred_x0 + pred_dir_xt + sigma_t);
+//				}
+//				System.err.println(sigma_t * noise[i]);
+				xt.data[i] =  (float)Math.sqrt(alphas_bar_prev[b]) * pred_x0 + pred_dir_xt + sigma_t * noise[i];
+//				xt.data[i] = (float) (Math.sqrt(alphas_bar_prev[b]) * pred_x0 + pred_dir_xt + sigma_t);
+			}
+		}
+		xt.hostToDevice();
+//		xt.showDMByOffset(0, 100);
+	}
+
 	public void testGaussianDiffusion(String it,int ddim_timesteps) {
 		
 		try {
-			
-			DuffsionUNet network = (DuffsionUNet) this.network;
 			
 			float beta_1 = 1e-4f;
 			float beta_T = 0.02f;
@@ -2128,7 +2152,7 @@ public class MBSGDOptimizer extends Optimizer {
 			
 			Tensor t = new Tensor(batchSize, 1, 1, 1, true);
 			
-			RandomUtils.gaussianRandom(noiseInput);
+			RandomUtils.gaussianRandom(noiseInput, 0, 1);
 			
 			float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
 			float[] alphas = MatrixOperation.subtraction(1, betas);
@@ -2145,6 +2169,10 @@ public class MBSGDOptimizer extends Optimizer {
 			}
 			int[] t_data = new int[batchSize];
 			int[] prev_t_data = new int[batchSize];
+			
+//			Tensor tn = new Tensor(noiseInput.number, noiseInput.channel, noiseInput.height, noiseInput.width, MatrixUtils.order(noiseInput.dataLength, 0.01f, 0.01f), true); 
+//			Tensor eps = new Tensor(noiseInput.number, noiseInput.channel, noiseInput.height, noiseInput.width, MatrixUtils.order(noiseInput.dataLength, 0.01f, 0.01f), true);
+//			noiseInput.showDMByOffset(0, 96);
 			for(int timestep = ddim_timesteps - 1;timestep>=0;timestep--) {
 				for(int i = 0;i<batchSize;i++) {
 					t_data[i] = (int) ddim_timestep_seq[timestep];
@@ -2152,18 +2180,25 @@ public class MBSGDOptimizer extends Optimizer {
 				}
 				t.setData(t_data);
 				
-				Tensor eps = network.forward(noiseInput, t);
-//				eps.showDMByOffset(0, 100);
 				float[] exsa1 = MatrixUtils.gather(alphas_bar, t_data);
 				
 				float[] exsa2 = MatrixUtils.gather(alphas_bar, prev_t_data);
+
+				prev_mean_from_eps(noiseInput, t, exsa1, exsa2, 1, timestep);
 				
-				System.out.println(JsonUtils.toJson(t_data));
-				System.out.println(JsonUtils.toJson(prev_t_data));
+//				tn.hostToDevice();
+//				System.out.println(timestep+":");
+//				tn.showDM(0);
 				
-				prev_mean_from_eps(noiseInput, eps, exsa1, exsa2, 1, timestep);
+//				if(timestep == 50) {
+//					MatrixOperation.clampSelf(tn.data, -1, 1);
+//				
+//					/**
+//					 * print image
+//					 */
+//					showImgs("H:\\voc\\gan_anime\\duffsion_test\\", tn, it+"_100");
+//				}
 				
-				noiseInput.hostToDevice();
 			}
 			
 			MatrixOperation.clampSelf(noiseInput.data, -1, 1);
@@ -2171,7 +2206,7 @@ public class MBSGDOptimizer extends Optimizer {
 			/**
 			 * print image
 			 */
-			showImgs("H:\\voc\\gan_anime\\duffsion_test\\", noiseInput, it);
+			showImgs("H:\\voc\\gan_anime\\duffsion_test\\", noiseInput, it, mean, std);
 			
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -2196,13 +2231,29 @@ public class MBSGDOptimizer extends Optimizer {
 		
 	}
 	
+	public static void showImgs(String outputPath,Tensor input,String it,float[] mean,float[] std) {
+
+		ImageUtils utils = new ImageUtils();
+		
+//		if(input.isHasGPU()) {
+//			input.syncHost();
+//		}
+		
+		for(int b = 0;b<input.number;b++) {
+			float[] once = input.getByNumber(b);
+//			once = MatrixOperation.add(once, 0.5f);
+			utils.createRGBImage(outputPath + it+ "_" + b + ".png", "png", ImageUtils.color2rgb2(once, input.channel, input.height, input.width, true, mean, std), input.height, input.width, null, null);
+		}
+		
+	}
+	
 	public static void showImgs(String outputPath,Tensor input,String it) {
 
 		ImageUtils utils = new ImageUtils();
 		
-		if(input.isHasGPU()) {
-			input.syncHost();
-		}
+//		if(input.isHasGPU()) {
+//			input.syncHost();
+//		}
 		
 		for(int b = 0;b<input.number;b++) {
 			float[] once = input.getByNumber(b);
@@ -2350,8 +2401,10 @@ public class MBSGDOptimizer extends Optimizer {
 					
 					if(it > 0 && it % 200 == 0) {
 						network.RUN_MODEL = RunModel.TEST;
+						System.out.println("start create test images.");
 //						testGaussianDiffusion(i + "_" + it, 200, input, noise);
 						testGaussianDiffusion(i + "_" + it, 200);
+						System.out.println("finish create.");
 //						testGaussianDiffusion(x_t, t, T, beta_1, beta_T, testParams, trainingData.mean, trainingData.std);
 						network.RUN_MODEL = RunModel.TRAIN;
 //						this.network.learnRate = this.network.learnRate * 0.1f;

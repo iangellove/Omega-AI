@@ -269,9 +269,26 @@ public class RandomUtils {
 		return temp;
 	}
 	
+	public static float[] gaussianRandom(int x,float mean,float std){
+		float[] temp = new float[x];
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float)(getInstance().nextGaussian() * std + mean);
+		}
+		return temp;
+	}
+	
 	public static void gaussianRandom(Tensor output){
 		for(int i = 0;i<output.dataLength;i++) {
 			output.data[i] = (float)(getInstance().nextGaussian());
+		}
+		if(output.isHasGPU()) {
+			output.hostToDevice();
+		}
+	}
+	
+	public static void gaussianRandom(Tensor output,float mean,float std){
+		for(int i = 0;i<output.dataLength;i++) {
+			output.data[i] = (float)(getInstance().nextGaussian() * std + mean);
 		}
 		if(output.isHasGPU()) {
 			output.hostToDevice();

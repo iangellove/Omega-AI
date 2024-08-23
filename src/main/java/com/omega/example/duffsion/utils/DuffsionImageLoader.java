@@ -114,7 +114,7 @@ public class DuffsionImageLoader extends RecursiveAction {
 			if(!getNames()[getIndexs()[i]].contains(".")) {
 				filePath = getPath() + "/" + getNames()[getIndexs()[i]] + "." + extName;
 			}
-			float[] data = YoloImageUtils.loadImgDataToArray(filePath, true);
+			float[] data = YoloImageUtils.loadImgDataToArray(filePath, true, mean, std);
 			for(int j = 0;j < data.length;j++) {
 				data[j] = data[j] * a[i] + noise[i * data.length + j] * b[i];
 			}

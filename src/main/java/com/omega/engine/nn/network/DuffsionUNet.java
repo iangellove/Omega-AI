@@ -181,7 +181,7 @@ public class DuffsionUNet extends Network {
 		gn = new GNLayer(32, this, BNType.conv_bn);
 //		gn = new BNLayer(this, BNType.conv_bn);
 		act = new SiLULayer(gn);
-		conv = new ConvolutionLayer(now_ch, inChannel, upBlocks.get(upBlocks.size() - 1).oWidth, upBlocks.get(upBlocks.size() - 1).oHeight, 3, 3, 1, 1, false, this);
+		conv = new ConvolutionLayer(now_ch, inChannel, upBlocks.get(upBlocks.size() - 1).oWidth, upBlocks.get(upBlocks.size() - 1).oHeight, 3, 3, 1, 1, true, this);
 		
 		this.addLayer(inputLayer);
 		this.addLayer(head);
@@ -238,6 +238,8 @@ public class DuffsionUNet extends Network {
 	public Tensor forward(Tensor input,Tensor t) {
 //		System.out.println("en_time:"+en_time+",de_time:"+de_time);
 //		input.showDMByOffset(0, 500);
+//		System.err.println("input:");
+//		input.showDMByOffset(0, 96);
 		/**
 		 * 设置输入数据
 		 */
@@ -248,12 +250,14 @@ public class DuffsionUNet extends Network {
 		 */
 		temb.forward(t);
 		
+		
 		/**
 		 * head
 		 */
 		head.forward(input);
 		
 		Tensor tmp = head.getOutput();
+
 //		System.out.println("head:"+MatrixOperation.isNaN(tmp.syncHost()));
 		/**
 		 * downsampling
@@ -311,7 +315,8 @@ public class DuffsionUNet extends Network {
 		act.forward(gn.getOutput());
 		conv.forward(act.getOutput());
 //		System.err.println("------");
-//		this.conv.getOutput().showDMByOffset(0, 500);
+//		System.err.println("output:");
+//		this.conv.getOutput().showDMByOffset(0, 96);
 //		System.err.println("------");
 		return this.conv.getOutput();
 	}
