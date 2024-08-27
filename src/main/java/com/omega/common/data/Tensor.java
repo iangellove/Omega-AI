@@ -405,7 +405,7 @@ public class Tensor implements Serializable{
 	
 	public void setData(int[] data) {
 		for(int i = 0;i<data.length;i++) {
-			this.data[i] = data[i];
+			this.data[i] = data[i] * 1.0f;
 		}
 		if(isHasGPU()) {
 			this.hostToDevice();

@@ -15,7 +15,7 @@ public class AdamW extends Updater {
 
 	private AdamWKernel kernel;
 	
-	private float weight_decay = 0.0005f;
+	private float weight_decay = 0.0001f;
 	
 	public AdamW(Map<String,Float> params) {
 		this.params = params;
@@ -24,6 +24,7 @@ public class AdamW extends Updater {
 	@Override
 	public void update(Layer layer) {
 		// TODO Auto-generated method stub
+		layer.learnRate = layer.network.learnRate;
 		/**
 		 * init
 		 */
@@ -66,7 +67,7 @@ public class AdamW extends Updater {
 	@Override
 	public void updateForBN(NormalizationLayer layer) {
 		// TODO Auto-generated method stub
-		
+		layer.learnRate = layer.network.learnRate;
 //		System.out.println(layer.learnRate);
 		/**
 		 * init
@@ -101,6 +102,7 @@ public class AdamW extends Updater {
 	@Override
 	public void update(Layer layer, int batchSize) {
 		// TODO Auto-generated method stub
+		layer.learnRate = layer.network.learnRate;
 		/**
 		 * init
 		 */

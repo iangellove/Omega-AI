@@ -557,8 +557,7 @@ public class AttentionKernel extends BaseKernel{
 			
 	        /**
 	         * 设置入参
-	         * float* dpreatt, const float* datt, const float* att,
-               int B, int T, int C, float scale, int BlockSize
+	         * float* dpreatt, const float* datt, const float* att,int B, int T, float scale
 	         */ 
 			int block_size = 32;
 			softmaxBackwardParameters = Pointer.to(

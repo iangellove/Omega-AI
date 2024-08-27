@@ -304,10 +304,9 @@ public class GPUOP {
             int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
             int ldb = CUBLAS_OP_N_B == CUBLAS_OP_N ? n : k;
 //            System.out.println(lda+":"+ldb);
-            int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, one, 
-                dB, ldb, dA, lda, zero, dC, n);
+            int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, one, dB, ldb, dA, lda, zero, dC, n);
             cublasGetVector(C.length, Sizeof.FLOAT, dC, 1, Pointer.to(C), 1);
-           
+            
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -490,6 +489,96 @@ public class GPUOP {
         
         int status = JCublas2.cublasGemmStridedBatchedEx(handle, transa, transb, m, n, k, alphaP, A, cudaDataType.CUDA_R_32F,
         		lda, strideA, B, cudaDataType.CUDA_R_32F, ldb, strideB, betaP, C, cudaDataType.CUDA_R_32F, ldc, strideC,
+        		batchCount, cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        
+        checkCUBLASResult(status);
+
+    }
+    
+    /**
+     * CT = (A*B)T = BT * AT
+     * @param m
+     * @param n
+     * @param k
+     * @param alpha
+     * @param A
+     * @param B
+     * @param beta
+     * @param C
+     * @param batchCount
+     */
+    public void bmm(
+            int m, 
+            int n, 
+            int k, 
+            float alpha, /** host or device pointer */
+            Tensor A, /** purposely signed */
+            Tensor B, 
+            float beta, /** host or device pointer */
+            Tensor C, 
+            int batchCount) {
+
+        Pointer alphaP = Pointer.to(new float[]{ alpha });
+        Pointer betaP = Pointer.to(new float[]{ beta });
+        
+        int transa = CUBLAS_OP_N;
+        int transb = CUBLAS_OP_N;
+        
+        int lda = k;
+        int ldb = n;
+        int ldc = n;
+        
+        long strideA = m * k;
+        
+        long strideB = k * n;
+        
+        long strideC = m * n;
+        
+        int status = JCublas2.cublasGemmStridedBatchedEx(handle, transa, transb, n, m, k, alphaP, B.getGpuData(), cudaDataType.CUDA_R_32F,
+        		ldb, strideB, A.getGpuData(), cudaDataType.CUDA_R_32F, lda, strideA, betaP, C.getGpuData(), cudaDataType.CUDA_R_32F, ldc, strideC,
+        		batchCount, cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        
+        checkCUBLASResult(status);
+
+    }
+    
+    public void bmm(
+    		int transa,
+    		int transb,
+            int m, //A row
+            int n, //B col
+            int k, //A col and B row
+            float alpha, /** host or device pointer */
+            Tensor A, /** [m, k] */
+            Tensor B, /** [k, n] */
+            float beta, /** [m, n] */
+            Tensor C, 
+            int batchCount) {
+
+        Pointer alphaP = Pointer.to(new float[]{ alpha });
+        Pointer betaP = Pointer.to(new float[]{ beta });
+        
+        int lda = k; // transA = CUBLAS_OP_N
+        
+        if(transa == CUBLAS_OP_T) {
+        	lda = m;
+        }
+        
+        int ldb = n; // transB = CUBLAS_OP_N
+        int ldc = n; // transB = CUBLAS_OP_N
+        if(transb == CUBLAS_OP_T) {
+        	ldb = k;
+        	ldc = k;
+        }
+
+        long strideA = m * k;
+        
+        long strideB = k * n;
+        
+        long strideC = m * n;
+        
+        int status = JCublas2.cublasGemmStridedBatchedEx(handle, transb, transa, n, m, k, alphaP, B.getGpuData(), cudaDataType.CUDA_R_32F,
+        		ldb, strideB, A.getGpuData(), cudaDataType.CUDA_R_32F, lda, strideA, betaP, C.getGpuData(), cudaDataType.CUDA_R_32F, ldc, strideC,
         		batchCount, cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         
         checkCUBLASResult(status);

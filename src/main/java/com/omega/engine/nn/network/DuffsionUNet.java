@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Stack;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
@@ -20,7 +18,6 @@ import com.omega.engine.nn.layer.active.SiLULayer;
 import com.omega.engine.nn.layer.diffsion.ResidualBlockLayer;
 import com.omega.engine.nn.layer.diffsion.TimeEmbeddingLayer;
 import com.omega.engine.nn.layer.diffsion.UpSampleLayer;
-import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.updater.UpdaterType;
@@ -439,28 +436,23 @@ public class DuffsionUNet extends Network {
 	public void update() {
 		
 		this.train_time += 1;
-		
-		head.learnRate = this.learnRate;
+
+		temb.update();
+
 		head.update();
 		
 		for(Layer layer:downBlocks) {
-			layer.learnRate = this.learnRate;
 			layer.update();
 		}
-		
-		midResBlock1.learnRate = this.learnRate;
+
 		midResBlock1.update();
-		midResBlock2.learnRate = this.learnRate;
 		midResBlock2.update();
 		
 		for(Layer layer:upBlocks) {
-			layer.learnRate = this.learnRate;
 			layer.update();
 		}
 		
-		gn.learnRate = this.learnRate;
 		gn.update();
-		conv.learnRate = this.learnRate;
 		conv.update();
 		
 	}

@@ -1,7 +1,6 @@
 package com.omega.engine.nn.layer.diffsion;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.FullyLayer;

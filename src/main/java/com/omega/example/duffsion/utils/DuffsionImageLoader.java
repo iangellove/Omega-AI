@@ -118,7 +118,7 @@ public class DuffsionImageLoader extends RecursiveAction {
 			for(int j = 0;j < data.length;j++) {
 				data[j] = data[j] * a[i] + noise[i * data.length + j] * b[i];
 			}
-			System.arraycopy(data, 0, getInput().data, i * getInput().channel * getInput().height * getInput().width, getInput().channel * getInput().height * getInput().width);
+			System.arraycopy(data, 0, getInput().data, i * data.length, data.length);
 		}
 		
 	}

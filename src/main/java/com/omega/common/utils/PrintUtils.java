@@ -30,8 +30,6 @@ public class PrintUtils {
 			System.out.println("====================");
 		}
 		
-		
-		
 	}
 	
 	public static void printImage(float[] data,int number,int channel,int height,int width) {

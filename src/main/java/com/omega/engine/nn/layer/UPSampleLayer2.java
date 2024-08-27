@@ -1,61 +1,69 @@
-package com.omega.engine.nn.layer.diffsion;
+package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.nn.layer.ConvolutionLayer;
-import com.omega.engine.nn.layer.Layer;
-import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.UPSampleLayer;
-import com.omega.engine.nn.layer.UPSampleLayer2;
+import com.omega.engine.nn.layer.gpu.UpSampleKernel2;
 import com.omega.engine.nn.network.Network;
 
 /**
- * duffsion UpSampleLayer upsample + conv
+ * 上采用层
  * @author Administrator
  *
  */
-public class UpSampleLayer extends Layer{
-
-	private int kHeight = 3;
+public class UPSampleLayer2 extends Layer {
 	
-	private int kWidth = 3;
+	private int scale = 2;
 	
-	private int padding = 1;
+	private int ndim = 3;
 	
-	private int stride = 1;
+	private UpSampleKernel2 kernel;
 	
-	private ConvolutionLayer conv;
-	
-	private UPSampleLayer2 up;
-	
-	public UpSampleLayer(int channel,int oChannel,int height,int width, Network network) {
-		this.network = network;
+	public UPSampleLayer2(int channel,int height,int width,int scale) {
 		this.channel = channel;
-		this.oChannel = oChannel;
 		this.height = height;
 		this.width = width;
-		this.oHeight = (height * 2 + padding * 2 - kHeight) / stride + 1;
-		this.oWidth = (width * 2 + padding * 2 - kWidth) / stride + 1;
-		initLayers();
+		this.oChannel = channel;
+		this.scale = scale;
+		if(height > 1 && width > 1) {
+			ndim = 4;
+		}
+		this.oHeight = this.height * scale;
+		this.oWidth = this.width * scale;
 	}
 	
-	public void initLayers() {
-
-		up = new UPSampleLayer2(channel, height, width, 2, network);
-		
-		conv = new ConvolutionLayer(channel, oChannel, up.oWidth, up.oHeight, kHeight, kWidth, padding, stride, false, this.network);
-
+	public UPSampleLayer2(int channel,int height,int width,int scale,Network network) {
+		this.network = network;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.oChannel = channel;
+		this.scale = scale;
+		if(height > 1 && width > 1) {
+			ndim = 4;
+		}
+		this.oHeight = this.height * scale;
+		this.oWidth = this.width * scale;
 	}
-
+	
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
+		if(this.output == null || this.output.number != number) {
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+		}
+
+		if(kernel == null) {
+			kernel = new UpSampleKernel2(this.scale, ndim);
+		}
+		
 	}
-	
+
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		
+		if(this.diff == null || this.diff.number != number) {
+			this.diff = new Tensor(number, channel, height, width, true);
+		}
 	}
 
 	@Override
@@ -67,25 +75,19 @@ public class UpSampleLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		up.forward(this.input);
-//		System.out.println("up:"+MatrixOperation.isNaN(up.getOutput().syncHost()));
-		conv.forward(up.getOutput());
-		this.output = conv.getOutput();
+		kernel.forward(input, output);
 	}
 
 	@Override
 	public Tensor getOutput() {
 		// TODO Auto-generated method stub
-		return this.output;
+		return output;
 	}
 
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-//		System.out.println("index:["+index+"]("+oChannel+")"+this.delta);
-		conv.back(this.delta);
-		up.back(conv.diff);
-		this.diff = up.diff;
+		kernel.backward(delta, diff);
 	}
 
 	@Override
@@ -96,12 +98,10 @@ public class UpSampleLayer extends Layer{
 		 * 参数初始化
 		 */
 		this.init();
-		
 		/**
 		 * 设置输入
 		 */
 		this.setInput();
-
 		/**
 		 * 计算输出
 		 */
@@ -113,7 +113,7 @@ public class UpSampleLayer extends Layer{
 	public void back() {
 		// TODO Auto-generated method stub
 
-		initBack();
+		this.initBack();
 		/**
 		 * 设置梯度
 		 */
@@ -122,11 +122,10 @@ public class UpSampleLayer extends Layer{
 		 * 计算梯度
 		 */
 		this.diff();
-	}
-
-	@Override
-	public void backTemp() {
-		// TODO Auto-generated method stub
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
 		
 	}
 
@@ -137,12 +136,10 @@ public class UpSampleLayer extends Layer{
 		 * 参数初始化
 		 */
 		this.init();
-		
 		/**
 		 * 设置输入
 		 */
 		this.setInput(inpnut);
-
 		/**
 		 * 计算输出
 		 */
@@ -152,8 +149,7 @@ public class UpSampleLayer extends Layer{
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
-
-		initBack();
+		this.initBack();
 		/**
 		 * 设置梯度
 		 */
@@ -162,13 +158,15 @@ public class UpSampleLayer extends Layer{
 		 * 计算梯度
 		 */
 		this.diff();
-
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
 	}
-	
+
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		conv.update();
+		
 	}
 
 	@Override
@@ -180,7 +178,7 @@ public class UpSampleLayer extends Layer{
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.duffsion_upsample;
+		return LayerType.upsample;
 	}
 
 	@Override
@@ -191,6 +189,12 @@ public class UpSampleLayer extends Layer{
 
 	@Override
 	public void initCache() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void backTemp() {
 		// TODO Auto-generated method stub
 		
 	}
