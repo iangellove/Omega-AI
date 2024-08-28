@@ -14,6 +14,8 @@ import com.omega.engine.nn.layer.DropoutLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
+import com.omega.engine.nn.layer.normalization.BNType;
+import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
@@ -32,6 +34,8 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	private int height = 0;
 	
 	private boolean bias = false;
+	
+	private GNLayer gn;
 	
 	private ConvolutionLayer qLayer;
 	private ConvolutionLayer kLayer;
@@ -103,6 +107,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	}
 	
 	public void initLayers() {
+		this.gn = new GNLayer(32, network, BNType.conv_bn);
 		this.qLayer = new ConvolutionLayer(inChannel, inChannel, width, height, 1, 1, 0, 1, bias, this.network);
 //		this.qLayer.weight = new Tensor(inChannel, inChannel, 1, 1, MatrixUtils.order(inChannel * inChannel, 0.01f, 0.01f), true);
 		this.kLayer = new ConvolutionLayer(inChannel, inChannel, width, height, 1, 1, 0, 1, bias, this.network);
@@ -133,22 +138,6 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
 		this.batchSize = number;
-
-//		if(this.preatt == null || this.preatt.number != this.batchSize || this.preatt.width != this.time) {
-//			// [batch_size，time，head_num，d_k]
-//			this.qt = Tensor.createTensor(this.qt, batchSize, headNum, time, dk, true);
-//			this.kt = Tensor.createTensor(this.kt, batchSize, headNum, time, dk, true);
-//			this.vt = Tensor.createTensor(this.vt, batchSize, headNum, time, dk, true);
-//			// [batch_size，n_heads，len_q，len_k]
-//			this.preatt = Tensor.createTensor(this.preatt, batchSize, headNum, time, time, true);
-//			// [batch_size，n_heads，len_q，len_k]
-//			this.attn = Tensor.createTensor(this.attn, batchSize, headNum, time, time, true);
-//			// [batch_size, n_heads, len_q, dim_v]
-//			this.vaccum = Tensor.createTensor(this.vaccum, batchSize, headNum, time, dk, true);
-//			// [batch_size, len_q, n_heads * dim_v]
-//			this.oi = Tensor.createTensor(this.oi, batchSize, time, headNum, dk, true);
-//		}
-
 	}
 	
 	public void init(Tensor input) {
@@ -208,10 +197,13 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 //		System.out.println("in");
+//		this.input.showDM();
 		
-		this.qLayer.forward(this.input);
-		this.kLayer.forward(this.input);
-		this.vLayer.forward(this.input);
+		this.gn.forward(this.input);
+		
+		this.qLayer.forward(this.gn.getOutput());
+		this.kLayer.forward(this.gn.getOutput());
+		this.vLayer.forward(this.gn.getOutput());
 		
 		TensorOP.permute(this.qLayer.getOutput(), qt, new int[] {0, 2, 3, 1});
 		TensorOP.permute(this.vLayer.getOutput(), vt, new int[] {0, 2, 3, 1});
@@ -233,8 +225,12 @@ public class DuffsionAttentionBlockLayer extends Layer{
 			dropoutLayer2.forward(this.oLayer.getOutput());
 			tmp = dropoutLayer2.getOutput();
 		}
-		
-		TensorOP.add(tmp, input, this.output);
+//		System.err.println("tmp:");
+//		tmp.showDM();
+//		this.input.showDM();
+		TensorOP.add(tmp, this.input, this.output);
+//		System.err.println("o:");
+//		this.output.showDM();
 //		this.output.showDMByOffset(0, 100);
 	}
 	
@@ -246,7 +242,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		int n = height * width;
 		int k = inChannel;
 		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, 1, qt, key, 0, preatt, batchSize);
-
+		
 		attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, m, d_k);
 		
 		Tensor tmp = attn;
@@ -262,7 +258,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		k = width * height;
 		
 		GPUOP.getInstance().bmm(CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, 1, tmp, value, 0, vaccum, batchSize);
-
+	
 	}
 
 	public void scaledDotProductAttentionBackward(Tensor qt,Tensor key,Tensor vt) {
@@ -342,9 +338,12 @@ public class DuffsionAttentionBlockLayer extends Layer{
 
 		TensorOP.add(this.qLayer.diff, this.kLayer.diff, this.qLayer.diff);
 		TensorOP.add(this.qLayer.diff, this.vLayer.diff, this.qLayer.diff);
-		TensorOP.add(this.qLayer.diff, delta, this.qLayer.diff);
+		
+		this.gn.back(this.qLayer.diff);
+		
+		TensorOP.add(this.gn.diff, delta, this.gn.diff);
 
-		this.diff = this.qLayer.diff;
+		this.diff = this.gn.diff;
 		
 	}
 
@@ -427,6 +426,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
+		gn.update();
 		qLayer.update();
 		kLayer.update();
 		vLayer.update();

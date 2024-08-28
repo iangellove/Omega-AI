@@ -192,6 +192,7 @@ public class ConvolutionLayer extends Layer {
 		this.oChannel = this.kernelNum;
 		this.oWidth = (this.width + this.padding * 2 - kWidth) / this.stride + 1;
 		this.oHeight = (this.height + this.padding * 2 - kHeight) / this.stride + 1;
+//		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierUniform(dataLength, channel, kernelNum, 1.0f), true);
 		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaiming_uniform(dataLength, this.channel * kHeight * kWidth, this.paramsInit), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaiming_normal(dataLength, this.oChannel * this.oHeight * this.oWidth, this.paramsInit), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierReluRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth), true);
@@ -201,8 +202,8 @@ public class ConvolutionLayer extends Layer {
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.heRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.oChannel * this.kHeight * this.kWidth));
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.val(kernelNum * channel * kHeight * kWidth, 0.1f), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.order(kernelNum * channel * kHeight * kWidth, 0.1f, 0.01f), true);
-		this.bias = new Tensor(1, 1, 1, kernelNum, RandomUtils.kaimingUniformBias(kernelNum, this.channel * kHeight * kWidth), true);
-//		this.bias = new Tensor(1, 1, 1, kernelNum, true);
+//		this.bias = new Tensor(1, 1, 1, kernelNum, RandomUtils.kaimingUniformBias(kernelNum, this.channel * kHeight * kWidth), true);
+		this.bias = new Tensor(1, 1, 1, kernelNum, true);
 		if(network != null) {
 			this.diffB = this.network.createParamterGrad(1, 1, 1, kernelNum, true);
 			this.diffW = this.network.createParamterGrad(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);

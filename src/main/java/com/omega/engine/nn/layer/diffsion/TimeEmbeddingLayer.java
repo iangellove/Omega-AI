@@ -1,6 +1,7 @@
 package com.omega.engine.nn.layer.diffsion;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.layer.EmbeddingIDLayer;
@@ -47,11 +48,13 @@ public class TimeEmbeddingLayer extends Layer{
 		emb.weight = emb.createTimeEMB(T, d_model);
 		
 		linear1 = new FullyLayer(d_model, dim, false, network);
+//		linear1.weight = new Tensor(1, 1, dim, d_model, MatrixUtils.order(dim * d_model, 0.01f, 0.01f), true);
 		
 		act = new SiLULayer(linear1);
 		
 		linear2 = new FullyLayer(dim, dim, false, network);
-
+//		linear2.weight = new Tensor(1, 1, dim, dim, MatrixUtils.order(dim * dim, 0.01f, 0.01f), true);
+		
 	}
 
 	@Override
@@ -76,9 +79,13 @@ public class TimeEmbeddingLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		emb.forward(input);
+//		emb.getOutput().showDM();
 		linear1.forward(emb.getOutput());
+//		linear1.getOutput().showDM();
 		act.forward(linear1.getOutput());
+//		act.getOutput().showDM();
 		linear2.forward(act.getOutput());
+//		linear2.getOutput().showDM();
 		this.output = linear2.getOutput();
 	}
 
@@ -95,6 +102,7 @@ public class TimeEmbeddingLayer extends Layer{
 		linear2.back(delta);
 		act.back(linear2.diff);
 		linear1.back(act.diff);
+//		linear1.diff.showDM();
 //		this.diff = linear1.diff;
 	}
 
@@ -214,16 +222,16 @@ public class TimeEmbeddingLayer extends Layer{
 	  		CUDAModules.initContext();
 	  		int N = 2;
 	  		int T = 1000;
-	  		int d_model = 64;
+	  		int d_model = 4;
 	  		int dim = d_model * 4;
 	  		
 	  		float[] data = new float[] {100, 200};
 	  		
 	  		Tensor input = new Tensor(N, 1, 1, 1, data, true);
 	  		
-//	  		float[] data2 = MatrixUtils.order(N * C * H * W, 0.01f, 0.01f);
-//	  		
-//	  		Tensor delta = new Tensor(N, C, H, W, data2, true);
+	  		float[] data2 = MatrixUtils.order(N * dim, 0.01f, 0.01f);
+	  		
+	  		Tensor delta = new Tensor(N, 1, 1, dim, data2, true);
 	  		
 	  		Transformer tf = new Transformer();
 	  		
@@ -234,9 +242,10 @@ public class TimeEmbeddingLayer extends Layer{
 	  		
 	  		mal.forward(input);
 	  		
+	  		mal.getOutput().showShape();
 	  		mal.getOutput().showDM();
 	  		
-//	  		mal.back(delta);
+	  		mal.back(delta);
 //	  		
 //	  		mal.diff.showDM();
 			} catch (Exception e) {

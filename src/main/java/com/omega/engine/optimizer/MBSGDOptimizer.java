@@ -7,7 +7,6 @@ import java.util.Map;
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
 import com.omega.common.utils.ImageUtils;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
@@ -2163,10 +2162,7 @@ public class MBSGDOptimizer extends Optimizer {
 			}
 			int[] t_data = new int[batchSize];
 			int[] prev_t_data = new int[batchSize];
-			
-//			Tensor tn = new Tensor(noiseInput.number, noiseInput.channel, noiseInput.height, noiseInput.width, MatrixUtils.order(noiseInput.dataLength, 0.01f, 0.01f), true); 
-//			Tensor eps = new Tensor(noiseInput.number, noiseInput.channel, noiseInput.height, noiseInput.width, MatrixUtils.order(noiseInput.dataLength, 0.01f, 0.01f), true);
-//			noiseInput.showDMByOffset(0, 96);
+
 			for(int timestep = ddim_timesteps - 1;timestep>=0;timestep--) {
 				for(int i = 0;i<batchSize;i++) {
 					t.data[i] = ddim_timestep_seq[timestep];
@@ -2329,9 +2325,11 @@ public class MBSGDOptimizer extends Optimizer {
 //					/**
 //					 * print image
 //					 */
-					if(it > 0 && it % 201 == 0) {
-						showImgs("H:\\voc\\gan_anime\\duffsion_test_input\\", input);
-					}
+//					if(it > 0 && it % 201 == 0) {
+//						float[] mean = new float[] {0.5f, 0.5f, 0.5f};
+//						float[] std = new float[] {0.5f, 0.5f, 0.5f};
+//						showImgs("H:\\voc\\gan_anime\\duffsion_test_input\\", input, mean, std);
+//					}
 					
 					/**
 					 * forward
@@ -2378,7 +2376,7 @@ public class MBSGDOptimizer extends Optimizer {
 					
 					this.batchIndex++;
 					
-					if(it > 0 && it % 200 == 0) {
+					if(it > 0 && it % 1000 == 0) {
 						network.RUN_MODEL = RunModel.TEST;
 						System.out.println("start create test images.");
 //						testGaussianDiffusion(i + "_" + it, 200, input, noise);

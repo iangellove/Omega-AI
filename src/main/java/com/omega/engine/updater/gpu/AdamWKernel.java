@@ -28,7 +28,7 @@ public class AdamWKernel {
 	
 	private float beta1 = 0.9f;
 	
-	private float beta2 = 0.95f;
+	private float beta2 = 0.999f;
 	
 	private CUfunction function;
 	

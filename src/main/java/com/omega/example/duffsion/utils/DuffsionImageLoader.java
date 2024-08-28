@@ -61,6 +61,10 @@ public class DuffsionImageLoader extends RecursiveAction {
 			job.setStart(0);
 			job.setEnd(end);
 			job.setIndexs(indexs);
+			job.setInput(input);
+			job.setA(a);
+			job.setB(b);
+			job.setNoise(noise);
 			job.reinitialize();
 		}
 		return job;
@@ -75,9 +79,9 @@ public class DuffsionImageLoader extends RecursiveAction {
 		this.setNames(names);
 		this.setIndexs(indexs);
 		this.setInput(input);
-		this.a = a;
-		this.b = b;
-		this.noise = noise;
+		this.setA(a);
+		this.setB(b);
+		this.setNoise(noise);
 		this.normalization = normalization;
 	}
 	
@@ -93,8 +97,8 @@ public class DuffsionImageLoader extends RecursiveAction {
 		} else {
 
 			int mid = (getStart() + getEnd() + 1) >>> 1;
-			DuffsionImageLoader left = new DuffsionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), a, b, noise, normalization, getStart(), mid - 1);
-			DuffsionImageLoader right = new DuffsionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), a, b, noise, normalization, mid, getEnd());
+			DuffsionImageLoader left = new DuffsionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), getA(), getB(), getNoise(), normalization, getStart(), mid - 1);
+			DuffsionImageLoader right = new DuffsionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), getA(), getB(), getNoise(), normalization, mid, getEnd());
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -116,7 +120,7 @@ public class DuffsionImageLoader extends RecursiveAction {
 			}
 			float[] data = YoloImageUtils.loadImgDataToArray(filePath, true, mean, std);
 			for(int j = 0;j < data.length;j++) {
-				data[j] = data[j] * a[i] + noise[i * data.length + j] * b[i];
+				data[j] = data[j] * getA()[i] + getNoise()[i * data.length + j] * getB()[i];
 			}
 			System.arraycopy(data, 0, getInput().data, i * data.length, data.length);
 		}
@@ -177,6 +181,30 @@ public class DuffsionImageLoader extends RecursiveAction {
 
 	public void setInput(Tensor input) {
 		this.input = input;
+	}
+
+	public float[] getA() {
+		return a;
+	}
+
+	public void setA(float[] a) {
+		this.a = a;
+	}
+
+	public float[] getB() {
+		return b;
+	}
+
+	public void setB(float[] b) {
+		this.b = b;
+	}
+
+	public float[] getNoise() {
+		return noise;
+	}
+
+	public void setNoise(float[] noise) {
+		this.noise = noise;
 	}
 	
 }

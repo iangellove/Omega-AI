@@ -120,6 +120,8 @@ public class DuffsionUNet extends Network {
 				now_ch = out_ch;
 				chs.push(now_ch);
 				hs.push(rbl);
+				oHeight = rbl.oHeight;
+				oWidth = rbl.oWidth;
 			}
 			now_ch = out_ch;
 			if(i != channelMult.length - 1) {
@@ -162,6 +164,8 @@ public class DuffsionUNet extends Network {
 				upBlocks.add(rbl);
 				now_ch = out_ch;
 				index = index + 2;
+				oHeight = rbl.oHeight;
+				oWidth = rbl.oWidth;
 			}
 			if(i != 0) {
 				UpSampleLayer up = new UpSampleLayer(now_ch, now_ch, oHeight, oWidth, this);
@@ -247,26 +251,29 @@ public class DuffsionUNet extends Network {
 		 */
 		temb.forward(t);
 		
-		
 		/**
 		 * head
 		 */
 		head.forward(input);
 		
-		Tensor tmp = head.getOutput();
-
 //		System.out.println("head:"+MatrixOperation.isNaN(tmp.syncHost()));
 		/**
 		 * downsampling
 		 */
-		for(Layer layer:downBlocks) {
+		for(int i = 0;i<downBlocks.size();i++) {
+			Layer layer = downBlocks.get(i);
+			
 			if(layer instanceof ResidualBlockLayer) {
 				ResidualBlockLayer rbl = (ResidualBlockLayer) layer;
-				rbl.forward(tmp, temb.getOutput());
-				tmp = rbl.getOutput();
+				if(i == 0) {
+					rbl.forward(head.getOutput(), temb.getOutput());
+				}else {
+					Layer preLayer = downBlocks.get(i - 1);
+					rbl.forward(preLayer.getOutput(), temb.getOutput());
+				}
 			}else {
-				layer.forward(tmp);
-				tmp = layer.getOutput();
+				Layer preLayer = downBlocks.get(i - 1);
+				layer.forward(preLayer.getOutput());
 			}
 //			System.out.println("downsampling tmp:"+MatrixOperation.isNaN(tmp.syncHost()));
 		}
@@ -275,9 +282,8 @@ public class DuffsionUNet extends Network {
 		/**
 		 * middle
 		 */
-		midResBlock1.forward(tmp, temb.getOutput());
+		midResBlock1.forward(downBlocks.get(downBlocks.size() - 1).getOutput(), temb.getOutput());
 		midResBlock2.forward(midResBlock1.getOutput(), temb.getOutput());
-		tmp = midResBlock2.getOutput();
 //		System.out.println(MatrixOperation.isNaN(tmp.syncHost()));
 //		tmp.showDMByOffset(0, 100);
 //		temb.getOutput().showDMByOffset(0, 100);
@@ -285,20 +291,24 @@ public class DuffsionUNet extends Network {
 		 * upsampling
 		 */
 //		int i = 0;
-		for(Layer layer:upBlocks) {
+		for(int i = 0;i<upBlocks.size();i++) {
+			Layer layer = upBlocks.get(i);
 //			System.out.println(layer.getClass());
 			if(layer instanceof ResidualBlockLayer) {
 				ResidualBlockLayer rbl = (ResidualBlockLayer) layer;
-				rbl.forward(tmp, temb.getOutput());
-				tmp = rbl.getOutput();
+				if(i == 0) {
+					rbl.forward(midResBlock2.getOutput(), temb.getOutput());
+				}else {
+					Layer preLayer = upBlocks.get(i - 1);
+					rbl.forward(preLayer.getOutput(), temb.getOutput());
+				}
 //				System.err.println(i+"[tmp]:"+MatrixOperation.isNaN(tmp.syncHost()));
 			}else if(layer instanceof RouteLayer) {
 				RouteLayer rl = (RouteLayer) layer;
 				rl.forward();
-				tmp = rl.getOutput();
 			}else {
-				layer.forward(tmp);
-				tmp = layer.getOutput();
+				Layer preLayer = upBlocks.get(i - 1);
+				layer.forward(preLayer.getOutput());
 			}
 //			System.err.println(i+":"+MatrixOperation.isNaN(tmp.syncHost()));
 //			i++;
@@ -308,7 +318,7 @@ public class DuffsionUNet extends Network {
 		/**
 		 * tail
 		 */
-		gn.forward(tmp);
+		gn.forward(upBlocks.get(upBlocks.size() - 1).getOutput());
 		act.forward(gn.getOutput());
 		conv.forward(act.getOutput());
 //		System.err.println("------");
@@ -349,18 +359,20 @@ public class DuffsionUNet extends Network {
 		/**
 		 * upsampling backward
 		 */
-		Tensor tmp = gn.diff;
 //		System.err.println("back:");
 //		System.out.println(MatrixOperation.isNaN(tmp.syncHost()));
 		for(int i = upBlocks.size() - 1;i>=0;i--) {
 			Layer layer = upBlocks.get(i);
 			if(layer instanceof ResidualBlockLayer) {
 				ResidualBlockLayer rbl = (ResidualBlockLayer) layer;
-				rbl.back(tmp, d_temb);
+				if(i == upBlocks.size() - 1) {
+					rbl.back(gn.diff, d_temb);
+				}else {
+					rbl.back(upBlocks.get(i + 1).diff, d_temb);
+				}
 			}else {
-				layer.back(tmp);
+				layer.back(upBlocks.get(i + 1).diff);
 			}
-			tmp = layer.diff;
 		}
 //		System.out.println(MatrixOperation.isNaN(tmp.syncHost()));
 //		System.err.println("====upsampling tmp===");
@@ -368,9 +380,8 @@ public class DuffsionUNet extends Network {
 		/**
 		 * middle backward
 		 */
-		midResBlock2.back(tmp, d_temb);
+		midResBlock2.back(upBlocks.get(0).diff, d_temb);
 		midResBlock1.back(midResBlock2.diff, d_temb);
-		tmp = midResBlock1.diff;
 //		System.out.println(MatrixOperation.isNaN(tmp.syncHost()));
 //		System.err.println("====middle tmp===");
 //		tmp.showDMByOffset(0, 500);
@@ -381,11 +392,14 @@ public class DuffsionUNet extends Network {
 			Layer layer = downBlocks.get(i);
 			if(layer instanceof ResidualBlockLayer) {
 				ResidualBlockLayer rbl = (ResidualBlockLayer) layer;
-				rbl.back(tmp, d_temb);
+				if(i == downBlocks.size() - 1) {
+					rbl.back(midResBlock1.diff, d_temb);
+				}else {
+					rbl.back(downBlocks.get(i + 1).diff, d_temb);
+				}
 			}else {
-				layer.back(tmp);
+				layer.back(downBlocks.get(i + 1).diff);
 			}
-			tmp = layer.diff;
 		}
 //		System.err.println("====down tmp===");
 //		tmp.showDMByOffset(0, 500);
@@ -393,7 +407,7 @@ public class DuffsionUNet extends Network {
 		/**
 		 * head backward
 		 */
-		head.back(tmp);
+		head.back(downBlocks.get(0).diff);
 		
 		/**
 		 * timestep embedding backward

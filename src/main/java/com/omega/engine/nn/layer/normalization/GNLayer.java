@@ -142,7 +142,7 @@ public class GNLayer extends NormalizationLayer {
 		}
 		
 		if(this.beta == null) {
-			this.beta = new Tensor(1, 1, 1, numChannel, MatrixUtils.one(this.numChannel), true);
+			this.beta = new Tensor(1, 1, 1, numChannel, MatrixUtils.zero(this.numChannel), true);
 			this.diffBeta = new Tensor(1, 1, 1, numChannel, true);
 		}
 		
@@ -188,7 +188,7 @@ public class GNLayer extends NormalizationLayer {
 		}
 		
 		if(this.beta == null) {
-			this.beta = new Tensor(1, 1, 1, numChannel, MatrixUtils.one(this.numChannel), true);
+			this.beta = new Tensor(1, 1, 1, numChannel, MatrixUtils.zero(this.numChannel), true);
 			this.diffBeta = new Tensor(1, 1, 1, numChannel, true);
 		}
 		

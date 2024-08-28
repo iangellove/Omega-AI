@@ -464,6 +464,22 @@ public class RandomUtils {
 	 * @param x
 	 * @return
 	 */
+	public static float[] xavierUniform(int x,int fanIn,int fanOut, float gain){
+		float[] temp = new float[x];
+		double std = gain * Math.sqrt(2.0 / (fanIn + fanOut));
+		float max = (float) (Math.sqrt(3.0) * std);
+		float min = (float) -(Math.sqrt(3.0) * std);
+		for(int i = 0;i<x;i++) {
+			temp[i] = min + getInstance().nextFloat() * (max - min);
+		}
+		return temp;
+	}
+	
+	/**
+	 * xavier随机数
+	 * @param x
+	 * @return
+	 */
 	public static float[] xavierLeakyReluRandom(int x,int fanIn,int fanOut){
 		float[] temp = new float[x];
 		float t = (float) (Math.sqrt(2.0f/(fanIn+fanOut)) * Math.sqrt(2.0f / (1 + 0.01f * 0.01f)));
