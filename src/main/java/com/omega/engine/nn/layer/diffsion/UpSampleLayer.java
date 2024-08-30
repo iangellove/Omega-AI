@@ -23,7 +23,7 @@ public class UpSampleLayer extends Layer{
 	
 	private int stride = 1;
 	
-	private ConvolutionLayer conv;
+	public ConvolutionLayer conv;
 	
 	private UPSampleLayer2 up;
 	

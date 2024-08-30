@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +25,21 @@ public class LagJsonReader {
 	public static List<Map<String,String>> readJsonFileSamll(String path) {
 		
 		List<Map<String,String>> mapList = new ArrayList<Map<String,String>>(); 
+		
+		try {
+			String jsonString = new String(Files.readAllBytes(Paths.get(path)));
+			mapList = JsonUtils.gson.fromJson(jsonString, mapList.getClass());
+			return mapList;
+        } catch (IOException e) {
+           e.printStackTrace();
+        }
+    	
+	    return null;
+	}
+	
+	public static Map<String,Object> readJsonFileSmallWeight(String path) {
+		
+		Map<String,Object> mapList = new LinkedHashMap<String, Object>();
 		
 		try {
 			String jsonString = new String(Files.readAllBytes(Paths.get(path)));

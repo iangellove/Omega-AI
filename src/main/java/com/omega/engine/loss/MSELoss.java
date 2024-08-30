@@ -1,7 +1,7 @@
 package com.omega.engine.loss;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.data.Tensors;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.loss.gpu.MSELossKernel;
 
 /**
@@ -94,15 +94,37 @@ public class MSELoss extends LossFunction {
 
 	
 	public static void main(String[] args) {
-		float[] x = new float[] {0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f,0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f};
-		Tensor xt = Tensors.tensor(2, 1, 1, 9, x, true);
-		float[] label = new float[] {0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,0,0,0};
-		Tensor labelt = Tensors.tensor(2, 1, 1, 9, label, true);
-		Tensor loss = MSELoss.operation().loss(xt, labelt);
-		
-		loss.showDM();
-		Tensor diff = MSELoss.operation().diff(xt, labelt);
-		diff.showDM();
+//		float[] x = new float[] {0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f,0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f};
+//		Tensor xt = Tensors.tensor(2, 1, 1, 9, x, true);
+//		float[] label = new float[] {0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,0,0,0};
+//		Tensor labelt = Tensors.tensor(2, 1, 1, 9, label, true);
+//		Tensor loss = MSELoss.operation().loss(xt, labelt);
+//		
+//		loss.showDM();
+//		Tensor diff = MSELoss.operation().diff(xt, labelt);
+//		diff.showDM();
+		try {
+			
+			int N = 2;
+			int W = 4;
+			
+			Tensor x = new Tensor(N, 1, 1, W, MatrixUtils.order(N * W, 0.1f, 0.1f),true);
+			
+			Tensor l = new Tensor(N, 1, 1, W, MatrixUtils.order(N * W, 0.01f, 0.01f),true);
+			
+			MSELoss loss = new MSELoss();
+			
+			Tensor lv = loss.loss(x, l);
+			
+			lv.showDM();
+			
+			Tensor ld = loss.diff(x, l);
+			
+			ld.showDM();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
 
 	}
 

@@ -286,6 +286,16 @@ public class RandomUtils {
 		}
 	}
 	
+	public static void gaussianRandom(Tensor output,long seed){
+		getInstance().setSeed(seed);
+		for(int i = 0;i<output.dataLength;i++) {
+			output.data[i] = (float)(getInstance().nextGaussian());
+		}
+		if(output.isHasGPU()) {
+			output.hostToDevice();
+		}
+	}
+	
 	public static void gaussianRandom(Tensor output,float mean,float std){
 		for(int i = 0;i<output.dataLength;i++) {
 			output.data[i] = (float)(getInstance().nextGaussian() * std + mean);
@@ -504,7 +514,7 @@ public class RandomUtils {
 			gain = (float) Math.sqrt(2.0f);
 			break;
 		case leaky_relu:
-			gain = (float) Math.sqrt(2.0f / (1.0f + Math.sqrt(0.5) * Math.sqrt(0.5)));
+			gain = (float) Math.sqrt(2.0f / (1.0f + Math.sqrt(5) * Math.sqrt(5)));
 			break;
 		default:
 			gain = 1.0f;
@@ -530,6 +540,10 @@ public class RandomUtils {
 	}
 	
 	public static float[] kaiming_uniform(int x,int fan,ParamsInit paramsInit) {
+		
+		if(paramsInit == null){
+			paramsInit = ParamsInit.leaky_relu;
+		}
 		
 		float[] temp = new float[x];
 		

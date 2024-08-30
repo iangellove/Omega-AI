@@ -5,6 +5,7 @@ import java.util.concurrent.RecursiveAction;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.task.ForkJobEngine;
+import com.omega.common.utils.JsonUtils;
 import com.omega.example.yolo.utils.YoloImageUtils;
 
 /**
@@ -118,7 +119,9 @@ public class DuffsionImageLoader extends RecursiveAction {
 			if(!getNames()[getIndexs()[i]].contains(".")) {
 				filePath = getPath() + "/" + getNames()[getIndexs()[i]] + "." + extName;
 			}
+//			System.out.println(filePath);
 			float[] data = YoloImageUtils.loadImgDataToArray(filePath, true, mean, std);
+			
 			for(int j = 0;j < data.length;j++) {
 				data[j] = data[j] * getA()[i] + getNoise()[i * data.length + j] * getB()[i];
 			}

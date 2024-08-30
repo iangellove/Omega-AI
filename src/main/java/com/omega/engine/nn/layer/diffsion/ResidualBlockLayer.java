@@ -21,15 +21,15 @@ public class ResidualBlockLayer extends Layer{
 	
 	private int t_dim;
 	
-	private Layer[] block1;
+	public Layer[] block1;
 	
-	private Layer[] temb_proj;
+	public Layer[] temb_proj;
 	
-	private Layer[] block2;
+	public Layer[] block2;
 	
-	private ConvolutionLayer shortcut;
+	public ConvolutionLayer shortcut;
 	
-	private DuffsionAttentionBlockLayer attn;
+	public DuffsionAttentionBlockLayer attn;
 //	private DuffsionSelfAttentionLayer2 attn;
 	
 	private Tensor h;
@@ -115,37 +115,38 @@ public class ResidualBlockLayer extends Layer{
 		// TODO Auto-generated method stub
 //		System.err.println("x:");
 //		input.showDM();
+//		System.err.println("t:");
+//		t.showDM();
+//		System.err.println("input:");
+//		input.showDMByOffset(0, input.height * input.width);
+//		System.err.println("");
 		/**
 		 * block1
 		 */
 //		System.out.println("input:"+MatrixOperation.isNaN(input.syncHost()));
 		block1[0].forward(input);
 //		System.err.println("gn:");
-//		block1[0].getOutput().showDM();
+//		block1[0].getOutput().showDMByOffset(0, input.height * input.width);
 //		System.out.println(MatrixOperation.isNaN(block1[0].getOutput().syncHost()));
 		block1[1].forward(block1[0].getOutput());
+//		block1[1].getOutput().showDMByOffset(0, input.height * input.width);
 //		System.out.println(MatrixOperation.isNaN(block1[1].getOutput().syncHost()));
+//		input.showDMByOffset(0, input.height * input.width);
 		block1[2].forward(block1[1].getOutput());
+//		block1[2].weight.showDM();
 //		System.out.println("block1[2]:"+MatrixOperation.isNaN(block1[2].getOutput().syncHost()));
+//		block1[2].getOutput().showDMByOffset(0, input.height * input.width);
 		/**
 		 * temb_proj
 		 */
 		temb_proj[0].forward(t);
 		temb_proj[1].forward(temb_proj[0].getOutput());
 //		System.out.println(MatrixOperation.isNaN(temb_proj[1].getOutput().syncHost()));
-		
-//		block1[2].getOutput().showShape();
-//		temb_proj[1].getOutput().showShape();
-//		temb_proj[1].getOutput().showDM();
-//		block1[2].getOutput().showDM();
-		
+
 		/**
 		 * block1 + temb_proj
 		 */
 		TensorOP.add(block1[2].getOutput(), temb_proj[1].getOutput(), h, block1[2].getOutput().height * block1[2].getOutput().width);
-		
-//		System.err.println("h:");
-//		h.showDM();
 		
 		/**
 		 * block2
@@ -242,6 +243,9 @@ public class ResidualBlockLayer extends Layer{
 		 */
 		Tensor tmpDelta = delta;
 		
+//		System.err.println("bdelta:");
+//		this.delta.showDMByOffset(0, 100);
+		
 		if(hasAttn) {
 			attn.back(delta);
 			tmpDelta = attn.diff;
@@ -253,12 +257,13 @@ public class ResidualBlockLayer extends Layer{
 		block2[2].back(tmpDelta);
 		block2[1].back(block2[2].diff);
 		block2[0].back(block2[1].diff);
-		
+
+//		block2[0].diff.showShape();
+//		PrintUtils.printImage(block2[0].diff);
 		/**
 		 * temb_proj backward
 		 */
 		TensorOP.sum(block2[0].diff, dt, 2);
-//		dt.showDMByOffset(0, 10);
 		temb_proj[1].back(dt);
 		temb_proj[0].back(temb_proj[1].diff);
 		TensorOP.add(t_diff, temb_proj[0].diff, t_diff);
@@ -278,6 +283,10 @@ public class ResidualBlockLayer extends Layer{
 		TensorOP.add(block1[0].diff, tmp, block1[0].diff);
 		
 		this.diff = block1[0].diff;
+		
+//		System.err.println("bdiff:");
+//		this.diff.showDMByOffset(0, 100);
+
 	}
 
 	@Override
@@ -457,7 +466,9 @@ public class ResidualBlockLayer extends Layer{
 	  		
 	  		float[] data_d = MatrixUtils.order(N * dim, 0.01f, 0.01f);
 	  		
-	  		Tensor delta = new Tensor(N, 1, 1, dim, data_d, true);
+//	  		Tensor delta = new Tensor(N, 1, 1, dim, data_d, true);
+	  		
+	  		Tensor t_diff = new Tensor(N, 1, 1, dim, true);
 	  		
 	  		Transformer tf = new Transformer();
 	  		
@@ -478,7 +489,6 @@ public class ResidualBlockLayer extends Layer{
 	  		rbl.getOutput().showShape();
 	  		rbl.getOutput().showDM();
 	  		
-	  		mal.back(delta);
 //	  		
 //	  		mal.diff.showDM();
 	  		
@@ -486,9 +496,13 @@ public class ResidualBlockLayer extends Layer{
 	  		
 	  		Tensor delta2 = new Tensor(N, oc, H, W, data_d2, true);
 	  		
-	  		rbl.back(delta2);
+	  		rbl.back(delta2, t_diff);
 	  		
 	  		rbl.diff.showDM();
+	  		
+	  		t_diff.showDM();
+	  		
+	  		mal.back(t_diff);
 	  		
 			} catch (Exception e) {
 				// TODO: handle exception

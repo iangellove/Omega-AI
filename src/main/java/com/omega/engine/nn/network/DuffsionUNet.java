@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Stack;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
@@ -52,21 +53,21 @@ public class DuffsionUNet extends Network {
 	
 	private InputLayer inputLayer;
 	
-	private TimeEmbeddingLayer temb;
+	public TimeEmbeddingLayer temb;
 	
-	private ConvolutionLayer head;
+	public ConvolutionLayer head;
 	
-	private List<Layer> downBlocks = new ArrayList<Layer>();
+	public List<Layer> downBlocks = new ArrayList<Layer>();
 	
-	private ResidualBlockLayer midResBlock1;
-	private ResidualBlockLayer midResBlock2;
+	public ResidualBlockLayer midResBlock1;
+	public ResidualBlockLayer midResBlock2;
 	
-	private List<Layer> upBlocks = new ArrayList<Layer>();
+	public List<Layer> upBlocks = new ArrayList<Layer>();
 	
-	private GNLayer gn;
+	public GNLayer gn;
 //	private BNLayer gn;
 	private SiLULayer act;
-	private ConvolutionLayer conv;
+	public ConvolutionLayer conv;
 	
 	public int width;
 	
@@ -95,7 +96,7 @@ public class DuffsionUNet extends Network {
 		
 		temb = new TimeEmbeddingLayer(T, mChannel, tdim, this);
 		
-		head = new ConvolutionLayer(inChannel, mChannel, width, height, 3, 3, 1, 1, false, this);
+		head = new ConvolutionLayer(inChannel, mChannel, width, height, 3, 3, 1, 1, true, this);
 		
 		chs.push(mChannel);
 		
@@ -182,7 +183,7 @@ public class DuffsionUNet extends Network {
 		gn = new GNLayer(32, this, BNType.conv_bn);
 //		gn = new BNLayer(this, BNType.conv_bn);
 		act = new SiLULayer(gn);
-		conv = new ConvolutionLayer(now_ch, inChannel, upBlocks.get(upBlocks.size() - 1).oWidth, upBlocks.get(upBlocks.size() - 1).oHeight, 3, 3, 1, 1, true, this);
+		conv = new ConvolutionLayer(now_ch, inChannel, upBlocks.get(upBlocks.size() - 1).oWidth, upBlocks.get(upBlocks.size() - 1).oHeight, 3, 3, 1, 1, false, this);
 		
 		this.addLayer(inputLayer);
 		this.addLayer(head);
@@ -256,6 +257,8 @@ public class DuffsionUNet extends Network {
 		 */
 		head.forward(input);
 		
+//		head.getOutput().showDM();
+		
 //		System.out.println("head:"+MatrixOperation.isNaN(tmp.syncHost()));
 		/**
 		 * downsampling
@@ -275,10 +278,13 @@ public class DuffsionUNet extends Network {
 				Layer preLayer = downBlocks.get(i - 1);
 				layer.forward(preLayer.getOutput());
 			}
+//			layer.getOutput().showDMByOffset(0, layer.getOutput().height * layer.getOutput().width);;
 //			System.out.println("downsampling tmp:"+MatrixOperation.isNaN(tmp.syncHost()));
 		}
+		
 //		System.out.println(MatrixOperation.isNaN(tmp.syncHost()));
 //		System.out.println("downsampling:"+MatrixOperation.isNaN(tmp.syncHost()));
+		
 		/**
 		 * middle
 		 */
@@ -321,9 +327,10 @@ public class DuffsionUNet extends Network {
 		gn.forward(upBlocks.get(upBlocks.size() - 1).getOutput());
 		act.forward(gn.getOutput());
 		conv.forward(act.getOutput());
-//		System.err.println("------");
+//		System.err.println("---input---");
+//		input.showDMByOffset(0, 1);
 //		System.err.println("output:");
-//		this.conv.getOutput().showDMByOffset(0, 96);
+//		this.conv.getOutput().showDMByOffset(0, 1);
 //		System.err.println("------");
 		return this.conv.getOutput();
 	}
@@ -346,16 +353,18 @@ public class DuffsionUNet extends Network {
 		 * 将误差值输入到最后一层
 		 */
 		this.setLossDiff(lossDiff);
+//		System.out.println(MatrixOperation.isNaN(lossDiff.syncHost()));
 //		System.err.println("lossDiff:");
 //		lossDiff.showDMByOffset(0, 96*96);
 		/**
 		 * tail backward
 		 */
 		conv.back(lossDiff);
+//		conv.diff.showDMByOffset(0, 96 * 96);
 		act.back(conv.diff);
 //		act.diff.showDMByOffset(0, 500);
 		gn.back(act.diff);
-//		gn.diff.showDMByOffset(0, 500);
+//		gn.diff.showDMByOffset(0, 96 * 96);
 		/**
 		 * upsampling backward
 		 */
@@ -374,6 +383,7 @@ public class DuffsionUNet extends Network {
 				layer.back(upBlocks.get(i + 1).diff);
 			}
 		}
+		
 //		System.out.println(MatrixOperation.isNaN(tmp.syncHost()));
 //		System.err.println("====upsampling tmp===");
 //		tmp.showDMByOffset(0, 500);
@@ -381,10 +391,14 @@ public class DuffsionUNet extends Network {
 		 * middle backward
 		 */
 		midResBlock2.back(upBlocks.get(0).diff, d_temb);
+//		System.err.println("mh1:");
+//		midResBlock2.diff.showDMByOffset(0, 100);
 		midResBlock1.back(midResBlock2.diff, d_temb);
 //		System.out.println(MatrixOperation.isNaN(tmp.syncHost()));
 //		System.err.println("====middle tmp===");
 //		tmp.showDMByOffset(0, 500);
+//		System.err.println("mh2:");
+//		midResBlock1.diff.showDMByOffset(0, 100);
 		/**
 		 * downsampling backward
 		 */
@@ -407,11 +421,13 @@ public class DuffsionUNet extends Network {
 		/**
 		 * head backward
 		 */
+//		downBlocks.get(0).diff.showDMByOffset(0, 96 * 96);
 		head.back(downBlocks.get(0).diff);
 		
 		/**
 		 * timestep embedding backward
 		 */
+//		d_temb.showDM();
 		temb.back(d_temb);
 //		d_temb.showDMByOffset(0, 500);
 		d_temb.clearGPU();

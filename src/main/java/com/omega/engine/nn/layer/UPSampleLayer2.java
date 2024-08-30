@@ -23,7 +23,7 @@ public class UPSampleLayer2 extends Layer {
 		this.width = width;
 		this.oChannel = channel;
 		this.scale = scale;
-		if(height > 1 && width > 1) {
+		if(width > 1 && height > 1) {
 			ndim = 4;
 		}
 		this.oHeight = this.height * scale;
@@ -37,7 +37,7 @@ public class UPSampleLayer2 extends Layer {
 		this.width = width;
 		this.oChannel = channel;
 		this.scale = scale;
-		if(height > 1 && width > 1) {
+		if(width > 1 && height > 1) {
 			ndim = 4;
 		}
 		this.oHeight = this.height * scale;

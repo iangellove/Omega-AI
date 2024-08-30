@@ -170,7 +170,7 @@ public class BaseKernel {
 	}
 	
 	public void axpy_gpu(Tensor a,Tensor b,int N, float ALPHA,int INCX, int INCY) {
-		axpy_gpu(a, b, INCY, ALPHA, 0, INCX, 0, INCY);
+		axpy_gpu(a, b, N, ALPHA, 0, INCX, 0, INCY);
 	}
 	
 	public void axpy_gpu(Tensor a,Tensor b,int N, float ALPHA, int OFFX, int INCX, int OFFY, int INCY) {

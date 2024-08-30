@@ -116,6 +116,7 @@ public class RouteLayer extends Layer{
 				kernel.axpy_gpu(this.delta, delta, part_input_size, 1, offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize() + part_input_size * groupId, 1);
 //				kernel.copy_gpu(this.delta, delta, delta.getOnceSize(), offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize(), 1);
 			}
+
 			offset += part_input_size;
 		}
 	}

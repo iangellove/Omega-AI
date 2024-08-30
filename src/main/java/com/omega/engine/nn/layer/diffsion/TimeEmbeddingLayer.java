@@ -25,10 +25,10 @@ public class TimeEmbeddingLayer extends Layer{
 	
 	private int dim;
 	
-	private EmbeddingIDLayer emb;
-	private FullyLayer linear1;
+	public EmbeddingIDLayer emb;
+	public FullyLayer linear1;
 	private SiLULayer act;
-	private FullyLayer linear2;
+	public FullyLayer linear2;
 	
 	public TimeEmbeddingLayer(int T,int d_model,int dim, Network network) {
 		this.network = network;
@@ -99,6 +99,7 @@ public class TimeEmbeddingLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 //		System.out.println("index:["+index+"]("+oChannel+")"+this.delta);
+//		delta.showDM();
 		linear2.back(delta);
 		act.back(linear2.diff);
 		linear1.back(act.diff);
@@ -217,7 +218,6 @@ public class TimeEmbeddingLayer extends Layer{
 	public static void main(String[] args) {
     	
 	   	  try {
-
 
 	  		CUDAModules.initContext();
 	  		int N = 2;

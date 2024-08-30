@@ -42,6 +42,36 @@ public class MathUtils {
 	 * @param length
 	 * @return
 	 */
+	public static int[][] orderInts(int length,int batchSize) {
+
+		int itc = new BigDecimal(length).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();
+		
+		int[][] tmp = new int[itc][batchSize];
+		
+		List<Integer> list = new ArrayList<Integer>(); 
+		
+		for(int i = 0;i<length;i++) {
+			list.add(i);
+		}
+		
+		for(int i = 0;i<tmp.length;i++) {
+			for(int j = 0;j<tmp[i].length;j++) {
+				if(i * batchSize + j >= length) {
+					tmp[i][j] = list.get(0 * batchSize + j);
+				}else {
+					tmp[i][j] = list.get(i * batchSize + j);
+				}
+			}
+		}
+		
+		return tmp;
+	}
+	
+	/**
+	 * 生成随机数组
+	 * @param length
+	 * @return
+	 */
 	public static int[][] randomInts(int length,int batchSize) {
 
 		int itc = new BigDecimal(length).divide(new BigDecimal(batchSize), 0, BigDecimal.ROUND_UP).intValue();

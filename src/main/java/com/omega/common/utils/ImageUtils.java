@@ -1199,10 +1199,14 @@ public class ImageUtils {
 					int g = (int) data[ocount + index];
 					int b = (int) data[ocount * 2 + index];
 					if(format) {
-						r = (int) ((data[index] * std[0] + mean[0]) * 255);
-						g = (int) ((data[ocount + index] * std[0] + mean[0]) * 255);
-						b = (int) ((data[ocount * 2 + index] * std[0] + mean[0]) * 255);
+						r = (int) ((data[index] * std[0] + mean[0]) * 255 + 0.5f);
+						g = (int) ((data[ocount + index] * std[0] + mean[0]) * 255 + 0.5f);
+						b = (int) ((data[ocount * 2 + index] * std[0] + mean[0]) * 255 + 0.5f);
 					}
+					
+					r = clamp(0, 255, r);
+					g = clamp(0, 255, g);
+					b = clamp(0, 255, b);
 					
 					int orgb = colorToRGB(255, r, g, b);
 					
@@ -1219,11 +1223,13 @@ public class ImageUtils {
 					int g = (int) data[index];
 					int b = (int) data[index];
 					if(format) {
-						r = (int) ((data[index] * std[0] + mean[0]) * 255);
-						g = (int) ((data[index] * std[0] + mean[0]) * 255);
-						b = (int) ((data[index] * std[0] + mean[0]) * 255);
+						r = (int) ((data[index] * std[0] + mean[0]) * 255 + 0.5f);
+						g = (int) ((data[index] * std[0] + mean[0]) * 255 + 0.5f);
+						b = (int) ((data[index] * std[0] + mean[0]) * 255 + 0.5f);
 					}
-					
+					r = clamp(0, 255, r);
+					g = clamp(0, 255, g);
+					b = clamp(0, 255, b);
 					int orgb = colorToRGB(255, r, g, b);
 					
 					rgb[i][j] = orgb;
@@ -1233,6 +1239,15 @@ public class ImageUtils {
 		}
 		
 		return rgb;
+	}
+	
+	public static int clamp(int min,int max,int x) {
+		if(x < min) {
+			x = min;
+		}else if(x > max) {
+			x = max;
+		}
+		return x;
 	}
 	
 	public static int[][] color2rgb(int[] data,int width,int height){

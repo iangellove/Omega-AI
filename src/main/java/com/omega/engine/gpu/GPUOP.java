@@ -762,6 +762,32 @@ public class GPUOP {
     	
     }
     
+    public void cudaNormRandom(Tensor x,float mean,float std) {
+    	
+    	try {
+    		checkCURANDResult(JCurand.curandSetPseudoRandomGeneratorSeed(getGenerator(), RandomUtils.rand()));
+    		checkCURANDResult(JCurand.curandGenerateNormal(generator, x.getGpuData(), x.getDataLength(), mean, std));
+//    		System.out.println("in");
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+    
+    public void cudaNormRandom(Tensor x,float mean,float std,long seed) {
+    	
+    	try {
+    		checkCURANDResult(JCurand.curandSetPseudoRandomGeneratorSeed(getGenerator(), seed));
+    		checkCURANDResult(JCurand.curandGenerateNormal(generator, x.getGpuData(), x.getDataLength(), mean, std));
+//    		System.out.println("in");
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+    
     public void free(Pointer p) {
     	cudaFree(p);
     }

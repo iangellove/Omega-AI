@@ -35,12 +35,12 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	
 	private boolean bias = false;
 	
-	private GNLayer gn;
+	public GNLayer gn;
 	
-	private ConvolutionLayer qLayer;
-	private ConvolutionLayer kLayer;
-	private ConvolutionLayer vLayer;
-	private ConvolutionLayer oLayer;
+	public ConvolutionLayer qLayer;
+	public ConvolutionLayer kLayer;
+	public ConvolutionLayer vLayer;
+	public ConvolutionLayer oLayer;
  
 	private DropoutLayer dropoutLayer;
 	

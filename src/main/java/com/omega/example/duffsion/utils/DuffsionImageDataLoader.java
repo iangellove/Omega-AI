@@ -4,6 +4,7 @@ import java.io.File;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MathUtils;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.example.unet.utils.SegImageLoader;
 import com.omega.example.yolo.data.BaseDataLoader;
@@ -75,6 +76,11 @@ public class DuffsionImageDataLoader extends BaseDataLoader{
 		return MathUtils.randomInts(this.number,this.batchSize);
 	}
 	
+	public int[][] order() {
+		// TODO Auto-generated method stub
+		return MathUtils.orderInts(this.number,this.batchSize);
+	}
+	
 	@Override
 	public void loadData(int pageIndex, int batchSize, Tensor input, Tensor label) {
 		// TODO Auto-generated method stub
@@ -130,7 +136,8 @@ public class DuffsionImageDataLoader extends BaseDataLoader{
 	
 	public void loadData(int[] indexs,float[] a,float[] b, Tensor input, Tensor noise) {
 		// TODO Auto-generated method stub
-		RandomUtils.gaussianRandom(noise, 0, 1);
+		RandomUtils.gaussianRandom(noise);
+//		noise.setData(MatrixUtils.order(noise.dataLength, 0.001f, 0.001f));
 		
 		/**
 		 * 加载input数据

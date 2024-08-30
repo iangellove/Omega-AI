@@ -2359,7 +2359,7 @@ public class MatrixOperation {
 		return temp;
 	}
 	
-	public static void clampSelf(float[] x,float min,float max) {
+	public static float[] clampSelf(float[] x,float min,float max) {
 		for(int i = 0;i<x.length;i++) {
 			float val = x[i];
 			if(val < min) {
@@ -2370,6 +2370,7 @@ public class MatrixOperation {
 				x[i] = val;
 			}
 		}
+		return x;
 	}
 	
 	/**
