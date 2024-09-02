@@ -19,6 +19,8 @@ import com.omega.engine.nn.network.Transformer;
  */
 public class TimeEmbeddingLayer extends Layer{
 	
+	private boolean bias = true;
+	
 	private int T;
 	
 	private int d_model;
@@ -27,11 +29,12 @@ public class TimeEmbeddingLayer extends Layer{
 	
 	public EmbeddingIDLayer emb;
 	public FullyLayer linear1;
-	private SiLULayer act;
+	public SiLULayer act;
 	public FullyLayer linear2;
 	
-	public TimeEmbeddingLayer(int T,int d_model,int dim, Network network) {
+	public TimeEmbeddingLayer(int T,int d_model,int dim,boolean bias, Network network) {
 		this.network = network;
+		this.bias = bias;
 		this.T = T;
 		this.d_model = d_model;
 		this.dim = dim;
@@ -47,12 +50,12 @@ public class TimeEmbeddingLayer extends Layer{
 		emb = new EmbeddingIDLayer(T, d_model, true, network);
 		emb.weight = emb.createTimeEMB(T, d_model);
 		
-		linear1 = new FullyLayer(d_model, dim, false, network);
+		linear1 = new FullyLayer(d_model, dim, bias, network);
 //		linear1.weight = new Tensor(1, 1, dim, d_model, MatrixUtils.order(dim * d_model, 0.01f, 0.01f), true);
 		
 		act = new SiLULayer(linear1);
 		
-		linear2 = new FullyLayer(dim, dim, false, network);
+		linear2 = new FullyLayer(dim, dim, bias, network);
 //		linear2.weight = new Tensor(1, 1, dim, dim, MatrixUtils.order(dim * dim, 0.01f, 0.01f), true);
 		
 	}
@@ -99,7 +102,6 @@ public class TimeEmbeddingLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 //		System.out.println("index:["+index+"]("+oChannel+")"+this.delta);
-//		delta.showDM();
 		linear2.back(delta);
 		act.back(linear2.diff);
 		linear1.back(act.diff);
@@ -219,6 +221,7 @@ public class TimeEmbeddingLayer extends Layer{
     	
 	   	  try {
 
+
 	  		CUDAModules.initContext();
 	  		int N = 2;
 	  		int T = 1000;
@@ -238,7 +241,7 @@ public class TimeEmbeddingLayer extends Layer{
 	  		tf.CUDNN = true;
 	  		tf.number = 2;
 	  		
-	  		TimeEmbeddingLayer mal = new TimeEmbeddingLayer(T, d_model, dim, tf);
+	  		TimeEmbeddingLayer mal = new TimeEmbeddingLayer(T, d_model, dim, false, tf);
 	  		
 	  		mal.forward(input);
 	  		

@@ -107,7 +107,9 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	}
 	
 	public void initLayers() {
+		
 		this.gn = new GNLayer(32, network, BNType.conv_bn);
+		
 		this.qLayer = new ConvolutionLayer(inChannel, inChannel, width, height, 1, 1, 0, 1, bias, this.network);
 //		this.qLayer.weight = new Tensor(inChannel, inChannel, 1, 1, MatrixUtils.order(inChannel * inChannel, 0.01f, 0.01f), true);
 		this.kLayer = new ConvolutionLayer(inChannel, inChannel, width, height, 1, 1, 0, 1, bias, this.network);
@@ -164,6 +166,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		}else {
 			this.qt.viewOrg();
 			this.vt.viewOrg();
+			this.oi.viewOrg();
 			this.qLayer.getOutput().viewOrg();
 			this.kLayer.getOutput().viewOrg();
 			this.vLayer.getOutput().viewOrg();

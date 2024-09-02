@@ -2366,8 +2366,6 @@ public class MatrixOperation {
 				x[i] = min;
 			}else if(val > max) {
 				x[i] = max;
-			}else {
-				x[i] = val;
 			}
 		}
 		return x;

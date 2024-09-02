@@ -16,28 +16,6 @@ public class MathUtils {
 	public static Random random;
 	
 	/**
-	 * 生成随机数
-	 * @param length
-	 * @return
-	 */
-	public static Integer[] randomInts(int length) {
-		
-		Integer[] tmp = new Integer[length];
-		
-		List<Integer> list = new ArrayList<Integer>();  
-		
-		for(int i = 0;i<length;i++) {
-			list.add(i);
-		}
-		
-		Collections.shuffle(list);
-		
-		tmp = list.toArray(tmp);
-		
-		return tmp;
-	}
-	
-	/**
 	 * 生成随机数组
 	 * @param length
 	 * @return
@@ -63,6 +41,28 @@ public class MathUtils {
 				}
 			}
 		}
+		
+		return tmp;
+	}
+	
+	/**
+	 * 生成随机数
+	 * @param length
+	 * @return
+	 */
+	public static Integer[] randomInts(int length) {
+		
+		Integer[] tmp = new Integer[length];
+		
+		List<Integer> list = new ArrayList<Integer>();  
+		
+		for(int i = 0;i<length;i++) {
+			list.add(i);
+		}
+		
+		Collections.shuffle(list);
+		
+		tmp = list.toArray(tmp);
 		
 		return tmp;
 	}

@@ -121,11 +121,11 @@ public class DuffsionSelfAttentionLayer2 extends Layer{
 
 		this.qkvLinerLayer = new FullyLayer(embedDim, 3 * embedDim, bias, this.network);
 //		NanoGPT net = (NanoGPT) this.network;
-		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, RandomUtils.uniform(this.embedDim * 3 * this.embedDim, 0.0f, 0.02f), true);
+//		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, RandomUtils.uniform(this.embedDim * 3 * this.embedDim, 0.0f, 0.02f), true);
 //		this.qkvLinerLayer.weight = new Tensor(1, 1, embedDim, 3 * embedDim, RandomUtils.order(this.embedDim * 3 * this.embedDim, 0.01f, 0.01f), true);
 
 		this.oLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+//		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
 
 		if(this.dropout) {
 			this.dropoutLayer = new DropoutLayer(0.1f, this.network);

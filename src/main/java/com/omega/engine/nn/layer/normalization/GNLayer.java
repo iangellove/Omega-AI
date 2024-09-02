@@ -34,6 +34,7 @@ public class GNLayer extends NormalizationLayer {
 	 * else if prelayer is fully layer meanNum = batchSize * channel
 	 * mean dims = W
 	 */
+	private int meanNum = 0;
 	
 	private int groupNum = 1;
 	
@@ -82,13 +83,6 @@ public class GNLayer extends NormalizationLayer {
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
-	public GNLayer(int groupNum,Layer preLaye,BNType bnType) {
-		this.setPreLayer(preLayer);
-		this.bnType = bnType;
-		this.groupNum = groupNum;
-		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
-	}
-	
 	public GNLayer(int groupNum,Network network,boolean hasBias) {
 		this.network = network;
 		this.hasBias = false;
@@ -115,19 +109,24 @@ public class GNLayer extends NormalizationLayer {
 				this.oWidth = this.width;
 				if(this.preLayer.getLayerType() == LayerType.conv) {
 					this.setBnType(BNType.conv_bn);
+					this.meanNum = this.height * this.width;
 					this.numChannel = this.channel;
 				}else if(this.preLayer.getLayerType() == LayerType.full){
 					this.setBnType(BNType.fully_bn);
+					this.meanNum = this.channel * this.height * this.width;
 					this.numChannel = this.height * this.width;
 				}else if(this.preLayer.getLayerType() == LayerType.conv_transpose) {
 					this.setBnType(BNType.conv_bn);
+					this.meanNum = this.height * this.width;
 					this.numChannel = this.channel;
 				}else {
 					this.setBnType(BNType.fully_bn);
+					this.meanNum = this.channel * this.height * this.width;
 					this.numChannel = this.height * this.width;
 				}
 			}else {
 				this.setBnType(BNType.fully_bn);
+				this.meanNum = this.channel * this.height * this.width;
 				this.numChannel = this.height * this.width;
 			}
 			
@@ -163,6 +162,7 @@ public class GNLayer extends NormalizationLayer {
 			this.oHeight = this.height;
 			this.oWidth = this.width;
 			this.setBnType(BNType.fully_bn);
+			this.meanNum = this.channel * this.height * this.width;
 			this.numChannel = this.height * this.width;
 		}else {
 			this.channel = input.channel;
@@ -172,6 +172,7 @@ public class GNLayer extends NormalizationLayer {
 			this.oHeight = this.height;
 			this.oWidth = this.width;
 			this.setBnType(BNType.conv_bn);
+			this.meanNum = this.height * this.width;
 			this.numChannel = this.channel;
 		}
 
@@ -218,8 +219,6 @@ public class GNLayer extends NormalizationLayer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-//		gamma.showDM();
-//		beta.showDM();
 		kernel.forward(gamma, beta, input, output);
 //		System.out.println("bn-output:");
 //		output.showDM();

@@ -6,14 +6,11 @@ import java.io.RandomAccessFile;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.FullyKernel;
 import com.omega.engine.nn.network.Network;
-import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.engine.updater.UpdaterFactory;
-import com.omega.engine.updater.UpdaterType;
 
 import jcuda.Sizeof;
 import jcuda.jcublas.cublasOperation;
@@ -304,7 +301,7 @@ public class FullyLayer extends Layer{
 	
 	public void diff(Tensor diff) {
 		// TODO Auto-generated method stub
-
+		
 		/**
 		 * deltaW = inputT * delta
 		 * int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta
@@ -313,7 +310,7 @@ public class FullyLayer extends Layer{
 		 * m = w,k = number,n = ow
 		 */
 		GPUOP.getInstance().multiplyFloatEX(cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, this.oWidth, this.width, this.number, 1,
-				input.getGpuData(), this.oWidth, delta.getGpuData(), this.width, 0, diffW.getGpuData(), this.width);
+				delta.getGpuData(), this.oWidth, input.getGpuData(), this.width, 0, diffW.getGpuData(), this.width);
 //		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, input.getGpuData(), delta.getGpuData(), diffW.getGpuData(),
 //				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 
@@ -556,7 +553,6 @@ public class FullyLayer extends Layer{
 			if(this.updater != null){
 				this.updater.update(this);
 			}else{
-				System.out.println("in");
 				for(int i = 0;i<this.weight.getDataLength();i++) {
 					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
 				}
@@ -819,59 +815,6 @@ public class FullyLayer extends Layer{
 		if(hasBias) {
 			ModelUtils.loadParams(inputStream, bias);
 		}
-		
-	}
-	
-	public static void main(String[] args) {
-		
-		CUDAModules.initContext();
-		
-		int N = 2;
-		int W = 4;
-		int OW = 8;
-		
-		float[] data = MatrixUtils.order(N * W, 0.1f, 0.1f);
-		
-		Tensor input = new Tensor(N, 1, 1, W, data, true);
-		
-		float[] data2 = MatrixUtils.order(N * OW, 0.01f, 0.01f);
-		
-		Tensor delta = new Tensor(N, 1, 1, OW, data2, true);
-		
-		Transformer tf = new Transformer();
-		tf.learnRate = 1e-4f;
-		tf.CUDNN = true;
-		tf.number = N;
-		tf.train_time = 1;
-		
-		FullyLayer fully = new FullyLayer(W, OW, false, tf);
-		fully.weight = new Tensor(1, 1, OW, W, MatrixUtils.order(fully.weight.dataLength, 0.01f, 0.01f), true);
-		
-		fully.setUpdater(UpdaterFactory.create(UpdaterType.adamw, null));
-		
-		fully.forward(input);
-		
-		fully.getOutput().showDM();
-		
-//		PrintUtils.printImage(mal.getOutput());
-		
-		fully.back(delta);
-		
-		fully.diff.showDM();
-		
-		fully.diffW.showDM();
-		
-		fully.weight.showDM();
-		
-		fully.update();
-		
-		fully.weight.showDM();
-		
-		tf.train_time = 2;
-		
-		fully.update();
-		
-		fully.weight.showDM();
 		
 	}
 	

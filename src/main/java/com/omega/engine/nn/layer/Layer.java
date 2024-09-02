@@ -203,13 +203,7 @@ public abstract class Layer {
 				this.delta = this.cache_delta;
 			}else if(this.cache_delta != this.delta){
 //				System.out.println("in===>add:"+this.getLayerType()+"["+index+"]");
-//				System.err.println("before-delta:");
-//				this.delta.showDMByOffset(0, 100);
-//				System.err.println("cache_delta:");
-//				this.cache_delta.showDMByOffset(0, 100);
 				BaseGPUOP.getKernel().axpy_gpu(this.cache_delta, this.delta, this.delta.getDataLength(), 1, 1, 1);
-//				System.err.println("after-delta:");
-//				this.delta.showDMByOffset(0, 100);
 			}
 //			this.cache_delta.clearGPU();
 		}

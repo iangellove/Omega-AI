@@ -1204,9 +1204,9 @@ public class ImageUtils {
 						b = (int) ((data[ocount * 2 + index] * std[0] + mean[0]) * 255 + 0.5f);
 					}
 					
-					r = clamp(0, 255, r);
-					g = clamp(0, 255, g);
-					b = clamp(0, 255, b);
+					r = clamp(r, 0, 255);
+					g = clamp(g, 0, 255);
+					b = clamp(b, 0, 255);
 					
 					int orgb = colorToRGB(255, r, g, b);
 					
@@ -1227,9 +1227,9 @@ public class ImageUtils {
 						g = (int) ((data[index] * std[0] + mean[0]) * 255 + 0.5f);
 						b = (int) ((data[index] * std[0] + mean[0]) * 255 + 0.5f);
 					}
-					r = clamp(0, 255, r);
-					g = clamp(0, 255, g);
-					b = clamp(0, 255, b);
+					r = clamp(r, 0, 255);
+					g = clamp(g, 0, 255);
+					b = clamp(b, 0, 255);
 					int orgb = colorToRGB(255, r, g, b);
 					
 					rgb[i][j] = orgb;
@@ -1241,11 +1241,11 @@ public class ImageUtils {
 		return rgb;
 	}
 	
-	public static int clamp(int min,int max,int x) {
-		if(x < min) {
-			x = min;
-		}else if(x > max) {
+	public static int clamp(int x,int min,int max) {
+		if(x > max) {
 			x = max;
+		}else if(x < min) {
+			x = min;
 		}
 		return x;
 	}

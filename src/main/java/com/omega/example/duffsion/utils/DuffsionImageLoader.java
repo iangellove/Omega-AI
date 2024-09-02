@@ -6,7 +6,6 @@ import java.util.concurrent.RecursiveAction;
 import com.omega.common.data.Tensor;
 import com.omega.common.data.utils.DataTransforms;
 import com.omega.common.task.ForkJobEngine;
-import com.omega.common.utils.JsonUtils;
 import com.omega.example.yolo.utils.YoloImageUtils;
 
 /**
@@ -39,9 +38,9 @@ public class DuffsionImageLoader extends RecursiveAction {
 	
 	private static DuffsionImageLoader job;
 	
-	private boolean hf = false;
-	
 	private boolean normalization = false;
+	
+	private boolean horizontalFilp = false;
 	
 	private float[] a;
 	
@@ -53,9 +52,9 @@ public class DuffsionImageLoader extends RecursiveAction {
 	
 	private float[] std = new float[] {0.5f, 0.5f, 0.5f};
 	
-	public static DuffsionImageLoader getInstance(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean hf,int start,int end) {
+	public static DuffsionImageLoader getInstance(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean horizontalFilp,int start,int end) {
 		if(job == null) {
-			job = new DuffsionImageLoader(path, extName, names, indexs, batchSize, input, a, b, noise, normalization, hf, start, end);
+			job = new DuffsionImageLoader(path, extName, names, indexs, batchSize, input, a, b, noise, normalization, horizontalFilp, start, end);
 		}else {
 			if(input != job.getInput()){
 				job.setInput(input);
@@ -66,6 +65,7 @@ public class DuffsionImageLoader extends RecursiveAction {
 			job.setEnd(end);
 			job.setIndexs(indexs);
 			job.setInput(input);
+			job.setHorizontalFilp(horizontalFilp);
 			job.setA(a);
 			job.setB(b);
 			job.setNoise(noise);
@@ -74,7 +74,7 @@ public class DuffsionImageLoader extends RecursiveAction {
 		return job;
 	}
 	
-	public DuffsionImageLoader(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean hf,int start,int end) {
+	public DuffsionImageLoader(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean horizontalFilp,int start,int end) {
 		this.setStart(start);
 		this.setEnd(end);
 		this.batchSize = batchSize;
@@ -86,7 +86,7 @@ public class DuffsionImageLoader extends RecursiveAction {
 		this.setA(a);
 		this.setB(b);
 		this.setNoise(noise);
-		this.hf = hf;
+		this.horizontalFilp = horizontalFilp;
 		this.normalization = normalization;
 	}
 	
@@ -102,8 +102,8 @@ public class DuffsionImageLoader extends RecursiveAction {
 		} else {
 
 			int mid = (getStart() + getEnd() + 1) >>> 1;
-			DuffsionImageLoader left = new DuffsionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), getA(), getB(), getNoise(), normalization, hf, getStart(), mid - 1);
-			DuffsionImageLoader right = new DuffsionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), getA(), getB(), getNoise(), normalization, hf, mid, getEnd());
+			DuffsionImageLoader left = new DuffsionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), getA(), getB(), getNoise(), normalization, horizontalFilp, getStart(), mid - 1);
+			DuffsionImageLoader right = new DuffsionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), getA(), getB(), getNoise(), normalization, horizontalFilp, mid, getEnd());
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -123,29 +123,26 @@ public class DuffsionImageLoader extends RecursiveAction {
 			if(!getNames()[getIndexs()[i]].contains(".")) {
 				filePath = getPath() + "/" + getNames()[getIndexs()[i]] + "." + extName;
 			}
-//			System.out.println(filePath);
 			float[] data = YoloImageUtils.loadImgDataToArray(filePath, true, mean, std);
 			
-			if(hf) {
+			if(horizontalFilp) {
 				float[] newData = new float[data.length];
 				data = DataTransforms.randomHorizontalFilp(data, newData, input.channel, input.height, input.width);
 			}
-
+			
 			for(int j = 0;j < data.length;j++) {
 				data[j] = data[j] * getA()[i] + getNoise()[i * data.length + j] * getB()[i];
 			}
-			/**
-			 * 随机翻转
-			 */
+			
 			System.arraycopy(data, 0, getInput().data, i * data.length, data.length);
 		}
 		
 	}
 	
-	public static void load(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean hf) {
+	public static void load(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean horizontalFilp) {
 		
 //		FileDataLoader job = new FileDataLoader(path, extName, names, indexs, batchSize, input, 0, batchSize - 1);
-		DuffsionImageLoader job = getInstance(path, extName, names, indexs, batchSize, input, a, b, noise, normalization, hf, 0, batchSize - 1);
+		DuffsionImageLoader job = getInstance(path, extName, names, indexs, batchSize, input, a, b, noise, normalization, horizontalFilp, 0, batchSize - 1);
 		ForkJobEngine.run(job);
 		
 	}
@@ -220,6 +217,14 @@ public class DuffsionImageLoader extends RecursiveAction {
 
 	public void setNoise(float[] noise) {
 		this.noise = noise;
+	}
+
+	public boolean isHorizontalFilp() {
+		return horizontalFilp;
+	}
+
+	public void setHorizontalFilp(boolean horizontalFilp) {
+		this.horizontalFilp = horizontalFilp;
 	}
 	
 }

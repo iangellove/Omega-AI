@@ -19,6 +19,8 @@ public class ResidualBlockLayer extends Layer{
 	
 	private boolean hasAttn = true;
 	
+	private boolean bias = true;
+	
 	private int t_dim;
 	
 	public Layer[] block1;
@@ -38,8 +40,9 @@ public class ResidualBlockLayer extends Layer{
 	
 	private Tensor dt;
 	
-	public ResidualBlockLayer(int channel,int oChannel,int height,int width,int t_dim,boolean hasAttn, Network network) {
+	public ResidualBlockLayer(int channel,int oChannel,int height,int width,int t_dim,boolean hasAttn,boolean bias, Network network) {
 		this.network = network;
+		this.bias = bias;
 		this.hasAttn = hasAttn;
 		this.t_dim = t_dim;
 		this.channel = channel;
@@ -56,27 +59,27 @@ public class ResidualBlockLayer extends Layer{
 		block1 = new Layer[3];
 		block1[0] = new GNLayer(32, network, BNType.conv_bn);
 		block1[1] = new SiLULayer(block1[0]);
-		block1[2] = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, 1, false, network);
+		block1[2] = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, 1, bias, network);
 //		block1[2].weight = new Tensor(oChannel, channel, 3, 3, MatrixUtils.order(block1[2].weight.dataLength, 0.01f, 0.01f), true);
 		
 		temb_proj = new Layer[2];
 		temb_proj[0] = new SiLULayer(network);
-		temb_proj[1] = new FullyLayer(t_dim, oChannel, false, network);
+		temb_proj[1] = new FullyLayer(t_dim, oChannel, bias, network);
 //		temb_proj[1].weight = new Tensor(1, 1, oChannel, t_dim, MatrixUtils.order(oChannel * t_dim, 0.01f, 0.01f), true);
 		
 		block2 = new Layer[3];
 		block2[0] = new GNLayer(32, network, BNType.conv_bn);
 		block2[1] = new SiLULayer(block2[0]);
-		block2[2] = new ConvolutionLayer(oChannel, oChannel, width, height, 3, 3, 1, 1, false, network);
+		block2[2] = new ConvolutionLayer(oChannel, oChannel, width, height, 3, 3, 1, 1, bias, network);
 //		block2[2].weight = new Tensor(oChannel, oChannel, 3, 3, MatrixUtils.order(block2[2].weight.dataLength, 0.01f, 0.01f), true);
 		
 		if(channel != oChannel){
-			shortcut = new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, 1, false, network);
+			shortcut = new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, 1, bias, network);
 //			shortcut.weight = new Tensor(oChannel, channel, 3, 3, MatrixUtils.order(shortcut.weight.dataLength, 0.01f, 0.01f), true);
 		}
 		
 		if(hasAttn) {
-			attn = new DuffsionAttentionBlockLayer(oChannel, width, height, false, false, network);
+			attn = new DuffsionAttentionBlockLayer(oChannel, width, height, bias, false, network);
 		}
 
 	}
@@ -115,38 +118,37 @@ public class ResidualBlockLayer extends Layer{
 		// TODO Auto-generated method stub
 //		System.err.println("x:");
 //		input.showDM();
-//		System.err.println("t:");
-//		t.showDM();
-//		System.err.println("input:");
-//		input.showDMByOffset(0, input.height * input.width);
-//		System.err.println("");
 		/**
 		 * block1
 		 */
 //		System.out.println("input:"+MatrixOperation.isNaN(input.syncHost()));
 		block1[0].forward(input);
 //		System.err.println("gn:");
-//		block1[0].getOutput().showDMByOffset(0, input.height * input.width);
+//		block1[0].getOutput().showDM();
 //		System.out.println(MatrixOperation.isNaN(block1[0].getOutput().syncHost()));
 		block1[1].forward(block1[0].getOutput());
-//		block1[1].getOutput().showDMByOffset(0, input.height * input.width);
 //		System.out.println(MatrixOperation.isNaN(block1[1].getOutput().syncHost()));
-//		input.showDMByOffset(0, input.height * input.width);
 		block1[2].forward(block1[1].getOutput());
-//		block1[2].weight.showDM();
 //		System.out.println("block1[2]:"+MatrixOperation.isNaN(block1[2].getOutput().syncHost()));
-//		block1[2].getOutput().showDMByOffset(0, input.height * input.width);
 		/**
 		 * temb_proj
 		 */
 		temb_proj[0].forward(t);
 		temb_proj[1].forward(temb_proj[0].getOutput());
 //		System.out.println(MatrixOperation.isNaN(temb_proj[1].getOutput().syncHost()));
-
+		
+//		block1[2].getOutput().showShape();
+//		temb_proj[1].getOutput().showShape();
+//		temb_proj[1].getOutput().showDM();
+//		block1[2].getOutput().showDM();
+		
 		/**
 		 * block1 + temb_proj
 		 */
 		TensorOP.add(block1[2].getOutput(), temb_proj[1].getOutput(), h, block1[2].getOutput().height * block1[2].getOutput().width);
+		
+//		System.err.println("h:");
+//		h.showDM();
 		
 		/**
 		 * block2
@@ -243,9 +245,6 @@ public class ResidualBlockLayer extends Layer{
 		 */
 		Tensor tmpDelta = delta;
 		
-//		System.err.println("bdelta:");
-//		this.delta.showDMByOffset(0, 100);
-		
 		if(hasAttn) {
 			attn.back(delta);
 			tmpDelta = attn.diff;
@@ -257,13 +256,12 @@ public class ResidualBlockLayer extends Layer{
 		block2[2].back(tmpDelta);
 		block2[1].back(block2[2].diff);
 		block2[0].back(block2[1].diff);
-
-//		block2[0].diff.showShape();
-//		PrintUtils.printImage(block2[0].diff);
+		
 		/**
 		 * temb_proj backward
 		 */
 		TensorOP.sum(block2[0].diff, dt, 2);
+//		dt.showDMByOffset(0, 10);
 		temb_proj[1].back(dt);
 		temb_proj[0].back(temb_proj[1].diff);
 		TensorOP.add(t_diff, temb_proj[0].diff, t_diff);
@@ -283,10 +281,6 @@ public class ResidualBlockLayer extends Layer{
 		TensorOP.add(block1[0].diff, tmp, block1[0].diff);
 		
 		this.diff = block1[0].diff;
-		
-//		System.err.println("bdiff:");
-//		this.diff.showDMByOffset(0, 100);
-
 	}
 
 	@Override
@@ -466,18 +460,16 @@ public class ResidualBlockLayer extends Layer{
 	  		
 	  		float[] data_d = MatrixUtils.order(N * dim, 0.01f, 0.01f);
 	  		
-//	  		Tensor delta = new Tensor(N, 1, 1, dim, data_d, true);
-	  		
-	  		Tensor t_diff = new Tensor(N, 1, 1, dim, true);
+	  		Tensor delta = new Tensor(N, 1, 1, dim, data_d, true);
 	  		
 	  		Transformer tf = new Transformer();
 	  		
 	  		tf.CUDNN = true;
 	  		tf.number = 2;
 	  		
-	  		ResidualBlockLayer rbl = new ResidualBlockLayer(ic, oc, H, W, dim, true, tf);
+	  		ResidualBlockLayer rbl = new ResidualBlockLayer(ic, oc, H, W, dim, true, false, tf);
 	  		
-	  		TimeEmbeddingLayer mal = new TimeEmbeddingLayer(T, d_model, dim, tf);
+	  		TimeEmbeddingLayer mal = new TimeEmbeddingLayer(T, d_model, dim, false, tf);
 	  		
 	  		mal.forward(input);
 	  		
@@ -489,6 +481,7 @@ public class ResidualBlockLayer extends Layer{
 	  		rbl.getOutput().showShape();
 	  		rbl.getOutput().showDM();
 	  		
+	  		mal.back(delta);
 //	  		
 //	  		mal.diff.showDM();
 	  		
@@ -496,13 +489,9 @@ public class ResidualBlockLayer extends Layer{
 	  		
 	  		Tensor delta2 = new Tensor(N, oc, H, W, data_d2, true);
 	  		
-	  		rbl.back(delta2, t_diff);
+	  		rbl.back(delta2);
 	  		
 	  		rbl.diff.showDM();
-	  		
-	  		t_diff.showDM();
-	  		
-	  		mal.back(t_diff);
 	  		
 			} catch (Exception e) {
 				// TODO: handle exception

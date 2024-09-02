@@ -2142,11 +2142,12 @@ public class MBSGDOptimizer extends Optimizer {
 			float[] mean = new float[] {0.5f, 0.5f, 0.5f};
 			float[] std = new float[] {0.5f, 0.5f, 0.5f};
 			
-			RandomUtils.gaussianRandom(noiseInput);
+//			Tensor noiseInput = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
+//			
+//			Tensor t = new Tensor(batchSize, 1, 1, 1, true);
 			
-//			noiseInput.data = MatrixUtils.order(noiseInput.dataLength, 0.001f, 0.001f);
-			
-//			noiseInput.hostToDevice();
+//			RandomUtils.gaussianRandom2(noiseInput, 0, 1);
+			RandomUtils.gaussianRandom(noiseInput, 0, 1);
 			
 			float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
 			float[] alphas = MatrixOperation.subtraction(1, betas);
@@ -2281,9 +2282,7 @@ public class MBSGDOptimizer extends Optimizer {
 			Tensor noise = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
 			
 			float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
-//			System.out.println("betas:"+JsonUtils.toJson(betas));
-			float[] alphas = MatrixOperation.subtraction(1.0f, betas);
-//			System.out.println("alphas:"+JsonUtils.toJson(alphas));
+			float[] alphas = MatrixOperation.subtraction(1, betas);
 			float[] alphas_bar = MatrixUtils.cumprod(alphas);
 			float[] sqrt_alphas_bar = MatrixOperation.sqrt(alphas_bar);
 			float[] sqrt_one_minus_alphas_bar = MatrixOperation.sqrt(MatrixOperation.subtraction(1, alphas_bar));
@@ -2316,8 +2315,10 @@ public class MBSGDOptimizer extends Optimizer {
 						break;
 					}
 					
-					int[] t_data = RandomUtils.randomInt(0, T, batchSize);
+//					int[] t_data = RandomUtils.randomInt2(0, T - 1, batchSize);
+					int[] t_data = RandomUtils.randomInt(0, T - 1, batchSize);
 //					int[] t_data = new int[] {100, 902, 31, 698};
+					
 //					System.out.println(JsonUtils.toJson(t_data));
 					t.setData(t_data);
 //					t.showDM();
@@ -2327,15 +2328,15 @@ public class MBSGDOptimizer extends Optimizer {
 					
 					trainingData.loadData(indexs[it], exsa1, exsa2, input, noise);
 					
-//					System.err.println("input:");
-//					input.showDMByOffset(0, 96 * 96);
+					JCudaDriver.cuCtxSynchronize();
+					
 //					/**
 //					 * print image
 //					 */
 //					if(it > 0 && it % 1 == 0) {
 //						float[] mean = new float[] {0.5f, 0.5f, 0.5f};
 //						float[] std = new float[] {0.5f, 0.5f, 0.5f};
-//						showImgs("H:\\voc\\gan_anime\\duffsion_test_input\\", input, mean, std);
+//						showImgs("E:\\voc\\gan_anime\\duffsion_test_input\\", input, mean, std);
 //					}
 					
 					/**
@@ -2409,35 +2410,6 @@ public class MBSGDOptimizer extends Optimizer {
 			 * 停止训练
 			 */
 			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-
-	}
-	
-	public void testGaussianDiffusion(DuffsionImageDataLoader trainingData) {
-		// TODO Auto-generated method stub
-
-		try {
-			
-			CUDAModules.initCUDAFunctions();
-
-			DuffsionUNet network = (DuffsionUNet) this.network;
-			
-			this.dataSize = trainingData.number;
-
-			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
-
-			Tensor t = new Tensor(batchSize, 1, 1, 1, true);
-
-			network.RUN_MODEL = RunModel.TEST;
-			for(int i = 0;i<10;i++) {
-				System.out.println("start create test images.");
-				testGaussianDiffusion("test_" + i, 200, input, t);
-				System.out.println("finish create.");
-			}
-			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

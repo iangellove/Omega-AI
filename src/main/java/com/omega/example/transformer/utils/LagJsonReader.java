@@ -52,7 +52,6 @@ public class LagJsonReader {
 	    return null;
 	}
 	
-
 	public static List<Map<String,String>> readJsonFile(String path) {
 		
 		List<Map<String,String>> mapList = new ArrayList<Map<String,String>>(); 

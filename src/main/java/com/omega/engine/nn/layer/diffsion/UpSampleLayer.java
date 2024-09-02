@@ -4,7 +4,6 @@ import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.UPSampleLayer;
 import com.omega.engine.nn.layer.UPSampleLayer2;
 import com.omega.engine.nn.network.Network;
 
@@ -25,7 +24,7 @@ public class UpSampleLayer extends Layer{
 	
 	public ConvolutionLayer conv;
 	
-	private UPSampleLayer2 up;
+	public UPSampleLayer2 up;
 	
 	public UpSampleLayer(int channel,int oChannel,int height,int width, Network network) {
 		this.network = network;

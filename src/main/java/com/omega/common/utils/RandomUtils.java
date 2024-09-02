@@ -45,6 +45,15 @@ public class RandomUtils {
 		return tmp;
 	}
 	
+//	public static int[] randomInt2(int min,int max,int count) {
+//		RandomDataGenerator r = new RandomDataGenerator();
+//		int[] tmp = new int[count];
+//		for(int i = 0;i<count;i++) {
+//			tmp[i] = r.nextInt(min, max);
+//		}
+//		return tmp;
+//	}
+	
 	public static int uniformInt(int min,int max) {
 		if(max < min) {
 			int swap = min;
@@ -278,17 +287,6 @@ public class RandomUtils {
 	}
 	
 	public static void gaussianRandom(Tensor output){
-		Random r = new Random();
-		for(int i = 0;i<output.dataLength;i++) {
-			output.data[i] = (float)(r.nextGaussian());
-		}
-		if(output.isHasGPU()) {
-			output.hostToDevice();
-		}
-	}
-	
-	public static void gaussianRandom(Tensor output,long seed){
-		getInstance().setSeed(seed);
 		for(int i = 0;i<output.dataLength;i++) {
 			output.data[i] = (float)(getInstance().nextGaussian());
 		}
@@ -305,6 +303,20 @@ public class RandomUtils {
 			output.hostToDevice();
 		}
 	}
+	
+//	public static void gaussianRandom2(Tensor output,float mean,float std){
+//		RandomDataGenerator r = new RandomDataGenerator();
+////		NormalDistribution n = new NormalDistribution(mean, std);
+//		for(int i = 0;i<output.dataLength;i++) {
+//			output.data[i] = (float)(r.nextGaussian(mean, std));
+////			System.out.println(new StringBuilder(String.valueOf(output.data[i])).insert(2,"-"));
+//		}
+//		if(output.isHasGPU()) {
+//			output.hostToDevice();
+////			output.showDM();
+//			
+//		}
+//	}
 	
 	/**
 	 * 高斯随机数
@@ -541,11 +553,9 @@ public class RandomUtils {
 	}
 	
 	public static float[] kaiming_uniform(int x,int fan,ParamsInit paramsInit) {
-		
 		if(paramsInit == null){
 			paramsInit = ParamsInit.leaky_relu;
 		}
-		
 		float[] temp = new float[x];
 		
 		float gain = gain(paramsInit);

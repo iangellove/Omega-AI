@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.ImageUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
@@ -15,13 +14,11 @@ import com.omega.engine.nn.layer.diffsion.ResidualBlockLayer;
 import com.omega.engine.nn.layer.diffsion.UpSampleLayer;
 import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.nn.network.DuffsionUNet;
-import com.omega.engine.nn.network.SimpleUNet;
 import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.example.duffsion.utils.DuffsionImageDataLoader;
 import com.omega.example.transformer.utils.LagJsonReader;
-import com.omega.example.unet.utils.SegImageDataLoader;
 
 public class DuffsionModelTest {
 	
@@ -45,12 +42,12 @@ public class DuffsionModelTest {
 			
 //			String weightPath = "H:\\voc\\gan_anime\\torch_weights.json";
 			
-			DuffsionImageDataLoader dataLoader = new DuffsionImageDataLoader(imgDirPath, imw, imh, batchSize, true);
+			DuffsionImageDataLoader dataLoader = new DuffsionImageDataLoader(imgDirPath, imw, imh, batchSize, false);
 			
 			DuffsionUNet network = new DuffsionUNet(LossType.MSE, UpdaterType.adamw, T, 3, mChannel, channelMult, resBlockNum, imw, imh, bias);
 			network.CUDNN = true;
-			network.learnRate = 0.0001f;
-
+			network.learnRate = 0.0005f;
+			
 //			Map<String, Object> weightMap = LagJsonReader.readJsonFileSmallWeight(weightPath);
 //			
 //			loadWeight(weightMap, network);
@@ -59,7 +56,7 @@ public class DuffsionModelTest {
 			
 			optimizer.trainGaussianDiffusion(dataLoader);
 			
-//			optimizer.testGaussianDiffusion(dataLoader);
+			
 			
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -73,15 +70,15 @@ public class DuffsionModelTest {
 			System.out.println(key);
 		}
 		//time_embedding
-		loadData(network.temb.emb.weight, weightMap.get("time_embedding.timembedding.0.weight"), "time_embedding.timembedding.0.weight");
-		loadData(network.temb.linear1.weight, weightMap.get("time_embedding.timembedding.1.weight"), "time_embedding.timembedding.1.weight");
-		loadData(network.temb.linear2.weight, weightMap.get("time_embedding.timembedding.3.weight"), "time_embedding.timembedding.3.weight");
+		loadData(network.getTemb().emb.weight, weightMap.get("time_embedding.timembedding.0.weight"), "time_embedding.timembedding.0.weight");
+		loadData(network.getTemb().linear1.weight, weightMap.get("time_embedding.timembedding.1.weight"), "time_embedding.timembedding.1.weight");
+		loadData(network.getTemb().linear2.weight, weightMap.get("time_embedding.timembedding.3.weight"), "time_embedding.timembedding.3.weight");
 		//head
-		loadData(network.head.weight, weightMap.get("head.weight"), "head.weight");
-		loadData(network.head.bias, weightMap.get("head.bias"), "head.bias");
+		loadData(network.getHead().weight, weightMap.get("head.weight"), "head.weight");
+		loadData(network.getHead().bias, weightMap.get("head.bias"), "head.bias");
 		//downblocks
-		for(int i = 0;i<network.downBlocks.size();i++) {
-			Layer layer = network.downBlocks.get(i);
+		for(int i = 0;i<network.getDownBlocks().size();i++) {
+			Layer layer = network.getDownBlocks().get(i);
 			if(layer instanceof ResidualBlockLayer) {
 				ResidualBlockLayer rbl = (ResidualBlockLayer) layer;
 				//block1.gn
@@ -108,7 +105,7 @@ public class DuffsionModelTest {
 			}
 		}
 		//middleblocks1
-		ResidualBlockLayer mid1 = network.midResBlock1;
+		ResidualBlockLayer mid1 = network.getMidResBlock1();
 		GNLayer mgn = (GNLayer) mid1.block1[0];
 		mgn.gamma = loadData(mgn.gamma, weightMap.get("middleblocks.0.block1.0.weight"), 1, "middleblocks.0.block1.0.weight");
 		mgn.beta = loadData(mgn.beta, weightMap.get("middleblocks.0.block1.0.bias"), 1, "middleblocks.0.block1.0.bias");
@@ -131,7 +128,7 @@ public class DuffsionModelTest {
 		mid1.attn.vLayer.weight = loadData(mid1.attn.vLayer.weight, weightMap.get("middleblocks.0.attn.proj_v.weight"), 4, "middleblocks.0.attn.proj_v.weight");
 		mid1.attn.oLayer.weight = loadData(mid1.attn.oLayer.weight, weightMap.get("middleblocks.0.attn.proj.weight"), 4, "middleblocks.0.attn.proj.weight");
 		//middleblocks2
-		ResidualBlockLayer mid2 = network.midResBlock2;
+		ResidualBlockLayer mid2 = network.getMidResBlock2();
 		GNLayer mbgn1 = (GNLayer) mid2.block1[0];
 		mbgn1.gamma = loadData(mbgn1.gamma, weightMap.get("middleblocks.1.block1.0.weight"), 1, "middleblocks.1.block1.0.weight");
 		mbgn1.beta = loadData(mbgn1.beta, weightMap.get("middleblocks.1.block1.0.bias"), 1, "middleblocks.1.block1.0.bias");
@@ -147,8 +144,8 @@ public class DuffsionModelTest {
 		loadData(mid2.block2[2].weight, weightMap.get("middleblocks.1.block2.3.weight"), "middleblocks.1.block2.3.weight");
 		//upblocks
 		int ri = 0;
-		for(int i = 0;i<network.upBlocks.size();i++) {
-			Layer layer = network.upBlocks.get(i);
+		for(int i = 0;i<network.getUpBlocks().size();i++) {
+			Layer layer = network.getUpBlocks().get(i);
 			System.err.println(layer);
 			if(layer instanceof ResidualBlockLayer) {
 				ResidualBlockLayer rbl = (ResidualBlockLayer) layer;
@@ -182,9 +179,9 @@ public class DuffsionModelTest {
 			}
 		}
 		//tail
-		network.gn.gamma = loadData(network.gn.gamma, weightMap.get("tail.0.weight"), 1, "tail.0.weight");
-		network.gn.beta = loadData(network.gn.beta, weightMap.get("tail.0.bias"), 1, "tail.0.bias");
-		loadData(network.conv.weight, weightMap.get("tail.2.weight"), "tail.2.weight");
+		network.getGn().gamma = loadData(network.getGn().gamma, weightMap.get("tail.0.weight"), 1, "tail.0.weight");
+		network.getGn().beta = loadData(network.getGn().beta, weightMap.get("tail.0.bias"), 1, "tail.0.bias");
+		loadData(network.getConv().weight, weightMap.get("tail.2.weight"), "tail.2.weight");
 	}
 	
 	public static void loadData(Tensor x,Object meta,String key) {
@@ -203,8 +200,7 @@ public class DuffsionModelTest {
 						x.data[n * dataA.get(n).size() + w] = dataA.get(n).get(w).floatValue();
 					}
 				}
-//				float[][] data = (float[][]) meta;
-//				x.data = MatrixUtils.transform(data);
+
 			}else if(dim == 3) {
 				float[][][] data = (float[][][]) meta;
 				x.data = MatrixUtils.transform(data);
@@ -214,8 +210,7 @@ public class DuffsionModelTest {
 				int C = dataA.get(0).size();
 				int H = dataA.get(0).get(0).size();
 				int W = dataA.get(0).get(0).get(0).size();
-//				x.showShape();
-//				System.out.println(N+":"+C+":"+H+":"+W);
+
 				for(int n = 0;n<N;n++) {
 					for(int c = 0;c<C;c++) {
 						for(int h = 0;h<H;h++) {
@@ -293,41 +288,6 @@ public class DuffsionModelTest {
 			dim++;
 		}
 		return dim;
-	}
-	
-	public static void testCell(String path,String labelPath,String filename,String extName,SegImageDataLoader dataLoader,int height,int width,SimpleUNet network,Tensor input,Tensor label) {
-
-		String testImg = path + filename + "." + extName;
-		
-		String testLabelImg = labelPath + filename + "." + extName;
-		System.out.println(testImg);
-		dataLoader.loadData(testImg, input);
-		
-		dataLoader.loadLabelData(testLabelImg, label);
-		
-		Tensor output = network.forward(input);
-		
-		ImageUtils utils = new ImageUtils();
-		
-		output.syncHost();
-//	    PrintUtils.printImage(output);
-	    for(int i = 0;i<output.dataLength;i++) {
-	    	output.data[i] = output.data[i] * 255.0f;
-		}
-
-		String outImg = "H:\\unet-dataset\\cell\\" + filename + "." + extName;
-
-		utils.createRGBImage(outImg, "png", ImageUtils.color2rgb2(output.data, output.channel, output.height, output.width, false), output.height, output.width, null, null);
-		
-		label.syncHost();
-		for(int i = 0;i<label.dataLength;i++) {
-			label.data[i] = label.data[i] * 255.0f;
-		}
-
-		String labelImg = "H:\\unet-dataset\\cell\\" + filename + "-mask" + "." + extName;
-		
-		utils.createRGBImage(labelImg, "png", ImageUtils.color2rgb2(label.data, label.channel, label.height, label.width, false), label.height, label.width, null, null);
-
 	}
 	
 	public static void main(String[] args) {
