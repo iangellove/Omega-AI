@@ -2142,11 +2142,11 @@ public class MBSGDOptimizer extends Optimizer {
 			float[] mean = new float[] {0.5f, 0.5f, 0.5f};
 			float[] std = new float[] {0.5f, 0.5f, 0.5f};
 			
-			RandomUtils.gaussianRandom(noiseInput, 0, 1);
+			RandomUtils.gaussianRandom(noiseInput);
 			
-			noiseInput.data = MatrixUtils.order(noiseInput.dataLength, 0.001f, 0.001f);
+//			noiseInput.data = MatrixUtils.order(noiseInput.dataLength, 0.001f, 0.001f);
 			
-			noiseInput.hostToDevice();
+//			noiseInput.hostToDevice();
 			
 			float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
 			float[] alphas = MatrixOperation.subtraction(1, betas);

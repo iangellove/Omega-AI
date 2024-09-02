@@ -1,5 +1,7 @@
 package com.omega.common.data.utils;
 
+import java.util.Arrays;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.PrintUtils;
@@ -279,6 +281,30 @@ public class DataTransforms {
 			
 		}
 
+	}
+	
+	public static float[] randomHorizontalFilp(float[] input,float[] output,int channel,int height,int width) {
+
+		float[] org = Arrays.copyOf(input, input.length);
+		
+		if(Math.random() >= 0.5d) {
+			for(int c = 0;c<channel;c++) {
+				for(int h = 0;h<height;h++) {
+					for(int w = 0;w<width / 2;w++) {
+						int ow = width - 1 - w;
+						output[c * height * width + h * width + w] = org[c * height * width + h * width + ow];
+						output[c * height * width + h * width + ow] = org[c * height * width + h * width + w];
+					}
+					if(width % 2 == 1) {
+						int w = width / 2;
+						output[c * height * width + h * width + w] = org[c * height * width + h * width + w];
+					}
+				}
+			}
+		}else {
+			output = org;
+		}
+		return output;
 	}
 	
 	public static void randomHorizontalFilpWithLabel(Tensor input,float[] img,int b,float[] orgLabel,float[] label,int labelSize) {

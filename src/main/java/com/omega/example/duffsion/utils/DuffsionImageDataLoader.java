@@ -3,6 +3,7 @@ package com.omega.example.duffsion.utils;
 import java.io.File;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.data.utils.DataTransforms;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
@@ -29,11 +30,14 @@ public class DuffsionImageDataLoader extends BaseDataLoader{
 	private String extName;
 	
 	public boolean normalization = true;
+	
+	public boolean horizontalFilp = false;
 
 	public static final float[] mean = new float[] {0.5f, 0.5f, 0.5f};
 	public static final float[] std = new float[] {0.5f, 0.5f, 0.5f};
 	
-	public DuffsionImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize) {
+	public DuffsionImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize,boolean horizontalFilp) {
+		this.horizontalFilp = horizontalFilp;
 		this.imgDirPath = imgDirPath;
 		this.img_w = img_w;
 		this.img_h = img_h;
@@ -142,7 +146,7 @@ public class DuffsionImageDataLoader extends BaseDataLoader{
 		/**
 		 * 加载input数据
 		 */
-		DuffsionImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, a, b, noise.data, true);
+		DuffsionImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, a, b, noise.data, true, true);
 
 		/**
 		 * copy data to gpu.

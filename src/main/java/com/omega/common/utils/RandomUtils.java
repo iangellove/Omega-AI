@@ -278,8 +278,9 @@ public class RandomUtils {
 	}
 	
 	public static void gaussianRandom(Tensor output){
+		Random r = new Random();
 		for(int i = 0;i<output.dataLength;i++) {
-			output.data[i] = (float)(getInstance().nextGaussian());
+			output.data[i] = (float)(r.nextGaussian());
 		}
 		if(output.isHasGPU()) {
 			output.hostToDevice();

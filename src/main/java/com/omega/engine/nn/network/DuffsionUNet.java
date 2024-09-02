@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Stack;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
@@ -355,7 +354,7 @@ public class DuffsionUNet extends Network {
 		this.setLossDiff(lossDiff);
 //		System.out.println(MatrixOperation.isNaN(lossDiff.syncHost()));
 //		System.err.println("lossDiff:");
-//		lossDiff.showDMByOffset(0, 96*96);
+//		lossDiff.showDMByOffset((lossDiff.channel / 2 - 1) * 96 * 96, 96 * 96);
 		/**
 		 * tail backward
 		 */
@@ -364,7 +363,7 @@ public class DuffsionUNet extends Network {
 		act.back(conv.diff);
 //		act.diff.showDMByOffset(0, 500);
 		gn.back(act.diff);
-//		gn.diff.showDMByOffset(0, 96 * 96);
+//		gn.diff.showDMByOffset((gn.diff.channel / 2 - 1) * 96 * 96, 96 * 96);
 		/**
 		 * upsampling backward
 		 */
@@ -423,7 +422,7 @@ public class DuffsionUNet extends Network {
 		 */
 //		downBlocks.get(0).diff.showDMByOffset(0, 96 * 96);
 		head.back(downBlocks.get(0).diff);
-		
+//		head.delta.showDMByOffset((head.delta.channel / 2 - 1) * 96 * 96, 96 * 96);
 		/**
 		 * timestep embedding backward
 		 */

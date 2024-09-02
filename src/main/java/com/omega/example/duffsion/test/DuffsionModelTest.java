@@ -5,7 +5,6 @@ import java.util.Map;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.ImageUtils;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
@@ -46,14 +45,14 @@ public class DuffsionModelTest {
 			
 //			String weightPath = "H:\\voc\\gan_anime\\torch_weights.json";
 			
-			DuffsionImageDataLoader dataLoader = new DuffsionImageDataLoader(imgDirPath, imw, imh, batchSize);
+			DuffsionImageDataLoader dataLoader = new DuffsionImageDataLoader(imgDirPath, imw, imh, batchSize, true);
 			
 			DuffsionUNet network = new DuffsionUNet(LossType.MSE, UpdaterType.adamw, T, 3, mChannel, channelMult, resBlockNum, imw, imh, bias);
 			network.CUDNN = true;
 			network.learnRate = 0.0001f;
 
 //			Map<String, Object> weightMap = LagJsonReader.readJsonFileSmallWeight(weightPath);
-			
+//			
 //			loadWeight(weightMap, network);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 50, 0.00001f, batchSize, LearnRateUpdate.GD_GECAY, false);
