@@ -1,4 +1,4 @@
-package com.omega.engine.nn.layer.diffsion;
+package com.omega.engine.nn.layer.diffusion;
 
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
@@ -28,7 +28,7 @@ import com.omega.engine.updater.UpdaterFactory;
  * @author Administrator
  *
  */
-public class DuffsionAttentionBlockLayer extends Layer{
+public class DiffusionAttentionBlockLayer extends Layer{
 	
 	private int inChannel = 0;
 	
@@ -79,7 +79,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	
 	private boolean dropout = false;
 	
-	public DuffsionAttentionBlockLayer(int inChannel,int width,int height,boolean bias,boolean dropout) {
+	public DiffusionAttentionBlockLayer(int inChannel,int width,int height,boolean bias,boolean dropout) {
 		this.bias = bias;
 		this.inChannel = inChannel;
 		this.height = height;
@@ -92,7 +92,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		this.initLayers();
 	}
 	
-	public DuffsionAttentionBlockLayer(int inChannel,int width,int height,boolean bias,boolean dropout,Network network) {
+	public DiffusionAttentionBlockLayer(int inChannel,int width,int height,boolean bias,boolean dropout,Network network) {
 		this.bias = bias;
 		this.network = network;
 		if(this.updater == null) {
@@ -511,7 +511,7 @@ public class DuffsionAttentionBlockLayer extends Layer{
 		tf.CUDNN = true;
 		tf.number = N;
 		
-		DuffsionAttentionBlockLayer mal = new DuffsionAttentionBlockLayer(C, W, H, false, false, tf);
+		DiffusionAttentionBlockLayer mal = new DiffusionAttentionBlockLayer(C, W, H, false, false, tf);
 		
 		mal.forward(input);
 		

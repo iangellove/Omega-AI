@@ -17,9 +17,9 @@ import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.RouteLayer;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
 import com.omega.engine.nn.layer.active.SiLULayer;
-import com.omega.engine.nn.layer.diffsion.ResidualBlockLayer;
-import com.omega.engine.nn.layer.diffsion.TimeEmbeddingLayer;
-import com.omega.engine.nn.layer.diffsion.UpSampleLayer;
+import com.omega.engine.nn.layer.diffusion.ResidualBlockLayer;
+import com.omega.engine.nn.layer.diffusion.TimeEmbeddingLayer;
+import com.omega.engine.nn.layer.diffusion.UpSampleLayer;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.updater.UpdaterType;
@@ -32,7 +32,7 @@ import jcuda.runtime.JCuda;
  * @author Administrator
  *
  */
-public class DuffsionUNet extends Network {
+public class DiffusionUNet extends Network {
 	
 	private int T;
 	
@@ -76,7 +76,7 @@ public class DuffsionUNet extends Network {
 	
 	private Tensor d_temb;
 	
-	public DuffsionUNet(LossType lossType,UpdaterType updater,int T,int inChannel,int mChannel,int[] channelMult,int resBlockNum,int width,int height,boolean bias) {
+	public DiffusionUNet(LossType lossType,UpdaterType updater,int T,int inChannel,int mChannel,int[] channelMult,int resBlockNum,int width,int height,boolean bias) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.bias = bias;
 		this.updater = updater;

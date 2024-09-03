@@ -1,4 +1,4 @@
-package com.omega.example.duffsion.utils;
+package com.omega.example.diffusion.utils;
 
 import java.io.File;
 
@@ -16,7 +16,7 @@ import com.omega.example.yolo.utils.YoloImageUtils;
  * @author Administrator
  *
  */
-public class DuffsionImageDataLoader extends BaseDataLoader{
+public class DiffusionImageDataLoader extends BaseDataLoader{
 	
 	private String imgDirPath;
 	
@@ -35,7 +35,7 @@ public class DuffsionImageDataLoader extends BaseDataLoader{
 	public static final float[] mean = new float[] {0.5f, 0.5f, 0.5f};
 	public static final float[] std = new float[] {0.5f, 0.5f, 0.5f};
 	
-	public DuffsionImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize,boolean horizontalFilp) {
+	public DiffusionImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize,boolean horizontalFilp) {
 		this.horizontalFilp = horizontalFilp;
 		this.imgDirPath = imgDirPath;
 		this.img_w = img_w;
@@ -146,7 +146,7 @@ public class DuffsionImageDataLoader extends BaseDataLoader{
 		/**
 		 * 加载input数据
 		 */
-		DuffsionImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, a, b, noise.data, true, horizontalFilp);
+		DiffusionImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, a, b, noise.data, true, horizontalFilp);
 
 		/**
 		 * copy data to gpu.

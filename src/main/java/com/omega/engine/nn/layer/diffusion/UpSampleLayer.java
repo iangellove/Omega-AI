@@ -1,4 +1,4 @@
-package com.omega.engine.nn.layer.diffsion;
+package com.omega.engine.nn.layer.diffusion;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;

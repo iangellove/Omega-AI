@@ -1,4 +1,4 @@
-package com.omega.engine.nn.layer.diffsion;
+package com.omega.engine.nn.layer.diffusion;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -34,7 +34,7 @@ public class ResidualBlockLayer extends Layer{
 	
 	public ConvolutionLayer shortcut;
 	
-	public DuffsionAttentionBlockLayer attn;
+	public DiffusionAttentionBlockLayer attn;
 //	private DuffsionSelfAttentionLayer2 attn;
 	
 	private Tensor h;
@@ -82,7 +82,7 @@ public class ResidualBlockLayer extends Layer{
 		}
 		
 		if(hasAttn) {
-			attn = new DuffsionAttentionBlockLayer(oChannel, width, height, bias, false, network);
+			attn = new DiffusionAttentionBlockLayer(oChannel, width, height, bias, false, network);
 		}
 
 	}

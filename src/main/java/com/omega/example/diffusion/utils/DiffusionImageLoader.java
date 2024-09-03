@@ -1,4 +1,4 @@
-package com.omega.example.duffsion.utils;
+package com.omega.example.diffusion.utils;
 
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
@@ -13,7 +13,7 @@ import com.omega.example.yolo.utils.YoloImageUtils;
  * @author Administrator
  *
  */
-public class DuffsionImageLoader extends RecursiveAction {
+public class DiffusionImageLoader extends RecursiveAction {
 
 	/**
 	 * 
@@ -36,7 +36,7 @@ public class DuffsionImageLoader extends RecursiveAction {
 	
 	private String extName;
 	
-	private static DuffsionImageLoader job;
+	private static DiffusionImageLoader job;
 	
 	private boolean normalization = false;
 	
@@ -52,9 +52,9 @@ public class DuffsionImageLoader extends RecursiveAction {
 	
 	private float[] std = new float[] {0.5f, 0.5f, 0.5f};
 	
-	public static DuffsionImageLoader getInstance(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean horizontalFilp,int start,int end) {
+	public static DiffusionImageLoader getInstance(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean horizontalFilp,int start,int end) {
 		if(job == null) {
-			job = new DuffsionImageLoader(path, extName, names, indexs, batchSize, input, a, b, noise, normalization, horizontalFilp, start, end);
+			job = new DiffusionImageLoader(path, extName, names, indexs, batchSize, input, a, b, noise, normalization, horizontalFilp, start, end);
 		}else {
 			if(input != job.getInput()){
 				job.setInput(input);
@@ -74,7 +74,7 @@ public class DuffsionImageLoader extends RecursiveAction {
 		return job;
 	}
 	
-	public DuffsionImageLoader(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean horizontalFilp,int start,int end) {
+	public DiffusionImageLoader(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean horizontalFilp,int start,int end) {
 		this.setStart(start);
 		this.setEnd(end);
 		this.batchSize = batchSize;
@@ -102,8 +102,8 @@ public class DuffsionImageLoader extends RecursiveAction {
 		} else {
 
 			int mid = (getStart() + getEnd() + 1) >>> 1;
-			DuffsionImageLoader left = new DuffsionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), getA(), getB(), getNoise(), normalization, horizontalFilp, getStart(), mid - 1);
-			DuffsionImageLoader right = new DuffsionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), getA(), getB(), getNoise(), normalization, horizontalFilp, mid, getEnd());
+			DiffusionImageLoader left = new DiffusionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), getA(), getB(), getNoise(), normalization, horizontalFilp, getStart(), mid - 1);
+			DiffusionImageLoader right = new DiffusionImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), getA(), getB(), getNoise(), normalization, horizontalFilp, mid, getEnd());
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -142,7 +142,7 @@ public class DuffsionImageLoader extends RecursiveAction {
 	public static void load(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,float[] a,float[] b,float[] noise,boolean normalization,boolean horizontalFilp) {
 		
 //		FileDataLoader job = new FileDataLoader(path, extName, names, indexs, batchSize, input, 0, batchSize - 1);
-		DuffsionImageLoader job = getInstance(path, extName, names, indexs, batchSize, input, a, b, noise, normalization, horizontalFilp, 0, batchSize - 1);
+		DiffusionImageLoader job = getInstance(path, extName, names, indexs, batchSize, input, a, b, noise, normalization, horizontalFilp, 0, batchSize - 1);
 		ForkJobEngine.run(job);
 		
 	}

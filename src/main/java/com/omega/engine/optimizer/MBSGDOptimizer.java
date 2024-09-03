@@ -17,13 +17,13 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.grad.GradClipping;
 import com.omega.engine.nn.layer.Layer;
-import com.omega.engine.nn.network.DuffsionUNet;
+import com.omega.engine.nn.network.DiffusionUNet;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.OutputsNetwork;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Yolo;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
-import com.omega.example.duffsion.utils.DuffsionImageDataLoader;
+import com.omega.example.diffusion.utils.DiffusionImageDataLoader;
 import com.omega.example.rnn.data.OneHotDataLoader;
 import com.omega.example.rnn.data.RNNDataLoader;
 import com.omega.example.yolo.data.BaseDataLoader;
@@ -1919,7 +1919,7 @@ public class MBSGDOptimizer extends Optimizer {
 		
 		try {
 			
-			DuffsionUNet network = (DuffsionUNet) this.network;
+			DiffusionUNet network = (DiffusionUNet) this.network;
 
 			RandomUtils.gaussianRandom(x_t);
 			
@@ -2104,7 +2104,7 @@ public class MBSGDOptimizer extends Optimizer {
 
 	public void prev_mean_from_eps(Tensor xt,Tensor t,float[] alphas_bar,float[] alphas_bar_prev,float eta,int timestep) {
 		
-		DuffsionUNet network = (DuffsionUNet) this.network;
+		DiffusionUNet network = (DiffusionUNet) this.network;
 //		xt.showDMByOffset(0, 100);
 		Tensor eps = network.forward(xt, t);
 		float[] eps_data = eps.syncHost();
@@ -2254,14 +2254,14 @@ public class MBSGDOptimizer extends Optimizer {
 		
 	}
 	
-	public void trainGaussianDiffusion(DuffsionImageDataLoader trainingData) {
+	public void trainGaussianDiffusion(DiffusionImageDataLoader trainingData) {
 		// TODO Auto-generated method stub
 
 		try {
 			
 			CUDAModules.initCUDAFunctions();
 
-			DuffsionUNet network = (DuffsionUNet) this.network;
+			DiffusionUNet network = (DiffusionUNet) this.network;
 			
 			this.dataSize = trainingData.number;
 

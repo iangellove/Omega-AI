@@ -1,4 +1,4 @@
-package com.omega.example.duffsion.test;
+package com.omega.example.diffusion.test;
 
 import java.util.List;
 import java.util.Map;
@@ -10,17 +10,17 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
-import com.omega.engine.nn.layer.diffsion.ResidualBlockLayer;
-import com.omega.engine.nn.layer.diffsion.UpSampleLayer;
+import com.omega.engine.nn.layer.diffusion.ResidualBlockLayer;
+import com.omega.engine.nn.layer.diffusion.UpSampleLayer;
 import com.omega.engine.nn.layer.normalization.GNLayer;
-import com.omega.engine.nn.network.DuffsionUNet;
+import com.omega.engine.nn.network.DiffusionUNet;
 import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
-import com.omega.example.duffsion.utils.DuffsionImageDataLoader;
+import com.omega.example.diffusion.utils.DiffusionImageDataLoader;
 import com.omega.example.transformer.utils.LagJsonReader;
 
-public class DuffsionModelTest {
+public class DiffusionModelTest {
 	
 	
 	public static void duffsion_anime() {
@@ -42,9 +42,9 @@ public class DuffsionModelTest {
 			
 //			String weightPath = "H:\\voc\\gan_anime\\torch_weights.json";
 			
-			DuffsionImageDataLoader dataLoader = new DuffsionImageDataLoader(imgDirPath, imw, imh, batchSize, false);
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imw, imh, batchSize, false);
 			
-			DuffsionUNet network = new DuffsionUNet(LossType.MSE, UpdaterType.adamw, T, 3, mChannel, channelMult, resBlockNum, imw, imh, bias);
+			DiffusionUNet network = new DiffusionUNet(LossType.MSE, UpdaterType.adamw, T, 3, mChannel, channelMult, resBlockNum, imw, imh, bias);
 			network.CUDNN = true;
 			network.learnRate = 0.0005f;
 			
@@ -65,7 +65,7 @@ public class DuffsionModelTest {
 
 	}
 	
-	public static void loadWeight(Map<String, Object> weightMap,DuffsionUNet network) {
+	public static void loadWeight(Map<String, Object> weightMap,DiffusionUNet network) {
 		for(String key:weightMap.keySet()) {
 			System.out.println(key);
 		}

@@ -1,4 +1,4 @@
-package com.omega.example.duffsion.utils;
+package com.omega.example.diffusion.utils;
 
 import java.io.File;
 import java.util.ArrayList;
