@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer.diffsion;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.ad.op.TensorOP;
@@ -431,6 +434,46 @@ public class ResidualBlockLayer extends Layer{
 	public void initCache() {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		GNLayer bgn1 = (GNLayer) block1[0];
+		bgn1.saveModel(outputStream);
+		ConvolutionLayer bconv1 = (ConvolutionLayer) block1[2];
+		bconv1.saveModel(outputStream);
+		FullyLayer tl = (FullyLayer) temb_proj[1];
+		tl.saveModel(outputStream);
+		
+		GNLayer bgn2 = (GNLayer) block2[0];
+		bgn2.saveModel(outputStream);
+		ConvolutionLayer bconv2 = (ConvolutionLayer) block2[2];
+		bconv2.saveModel(outputStream);
+		
+		if(shortcut != null){
+			shortcut.saveModel(outputStream);
+		}
+		
+		attn.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		GNLayer bgn1 = (GNLayer) block1[0];
+		bgn1.loadModel(inputStream);
+		ConvolutionLayer bconv1 = (ConvolutionLayer) block1[2];
+		bconv1.loadModel(inputStream);
+		FullyLayer tl = (FullyLayer) temb_proj[1];
+		tl.loadModel(inputStream);
+		
+		GNLayer bgn2 = (GNLayer) block2[0];
+		bgn2.loadModel(inputStream);
+		ConvolutionLayer bconv2 = (ConvolutionLayer) block2[2];
+		bconv2.loadModel(inputStream);
+		
+		if(shortcut != null){
+			shortcut.loadModel(inputStream);
+		}
+		
+		attn.loadModel(inputStream);
 	}
 	
 	public static void main(String[] args) {

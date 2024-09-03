@@ -191,7 +191,7 @@ public class YoloV7Test {
 			DarknetLoader.loadWeight(netWork, weightPath, 86, true);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 1000, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
-
+			
 			optimizer.trainObjectRecognitionOutputs(trainData, vailData);
 			
 			/**

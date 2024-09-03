@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer.diffsion;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
@@ -193,5 +196,15 @@ public class UpSampleLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 	}
+	
+
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		conv.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		conv.loadModel(inputStream);
+	}
+	
 
 }

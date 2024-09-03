@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer.normalization;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.cudnn.BNCudnnKernel;
@@ -9,6 +12,7 @@ import com.omega.engine.nn.layer.gpu.BNBaseKernel;
 import com.omega.engine.nn.layer.normalization.gpu.BNKernel3;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
@@ -389,6 +393,21 @@ public class BNLayer extends NormalizationLayer {
 	public void backTemp() {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		ModelUtils.saveParams(outputStream, gamma);
+		if(hasBias) {
+			ModelUtils.saveParams(outputStream, beta);
+		}
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		init();
+		ModelUtils.loadParams(inputStream, gamma);
+		if(hasBias) {
+			ModelUtils.loadParams(inputStream, beta);
+		}
 	}
 
 }

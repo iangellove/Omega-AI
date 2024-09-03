@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer.diffsion;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
@@ -215,6 +218,16 @@ public class TimeEmbeddingLayer extends Layer{
 	public void initCache() {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		linear1.saveModel(outputStream);
+		linear2.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		linear1.loadModel(inputStream);
+		linear2.loadModel(inputStream);
 	}
 	
 	public static void main(String[] args) {

@@ -1,5 +1,7 @@
 package com.omega.engine.nn.network;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -254,7 +256,7 @@ public class DuffsionUNet extends Network {
 		/**
 		 * timestep embedding
 		 */
-		getTemb().forward(t);
+		temb.forward(t);
 		
 		/**
 		 * head
@@ -290,8 +292,8 @@ public class DuffsionUNet extends Network {
 		/**
 		 * middle
 		 */
-		getMidResBlock1().forward(getDownBlocks().get(getDownBlocks().size() - 1).getOutput(), getTemb().getOutput());
-		getMidResBlock2().forward(getMidResBlock1().getOutput(), getTemb().getOutput());
+		midResBlock1.forward(getDownBlocks().get(getDownBlocks().size() - 1).getOutput(), getTemb().getOutput());
+		midResBlock2.forward(getMidResBlock1().getOutput(), getTemb().getOutput());
 //		System.out.println(MatrixOperation.isNaN(tmp.syncHost()));
 //		tmp.showDMByOffset(0, 100);
 //		temb.getOutput().showDMByOffset(0, 100);
@@ -327,9 +329,9 @@ public class DuffsionUNet extends Network {
 		/**
 		 * tail
 		 */
-		getGn().forward(getUpBlocks().get(getUpBlocks().size() - 1).getOutput());
+		gn.forward(getUpBlocks().get(getUpBlocks().size() - 1).getOutput());
 		act.forward(getGn().getOutput());
-		getConv().forward(act.getOutput());
+		conv.forward(act.getOutput());
 //		System.err.println("------");
 //		System.err.println("output:");
 //		this.conv.getOutput().showDMByOffset(0, 96);
@@ -579,16 +581,88 @@ public class DuffsionUNet extends Network {
 		return conv;
 	}
 	
-//	public void saveModel(RandomAccessFile outputStream) throws IOException {
-//		decoder.saveModel(outputStream);
-//		System.out.println("decoder save success...");
-//		fullyLayer.saveModel(outputStream);
-//		System.out.println("fullyLayer save success...");
-//	}
-//	
-//	public void loadModel(RandomAccessFile inputStream) throws IOException {
-//		decoder.loadModel(inputStream);
-//		fullyLayer.loadModel(inputStream);
-//	}
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		temb.saveModel(outputStream);
+		head.saveModel(outputStream);
+		System.out.println("head save success...");
+		
+		for(int i = 0;i<downBlocks.size();i++) {
+			Layer layer = downBlocks.get(i);
+			if(layer instanceof ResidualBlockLayer) {
+				ResidualBlockLayer rbl = (ResidualBlockLayer) layer;
+				rbl.saveModel(outputStream);
+			}else if(layer instanceof ConvolutionLayer) {
+				ConvolutionLayer conv = (ConvolutionLayer) layer;
+				conv.saveModel(outputStream);
+			}
+		}
+		System.out.println("downBlocks save success...");
+		
+		midResBlock1.saveModel(outputStream);
+		midResBlock2.saveModel(outputStream);
+		System.out.println("midResBlocks save success...");
+		
+		for(int i = 0;i<upBlocks.size();i++) {
+			Layer layer = downBlocks.get(i);
+			if(layer instanceof ResidualBlockLayer) {
+				ResidualBlockLayer rbl = (ResidualBlockLayer) layer;
+				rbl.saveModel(outputStream);
+			}else if(layer instanceof ConvolutionLayer) {
+				ConvolutionLayer conv = (ConvolutionLayer) layer;
+				conv.saveModel(outputStream);
+			}else if(layer instanceof UpSampleLayer) {
+				UpSampleLayer up = (UpSampleLayer) layer;
+				up.saveModel(outputStream);
+			}
+		}
+		System.out.println("upBlocks save success...");
+		
+		gn.saveModel(outputStream);
+		conv.saveModel(outputStream);
+		System.out.println("tail save success...");
+		
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		temb.loadModel(inputStream);
+		head.loadModel(inputStream);
+		System.out.println("head load success...");
+		
+		for(int i = 0;i<downBlocks.size();i++) {
+			Layer layer = downBlocks.get(i);
+			if(layer instanceof ResidualBlockLayer) {
+				ResidualBlockLayer rbl = (ResidualBlockLayer) layer;
+				rbl.loadModel(inputStream);
+			}else if(layer instanceof ConvolutionLayer) {
+				ConvolutionLayer conv = (ConvolutionLayer) layer;
+				conv.loadModel(inputStream);
+			}
+		}
+		System.out.println("downBlocks load success...");
+		
+		midResBlock1.loadModel(inputStream);
+		midResBlock2.loadModel(inputStream);
+		System.out.println("midResBlocks load success...");
+		
+		for(int i = 0;i<upBlocks.size();i++) {
+			Layer layer = downBlocks.get(i);
+			if(layer instanceof ResidualBlockLayer) {
+				ResidualBlockLayer rbl = (ResidualBlockLayer) layer;
+				rbl.loadModel(inputStream);
+			}else if(layer instanceof ConvolutionLayer) {
+				ConvolutionLayer conv = (ConvolutionLayer) layer;
+				conv.loadModel(inputStream);
+			}else if(layer instanceof UpSampleLayer) {
+				UpSampleLayer up = (UpSampleLayer) layer;
+				up.loadModel(inputStream);
+			}
+		}
+		System.out.println("upBlocks load success...");
+		
+		gn.loadModel(inputStream);
+		conv.loadModel(inputStream);
+		System.out.println("tail load success...");
+		
+	}
 	
 }

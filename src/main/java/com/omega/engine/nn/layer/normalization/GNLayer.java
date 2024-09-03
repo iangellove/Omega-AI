@@ -28,14 +28,6 @@ public class GNLayer extends NormalizationLayer {
 	
 	public BNType bnType = null;
 
-	/**
-	 * if prelayer is conv layer meanNum = batchSize * channel
-	 * mean dims = H * W
-	 * else if prelayer is fully layer meanNum = batchSize * channel
-	 * mean dims = W
-	 */
-	private int meanNum = 0;
-	
 	private int groupNum = 1;
 	
 	private int numChannel = 0;
@@ -109,24 +101,19 @@ public class GNLayer extends NormalizationLayer {
 				this.oWidth = this.width;
 				if(this.preLayer.getLayerType() == LayerType.conv) {
 					this.setBnType(BNType.conv_bn);
-					this.meanNum = this.height * this.width;
 					this.numChannel = this.channel;
 				}else if(this.preLayer.getLayerType() == LayerType.full){
 					this.setBnType(BNType.fully_bn);
-					this.meanNum = this.channel * this.height * this.width;
 					this.numChannel = this.height * this.width;
 				}else if(this.preLayer.getLayerType() == LayerType.conv_transpose) {
 					this.setBnType(BNType.conv_bn);
-					this.meanNum = this.height * this.width;
 					this.numChannel = this.channel;
 				}else {
 					this.setBnType(BNType.fully_bn);
-					this.meanNum = this.channel * this.height * this.width;
 					this.numChannel = this.height * this.width;
 				}
 			}else {
 				this.setBnType(BNType.fully_bn);
-				this.meanNum = this.channel * this.height * this.width;
 				this.numChannel = this.height * this.width;
 			}
 			
@@ -162,7 +149,6 @@ public class GNLayer extends NormalizationLayer {
 			this.oHeight = this.height;
 			this.oWidth = this.width;
 			this.setBnType(BNType.fully_bn);
-			this.meanNum = this.channel * this.height * this.width;
 			this.numChannel = this.height * this.width;
 		}else {
 			this.channel = input.channel;
@@ -172,7 +158,6 @@ public class GNLayer extends NormalizationLayer {
 			this.oHeight = this.height;
 			this.oWidth = this.width;
 			this.setBnType(BNType.conv_bn);
-			this.meanNum = this.height * this.width;
 			this.numChannel = this.channel;
 		}
 
@@ -392,16 +377,20 @@ public class GNLayer extends NormalizationLayer {
 		
 	}
 	
+
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
-		
 		ModelUtils.saveParams(outputStream, gamma);
-		
+		if(hasBias) {
+			ModelUtils.saveParams(outputStream, beta);
+		}
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
 		init();
 		ModelUtils.loadParams(inputStream, gamma);
-		
+		if(hasBias) {
+			ModelUtils.loadParams(inputStream, beta);
+		}
 	}
 
 }

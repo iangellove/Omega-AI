@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
@@ -13,6 +16,7 @@ import com.omega.engine.nn.model.ConvLayerInit;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.CNN;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
@@ -517,6 +521,26 @@ public class ConvolutionLayer extends Layer {
 	@Override
 	public void backTemp() {
 		// TODO Auto-generated method stub
+		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		ModelUtils.saveParams(outputStream, weight);
+		
+		if(hasBias) {
+			ModelUtils.saveParams(outputStream, bias);
+		}
+		
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		ModelUtils.loadParams(inputStream, weight);
+		
+		if(hasBias) {
+			ModelUtils.loadParams(inputStream, bias);
+		}
 		
 	}
 	

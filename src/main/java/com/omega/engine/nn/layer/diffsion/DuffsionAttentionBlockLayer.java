@@ -3,6 +3,9 @@ package com.omega.engine.nn.layer.diffsion;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.ad.op.TensorOP;
@@ -464,6 +467,22 @@ public class DuffsionAttentionBlockLayer extends Layer{
 	public void backTemp() {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		gn.saveModel(outputStream);
+		qLayer.saveModel(outputStream);
+		kLayer.saveModel(outputStream);
+		vLayer.saveModel(outputStream);
+		oLayer.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile outputStream) throws IOException {
+		gn.loadModel(outputStream);
+		qLayer.loadModel(outputStream);
+		kLayer.loadModel(outputStream);
+		vLayer.loadModel(outputStream);
+		oLayer.loadModel(outputStream);
 	}
 	
 //	public Tensor getWeights() {

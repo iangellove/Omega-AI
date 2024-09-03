@@ -180,6 +180,7 @@ public abstract class Layer {
 			}else if(this.cache_delta != this.delta){
 //				System.out.println("in===>add:"+this.getLayerType()+"["+index+"]");
 				BaseGPUOP.getKernel().axpy_gpu(this.cache_delta, this.delta, this.delta.getDataLength(), 1, 1, 1);
+				this.cache_delta.clearGPU();
 			}
 //			this.cache_delta.clearGPU();
 		}
@@ -204,6 +205,7 @@ public abstract class Layer {
 			}else if(this.cache_delta != this.delta){
 //				System.out.println("in===>add:"+this.getLayerType()+"["+index+"]");
 				BaseGPUOP.getKernel().axpy_gpu(this.cache_delta, this.delta, this.delta.getDataLength(), 1, 1, 1);
+				this.cache_delta.clearGPU();
 			}
 //			this.cache_delta.clearGPU();
 		}

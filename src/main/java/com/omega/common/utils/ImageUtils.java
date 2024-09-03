@@ -836,15 +836,31 @@ public class ImageUtils {
 		return true;
 	}
 	
-	public boolean createRGBGIF(String path,String extName,int[][][] rgb,int weight,int height) {
+	public boolean createRGBGIF(String path,String extName,int[][][] rgb,int width,int height) {
 		AnimatedGifEncoder ae = new AnimatedGifEncoder();
-		ae.setSize(weight, height);
+		ae.setSize(width, height);
+		ae.start(path);
+		ae.setDelay(1000);
+		ae.setRepeat(0);
+		for(int i = 0;i<rgb.length;i++) {
+			BufferedImage bufferedImage = this.convertRGBImage(rgb[i]);
+			ae.addFrame(bufferedImage);
+		}
+		return ae.finish();
+	}
+	
+	public boolean createScaledRGBGIF(String path,String extName,int[][][] rgb,int targetWidth,int targetHeight) {
+		AnimatedGifEncoder ae = new AnimatedGifEncoder();
+		ae.setSize(targetWidth, targetHeight);
 		ae.start(path);
 		ae.setDelay(100);
 		ae.setRepeat(0);
 		for(int i = 0;i<rgb.length;i++) {
 			BufferedImage bufferedImage = this.convertRGBImage(rgb[i]);
-			ae.addFrame(bufferedImage);
+			Image resultingImage = bufferedImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_AREA_AVERAGING);
+		    BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+		    outputImage.getGraphics().drawImage(resultingImage, 0, 0, null);
+			ae.addFrame(outputImage);
 		}
 		return ae.finish();
 	}
@@ -1149,10 +1165,14 @@ public class ImageUtils {
 					int g = (int) data[ocount + index];
 					int b = (int) data[ocount * 2 + index];
 					if(format) {
-						r = (int) ((data[index] * std[0] + mean[0]) * 255);
-						g = (int) ((data[ocount + index] * std[1] + mean[1]) * 255);
-						b = (int) ((data[ocount * 2 + index] * std[2] + mean[2]) * 255);
+						r = (int) ((data[index] * std[0] + mean[0]) * 255 + 0.5f);
+						g = (int) ((data[ocount + index] * std[0] + mean[0]) * 255 + 0.5f);
+						b = (int) ((data[ocount * 2 + index] * std[0] + mean[0]) * 255 + 0.5f);
 					}
+					
+					r = clamp(r, 0, 255);
+					g = clamp(g, 0, 255);
+					b = clamp(b, 0, 255);
 				
 					int orgb = colorToRGB(255, r, g, b);
 					
@@ -1169,10 +1189,13 @@ public class ImageUtils {
 					int g = (int) data[index];
 					int b = (int) data[index];
 					if(format) {
-						r = (int) ((data[index] * std[0] + mean[0]) * 255);
-						g = (int) ((data[index] * std[1] + mean[1]) * 255);
-						b = (int) ((data[index] * std[2] + mean[2]) * 255);
+						r = (int) ((data[index] * std[0] + mean[0]) * 255 + 0.5f);
+						g = (int) ((data[index] * std[0] + mean[0]) * 255 + 0.5f);
+						b = (int) ((data[index] * std[0] + mean[0]) * 255 + 0.5f);
 					}
+					r = clamp(r, 0, 255);
+					g = clamp(g, 0, 255);
+					b = clamp(b, 0, 255);
 					
 					int orgb = colorToRGB(255, r, g, b);
 					
