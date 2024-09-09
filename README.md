@@ -185,6 +185,13 @@ train_loss = 2.0f //最终训练集损失在2.0左右
 ###### 推理效果图
 ![Llama2医疗问答系统](images/llama2-medical.png)
 
+### Diffusion model 扩散模型系列
+#### [基于diffusion扩散模型实现生成动漫头像图片](#diffusion-model-anime-demo-生成手写数字)
+#### 训练过程演示图
+![输入图片说明](images/diffusion_anime-min.gif)
+#### 50次循环训练后反向去噪生成过程图
+
+
 ##  功能介绍
 #### 支持的网络层类型：
 
@@ -1467,4 +1474,4 @@ http://119.3.123.193:8011/AICar
 
 ### QQ：465973119
 ### 技术交流QQ群：119593195
-### 电子邮箱：465973119@qq.com
+### 电子邮箱：465973119@qq.com![输入图片说明](images/diffusion_0_anime.gif)![输入图片说明](images/diffusion_11_anime.gif)
