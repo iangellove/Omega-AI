@@ -1505,4 +1505,4 @@ http://119.3.123.193:8011/AICar
 
 ### QQ：465973119
 ### 技术交流QQ群：119593195
-### 电子邮箱：465973119@qq.com![输入图片说明](images/diffusion_0_anime.gif)![输入图片说明](images/diffusion_11_anime.gif)
+### 电子邮箱：465973119@qq.com
