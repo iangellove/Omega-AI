@@ -186,10 +186,14 @@ train_loss = 2.0f //最终训练集损失在2.0左右
 ![Llama2医疗问答系统](images/llama2-medical.png)
 
 ### Diffusion model 扩散模型系列
-#### [基于diffusion扩散模型实现生成动漫头像图片](#diffusion-model-anime-demo-生成手写数字)
+#### [基于diffusion扩散模型实现生成动漫头像图片](#diffusion-动漫头像生成)
 #### 训练过程演示图
 ![输入图片说明](images/diffusion_anime-min.gif)
 #### 50次循环训练后反向去噪生成过程图
+![输入图片说明](images/diffusion_0_anime.gif)
+![输入图片说明](images/diffusion_11(2)_anime.gif)
+![输入图片说明](images/diffusion_11_anime.gif)
+![输入图片说明](images/diffusion_5_anime.gif)
 
 
 ##  功能介绍
@@ -1329,6 +1333,33 @@ public static void gan_anime() {
 		}
 	}
 ```
+
+#### diffusion-动漫头像生成
+```java
+public static void duffsion_anime() {
+		try {
+			boolean bias = false;
+			int batchSize = 8;
+			int imw = 96;
+			int imh = 96;
+			int mChannel = 64;
+			int resBlockNum = 2;
+			int T = 1000;
+			int[] channelMult = new int[] {1, 2, 3, 4};
+			String imgDirPath = "H:\\voc\\gan_anime\\ml2021spring-hw6\\faces\\";
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imw, imh, batchSize, false);
+			DiffusionUNet network = new DiffusionUNet(LossType.MSE, UpdaterType.adamw, T, 3, mChannel, channelMult, resBlockNum, imw, imh, bias);
+			network.CUDNN = true;
+			network.learnRate = 0.0002f;
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 50, 0.00001f, batchSize, LearnRateUpdate.GD_GECAY, false);
+			optimizer.trainGaussianDiffusion(dataLoader);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+``` 
+
 
 ## 版本依赖包
 ```xml
