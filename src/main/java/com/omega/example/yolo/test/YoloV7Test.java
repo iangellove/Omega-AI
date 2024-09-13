@@ -862,8 +862,8 @@ public class YoloV7Test {
 //			y.yolov3_show2();
 //			y.createMaskTrainTestDataSet();
 //			y.yolov7_tiny_mask();
-			y.yolov7_tiny_helmet();
-//			y.yolov7_tiny_sm();
+			//y.yolov7_tiny_helmet();
+			y.yolov7_tiny_sm();
 //			y.yolov7_tiny_yz();
 //			y.yolov3_tiny_voc();
 //			y.getAnchors();

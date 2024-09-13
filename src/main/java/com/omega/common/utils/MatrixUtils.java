@@ -146,6 +146,22 @@ public class MatrixUtils {
 		return temp;
 	}
 	
+	public static int[] orderRank(int start,int end) {
+		int[] temp = new int[end - start];
+		for(int i = 0;i<(end - start);i++) {
+			temp[i] = i + start;
+		}
+		return temp;
+	}
+	
+	public static Integer[] orderRankInt(int start,int end) {
+		Integer[] temp = new Integer[end - start];
+		for(int i = 0;i<(end - start);i++) {
+			temp[i] = i + start;
+		}
+		return temp;
+	}
+	
 	/**
 	 * 
 	 * @Title: zero

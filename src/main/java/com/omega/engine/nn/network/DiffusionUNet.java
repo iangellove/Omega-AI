@@ -553,10 +553,6 @@ public class DiffusionUNet extends Network {
 		return temb;
 	}
 
-	public ConvolutionLayer getHead() {
-		return head;
-	}
-
 	public List<Layer> getDownBlocks() {
 		return downBlocks;
 	}
@@ -571,6 +567,10 @@ public class DiffusionUNet extends Network {
 
 	public List<Layer> getUpBlocks() {
 		return upBlocks;
+	}
+
+	public ConvolutionLayer getHead() {
+		return head;
 	}
 
 	public GNLayer getGn() {

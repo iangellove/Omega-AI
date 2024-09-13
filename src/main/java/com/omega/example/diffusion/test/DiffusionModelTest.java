@@ -18,7 +18,6 @@ import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.example.diffusion.utils.DiffusionImageDataLoader;
-import com.omega.example.transformer.utils.LagJsonReader;
 
 public class DiffusionModelTest {
 	
