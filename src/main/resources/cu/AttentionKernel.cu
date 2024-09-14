@@ -1,5 +1,6 @@
 #define BLOCK 1024 
 #define BlockSize 256
+#define BlockSize32 32
 
 #include <float.h>
 #include <cooperative_groups.h>
@@ -264,7 +265,7 @@ __device__ float warpReduceSum(float val) {
 }
 
 extern "C"
-__global__ void softmax_forward_kernel4(float* out, float scale, const float* inp, int N, int C) {
+__global__ void softmax_forward_kernel4(float* out, const float* inp, int N, int C) {
     // out is (N, C) just like inp. Each row of inp will get softmaxed.
     // same as kernel3, but can handle any block size (multiple of 32)
     // each row of C elements is handled by block_size threads
@@ -292,7 +293,7 @@ __global__ void softmax_forward_kernel4(float* out, float scale, const float* in
     // first, thread coarsening by directly accessing global memory in series
     float maxval = -INFINITY;
     for (int i = tid; i < C; i += blockDim.x) {
-        maxval = fmaxf(maxval, x[i] * scale);
+        maxval = fmaxf(maxval, x[i]);
     }
     // now within-warp reductions for maxval
     maxval = warpReduceMax(maxval);
@@ -317,7 +318,7 @@ __global__ void softmax_forward_kernel4(float* out, float scale, const float* in
     // compute expf and write the result to global memory
     for (int i = tid; i < C; i += blockDim.x) {
         // subtract max for numerical stability
-        out[idx * C + i] = expf(x[i] * scale - offset);
+        out[idx * C + i] = expf(x[i] - offset);
     }
 
     // okay now we calculated exp(x - max(x))
@@ -327,7 +328,7 @@ __global__ void softmax_forward_kernel4(float* out, float scale, const float* in
     x = out + idx * C;
     float sumval = 0.0f;
     for (int i = tid; i < C; i += blockDim.x) {
-        sumval += x[i] * scale;
+        sumval += x[i];
     }
     // within-warp reduction for sumval
     sumval = warpReduceSum(sumval);
@@ -350,7 +351,7 @@ __global__ void softmax_forward_kernel4(float* out, float scale, const float* in
 
     // divide the whole row by the sum
     for (int i = tid; i < C; i += blockDim.x) {
-        out[idx * C + i] = x[i] * scale / sum;
+        out[idx * C + i] = x[i] / sum;
     }
 }
 
@@ -514,7 +515,63 @@ __global__ void softmax_forward_kernel5(float* out, float inv_temperature, const
     }
 }
 
+extern "C"
+__global__ void softmax_forward_kernel5_no_mask(float* out, float inv_temperature, const float* inp, int N, int T) {
+    // inp, out shape: (N, T, T), where N = B * NH
+    // fuses the multiplication by scale inside attention
+    // directly autoregressive, so we only compute the lower triangular part
+    // uses the online softmax algorithm
+    //assert(T % 4  == 0);
+    namespace cg = cooperative_groups;
+    cg::thread_block block = cg::this_thread_block();
+    cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
+    int idx = blockIdx.x * warp.meta_group_size() + warp.meta_group_rank();
+    if(idx >= N * T) {
+        return;
+    }
+    int own_pos = T;
+    int pos_by_4 = own_pos / 4;
 
+    // one row of inp, i.e. inp[idx, :] of shape (T,)
+    const float* x = inp + idx * T;
+
+    // not INF, so we don't get NaNs accidentally when subtracting two values.
+    float maxval = -FLT_MAX;
+    float sumval = 0.0f;
+
+    const float4* x_vec = reinterpret_cast<const float4*>(x);
+    for (int i = warp.thread_rank(); i < pos_by_4; i += warp.size()) {
+        float4 v = x_vec[i];
+        float old_maxval = maxval;
+        for(int k = 0; k < 4; ++k) {
+            maxval = fmaxf(maxval, vec_at(v, k));
+        }
+        sumval *= expf(inv_temperature * (old_maxval - maxval));
+        for(int k = 0; k < 4; ++k) {
+            sumval += expf(inv_temperature * (vec_at(v, k) - maxval));
+        }
+    }
+
+    if(4*pos_by_4 + warp.thread_rank() < own_pos) {
+        float old_maxval = maxval;
+        maxval = fmaxf(maxval, x[4*pos_by_4 + warp.thread_rank()]);
+        sumval *= expf(inv_temperature * (old_maxval - maxval));
+        sumval += expf(inv_temperature * (x[4*pos_by_4 + warp.thread_rank()] - maxval));
+    }
+
+    float global_maxval = cg::reduce(warp, maxval, cg::greater<float>{});
+    sumval *= expf(inv_temperature * (maxval - global_maxval));
+
+    float sum = cg::reduce(warp, sumval, cg::plus<float>{});
+    float norm = 1.f / sum;
+
+    // divide the whole row by the sum
+    for (int i = warp.thread_rank(); i < own_pos; i += warp.size()) {
+        // recalculation is faster than doing the round-trip through memory.
+        float ev = expf(inv_temperature * (__ldcs(x + i) - global_maxval));
+        __stcs(out + idx * T + i, ev * norm);
+    }
+}
 
 extern "C"
 __global__ void softmax_autoregressive_backward_kernel7(float* dpreatt, const float* datt, const float* att,
@@ -540,7 +597,7 @@ __global__ void softmax_autoregressive_backward_kernel7(float* dpreatt, const fl
     }
 
     float local_sum = 0;
-    for(int t2 = block.thread_rank(); t2 <= t; t2 += BlockSize) {
+    for(int t2 = block.thread_rank(); t2 <= t; t2 += BlockSize32) {
         local_sum += att_bth[t2] * datt_bth[t2];
     }
 
@@ -548,7 +605,7 @@ __global__ void softmax_autoregressive_backward_kernel7(float* dpreatt, const fl
     block.sync();
     local_sum = cg::reduce(warp, block_acc[warp.thread_rank()], cg::plus<float>{});
 
-    for (int t3 = block.thread_rank(); t3 <= t; t3 += BlockSize) {
+    for (int t3 = block.thread_rank(); t3 <= t; t3 += BlockSize32) {
         float acc = att_bth[t3] * (datt_bth[t3] - local_sum);
         dpreatt_bth[t3] = scale * acc;
     }
@@ -583,7 +640,7 @@ __global__ void softmax_autoregressive_backward_kernel8(float* dpreatt, const fl
         float* dpreatt_bth = dpreatt + t * T;
 
         float local_sum = 0;
-        for (int t2 = block.thread_rank(); t2 <= t; t2 += BlockSize) {
+        for (int t2 = block.thread_rank(); t2 <= t; t2 += BlockSize32) {
             local_sum += att_bth[t2] * datt_bth[t2];
         }
 
@@ -591,7 +648,53 @@ __global__ void softmax_autoregressive_backward_kernel8(float* dpreatt, const fl
         block.sync();
         local_sum = cg::reduce(warp, block_acc[warp.thread_rank()], cg::plus<float>{});
 
-        for (int t3 = block.thread_rank(); t3 <= t; t3 += BlockSize) {
+        for (int t3 = block.thread_rank(); t3 <= t; t3 += BlockSize32) {
+            // don't touch the cache. Some parts will still be here from the previous loop, and
+            // we want to exploit those.
+            float acc = __ldcs(att_bth + t3) * (__ldcs(datt_bth + t3) - local_sum);
+            __stcs(dpreatt_bth + t3, scale * acc);
+        }
+    }
+}
+
+extern "C"
+__global__ void softmax_autoregressive_nomask_backward_kernel8(float* dpreatt, const float* datt, const float* att,
+                                                        int B, int T, float scale) {
+    namespace cg = cooperative_groups;
+    constexpr int T_per_block = 4;
+    cg::thread_block block = cg::this_thread_block();
+    cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
+    __shared__ float block_acc[32];
+
+    int idx = blockIdx.y;
+    // go through blocks in reverse order, so the slowest block starts first
+    int t0 = T - 1 - T_per_block*blockIdx.x;
+
+    att += idx * T * T;
+    datt += idx * T * T;
+    dpreatt += idx * T * T;
+
+    if (warp.meta_group_rank() == 0) {
+        block_acc[warp.thread_rank()] = 0;
+    }
+
+    for(int to = 0; to < T_per_block; ++to) {
+        int t = t0 - to;
+        if(t < 0) return;
+        const float* att_bth = att + t * T;
+        const float* datt_bth = datt + t * T;
+        float* dpreatt_bth = dpreatt + t * T;
+
+        float local_sum = 0;
+        for (int t2 = block.thread_rank(); t2 < T; t2 += BlockSize32) {
+            local_sum += att_bth[t2] * datt_bth[t2];
+        }
+
+        block_acc[warp.meta_group_rank()] = cg::reduce(warp, local_sum, cg::plus<float>{});
+        block.sync();
+        local_sum = cg::reduce(warp, block_acc[warp.thread_rank()], cg::plus<float>{});
+
+        for (int t3 = block.thread_rank(); t3 < T; t3 += BlockSize32) {
             // don't touch the cache. Some parts will still be here from the previous loop, and
             // we want to exploit those.
             float acc = __ldcs(att_bth + t3) * (__ldcs(datt_bth + t3) - local_sum);

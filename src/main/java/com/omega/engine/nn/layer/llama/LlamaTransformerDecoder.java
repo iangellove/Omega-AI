@@ -38,6 +38,8 @@ public class LlamaTransformerDecoder extends Layer{
 	
 	private int headNum = 8;
 	
+	private int nKVHeadNum = 8;
+	
 	private int n_layers = 6;
 	
 	private EmbeddingIDLayer src_emb;
@@ -49,6 +51,7 @@ public class LlamaTransformerDecoder extends Layer{
 	
 	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout) {
 		this.headNum = headNum;
+		this.nKVHeadNum = headNum;
 		this.n_layers = n_layers;
 		this.vocab_size = vocab_size;
 		this.time = time;
@@ -67,6 +70,30 @@ public class LlamaTransformerDecoder extends Layer{
 	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention,Network network) {
 		this.flashAttention = flashAttention;
 		this.headNum = headNum;
+		this.nKVHeadNum = headNum;
+		this.n_layers = n_layers;
+		this.network = network;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
+		this.vocab_size = vocab_size;
+		this.time = time;
+		this.embedDim = embedDim;
+		this.bias = bias;
+		this.dropout = dropout;
+		this.channel = 1;
+		this.height = 1;
+		this.width = embedDim;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
+		this.initLayers();
+	}
+	
+	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int nKVHeadNum,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention,Network network) {
+		this.flashAttention = flashAttention;
+		this.headNum = headNum;
+		this.nKVHeadNum = nKVHeadNum;
 		this.n_layers = n_layers;
 		this.network = network;
 		if(this.updater == null) {
@@ -95,7 +122,7 @@ public class LlamaTransformerDecoder extends Layer{
 		decoderLayers = new ArrayList<LlamaTransformerBlock>();
 		
 		for(int i = 0;i<n_layers;i++) {
-			LlamaTransformerBlock decoderLayer = new LlamaTransformerBlock(headNum, time, embedDim, bias, dropout, flashAttention, network);
+			LlamaTransformerBlock decoderLayer = new LlamaTransformerBlock(headNum, nKVHeadNum, time, embedDim, bias, dropout, flashAttention, network);
 			decoderLayers.add(decoderLayer);
 		}
 		

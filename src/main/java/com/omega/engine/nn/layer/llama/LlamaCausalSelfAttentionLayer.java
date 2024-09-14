@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
@@ -17,6 +16,7 @@ import com.omega.engine.nn.layer.DropoutLayer;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
+import com.omega.engine.nn.layer.gpu.RepeatKVKernel;
 import com.omega.engine.nn.layer.gpu.RoPEKernel;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
@@ -57,6 +57,8 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 	
 	private RoPEKernel ropeKernel;
 	
+	private RepeatKVKernel repeatKVKernel;
+	
 	private Tensor rq;
 	private Tensor rk;
 	
@@ -88,11 +90,16 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 	
 	private boolean dropout = false;
 	
+	private int nKVHeads = 0;
+	
+	private int nRep = 1;
+	
 	public LlamaCausalSelfAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout) {
 		this.bias = bias;
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
+		this.nKVHeads = headNum;
 		if(embedDim % headNum != 0){
 			throw new RuntimeException("embedDim % headNum must be zero.");
 		}
@@ -114,8 +121,35 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		this.time = time;
 		this.embedDim = embedDim;
 		this.headNum = headNum;
+		this.nKVHeads = headNum;
 		if(embedDim % headNum != 0){
 			throw new RuntimeException("embedDim % headNum must be zero.");
+		}
+		this.dk = embedDim / headNum;
+		this.bias = bias;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
+		this.dropout = dropout;
+		this.initLayers();
+	}
+	
+	public LlamaCausalSelfAttentionLayer(int embedDim,int headNum,int nKVHeads,int time,boolean bias,boolean dropout,Network network) {
+		this.bias = bias;
+		this.network = network;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
+		this.time = time;
+		this.embedDim = embedDim;
+		this.headNum = headNum;
+		this.nKVHeads = nKVHeads;
+		this.nRep = headNum / nKVHeads;
+		if(embedDim % headNum != 0){
+			throw new RuntimeException("embedDim % headNum must be zero.");
+		}
+		if(headNum % nKVHeads != 0){
+			throw new RuntimeException("headNum % nKVHeads must be zero.");
 		}
 		this.dk = embedDim / headNum;
 		this.bias = bias;
@@ -135,16 +169,16 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 //		TensorOP.permute(this.qLinerLayer.weight, qw, new int[] {0, 1, 3, 2});
 //		this.qLinerLayer.weight = qw;
 		
-		this.kLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+		this.kLinerLayer = new FullyLayer(embedDim, nKVHeads * dk, bias, this.network);
+		this.kLinerLayer.weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.uniform(this.embedDim * nKVHeads * dk, 0.0f, 0.02f), true);
 //		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.001f, 0.001f), true);
 //		Tensor kw = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.kLinerLayer.weight, kw, new int[] {0, 1, 3, 2});
 //		this.kLinerLayer.weight = kw;
 //		this.kLinerLayer.weight.showDM();
 		
-		this.vLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+		this.vLinerLayer = new FullyLayer(embedDim, nKVHeads * dk, bias, this.network);
+		this.vLinerLayer.weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.uniform(this.embedDim * nKVHeads * dk, 0.0f, 0.02f), true);
 //		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.001f, 0.001f), true);
 //		Tensor vw = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.vLinerLayer.weight, vw, new int[] {0, 1, 3, 2});
@@ -177,6 +211,10 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 			ropeKernel = new RoPEKernel();
 		}
 		
+		if(repeatKVKernel == null) {
+			repeatKVKernel = new RepeatKVKernel();
+		}
+		
 	}
 	
 	@Override
@@ -194,7 +232,7 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		if(this.preatt == null || this.preatt.number != this.batchSize || this.preatt.width != this.time) {
 			// [batch_size，time，head_num，d_k]
 			this.rq = Tensor.createGPUTensor(this.rq, batchSize, time, headNum, dk, true);
-			this.rk = Tensor.createGPUTensor(this.rk, batchSize, time, headNum, dk, true);
+			this.rk = Tensor.createGPUTensor(this.rk, batchSize, time, nKVHeads, dk, true);
 			this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
 			this.kt = Tensor.createGPUTensor(this.kt, batchSize, headNum, time, dk, true);
 			this.vt = Tensor.createGPUTensor(this.vt, batchSize, headNum, time, dk, true);
@@ -257,21 +295,27 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		this.vLinerLayer.forward(this.input);
 		
 		Tensor query = this.qLinerLayer.getOutput().view(batchSize, time, headNum, dk);
-		Tensor key = this.kLinerLayer.getOutput().view(batchSize, time, headNum, dk);
-		Tensor value = this.vLinerLayer.getOutput().view(batchSize, time, headNum, dk);
+		Tensor key = this.kLinerLayer.getOutput().view(batchSize, time, nKVHeads, dk);
+		Tensor value = this.vLinerLayer.getOutput().view(batchSize, time, nKVHeads, dk);
 //		query.showDM();
 		/**
 		 * apply RoPE
 		 */
-		ropeKernel.forward(cos, sin, query, key, rq, rk);
-//		System.err.println("------rq");
-//		rq.showDM();
-//		ropeKernel.forwardAll32(query, key, rq, rk);
+		ropeKernel.forward(cos, sin, query, rq);
+		ropeKernel.forward(cos, sin, key, rk);
 		
 		TensorOP.permute(rq, qt, new int[] {0, 2, 1, 3});
-		TensorOP.permute(rk, kt, new int[] {0, 2, 1, 3});
-		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
-		
+
+		if(headNum != nKVHeads) {
+			repeatKVKernel.forward(rk, rq, nRep);
+			TensorOP.permute(rq, kt, new int[] {0, 2, 1, 3});
+			repeatKVKernel.forward(value, rq, nRep);
+			TensorOP.permute(rq, vt, new int[] {0, 2, 1, 3});
+		}else {
+			TensorOP.permute(rk, kt, new int[] {0, 2, 1, 3});
+			TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
+		}
+
 		scaledDotProductAttention(qt, kt, vt);
 //		System.err.println("------------vaccum");
 //		vaccum.showDM();
@@ -372,22 +416,54 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		scaledDotProductAttentionBackward();
 
 		qt.view(this.qLinerLayer.getOutput().shape());
-		kt.view(this.kLinerLayer.getOutput().shape());
-		vt.view(this.vLinerLayer.getOutput().shape());
-
-		TensorOP.permute(dqt, qt, new int[] {0, 2, 1, 3});
-		TensorOP.permute(dkt, kt, new int[] {0, 2, 1, 3});
-		TensorOP.permute(dvt, vt, new int[] {0, 2, 1, 3});
+		kt.view(this.qLinerLayer.getOutput().shape());
+		vt.view(this.qLinerLayer.getOutput().shape());
 		
-		/**
-		 * RoPE backward
-		 */
-		ropeKernel.backward(cos, sin, qt, kt, rq, rk);
-//		ropeKernel.backwardAll32(qt, kt, rq, rk);
+		Tensor queryDelta = null;
+		Tensor keyDelta = null;
+		Tensor valueDelta = null;
 		
-		Tensor queryDelta = rq.view(batchSize * time, 1, 1, headNum * dk);
-		Tensor keyDelta = rk.view(batchSize * time, 1, 1, headNum * dk);
-		Tensor valueDelta = vt.view(batchSize * time, 1, 1, headNum * dk);
+		if(headNum != nKVHeads) {
+			/**
+			 * drq
+			 */
+			TensorOP.permute(dqt, qt, new int[] {0, 2, 1, 3});
+			/**
+			 * drk
+			 */
+			TensorOP.permute(dkt, kt, new int[] {0, 2, 1, 3});
+			repeatKVKernel.backward(kt, rk, nRep);
+			
+			/**
+			 * RoPE backward
+			 */
+			ropeKernel.backward(cos, sin, qt, rq);
+			ropeKernel.backward(cos, sin, rk, rk);
+			
+			Tensor v = this.vLinerLayer.getOutput();
+			TensorOP.permute(dvt, vt, new int[] {0, 2, 1, 3});
+			repeatKVKernel.backward(vt, v, nRep);
+			
+			queryDelta = rq;
+			keyDelta = rk;
+			valueDelta = v;
+		}else {
+			TensorOP.permute(dqt, qt, new int[] {0, 2, 1, 3});
+			TensorOP.permute(dkt, kt, new int[] {0, 2, 1, 3});
+			TensorOP.permute(dvt, vt, new int[] {0, 2, 1, 3});
+			/**
+			 * RoPE backward
+			 */
+			ropeKernel.backward(cos, sin, qt, kt, rq, rk);
+			
+			queryDelta = rq;
+			keyDelta = rk;
+			valueDelta = vt;
+		}
+		
+		queryDelta = queryDelta.view(batchSize * time, 1, 1, headNum * dk);
+		keyDelta = keyDelta.view(batchSize * time, 1, 1, nKVHeads * dk);
+		valueDelta = valueDelta.view(batchSize * time, 1, 1, nKVHeads * dk);
 		
 		this.qLinerLayer.back(queryDelta);
 		this.kLinerLayer.back(keyDelta);

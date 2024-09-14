@@ -23,6 +23,8 @@ public class LlamaTransformerBlock extends Layer{
 	
 	private int headNum = 8;
 	
+	private int nKVHeads = 8;
+	
 	private int embedDim = 0;
 	
 	private boolean bias = false;
@@ -49,6 +51,7 @@ public class LlamaTransformerBlock extends Layer{
 	
 	public LlamaTransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout) {
 		this.headNum = headNum;
+		this.nKVHeads = headNum;
 		this.time = time;
 		this.embedDim = embedDim;
 		this.bias = bias;
@@ -62,6 +65,25 @@ public class LlamaTransformerBlock extends Layer{
 	public LlamaTransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention,Network network) {
 		this.flashAttention = flashAttention;
 		this.headNum = headNum;
+		this.nKVHeads = headNum;
+		this.network = network;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
+		this.time = time;
+		this.embedDim = embedDim;
+		this.bias = bias;
+		this.dropout = dropout;
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = embedDim;
+		this.initLayers();
+	}
+	
+	public LlamaTransformerBlock(int headNum,int nKVHeads,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention,Network network) {
+		this.flashAttention = flashAttention;
+		this.headNum = headNum;
+		this.nKVHeads = nKVHeads;
 		this.network = network;
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
@@ -83,7 +105,7 @@ public class LlamaTransformerBlock extends Layer{
 		if(flashAttention) {
 			this.attn = new LlamaFlashAttentionLayer(embedDim, headNum, time, bias, dropout, network);
 		}else {
-			this.attn = new LlamaCausalSelfAttentionLayer(embedDim, headNum, time, bias, dropout, network);
+			this.attn = new LlamaCausalSelfAttentionLayer(embedDim, headNum, nKVHeads, time, bias, dropout, network);
 		}
 
 		this.norm2 = new RMSLayer(attn);

@@ -8,7 +8,6 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
-import com.omega.engine.nn.network.Transformer;
 
 import jcuda.Pointer;
 import jcuda.Sizeof;
@@ -25,10 +24,12 @@ public class RepeatKVKernel extends BaseKernel{
 	/**
 	 * 向前方法
 	 */
+	private CUfunction forward_once_function;
 	private CUfunction forward_function;
 	/**
 	 * 反向传播方法
 	 */
+	private CUfunction backward_once_function;
 	private CUfunction backward_function;
 	
 	/**
@@ -45,10 +46,18 @@ public class RepeatKVKernel extends BaseKernel{
 		
 		try {
 			
+			if(forward_once_function == null) {
+				forward_once_function = CUDAModules.getLocalFunctionByModule("RepeatKVKernel.cu", "repeat_once_forward");
+			}
+			
 			if(forward_function == null) {
 				forward_function = CUDAModules.getLocalFunctionByModule("RepeatKVKernel.cu", "repeat_kv_forward");
 			}
-
+			
+			if(backward_once_function == null) {
+				backward_once_function = CUDAModules.getLocalFunctionByModule("RepeatKVKernel.cu", "repeat_once_backward");
+			}
+			
 			if(backward_function == null) {
 				backward_function = CUDAModules.getLocalFunctionByModule("RepeatKVKernel.cu", "repeat_kv_backward");
 			}
@@ -65,6 +74,42 @@ public class RepeatKVKernel extends BaseKernel{
 		 * 初始化cuda函数
 		 */
 		initFunction();
+		
+	}
+	
+	public void forward(Tensor input, Tensor output,int nRep) {
+		
+		try {
+			
+			/**
+			 * float *k_out, float *v_out, const float *k, const float *v,int B, int T, int num_kv_heads, int num_queries_per_kv, int head_dim
+			 */
+			forwardParameters = Pointer.to(
+					Pointer.to(output.getGpuData()),
+					Pointer.to(input.getGpuData()),
+					Pointer.to(new int[] {input.number}), //batchSize
+					Pointer.to(new int[] {input.channel}),  //Time
+					Pointer.to(new int[] {input.height}),  //kv_head_num
+					Pointer.to(new int[] {nRep}),  //query_per_kv_head = q_head_num / kv_head_num
+					Pointer.to(new int[] {input.width}) //head_dim
+	            );
+			
+			int[] block_nums = new int[] {input.number, input.channel, input.height};
+			
+			int[] block_dims = new int[] {input.width, 1, 1};
+			
+			checkCUDA(cuLaunchKernel(forward_once_function,
+					block_nums[0], block_nums[1], block_nums[2],      // Grid dimension
+					block_dims[0], block_dims[1], block_dims[2],      // Block dimension
+					0, null,               // Shared memory size and stream
+					forwardParameters, null // Kernel- and extra parameters
+				));
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
 		
 	}
 	
@@ -96,6 +141,42 @@ public class RepeatKVKernel extends BaseKernel{
 					block_dims[0], block_dims[1], block_dims[2],      // Block dimension
 					0, null,               // Shared memory size and stream
 					forwardParameters, null // Kernel- and extra parameters
+				));
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backward(Tensor detla,Tensor diff,int nRep) {
+		
+		try {
+			
+			/**
+			 * float *dk, float *dv, const float *dk_rep, const float *dv_rep,int B, int T, int num_kv_heads, int num_queries_per_kv, int head_dim
+			 */
+			backwardParameters = Pointer.to(
+					Pointer.to(diff.getGpuData()),
+					Pointer.to(detla.getGpuData()),
+					Pointer.to(new int[] {diff.number}), //batchSize
+					Pointer.to(new int[] {diff.channel}),  //Time
+					Pointer.to(new int[] {diff.height}),  //kv_head_num
+					Pointer.to(new int[] {nRep}),  //query_per_kv_head = q_head_num / kv_head_num
+					Pointer.to(new int[] {diff.width}) //head_dim
+	            );
+			
+			int[] block_nums = new int[] {diff.number, diff.channel, diff.height};
+			
+			int[] block_dims = new int[] {diff.width, 1, 1};
+			
+			checkCUDA(cuLaunchKernel(backward_once_function,
+					block_nums[0], block_nums[1], block_nums[2],      // Grid dimension
+					block_dims[0], block_dims[1], block_dims[2],      // Block dimension
+					0, null,               // Shared memory size and stream
+					backwardParameters, null // Kernel- and extra parameters
 				));
 			
 			
@@ -193,7 +274,7 @@ public class RepeatKVKernel extends BaseKernel{
 	    		dk.showDM();
 	    		dv.showDM();
 	    	}
-			
+	    	
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

@@ -17,6 +17,7 @@ import com.omega.engine.nn.layer.gpu.RoPEKernel;
 import com.omega.engine.nn.network.GPT;
 import com.omega.engine.nn.network.GPT2;
 import com.omega.engine.nn.network.Llama2;
+import com.omega.engine.nn.network.Llama3;
 import com.omega.engine.nn.network.NanoGPT;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
@@ -32,6 +33,7 @@ import com.omega.example.transformer.utils.CNWikiTokenizer2;
 import com.omega.example.transformer.utils.CNWikiTokenizer3;
 import com.omega.example.transformer.utils.CNWikiTokenizer4;
 import com.omega.example.transformer.utils.ENTokenizer;
+import com.omega.example.transformer.utils.bpe.CNBpeTokenizer;
 
 import jcuda.driver.JCudaDriver;
 import jcuda.runtime.JCuda;
@@ -2434,6 +2436,261 @@ public class EDOptimizer extends Optimizer {
 					
 //					JCuda.cudaDeviceSynchronize();
 //					System.out.println("update:"+(System.nanoTime() - start55) / 1e6+"ms.");
+					
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
+					}
+
+					output.syncHost();
+					
+					if(it % 20 == 0) {
+						int time = output.number / batchSize;
+						if(trainingData.tokenizer != null) {
+							float error = this.accuracyBatchFisrt(input, tmpInput, output, label, tmpLabel, time, batchSize, trainingData.tokenizer, pad);
+						}else {
+							float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, pad);
+						}
+					}
+
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+
+					/**
+					 * update learning rate
+					 */
+					this.updateLR(this.lr_step, it);
+
+				}
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void trainLlama3_GEN(CNTokenizer trainingData) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Llama3 network = (Llama3) this.network;
+			
+			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
+
+			Tensor label = new Tensor(batchSize * network.time, 1, 1, 1, true);
+			
+			Tensor[] cs = RoPEKernel.getCosAndSin(network.time, network.embedDim, network.headNum);
+			
+			Tensor cos = cs[0];
+			
+			Tensor sin = cs[1];
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = MathUtils.randomInts(trainingData.trainData.length - network.time,this.batchSize);
+				
+				Tensor output = null;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+					
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+					
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadIDXData(indexs[it], input, label);
+					
+					/**
+					 * forward
+					 */
+					output = network.forward(cos, sin, input);
+					
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, label);
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label);
+
+					/**
+					 * back
+					 */
+					network.back(cos, sin, this.lossDiff);
+
+					/**
+					 * update
+					 */
+					this.network.update();
+
+					/**
+					 * current time error
+					 */
+					if(this.loss.isHasGPU()) {
+						this.currentError = MatrixOperation.sum(this.loss.syncHost()) / input.number;
+					}else {
+						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
+					}
+
+					output.syncHost();
+
+					int time = output.number / batchSize;
+					float error = this.accuracyIdx(input, output, label, time, batchSize, trainingData.vocab);
+
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") accuracy:{"+error+"%} train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+
+					this.batchIndex++;
+					
+				}
+				
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(this.lr_step);
+
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void trainLlama3_chinese(CNBpeTokenizer trainingData) {
+		// TODO Auto-generated method stub
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			this.dataSize = trainingData.number;
+			
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+			
+			Llama3 network = (Llama3) this.network;
+			
+			Tensor input = new Tensor(batchSize * network.time, 1, 1, 1, true);
+			
+			float[] tmpInput = new float[batchSize * network.time];
+
+			Tensor label = new Tensor(batchSize , 1, 1, network.time, true);
+			
+			float[] tmpLabel = new float[batchSize * network.time];
+
+			Tensor[] cs = RoPEKernel.getCosAndSin(network.time, network.embedDim, network.headNum);
+			
+			Tensor cos = cs[0];
+			
+			Tensor sin = cs[1];
+			
+			int pad = trainingData.tokenizer.pad;
+			
+			trainingData.loadData(input, label, tmpInput, tmpLabel);
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+				
+				this.trainIndex = i + 1;
+
+				Tensor output = null;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<trainingData.count_it;it++) {
+					this.network.train_time = it + 1;
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					long start = System.nanoTime();
+					
+					this.loss.clear();
+
+					this.lossDiff.clear();
+					
+//					JCuda.cudaDeviceSynchronize();
+//					long start22 = System.nanoTime();
+					/**
+					 * 读取训练数据
+					 */
+					trainingData.loadData(input, label, tmpInput, tmpLabel);
+
+					/**
+					 * forward
+					 */
+					output = network.forward(cos, sin, input);
+					
+					/**
+					 * loss
+					 */
+					this.loss = network.loss(output, label, pad);
+
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, label, pad);
+
+					/**
+					 * back
+					 */
+					network.back(cos, sin, this.lossDiff);
+
+					/**
+					 * update
+					 */
+					this.network.update();
 					
 					/**
 					 * current time error

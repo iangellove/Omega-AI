@@ -552,6 +552,20 @@ public class RoPEKernel extends BaseKernel{
 	    		rope.back(cos, sin, delta);
 	    		rope.diff.showDM();
 	    	}
+	    	
+	    	RoPEKernel kernel = new RoPEKernel();
+	    	
+	    	float[] data2 = RandomUtils.order(N * T * HN *  W, 0.01f, 0.01f);
+	    	
+	    	Tensor k2 = new Tensor(N, T, HN, W, data, true);
+	    	
+	    	System.err.println("-----------------------");
+	    	
+	    	input.showDM();
+	    	
+	    	kernel.forward(cos, sin, input, input);
+	    	
+	    	input.showDM();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

@@ -8,7 +8,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,16 +24,25 @@ public class BPETokenizer3 {
 	
 	public Map<String,Integer> vocab;
 	
-	public Map<Integer,String> decoder = new LinkedHashMap<Integer, String>();
+	public Map<Integer,String> decoder = new HashMap<Integer, String>();
 	
 	public Map<String[], Integer> merges;
 	
 	public Map<Integer,String> unicodeMap;
 	
+	public int voc_size = 0;
+	
+	public int pad = 0;
+	
+	public int sos = 1;
+	
+	public int eos = 2;
+	
 	public BPETokenizer3(String vocabPath,String mergesPath) {
 		System.out.println("init bpe tokenizer.");
 		this.unicodeMap = unicodeMap();
 		this.vocab = readJsonFileSamll(vocabPath);
+		this.voc_size = vocab.size();
 		this.merges = readMerges(mergesPath);
 		for(String key:vocab.keySet()) {
 			decoder.put(vocab.get(key).intValue(), key);
@@ -85,6 +94,17 @@ public class BPETokenizer3 {
 		return new String(unicode2Byte(txt, unicodeMap), StandardCharsets.UTF_8);
 	}
 	
+	public String decode(int[] ids) {
+
+		String txt = "";
+		for(int i = 0;i<ids.length;i++) {
+			String bstr = decoder.get(ids[i]);
+			txt += bstr;
+		}
+		
+		return new String(unicode2Byte(txt, unicodeMap), StandardCharsets.UTF_8);
+	}
+	
 	private byte[] unicode2Byte(String txt,Map<Integer,String> unicodeMap) {
 		String[] tokens = txt.split("");
 		byte[] y = new byte[tokens.length];
@@ -109,8 +129,8 @@ public class BPETokenizer3 {
 	@SuppressWarnings("unchecked")
 	private Map<String,Integer> readJsonFileSamll(String path) {
 		
-		Map<String,Double> mapListd = new LinkedHashMap<String,Double>(); 
-		Map<String,Integer> mapList = new LinkedHashMap<String,Integer>(); 
+		Map<String,Double> mapListd = new HashMap<String,Double>(); 
+		Map<String,Integer> mapList = new HashMap<String,Integer>(); 
 		try {
 			String line = null;
 			FileInputStream fis = new FileInputStream(path);
@@ -136,7 +156,7 @@ public class BPETokenizer3 {
 	
 	private Map<String[],Integer> readMerges(String path) {
 		
-		Map<String[], Integer> mapList = new LinkedHashMap<String[], Integer>(); 
+		Map<String[], Integer> mapList = new HashMap<String[], Integer>(); 
 		try {
 			String line = null;
 			FileInputStream fis = new FileInputStream(path);
@@ -159,11 +179,11 @@ public class BPETokenizer3 {
 	
 	public List<Integer> encode(String txt){
 		String unicodeToken = unicodeToken(encode(txt, "utf-8"), unicodeMap);
-		
+//		System.out.println("index2:"+i);
 //		System.out.println(unicodeToken);
 		
 		String[] bbpeTokens = bbpe(unicodeToken, merges);
-		
+//		System.out.println("index3:"+i);
 //		System.out.println(JsonUtils.toJson(bbpeTokens));
 		
 		List<Integer> idxs = new ArrayList<Integer>();
@@ -171,7 +191,21 @@ public class BPETokenizer3 {
 		for(String key:bbpeTokens) {
 			idxs.add(vocab.get(key).intValue());
 		}
+//		System.out.println("index4:"+i);
+		return idxs;
+	}
+	
+	public int[] encodeInt(String txt){
+		String unicodeToken = unicodeToken(encode(txt, "utf-8"), unicodeMap);
+
+		String[] bbpeTokens = bbpe(unicodeToken, merges);
+
+		int[] idxs = new int[bbpeTokens.length];
 		
+		for(int i = 0;i<bbpeTokens.length;i++) {
+			String key = bbpeTokens[i];
+			idxs[i] = vocab.get(key).intValue();
+		}
 		return idxs;
 	}
 	
@@ -264,7 +298,7 @@ public class BPETokenizer3 {
 		}
 //		System.out.println(final_cs.size());
 //		System.out.println(JsonUtils.toJson(final_cs));
-		Map<Integer,String> unicodeMap = new LinkedHashMap<Integer, String>();
+		Map<Integer,String> unicodeMap = new HashMap<Integer, String>();
 		for(int i = 0;i<final_cs.size();i++) {
 			unicodeMap.put(bs.get(i), final_cs.get(i).toString());
 		}
@@ -288,20 +322,20 @@ public class BPETokenizer3 {
 	public static void main(String args[]) {
 		try {
 			
-			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
-			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
-			
-			String txt = "wenjie，椭圆和⚪的关系是什么呢？因为明天下午要带家人去下医院，所以申请上午在家办公，因为明天下午要带家人去下医院，所以申请上午在家办公，因为明天下午要带家人去下医院，所以申请上午在家办公，下午请半天假~@LWJWe ";
-			
-			BPETokenizer3 bpe = new BPETokenizer3(vocabPath, mergesPath);
-			
-			List<Integer> ids = bpe.encode(txt);
-			
-			System.out.println(JsonUtils.toJson(ids));
-			
-			String decodeTxt = bpe.decode(ids);
-			
-			System.out.println(decodeTxt);
+//			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
+//			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
+//			
+//			String txt = "wenjie，椭圆和⚪的关系是什么呢？因为明天下午要带家人去下医院，所以申请上午在家办公，因为明天下午要带家人去下医院，所以申请上午在家办公，因为明天下午要带家人去下医院，所以申请上午在家办公，下午请半天假~@LWJWe ";
+//			
+//			BPETokenizer3 bpe = new BPETokenizer3(vocabPath, mergesPath);
+//			
+//			List<Integer> ids = bpe.encode(txt);
+//			
+//			System.out.println(JsonUtils.toJson(ids));
+//			
+//			String decodeTxt = bpe.decode(ids);
+//			
+//			System.out.println(decodeTxt);
 			
 		} catch (Exception e) {
 			// TODO: handle exception

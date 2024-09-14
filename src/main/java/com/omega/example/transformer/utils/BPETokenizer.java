@@ -16,6 +16,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
@@ -140,6 +141,7 @@ public class BPETokenizer {
 	
 	public Map<String,Integer> getStats(List<Integer> ids){
 		Map<String, Integer> counts = Collections.synchronizedMap(new LinkedHashMap<String, Integer>());
+		counts.clear();
 //		IntStream.range(0, ids.size() - 1).parallel().forEach(i->{
 //			String pairKey = ids.get(i) + ":" + ids.get(i + 1);
 //			if(counts.get(pairKey)!=null) {

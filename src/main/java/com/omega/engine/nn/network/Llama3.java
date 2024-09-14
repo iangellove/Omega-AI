@@ -14,17 +14,19 @@ import com.omega.engine.nn.layer.llama.LlamaTransformerDecoder;
 import com.omega.engine.updater.UpdaterType;
 
 /**
- * Llama-3.1
+ * Llama-2
  * @author Administrator
  *
  */
-public class Llama2 extends Network {
+public class Llama3 extends Network {
 
 	public int vocabSize;
 	
 	public int embedDim;
 	
 	public int headNum = 8;
+	
+	public int nKVHeadNum = 8;
 	
 	public int decoderNum = 1;
 	
@@ -40,25 +42,26 @@ public class Llama2 extends Network {
 	
 	private FullyLayer fullyLayer;
 	
-	public Llama2(LossType lossType,UpdaterType updater,int headNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout) {
+	public Llama3(LossType lossType,UpdaterType updater,int headNum,int nKVHeadNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.bias = bias;
 		this.dropout = dropout;
 		this.decoderNum = decoderNum;
 		this.updater = updater;
 		this.headNum = headNum;
+		this.nKVHeadNum = nKVHeadNum;
 		this.time = time;
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.decoder = new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, this.bias, this.dropout, this.flashAttention, this);
+		this.decoder = new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.bias, this.dropout, this.flashAttention, this);
 		this.fullyLayer = new FullyLayer(embedDim, vocabSize, false, this);
 		this.addLayer(inputLayer);
 		this.addLayer(decoder);
 		this.addLayer(fullyLayer);
 	}
 	
-	public Llama2(LossType lossType,UpdaterType updater,int headNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention) {
+	public Llama3(LossType lossType,UpdaterType updater,int headNum,int nKVHeadNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention) {
 		this.flashAttention = flashAttention;
 		this.lossFunction = LossFactory.create(lossType);
 		this.bias = bias;
@@ -66,11 +69,12 @@ public class Llama2 extends Network {
 		this.decoderNum = decoderNum;
 		this.updater = updater;
 		this.headNum = headNum;
+		this.nKVHeadNum = nKVHeadNum;
 		this.time = time;
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.decoder = new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.time, this.embedDim, this.bias, this.dropout, this.flashAttention, this);
+		this.decoder = new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.bias, this.dropout, this.flashAttention, this);
 		this.fullyLayer = new FullyLayer(embedDim, vocabSize, false, this);
 		this.addLayer(inputLayer);
 		this.addLayer(decoder);
