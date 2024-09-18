@@ -115,21 +115,21 @@ public class LlamaTransformerDecoder extends Layer{
 	
 	public void initLayers() {
 		
-		this.src_emb = new EmbeddingIDLayer(vocab_size, embedDim, network);
-		this.src_emb.weight = new Tensor(1, 1, src_emb.width, src_emb.oWidth, RandomUtils.uniform(this.src_emb.width * this.src_emb.oWidth, 0.0f, 0.02f), true);
+		this.setSrc_emb(new EmbeddingIDLayer(vocab_size, embedDim, network));
+		this.getSrc_emb().weight = new Tensor(1, 1, getSrc_emb().width, getSrc_emb().oWidth, RandomUtils.uniform(this.getSrc_emb().width * this.getSrc_emb().oWidth, 0.0f, 0.02f), true);
 //		this.src_emb.weight = new Tensor(1, 1, src_emb.width, src_emb.oWidth, RandomUtils.order(this.src_emb.width * this.src_emb.oWidth, 0.001f, 0.001f), true);
 
-		decoderLayers = new ArrayList<LlamaTransformerBlock>();
+		setDecoderLayers(new ArrayList<LlamaTransformerBlock>());
 		
 		for(int i = 0;i<n_layers;i++) {
 			LlamaTransformerBlock decoderLayer = new LlamaTransformerBlock(headNum, nKVHeadNum, time, embedDim, bias, dropout, flashAttention, network);
-			decoderLayers.add(decoderLayer);
+			getDecoderLayers().add(decoderLayer);
 		}
 		
-		this.norm = new RMSLayer(decoderLayers.get(n_layers - 1));
+		this.setNorm(new RMSLayer(getDecoderLayers().get(n_layers - 1)));
 		
 		if(dropout) {
-			dropoutLayer = new DropoutLayer(0.1f, src_emb);
+			dropoutLayer = new DropoutLayer(0.1f, getSrc_emb());
 		}
 		
 		if(baseKernel == null) {
@@ -166,9 +166,9 @@ public class LlamaTransformerDecoder extends Layer{
 	public void output(Tensor cos,Tensor sin) {
 		// TODO Auto-generated method stub
 	
-		src_emb.forward(input);
+		getSrc_emb().forward(input);
 
-		Tensor out1 = src_emb.getOutput();
+		Tensor out1 = getSrc_emb().getOutput();
 		
 		if(dropout) {
 			this.dropoutLayer.forward(out1);
@@ -176,12 +176,12 @@ public class LlamaTransformerDecoder extends Layer{
 		}
 		
 		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).forward(cos, sin, out1);
-			out1 = decoderLayers.get(i).getOutput();
+			getDecoderLayers().get(i).forward(cos, sin, out1);
+			out1 = getDecoderLayers().get(i).getOutput();
 		}
 		
-		this.norm.forward(out1);
-		this.output = this.norm.getOutput();
+		this.getNorm().forward(out1);
+		this.output = this.getNorm().getOutput();
 	}
 	
 	@Override
@@ -199,23 +199,23 @@ public class LlamaTransformerDecoder extends Layer{
 	public void diff(Tensor cos,Tensor sin) {
 		// TODO Auto-generated method stub
 		
-		this.norm.back(delta);
-		Tensor decoderDiff = this.norm.diff;
+		this.getNorm().back(delta);
+		Tensor decoderDiff = this.getNorm().diff;
 		
 		for(int i = n_layers - 1;i>=0;i--) {
-			decoderLayers.get(i).back(cos, sin, decoderDiff);
-			decoderDiff = decoderLayers.get(i).diff;
+			getDecoderLayers().get(i).back(cos, sin, decoderDiff);
+			decoderDiff = getDecoderLayers().get(i).diff;
 		}
-		
+//		decoderDiff.showDMByNumber(0);
 		if(dropout) {
 			this.dropoutLayer.back(decoderDiff);
 			decoderDiff = dropoutLayer.diff;
 		}
 //		System.err.println("decoderDiff:");
 //		decoderDiff.showDM();
-		src_emb.back(decoderDiff);
-
-		this.diff = this.src_emb.diff;
+		getSrc_emb().back(decoderDiff);
+		
+		this.diff = this.getSrc_emb().diff;
 		
 	}
 
@@ -282,10 +282,10 @@ public class LlamaTransformerDecoder extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		src_emb.update();
-		norm.update();
+		getSrc_emb().update();
+		getNorm().update();
 		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).update();
+			getDecoderLayers().get(i).update();
 		}
 	}
 
@@ -321,26 +321,50 @@ public class LlamaTransformerDecoder extends Layer{
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
 		
-		src_emb.saveModel(outputStream);
+		getSrc_emb().saveModel(outputStream);
 		
 		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).saveModel(outputStream);
+			getDecoderLayers().get(i).saveModel(outputStream);
 		}
 		
-		norm.saveModel(outputStream);
+		getNorm().saveModel(outputStream);
 		
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
 		
-		src_emb.loadModel(inputStream);
+		getSrc_emb().loadModel(inputStream);
 		
 		for(int i = 0;i<n_layers;i++) {
-			decoderLayers.get(i).loadModel(inputStream);
+			getDecoderLayers().get(i).loadModel(inputStream);
 		}
 		
-		norm.loadModel(inputStream);
+		getNorm().loadModel(inputStream);
 		
+	}
+
+	public EmbeddingIDLayer getSrc_emb() {
+		return src_emb;
+	}
+
+	public void setSrc_emb(EmbeddingIDLayer src_emb) {
+		this.src_emb = src_emb;
+	}
+
+	public List<LlamaTransformerBlock> getDecoderLayers() {
+		return decoderLayers;
+	}
+
+	public void setDecoderLayers(List<LlamaTransformerBlock> decoderLayers) {
+		this.decoderLayers = decoderLayers;
+	}
+
+	public RMSLayer getNorm() {
+		return norm;
+	}
+
+	public void setNorm(RMSLayer norm) {
+		this.norm = norm;
 	}
 	
 }

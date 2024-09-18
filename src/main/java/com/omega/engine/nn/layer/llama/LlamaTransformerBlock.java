@@ -100,17 +100,17 @@ public class LlamaTransformerBlock extends Layer{
 	
 	public void initLayers() {
 
-		this.norm1 = new RMSLayer(this);
+		this.setNorm1(new RMSLayer(this));
 		
 		if(flashAttention) {
-			this.attn = new LlamaFlashAttentionLayer(embedDim, headNum, time, bias, dropout, network);
+			this.setAttn(new LlamaFlashAttentionLayer(embedDim, headNum, time, bias, dropout, network));
 		}else {
-			this.attn = new LlamaCausalSelfAttentionLayer(embedDim, headNum, nKVHeads, time, bias, dropout, network);
+			this.setAttn(new LlamaCausalSelfAttentionLayer(embedDim, headNum, nKVHeads, time, bias, dropout, network));
 		}
 
-		this.norm2 = new RMSLayer(attn);
+		this.setNorm2(new RMSLayer(getAttn()));
 		
-		this.mlp = new LlamaMLPLayer(embedDim, embedDim, bias, network);
+		this.setMlp(new LlamaMLPLayer(embedDim, embedDim, bias, network));
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
@@ -153,17 +153,17 @@ public class LlamaTransformerBlock extends Layer{
 	public void output(Tensor cos,Tensor sin) {
 		// TODO Auto-generated method stub
 		
-		norm1.forward(input);
+		getNorm1().forward(input);
 
-		attn.forward(cos, sin, norm1.getOutput());
+		getAttn().forward(cos, sin, getNorm1().getOutput());
 
-		TensorOP.add(attn.getOutput(), input, tmp1);
+		TensorOP.add(getAttn().getOutput(), input, tmp1);
 
-		norm2.forward(tmp1);
+		getNorm2().forward(tmp1);
 		
-		mlp.forward(norm2.getOutput());
+		getMlp().forward(getNorm2().getOutput());
 		
-		TensorOP.add(mlp.getOutput(), tmp1, tmp2);
+		TensorOP.add(getMlp().getOutput(), tmp1, tmp2);
 		
 		this.output = tmp2;
 //		System.err.println("---------------------------------");
@@ -187,19 +187,19 @@ public class LlamaTransformerBlock extends Layer{
 		
 //		delta.showDM();
 		
-		mlp.back(delta);
+		getMlp().back(delta);
 
-		norm2.back(mlp.diff);
+		getNorm2().back(getMlp().diff);
 		
-		TensorOP.add(norm2.diff, delta, norm2.diff);
+		TensorOP.add(getNorm2().diff, delta, getNorm2().diff);
 		
 //		norm2.diff.showDM();
 		
-		attn.back(cos, sin, norm2.diff);
+		getAttn().back(cos, sin, getNorm2().diff);
 		
-		norm1.back(attn.diff);
+		getNorm1().back(getAttn().diff);
 		
-		TensorOP.add(norm1.diff, norm2.diff, tmp2);
+		TensorOP.add(getNorm1().diff, getNorm2().diff, tmp2);
 		
 		this.diff = tmp2;
 //		System.err.println("diff:");
@@ -269,10 +269,10 @@ public class LlamaTransformerBlock extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		norm1.update();
-		attn.update();
-		norm2.update();
-		mlp.update();
+		getNorm1().update();
+		getAttn().update();
+		getNorm2().update();
+		getMlp().update();
 	}
 
 	@Override
@@ -306,17 +306,49 @@ public class LlamaTransformerBlock extends Layer{
 	}
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
-		norm1.saveModel(outputStream);
-		attn.saveModel(outputStream);
-		norm2.saveModel(outputStream);
-		mlp.saveModel(outputStream);
+		getNorm1().saveModel(outputStream);
+		getAttn().saveModel(outputStream);
+		getNorm2().saveModel(outputStream);
+		getMlp().saveModel(outputStream);
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-		norm1.loadModel(inputStream);
-		attn.loadModel(inputStream);
-		norm2.loadModel(inputStream);
-		mlp.loadModel(inputStream);
+		getNorm1().loadModel(inputStream);
+		getAttn().loadModel(inputStream);
+		getNorm2().loadModel(inputStream);
+		getMlp().loadModel(inputStream);
+	}
+
+	public LlamaAttentionLayer getAttn() {
+		return attn;
+	}
+
+	public void setAttn(LlamaAttentionLayer attn) {
+		this.attn = attn;
+	}
+
+	public RMSLayer getNorm1() {
+		return norm1;
+	}
+
+	public void setNorm1(RMSLayer norm1) {
+		this.norm1 = norm1;
+	}
+
+	public LlamaMLPLayer getMlp() {
+		return mlp;
+	}
+
+	public void setMlp(LlamaMLPLayer mlp) {
+		this.mlp = mlp;
+	}
+
+	public RMSLayer getNorm2() {
+		return norm2;
+	}
+
+	public void setNorm2(RMSLayer norm2) {
+		this.norm2 = norm2;
 	}
 	
 }

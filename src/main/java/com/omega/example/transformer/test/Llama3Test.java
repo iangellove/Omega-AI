@@ -1,21 +1,29 @@
 package com.omega.example.transformer.test;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.gpu.RoPEKernel;
+import com.omega.engine.nn.layer.llama.LlamaCausalSelfAttentionLayer;
+import com.omega.engine.nn.layer.llama.LlamaMLPLayer;
+import com.omega.engine.nn.layer.llama.LlamaTransformerBlock;
+import com.omega.engine.nn.network.DiffusionUNet;
 import com.omega.engine.nn.network.Llama3;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.EDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.example.transformer.utils.CNTokenizer;
+import com.omega.example.transformer.utils.LagJsonReader;
 import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.transformer.utils.bpe.BPETokenizer3;
 import com.omega.example.transformer.utils.bpe.CNBpeTokenizer;
@@ -104,7 +112,7 @@ public class Llama3Test {
 			
 			boolean flashAttention = false;
 			
-			int batchSize = 8;
+			int batchSize = 3;
 			
 			int max_len = 512;
 			
@@ -130,6 +138,12 @@ public class Llama3Test {
 			
 			network.learnRate = 3e-4f;
 			
+//			String weightPath = "H:\\model\\torch_weights.json";
+//			
+//			Map<String, Object> weightMap = LagJsonReader.readJsonFileSmallWeight(weightPath);
+//			
+//			loadWeight(weightMap, network);
+			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.COSINE, false);
 			optimizer.lr_step = new int[] {1, 2};
 			optimizer.lr = 3e-4f;
@@ -140,7 +154,7 @@ public class Llama3Test {
 			optimizer.trainLlama3_chinese(trainData);
 
 			String model_path = "H:\\model\\llama3-26m-chinese.model";
-	    
+			
 			ModelUtils.saveModel(network, model_path);
 			
 			network.RUN_MODEL = RunModel.TEST;
@@ -184,6 +198,33 @@ public class Llama3Test {
 			e.printStackTrace();
 		}
 		
+	}
+	
+	public static void loadWeight(Map<String, Object> weightMap,Llama3 network) {
+		for(String key:weightMap.keySet()) {
+			System.out.println(key);
+		}
+		
+		loadData(network.getDecoder().getSrc_emb().weight, weightMap.get("tok_embeddings.weight"), "tok_embeddings.weight");
+		
+		for(int i = 0;i<8;i++) {
+			LlamaTransformerBlock block = network.getDecoder().getDecoderLayers().get(i);
+			LlamaCausalSelfAttentionLayer attn = (LlamaCausalSelfAttentionLayer) block.getAttn();
+			loadData(attn.getqLinerLayer().weight, weightMap.get("layers."+i+".attention.wq.weight"), "layers."+i+".attention.wq.weight");
+			loadData(attn.getkLinerLayer().weight, weightMap.get("layers."+i+".attention.wk.weight"), "layers."+i+".attention.wk.weight");
+			loadData(attn.getvLinerLayer().weight, weightMap.get("layers."+i+".attention.wv.weight"), "layers."+i+".attention.wv.weight");
+			loadData(attn.getoLinerLayer().weight, weightMap.get("layers."+i+".attention.wo.weight"), "layers."+i+".attention.wo.weight");
+			loadData(block.getNorm1().gamma, weightMap.get("layers."+i+".attention_norm.weight"), 1, "layers."+i+".attention_norm.weight");
+			
+			loadData(block.getNorm2().gamma, weightMap.get("layers."+i+".ffn_norm.weight"), 1, "layers."+i+".ffn_norm.weight");
+			LlamaMLPLayer mlp = block.getMlp();
+			loadData(mlp.getLinear1().weight, weightMap.get("layers."+i+".feed_forward.w1.weight"), "layers."+i+".feed_forward.w1.weight");
+			loadData(mlp.getLinear2().weight, weightMap.get("layers."+i+".feed_forward.w2.weight"), "layers."+i+".feed_forward.w2.weight");
+			loadData(mlp.getLinear3().weight, weightMap.get("layers."+i+".feed_forward.w3.weight"), "layers."+i+".feed_forward.w3.weight");
+		}
+		
+		loadData(network.getDecoder().getNorm().gamma, weightMap.get("norm.weight"), 1, "norm.weight");
+		loadData(network.getFullyLayer().weight, weightMap.get("output.weight"), "output.weight");
 	}
 	
 	public static String genTxt(Tensor input,Tensor output,Llama3 network,CNTokenizer trainData,int time,Tensor[] pos) {
@@ -257,6 +298,115 @@ public class Llama3Test {
 			return pickTopN(output.getByNumber(nextTokenIdx), 3);
 		}
 		return 0;
+	}
+	
+	public static void loadData(Tensor x,Object meta,String key) {
+		
+		if(meta!=null) {
+			int dim = getDim(x);
+			if(dim == 1) {
+				List<Double> dataA = (List<Double>) meta;
+				for(int n = 0;n<dataA.size();n++) {
+					x.data[n] = dataA.get(n).floatValue();
+				}
+			}else if(dim == 2) {
+				
+				List<List<Double>> dataA = (List<List<Double>>) meta;
+				x.showShape();
+				System.out.println(dataA.size()+":"+dataA.get(0).size());
+				for(int n = 0;n<dataA.size();n++) {
+					for(int w = 0;w<dataA.get(n).size();w++) {
+						x.data[n * dataA.get(n).size() + w] = dataA.get(n).get(w).floatValue();
+					}
+				}
+
+			}else if(dim == 3) {
+				float[][][] data = (float[][][]) meta;
+				x.data = MatrixUtils.transform(data);
+			}else{
+				List<List<List<List<Double>>>> dataA = (List<List<List<List<Double>>>>) meta;
+				int N = dataA.size();
+				int C = dataA.get(0).size();
+				int H = dataA.get(0).get(0).size();
+				int W = dataA.get(0).get(0).get(0).size();
+
+				for(int n = 0;n<N;n++) {
+					for(int c = 0;c<C;c++) {
+						for(int h = 0;h<H;h++) {
+							for(int w = 0;w<W;w++) {
+								x.data[n * x.getOnceSize() + c * H * W + h * W + w] = dataA.get(n).get(c).get(h).get(w).floatValue();
+							}
+						}
+					}
+				}
+
+			}
+			x.hostToDevice();
+			System.out.println(key+"_finish.");
+		}
+	}
+	
+	public static Tensor loadData(Tensor x,Object meta,int dim,String key) {
+		if(meta!=null) {
+			if(dim == 1) {
+				List<Double> dataA = (List<Double>) meta;
+				x = new Tensor(1, 1, 1, dataA.size(), true);
+				for(int n = 0;n<dataA.size();n++) {
+					x.data[n] = dataA.get(n).floatValue();
+				}
+			}else if(dim == 2) {
+				List<List<Double>> dataA = (List<List<Double>>) meta;
+				x = new Tensor(dataA.size(), 1, 1, dataA.get(0).size(), true);
+				for(int n = 0;n<dataA.size();n++) {
+					for(int w = 0;w<dataA.get(n).size();w++) {
+						x.data[n * dataA.get(n).size() + w] = dataA.get(n).get(w).floatValue();
+					}
+				}
+//				float[][] data = (float[][]) meta;
+//				x.data = MatrixUtils.transform(data);
+			}else if(dim == 3) {
+				float[][][] data = (float[][][]) meta;
+				x.data = MatrixUtils.transform(data);
+			}else{
+				List<List<List<List<Double>>>> dataA = (List<List<List<List<Double>>>>) meta;
+				int N = dataA.size();
+				int C = dataA.get(0).size();
+				int H = dataA.get(0).get(0).size();
+				int W = dataA.get(0).get(0).get(0).size();
+				x = new Tensor(N, C, H, W, true);
+				for(int n = 0;n<dataA.size();n++) {
+					for(int c = 0;c<dataA.get(n).size();c++) {
+						for(int h = 0;h<dataA.get(n).get(c).size();h++) {
+							for(int w = 0;w<dataA.get(n).get(c).get(h).size();w++) {
+								x.data[n * x.getOnceSize() + c * x.height * x.width + h * x.width + w] = dataA.get(n).get(c).get(h).get(w).floatValue();
+							}
+						}
+					}
+				}
+
+			}
+			x.hostToDevice();
+			System.out.println(key+"_finish.");
+			return x;
+		}
+		return null;
+	}
+	
+	public static int getDim(Tensor x) {
+		int dim = 0;
+		if(x.number > 1) {
+			dim++;
+		}
+		if(x.channel > 1) {
+			dim++;
+		}
+		if(x.height > 1) {
+			dim++;
+		}
+		if(x.width > 1) {
+			dim++;
+		}
+		return dim;
 	}
 	
 	public static void main(String[] args) {

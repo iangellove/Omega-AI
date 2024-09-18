@@ -162,23 +162,23 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 	
 	public void initLayers() {
 		
-		this.qLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+		this.setqLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
+		this.getqLinerLayer().weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
 //		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.001f, 0.001f), true);
 //		Tensor qw = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.qLinerLayer.weight, qw, new int[] {0, 1, 3, 2});
 //		this.qLinerLayer.weight = qw;
 		
-		this.kLinerLayer = new FullyLayer(embedDim, nKVHeads * dk, bias, this.network);
-		this.kLinerLayer.weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.uniform(this.embedDim * nKVHeads * dk, 0.0f, 0.02f), true);
+		this.setkLinerLayer(new FullyLayer(embedDim, nKVHeads * dk, bias, this.network));
+		this.getkLinerLayer().weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.uniform(this.embedDim * nKVHeads * dk, 0.0f, 0.02f), true);
 //		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.001f, 0.001f), true);
 //		Tensor kw = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.kLinerLayer.weight, kw, new int[] {0, 1, 3, 2});
 //		this.kLinerLayer.weight = kw;
 //		this.kLinerLayer.weight.showDM();
 		
-		this.vLinerLayer = new FullyLayer(embedDim, nKVHeads * dk, bias, this.network);
-		this.vLinerLayer.weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.uniform(this.embedDim * nKVHeads * dk, 0.0f, 0.02f), true);
+		this.setvLinerLayer(new FullyLayer(embedDim, nKVHeads * dk, bias, this.network));
+		this.getvLinerLayer().weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.uniform(this.embedDim * nKVHeads * dk, 0.0f, 0.02f), true);
 //		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.001f, 0.001f), true);
 //		Tensor vw = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.vLinerLayer.weight, vw, new int[] {0, 1, 3, 2});
@@ -187,8 +187,8 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 //		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.01f, 2 * this.embedDim * this.embedDim * 0.01f + 0.01f), true);
 //		this.vLinerLayer.weight.showDM();
 		
-		this.oLinerLayer = new FullyLayer(embedDim, embedDim, bias, this.network);
-		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+		this.setoLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
+		this.getoLinerLayer().weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
 //		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.001f, 0.001f), true);
 //		Tensor ow = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.oLinerLayer.weight, ow, new int[] {0, 1, 3, 2});
@@ -196,7 +196,7 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 
 		if(this.dropout) {
 			this.dropoutLayer = new DropoutLayer(0.1f, this.network);
-			this.dropoutLayer2 = new DropoutLayer(0.1f, oLinerLayer);
+			this.dropoutLayer2 = new DropoutLayer(0.1f, getoLinerLayer());
 		}
 		
 		if(baseKernel == null) {
@@ -251,10 +251,10 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		this.vt.viewOrg();
 		this.rq.viewOrg();
 		this.rk.viewOrg();
-		if(this.qLinerLayer.getOutput() != null) {
-			this.qLinerLayer.getOutput().viewOrg();
-			this.kLinerLayer.getOutput().viewOrg();
-			this.vLinerLayer.getOutput().viewOrg();
+		if(this.getqLinerLayer().getOutput() != null) {
+			this.getqLinerLayer().getOutput().viewOrg();
+			this.getkLinerLayer().getOutput().viewOrg();
+			this.getvLinerLayer().getOutput().viewOrg();
 		}
 	}
 	
@@ -290,13 +290,13 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		// TODO Auto-generated method stub
 //		System.out.println("in");
 //		this.input.showDM();
-		this.qLinerLayer.forward(this.input);
-		this.kLinerLayer.forward(this.input);
-		this.vLinerLayer.forward(this.input);
+		this.getqLinerLayer().forward(this.input);
+		this.getkLinerLayer().forward(this.input);
+		this.getvLinerLayer().forward(this.input);
 		
-		Tensor query = this.qLinerLayer.getOutput().view(batchSize, time, headNum, dk);
-		Tensor key = this.kLinerLayer.getOutput().view(batchSize, time, nKVHeads, dk);
-		Tensor value = this.vLinerLayer.getOutput().view(batchSize, time, nKVHeads, dk);
+		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
+		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, time, nKVHeads, dk);
+		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, time, nKVHeads, dk);
 //		query.showDM();
 		/**
 		 * apply RoPE
@@ -321,12 +321,12 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 //		vaccum.showDM();
 		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
 		
-		this.oLinerLayer.forward(oi);
+		this.getoLinerLayer().forward(oi);
 		
-		this.output = this.oLinerLayer.getOutput();
+		this.output = this.getoLinerLayer().getOutput();
 		
 		if(dropout) {
-			dropoutLayer2.forward(this.oLinerLayer.getOutput());
+			dropoutLayer2.forward(this.getoLinerLayer().getOutput());
 			this.output = dropoutLayer2.getOutput();
 		}
 //		System.err.println("output:");
@@ -406,18 +406,18 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		
 		if(dropout) {
 			dropoutLayer2.back(delta);
-			this.oLinerLayer.back(dropoutLayer2.diff, oi);
+			this.getoLinerLayer().back(dropoutLayer2.diff, oi);
 		}else {
-			this.oLinerLayer.back(delta, oi);
+			this.getoLinerLayer().back(delta, oi);
 		}
 		
 		attentionKernel.unpermute_backward(dvaccum, oi, batchSize, time, headNum, dk);
 		
 		scaledDotProductAttentionBackward();
 
-		qt.view(this.qLinerLayer.getOutput().shape());
-		kt.view(this.qLinerLayer.getOutput().shape());
-		vt.view(this.qLinerLayer.getOutput().shape());
+		qt.view(this.getqLinerLayer().getOutput().shape());
+		kt.view(this.getqLinerLayer().getOutput().shape());
+		vt.view(this.getqLinerLayer().getOutput().shape());
 		
 		Tensor queryDelta = null;
 		Tensor keyDelta = null;
@@ -440,7 +440,7 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 			ropeKernel.backward(cos, sin, qt, rq);
 			ropeKernel.backward(cos, sin, rk, rk);
 			
-			Tensor v = this.vLinerLayer.getOutput();
+			Tensor v = this.getvLinerLayer().getOutput();
 			TensorOP.permute(dvt, vt, new int[] {0, 2, 1, 3});
 			repeatKVKernel.backward(vt, v, nRep);
 			
@@ -465,14 +465,14 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		keyDelta = keyDelta.view(batchSize * time, 1, 1, nKVHeads * dk);
 		valueDelta = valueDelta.view(batchSize * time, 1, 1, nKVHeads * dk);
 		
-		this.qLinerLayer.back(queryDelta);
-		this.kLinerLayer.back(keyDelta);
-		this.vLinerLayer.back(valueDelta);
+		this.getqLinerLayer().back(queryDelta);
+		this.getkLinerLayer().back(keyDelta);
+		this.getvLinerLayer().back(valueDelta);
 		
-		TensorOP.add(this.qLinerLayer.diff, this.kLinerLayer.diff, this.qLinerLayer.diff);
-		TensorOP.add(this.qLinerLayer.diff, this.vLinerLayer.diff, this.qLinerLayer.diff);
+		TensorOP.add(this.getqLinerLayer().diff, this.getkLinerLayer().diff, this.getqLinerLayer().diff);
+		TensorOP.add(this.getqLinerLayer().diff, this.getvLinerLayer().diff, this.getqLinerLayer().diff);
 
-		this.diff = this.qLinerLayer.diff;
+		this.diff = this.getqLinerLayer().diff;
 //		this.diff.showDMByNumber(0);
 		
 	}
@@ -540,10 +540,10 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		qLinerLayer.update();
-		kLinerLayer.update();
-		vLinerLayer.update();
-		oLinerLayer.update();
+		getqLinerLayer().update();
+		getkLinerLayer().update();
+		getvLinerLayer().update();
+		getoLinerLayer().update();
 	}
 
 	@Override
@@ -663,17 +663,49 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 	}
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
-		qLinerLayer.saveModel(outputStream);
-		kLinerLayer.saveModel(outputStream);
-		vLinerLayer.saveModel(outputStream);
-		oLinerLayer.saveModel(outputStream);
+		getqLinerLayer().saveModel(outputStream);
+		getkLinerLayer().saveModel(outputStream);
+		getvLinerLayer().saveModel(outputStream);
+		getoLinerLayer().saveModel(outputStream);
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-		qLinerLayer.loadModel(inputStream);
-		kLinerLayer.loadModel(inputStream);
-		vLinerLayer.loadModel(inputStream);
-		oLinerLayer.loadModel(inputStream);
+		getqLinerLayer().loadModel(inputStream);
+		getkLinerLayer().loadModel(inputStream);
+		getvLinerLayer().loadModel(inputStream);
+		getoLinerLayer().loadModel(inputStream);
+	}
+
+	public FullyLayer getqLinerLayer() {
+		return qLinerLayer;
+	}
+
+	public void setqLinerLayer(FullyLayer qLinerLayer) {
+		this.qLinerLayer = qLinerLayer;
+	}
+
+	public FullyLayer getkLinerLayer() {
+		return kLinerLayer;
+	}
+
+	public void setkLinerLayer(FullyLayer kLinerLayer) {
+		this.kLinerLayer = kLinerLayer;
+	}
+
+	public FullyLayer getvLinerLayer() {
+		return vLinerLayer;
+	}
+
+	public void setvLinerLayer(FullyLayer vLinerLayer) {
+		this.vLinerLayer = vLinerLayer;
+	}
+
+	public FullyLayer getoLinerLayer() {
+		return oLinerLayer;
+	}
+
+	public void setoLinerLayer(FullyLayer oLinerLayer) {
+		this.oLinerLayer = oLinerLayer;
 	}
 	
 }

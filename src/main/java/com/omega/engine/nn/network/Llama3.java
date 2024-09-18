@@ -54,11 +54,11 @@ public class Llama3 extends Network {
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.decoder = new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.bias, this.dropout, this.flashAttention, this);
-		this.fullyLayer = new FullyLayer(embedDim, vocabSize, false, this);
+		this.setDecoder(new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.bias, this.dropout, this.flashAttention, this));
+		this.setFullyLayer(new FullyLayer(embedDim, vocabSize, false, this));
 		this.addLayer(inputLayer);
-		this.addLayer(decoder);
-		this.addLayer(fullyLayer);
+		this.addLayer(getDecoder());
+		this.addLayer(getFullyLayer());
 	}
 	
 	public Llama3(LossType lossType,UpdaterType updater,int headNum,int nKVHeadNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention) {
@@ -74,11 +74,11 @@ public class Llama3 extends Network {
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.decoder = new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.bias, this.dropout, this.flashAttention, this);
-		this.fullyLayer = new FullyLayer(embedDim, vocabSize, false, this);
+		this.setDecoder(new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.bias, this.dropout, this.flashAttention, this));
+		this.setFullyLayer(new FullyLayer(embedDim, vocabSize, false, this));
 		this.addLayer(inputLayer);
-		this.addLayer(decoder);
-		this.addLayer(fullyLayer);
+		this.addLayer(getDecoder());
+		this.addLayer(getFullyLayer());
 	}
 	
 	@Override
@@ -142,13 +142,13 @@ public class Llama3 extends Network {
 //		long start = System.nanoTime();
 //		System.err.println("input:");
 //		input.showDM();
-		decoder.forward(cos, sin, input);
+		getDecoder().forward(cos, sin, input);
 //		System.err.println("decoder:");
 //		decoder.getOutput().showDM();
 //		JCuda.cudaDeviceSynchronize();
 //		System.out.println("forward1:"+(System.nanoTime() - start) / 1e6+"ms.");
 //		long start2 = System.nanoTime();
-		fullyLayer.forward(decoder.getOutput());
+		getFullyLayer().forward(getDecoder().getOutput());
 //		System.err.println("fullyLayer:");
 //		fullyLayer.getOutput().showDM();
 //		JCuda.cudaDeviceSynchronize();
@@ -173,14 +173,14 @@ public class Llama3 extends Network {
 		
 //		JCuda.cudaDeviceSynchronize();
 //		long start2 = System.nanoTime();
-		this.fullyLayer.back(lossDiff);
+		this.getFullyLayer().back(lossDiff);
 //		System.err.println("---fully:");
 //		this.fullyLayer.diff.showDM();
 //		JCuda.cudaDeviceSynchronize();
 //		System.out.println("backward2:"+(System.nanoTime() - start2) / 1e6+"ms.");
 //		JCuda.cudaDeviceSynchronize();
 //		long start3 = System.nanoTime();
-		this.decoder.back(cos, sin, this.fullyLayer.diff);
+		this.getDecoder().back(cos, sin, this.getFullyLayer().diff);
 //		JCuda.cudaDeviceSynchronize();
 //		System.out.println("backward3:"+(System.nanoTime() - start3) / 1e6+"ms.");
 	}
@@ -242,13 +242,29 @@ public class Llama3 extends Network {
 	}
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
-		decoder.saveModel(outputStream);
-		fullyLayer.saveModel(outputStream);
+		getDecoder().saveModel(outputStream);
+		getFullyLayer().saveModel(outputStream);
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-		decoder.loadModel(inputStream);
-		fullyLayer.loadModel(inputStream);
+		getDecoder().loadModel(inputStream);
+		getFullyLayer().loadModel(inputStream);
+	}
+
+	public LlamaTransformerDecoder getDecoder() {
+		return decoder;
+	}
+
+	public void setDecoder(LlamaTransformerDecoder decoder) {
+		this.decoder = decoder;
+	}
+
+	public FullyLayer getFullyLayer() {
+		return fullyLayer;
+	}
+
+	public void setFullyLayer(FullyLayer fullyLayer) {
+		this.fullyLayer = fullyLayer;
 	}
 	
 }

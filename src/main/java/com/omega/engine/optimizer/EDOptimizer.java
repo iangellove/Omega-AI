@@ -8,6 +8,7 @@ import java.util.List;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
@@ -2635,6 +2636,16 @@ public class EDOptimizer extends Optimizer {
 			
 			trainingData.loadData(input, label, tmpInput, tmpLabel);
 			
+//			batchSize = 2;
+//			
+//			tmpInput = MatrixUtils.order(batchSize * network.time, 0, 1);
+//			
+//			input = new Tensor(batchSize * network.time, 1, 1, 1, tmpInput, true);
+//			
+//			tmpLabel = MatrixUtils.order(batchSize * network.time, 1, 1);
+//			
+//			label = new Tensor(batchSize , 1, 1, network.time, tmpLabel, true);
+			
 			for(int i = 0;i<this.trainTime;i++) {
 				
 				if(this.trainIndex >= this.minTrainTime) {
@@ -2675,13 +2686,15 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * loss
 					 */
-					this.loss = network.loss(output, label, pad);
-
+					this.loss = network.loss(output, label, -1);
+					
+//					label.showDM();
+					
 					/**
 					 * loss diff
 					 */
-					this.lossDiff = network.lossDiff(output, label, pad);
-
+					this.lossDiff = network.lossDiff(output, label, -1);
+					
 					/**
 					 * back
 					 */

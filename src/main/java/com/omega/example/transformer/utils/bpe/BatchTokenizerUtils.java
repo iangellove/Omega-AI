@@ -40,18 +40,22 @@ public class BatchTokenizerUtils {
 		    	
 		    	String txt = once.get("text");
 		    	
-		    	if(txt != null && !txt.equals("")) {
-		    		txtList.add(txt);
+		    	if(txt.length() <= 512) {
+
+			    	if(txt != null && !txt.equals("")) {
+			    		txtList.add(txt);
+			    	}
+			    	
+			    	if(i > 1 && i % batchSize == 0) {
+			    		EncodeEx.encode(txtList, ids, bpe);
+			    		write(txtList, ids, writer);
+			    		txtList.clear();
+			    	}
+
+	    			System.out.println(i);
+	    			i++;
 		    	}
 		    	
-		    	if(i > 1 && i % batchSize == 0) {
-		    		EncodeEx.encode(txtList, ids, bpe);
-		    		write(txtList, ids, writer);
-		    		txtList.clear();
-		    	}
-		    	
-    			System.out.println(i);
-    			i++;
 		    }
 			if(txtList.size() > 0) {
 				EncodeEx.encode(txtList, ids, bpe);

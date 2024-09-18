@@ -148,7 +148,7 @@ public class CNBpeTokenizer extends BaseTokenizer{
 					for(int b = 0;b<batchSize;b++) {
 						int[] onceToken = readIdx();
 						for(int t = 0;t<max_len;t++) {
-							formatNotHeadToIdx(b, t, onceToken, input, label);
+							formatToIdx(b, t, onceToken, input, label);
 						}
 					}
 				} catch (Exception e) {
@@ -168,7 +168,7 @@ public class CNBpeTokenizer extends BaseTokenizer{
 					for(int b = 0;b<batchSize;b++) {
 						int[] onceToken = readIdx();
 						for(int t = 0;t<max_len;t++) {
-							formatNotHeadToIdx(b, t, onceToken, input, label);
+							formatToIdx(b, t, onceToken, input, label);
 						}
 					}
 				} catch (Exception e) {
@@ -269,6 +269,28 @@ public class CNBpeTokenizer extends BaseTokenizer{
 //		label.hostToDevice();
 //		
 //	}
+	
+	public void formatToIdx(int b,int t,int[] onceToken,Tensor input,Tensor label) {
+		if(t == 0) {
+			input.data[b * max_len + t] = tokenizer.sos;
+			label.data[b * max_len + t] = onceToken[t];
+		}else if(t < onceToken.length) {
+			int curr = onceToken[t - 1];
+			int next = onceToken[t];
+			input.data[b * max_len + t] = curr;
+			label.data[b * max_len + t] = next;
+//			label.data[(b * max_len + t) * vocab_size + next] = 1.0f;
+		}else if(t == onceToken.length){
+			int curr = onceToken[t - 1];
+			input.data[b * max_len + t] = curr;
+			label.data[b * max_len + t] = tokenizer.eos;
+//			label.data[(b * max_len + t) * vocab_size + tokenizer.eos] = 1.0f;
+		}else {
+			input.data[b * max_len + t] = tokenizer.pad;
+			label.data[b * max_len + t] = tokenizer.pad;
+//			label.data[(b * max_len + t) * vocab_size + tokenizer.pad] = 1.0f;
+		}
+	}
 	
 	public void formatNotHeadToIdx(int b,int t,int[] onceToken,Tensor input,Tensor label) {
 		if(t + 1 < onceToken.length) {

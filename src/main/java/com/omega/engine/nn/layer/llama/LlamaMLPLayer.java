@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.nn.layer.DropoutLayer;
 import com.omega.engine.nn.layer.FullyLayer;
@@ -39,7 +38,7 @@ public class LlamaMLPLayer extends Layer{
 	
 	private Tensor tmp;
 	
-	private int multiple_of = 32;
+	private int multiple_of = 64;
 	
 	public LlamaMLPLayer(int embedDim,int nChannel,boolean bias) {
 		this.embedDim = embedDim;
@@ -48,8 +47,8 @@ public class LlamaMLPLayer extends Layer{
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
-		this.nChannel = 4 * embedDim;
-		this.nChannel = (int)(2 * nChannel / 3);
+		this.nChannel = 4 * this.embedDim;
+		this.nChannel = (int)(2 * this.nChannel / 3);
 		this.nChannel = multiple_of * ((this.nChannel + multiple_of - 1) / multiple_of);
 		this.initLayers();
 	}
@@ -65,15 +64,15 @@ public class LlamaMLPLayer extends Layer{
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
-		this.nChannel = 4 * embedDim;
-		this.nChannel = (int)(2 * nChannel / 3);
+		this.nChannel = 4 * this.embedDim;
+		this.nChannel = (int)(2 * this.nChannel / 3);
 		this.nChannel = multiple_of * ((this.nChannel + multiple_of - 1) / multiple_of);
 		this.initLayers();
 	}
 	
 	public void initLayers() {
 //		NanoGPT net = (NanoGPT) this.network;
-		this.linear1 = new FullyLayer(embedDim, nChannel, bias, network);
+		this.setLinear1(new FullyLayer(embedDim, nChannel, bias, network));
 //		this.linear1.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.01f, 0.02f), true);
 //		this.linear1.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.order(this.embedDim * nChannel, 0.001f, 0.001f), true);
 //		Tensor qw = new Tensor(1, 1, embedDim, nChannel, true);
@@ -81,9 +80,9 @@ public class LlamaMLPLayer extends Layer{
 //		this.linear1.weight = qw;
 //		this.linear1.weight = new Tensor(1, 1, embedDim, nChannel, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, 0.02f), true);
 
-		this.active = new SiLULayer(linear1);
+		this.active = new SiLULayer(getLinear1());
 		
-		this.linear2 = new FullyLayer(nChannel, embedDim, bias, network);
+		this.setLinear2(new FullyLayer(nChannel, embedDim, bias, network));
 //		this.linear2.weight = new Tensor(1, 1, embedDim, nChannel, RandomUtils.uniform(this.nChannel * embedDim, 0.01f, 0.02f), true);
 //		this.linear2.weight = new Tensor(1, 1, embedDim, nChannel, RandomUtils.order(this.nChannel * embedDim, 0.001f, 0.001f), true);
 //		Tensor w2 = new Tensor(1, 1, nChannel, embedDim, true);
@@ -92,7 +91,7 @@ public class LlamaMLPLayer extends Layer{
 //		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, 0.02f), true);
 //		this.linear2.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.0f, (0.02f / (float) Math.sqrt(2 * net.decoderNum))), true);
 		
-		this.linear3 = new FullyLayer(embedDim, nChannel, bias, network);
+		this.setLinear3(new FullyLayer(embedDim, nChannel, bias, network));
 //		this.linear3.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.uniform(this.embedDim * nChannel, 0.01f, 0.02f), true);
 //		this.linear3.weight = new Tensor(1, 1, nChannel, embedDim, RandomUtils.order(this.embedDim * nChannel, 0.001f, 0.001f), true);
 //		Tensor w3 = new Tensor(1, 1, embedDim, nChannel, true);
@@ -100,7 +99,7 @@ public class LlamaMLPLayer extends Layer{
 //		this.linear3.weight = w3;
 		
 		if(dropout) {
-			dropoutLayer = new DropoutLayer(0.1f, linear2);
+			dropoutLayer = new DropoutLayer(0.1f, getLinear2());
 		}
 		
 	}
@@ -130,21 +129,21 @@ public class LlamaMLPLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		linear1.forward(input);
+		getLinear1().forward(input);
 		
-		active.forward(linear1.getOutput());
+		active.forward(getLinear1().getOutput());
 		
-		linear3.forward(input);
+		getLinear3().forward(input);
 		
-		TensorOP.mul(active.getOutput(), linear3.getOutput(), tmp);
+		TensorOP.mul(active.getOutput(), getLinear3().getOutput(), tmp);
 		
-		linear2.forward(tmp);
+		getLinear2().forward(tmp);
 		
 		if(dropout) {
-			dropoutLayer.forward(linear2.getOutput());
+			dropoutLayer.forward(getLinear2().getOutput());
 			this.output = dropoutLayer.getOutput();
 		}else {
-			this.output = linear2.getOutput();
+			this.output = getLinear2().getOutput();
 		}
 
 	}
@@ -160,25 +159,25 @@ public class LlamaMLPLayer extends Layer{
 		// TODO Auto-generated method stub
 		if(this.dropout) {
 			this.dropoutLayer.back(delta);
-			this.linear2.back(this.dropoutLayer.diff);
+			this.getLinear2().back(this.dropoutLayer.diff);
 		}else {
-			this.linear2.back(this.delta);
+			this.getLinear2().back(this.delta);
 		}
 		
 		//diff l3
-		TensorOP.mul(this.linear2.diff, active.getOutput(), tmp);
-		linear3.back(tmp);
+		TensorOP.mul(this.getLinear2().diff, active.getOutput(), tmp);
+		getLinear3().back(tmp);
 		
 		//diff l1
-		TensorOP.mul(this.linear2.diff, linear3.getOutput(), tmp);
+		TensorOP.mul(this.getLinear2().diff, getLinear3().getOutput(), tmp);
 		
 		active.back(tmp);
 		
-		linear1.back(active.diff);
+		getLinear1().back(active.diff);
 		
-		TensorOP.add(this.linear1.diff, this.linear3.diff, this.linear1.diff);
+		TensorOP.add(this.getLinear1().diff, this.getLinear3().diff, this.getLinear1().diff);
 		
-		this.diff = this.linear1.diff;
+		this.diff = this.getLinear1().diff;
 		
 //		System.out.println("mlp diff:");
 //		diff.showDMByNumber(0);
@@ -263,9 +262,9 @@ public class LlamaMLPLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		linear1.update();
-		linear2.update();
-		linear3.update();
+		getLinear1().update();
+		getLinear2().update();
+		getLinear3().update();
 	}
 
 	@Override
@@ -303,15 +302,39 @@ public class LlamaMLPLayer extends Layer{
 	}
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
-		linear1.saveModel(outputStream);
-		linear3.saveModel(outputStream);
-		linear2.saveModel(outputStream);
+		getLinear1().saveModel(outputStream);
+		getLinear3().saveModel(outputStream);
+		getLinear2().saveModel(outputStream);
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-		linear1.loadModel(inputStream);
-		linear3.loadModel(inputStream);
-		linear2.loadModel(inputStream);
+		getLinear1().loadModel(inputStream);
+		getLinear3().loadModel(inputStream);
+		getLinear2().loadModel(inputStream);
+	}
+
+	public FullyLayer getLinear1() {
+		return linear1;
+	}
+
+	public void setLinear1(FullyLayer linear1) {
+		this.linear1 = linear1;
+	}
+
+	public FullyLayer getLinear2() {
+		return linear2;
+	}
+
+	public void setLinear2(FullyLayer linear2) {
+		this.linear2 = linear2;
+	}
+
+	public FullyLayer getLinear3() {
+		return linear3;
+	}
+
+	public void setLinear3(FullyLayer linear3) {
+		this.linear3 = linear3;
 	}
 	
 }
