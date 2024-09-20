@@ -34,6 +34,7 @@ import com.omega.example.transformer.utils.CNWikiTokenizer2;
 import com.omega.example.transformer.utils.CNWikiTokenizer3;
 import com.omega.example.transformer.utils.CNWikiTokenizer4;
 import com.omega.example.transformer.utils.ENTokenizer;
+import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.transformer.utils.bpe.CNBpeTokenizer;
 
 import jcuda.driver.JCudaDriver;
@@ -2632,7 +2633,9 @@ public class EDOptimizer extends Optimizer {
 			
 			Tensor sin = cs[1];
 			
-			int pad = trainingData.tokenizer.pad;
+//			int pad = trainingData.tokenizer.pad;
+			
+			int pad = -1;
 			
 			trainingData.loadData(input, label, tmpInput, tmpLabel);
 			
@@ -2677,29 +2680,39 @@ public class EDOptimizer extends Optimizer {
 					 * 读取训练数据
 					 */
 					trainingData.loadData(input, label, tmpInput, tmpLabel);
-
+//					System.out.println("loadTrainData:"+(System.nanoTime() - start22) / 1e6+"ms.");
+					
+//					long start23 = System.nanoTime();
 					/**
 					 * forward
 					 */
 					output = network.forward(cos, sin, input);
+//					System.out.println("forward:"+(System.nanoTime() - start23) / 1e6+"ms.");
 					
+//					long start24 = System.nanoTime();
 					/**
 					 * loss
 					 */
-					this.loss = network.loss(output, label, -1);
+					this.loss = network.loss(output, label, pad);
+					
+//					System.out.println("loss:"+(System.nanoTime() - start24) / 1e6+"ms.");
 					
 //					label.showDM();
 					
+//					long start25 = System.nanoTime();
 					/**
 					 * loss diff
 					 */
-					this.lossDiff = network.lossDiff(output, label, -1);
+					this.lossDiff = network.lossDiff(output, label, pad);
+//					System.out.println("lossDiff:"+(System.nanoTime() - start25) / 1e6+"ms.");
 					
+//					long start26 = System.nanoTime();
 					/**
 					 * back
 					 */
 					network.back(cos, sin, this.lossDiff);
-
+//					System.out.println("back:"+(System.nanoTime() - start26) / 1e6+"ms.");
+					
 					/**
 					 * update
 					 */
@@ -2725,7 +2738,7 @@ public class EDOptimizer extends Optimizer {
 						}
 					}
 
-					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					String msg = "training["+this.trainIndex+"]{"+it+"/"+trainingData.count_it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
 					System.out.println(msg);
 
@@ -2738,6 +2751,13 @@ public class EDOptimizer extends Optimizer {
 
 				}
 				
+				/**
+				 * save model
+				 */
+				String model_path = "/omega/models/llama3-26m-chinese_"+trainIndex+".model";
+				
+				ModelUtils.saveModel(network, model_path);
+
 			}
 			
 			/**

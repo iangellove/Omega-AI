@@ -5,12 +5,14 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
+import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 
 public class FlashAttentionV2Kernel extends BaseKernel{
@@ -30,6 +32,8 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 	private int time;
 	
 	private int headDim;
+	
+	private Tensor sTmp;
 	
 	public FlashAttentionV2Kernel(int headNum,int time,int headDim) {
 		this.headNum = headNum;
@@ -93,13 +97,28 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 			int nh = headNum;
 			int N = time;
 			int d = headDim;
-
-			int Bc = 32;
-			int Br = 32;
 			
+			int Br = Math.min(64, N);
+            while (Br > 1){
+                if (N % Br == 0){
+                    break;
+                }
+                Br--;
+            }
+            int Bc = Br;
+
 			float scale = (float) (1.0f / Math.sqrt(d));
 			int Tc = (int) Math.ceil((float) N / Bc);
 			int Tr = (int) Math.ceil((float) N / Br);
+			if (Tr > Br && Tr < 64){
+                //Switch Tr and Br so that we could have more thread in a block
+                int tmp = Br;
+                Br = Tr;
+                Tr = tmp;
+
+                Bc = Br;
+                Tc = Tr;
+            }
 //			System.out.println(Bc);
 //			System.out.println(Br);
 //			System.out.println(Tc);
@@ -116,9 +135,12 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 			    const int Bc,
 			    const int Br,
 			    const float softmax_scale,
+			    const int q_start_offset,
 			    float* L,
 			    float* O
 	         */ 
+			int q_start_offset = 0;
+			int startTr = q_start_offset / Br;
 			kernelParameters = Pointer.to(
 	        		Pointer.to(Q.getGpuData()),
 	        		Pointer.to(K.getGpuData()),
@@ -130,23 +152,17 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 	        		Pointer.to(new int[]{Bc}),
 	        		Pointer.to(new int[]{Br}),
 	        		Pointer.to(new float[]{scale}),
+	        		Pointer.to(new int[]{startTr}),
 	        		Pointer.to(d_l.getGpuData()),
 	        		Pointer.to(output.getGpuData())
 	            );
 	        
 			int col_tile_size = Bc * d;  // size of Kj, Vj
 		    int row_tile_size = Br * d;  // size of Qi
-		    int sram_size =
-		        (2 * col_tile_size * Sizeof.FLOAT)  // SRAM size for Kj, Vj
-		        + (row_tile_size * Sizeof.FLOAT)  // SRAM size for Qi
-		        + (Bc * Br * Sizeof.FLOAT);  // SRAM size for S
+		    int sram_size = (col_tile_size * 2) + (row_tile_size * 2);
 
-			int[] grid_dim = new int[] {B, nh, 1};
+			int[] grid_dim = new int[] {B, nh, Tr};
 			int[] block_dim = new int[] {Br, 1, 1};
-			
-			if(CUDAModules.props.sharedMemPerBlock < sram_size) {
-				System.err.printf("max share memory size:"+CUDAModules.props.sharedMemPerBlock + ".current size:"+sram_size);
-			}
 			
 		    checkCUDA(cuLaunchKernel(forward_function,
 		    		grid_dim[0],  grid_dim[1], grid_dim[2],      // Grid dimension
@@ -156,7 +172,7 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 		        ));
 
 //		    d_l.showDM();
-		    
+//		    JCuda.cudaDeviceSynchronize();
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -164,7 +180,7 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 		
 	}
 	
-	public void backward(Tensor Q,Tensor K,Tensor V,Tensor output,Tensor diff,Tensor dQ,Tensor dK,Tensor dV) {
+	public void backward(Tensor Q,Tensor K,Tensor V,Tensor output,Tensor delta,Tensor dQ,Tensor dK,Tensor dV) {
 		
 		try {
 			
@@ -173,16 +189,35 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 			int N = time;
 			int d = headDim;
 
-			int Bc = 16;
-			int Br = 16;
-			
+			int Br = Math.min(64, N);
+            while (Br > 1){
+                if (N % Br == 0){
+                    break;
+                }
+                Br--;
+            }
+            int Bc = Br;
+
 			float scale = (float) (1.0f / Math.sqrt(d));
 			int Tc = (int) Math.ceil((float) N / Bc);
 			int Tr = (int) Math.ceil((float) N / Br);
-//			System.out.println(Bc);
-//			System.out.println(Br);
-//			System.out.println(Tc);
-//			System.out.println(Tr);
+			
+			int col_tile_size = Bc * d;  // size of Kj, Vj
+		    int row_tile_size = Br * d;  // size of Qi
+		    int sram_size = (2 * col_tile_size * 2) + (2 * row_tile_size * 2);
+		  
+		    if(sTmp == null || B != sTmp.number) {
+		    	sTmp = new Tensor(B, nh, Br, Br, true);
+		    }else {
+//		    	System.err.println("in");
+//		    	sTmp.clearGPU();
+		    	dQ.clearGPU();
+		    	dK.clearGPU();
+		    	dV.clearGPU();
+//		    	JCuda.cudaDeviceSynchronize();
+//		    	dQ.showDM(0);
+		    }
+		    
 	        /**
 	         *  设置入参
 	         *  const float* Q,
@@ -200,14 +235,15 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 			    const float softmax_scale,
 			    float* dQ,
 			    float* dK,
-			    float* dV
+			    float* dV,
+			    float* Stmp
 	         */ 
 			backwardKernelParameters = Pointer.to(
 	        		Pointer.to(Q.getGpuData()),
 	        		Pointer.to(K.getGpuData()),
 	        		Pointer.to(V.getGpuData()),
 	        		Pointer.to(output.getGpuData()),
-	        		Pointer.to(diff.getGpuData()),
+	        		Pointer.to(delta.getGpuData()),
 	        		Pointer.to(d_l.getGpuData()),
 	        		Pointer.to(new int[]{N}),
 	        		Pointer.to(new int[]{d}),
@@ -218,22 +254,16 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 	        		Pointer.to(new float[]{scale}),
 	        		Pointer.to(dQ.getGpuData()),
 	        		Pointer.to(dK.getGpuData()),
-	        		Pointer.to(dV.getGpuData())
+	        		Pointer.to(dV.getGpuData()),
+	        		Pointer.to(sTmp.getGpuData())
 	            );
 	        
-			int col_tile_size = Bc * d;  // size of Kj, Vj
-		    int row_tile_size = Br * d;  // size of Qi
-		    int sram_size =
-		            (4 * col_tile_size * Sizeof.FLOAT)  // SRAM size for Kj, Vj, dKj, dVj
-		            + (3 * row_tile_size * Sizeof.FLOAT)  // SRAM size for Qi, Oi, dOi
-		            + (2 * Br * Bc * Sizeof.FLOAT);  // SRAM size for S, dS
-
-			int[] grid_dim = new int[] {B, nh, 1};
+			int[] grid_dim = new int[] {B, nh, Tc};
 			int[] block_dim = new int[] {Br, 1, 1};
 			
-			if(CUDAModules.props.sharedMemPerBlock < sram_size) {
-				System.err.printf("max share memory size:"+CUDAModules.props.sharedMemPerBlock + ".current size:"+sram_size);
-			}
+//			if(CUDAModules.props.sharedMemPerBlock < sram_size) {
+//				System.err.printf("max share memory size:"+CUDAModules.props.sharedMemPerBlock + ".current size:"+sram_size);
+//			}
 			
 		    checkCUDA(cuLaunchKernel(backward_function,
 		    		grid_dim[0],  grid_dim[1], grid_dim[2],      // Grid dimension
@@ -242,7 +272,7 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 		    		backwardKernelParameters, null // Kernel- and extra parameters
 		        ));
 //		    d_l.showDM(0);
-		    
+//		    JCuda.cudaDeviceSynchronize();
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -261,41 +291,45 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 		
 		CUDAModules.initContext();
 		
-		int batchSize = 4;
+		int batchSize = 16;
 		int headNum = 8;
 		int time = 512;
 		int headDim = 64; //headDim
 		int len = batchSize * headNum * time * headDim;
 		
-		Tensor Q = new Tensor(batchSize, headNum, time, headDim, MatrixUtils.order(len, 0.01f, 0.1f), true);
-		Tensor K = new Tensor(batchSize, headNum, time, headDim, MatrixUtils.order(len, 0.01f, 0.1f), true);
-		Tensor V = new Tensor(batchSize, headNum, time, headDim, MatrixUtils.order(len, 0.01f, 0.1f), true);
+		Tensor Q = new Tensor(batchSize, headNum, time, headDim, RandomUtils.gaussianRandom(len, 0.1f), true);
+		Tensor K = new Tensor(batchSize, headNum, time, headDim, RandomUtils.gaussianRandom(len, 0.1f), true);
+		Tensor V = new Tensor(batchSize, headNum, time, headDim, RandomUtils.gaussianRandom(len, 0.1f), true);
 		
 		Tensor dQ = new Tensor(batchSize, headNum, time, headDim, true);
 		Tensor dK = new Tensor(batchSize, headNum, time, headDim, true);
 		Tensor dV = new Tensor(batchSize, headNum, time, headDim, true);
 		
 		Tensor output = new Tensor(batchSize, headNum, time, headDim, true);
-		
-		Tensor diff = new Tensor(batchSize, headNum, time, headDim, MatrixUtils.order(len, 0.1f, 0.1f), true);
+
+		Tensor delta = new Tensor(batchSize, headNum, time, headDim, MatrixUtils.order(len, 0.1f, 0.1f), true);
 		
 		FlashAttentionV2Kernel kernel = new FlashAttentionV2Kernel(headNum, time, headDim);
 		
-		for(int i = 0;i<10;i++) {
+		for(int i = 0;i<100;i++) {
 			long startTime = System.nanoTime();
 		    
 			kernel.forward(Q, K, V, output);
 
-			output.showDM(0);
-			
 			System.out.println((System.nanoTime() - startTime)/1e6+"ms.");
+			
+//			output.
 			
 			long startTime2 = System.nanoTime();
 			
-			kernel.backward(Q, K, V, output, diff, dQ, dK, dV);
+			kernel.backward(Q, K, V, output, delta, dQ, dK, dV);
 			
-			dQ.showDM(0);
 			System.out.println((System.nanoTime() - startTime2)/1e6+"ms.");
+			
+//			dQ.showDMByOffset(0, 100);
+//			dK.showDMByOffset(0, 100);
+//			dV.showDMByOffset(0, 100);
+			
 //			dK.showDM();
 //			dV.showDM();
 		}

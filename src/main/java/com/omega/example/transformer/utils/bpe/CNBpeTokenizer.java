@@ -3,11 +3,13 @@ package com.omega.example.transformer.utils.bpe;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.concurrent.CompletableFuture;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.PrintUtils;
+import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.example.transformer.utils.BaseTokenizer;
 
 import jcuda.runtime.JCuda;
@@ -40,7 +42,15 @@ public class CNBpeTokenizer extends BaseTokenizer{
 	
 	private BufferedReader	bufferedReader;
 	
+	private RandomAccessFile file;
+	
 	private boolean loadDataStatus = false;
+	
+	private int index = 0;
+	
+	private boolean isBin = false;
+	
+	private int[] cache = null;
 	
 	public CNBpeTokenizer(String dataPath,int max_len,int batchSize,int number,BPETokenizer3 tokenizer) {
 		this.dataPath = dataPath;
@@ -62,7 +72,14 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		this.batchSize = batchSize;
 		this.tokenizer = tokenizer;
 		this.vocab_size = tokenizer.voc_size;
-		this.number = loadCount();
+		if(dataPath.contains(".bin")) {
+			this.isBin = true;
+		}
+		if(isBin) {
+			this.number = loadBinCount();
+		}else {
+			this.number = loadCount();
+		}
 		this.count_it = this.number / batchSize;
 		System.out.println("dataCount:"+this.number);
 		System.out.println("vocab_size:"+this.vocab_size);
@@ -98,6 +115,28 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		return number;
 	}
 	
+	public int loadBinCount() {
+		try {
+			file = new RandomAccessFile(dataPath, "r");
+			number = (int) (file.length() / max_len / 4);
+			cache = new int[max_len + 1];
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		return number;
+	}
+	
+	public void initBinReader() {
+		try {
+			file.seek(0);
+			System.out.println("dataset is ready.");
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
 	public void initReader() {
 		try {
 			fileReader = new FileReader(this.dataPath);
@@ -107,6 +146,27 @@ public class CNBpeTokenizer extends BaseTokenizer{
 			// TODO: handle exception
 			e.printStackTrace();
 		}
+	}
+	
+	public int[] loadData() {
+		
+		try {
+
+			if((index + 1) * max_len * 4 <= file.length()) {
+				ModelUtils.loadIntData(file, cache);
+				file.seek(file.getFilePointer() - 4);
+				index++;
+			}else {
+				initBinReader();
+				return loadData();
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+		return cache;
 	}
 	
 	public int[] readIdx() throws IOException {
@@ -133,6 +193,38 @@ public class CNBpeTokenizer extends BaseTokenizer{
     	}
 	}
 	
+	public int[] readBinIdx() throws IOException {
+		String line = bufferedReader.readLine();
+		if(line == null) {
+			close();
+			initReader();
+			line = bufferedReader.readLine();
+		}
+		String[] ids = line.split(" ");
+		if(ids.length >= min_len) {
+			int[] tokens = null;
+			if(ids.length > max_len) {
+				tokens = new int[max_len];	
+			}else {
+				tokens = new int[ids.length];	
+			}
+			for(int i = 0;i<tokens.length;i++) {
+				tokens[i] = Integer.parseInt(ids[i]);
+			}
+			return tokens;
+    	}else {
+    		return readIdx();
+    	}
+	}
+	
+	public int[] readIdxData() throws IOException {
+		if(isBin) {
+			return loadData();
+		}else {
+			return readIdx();
+		}
+	}
+	
 	public void loadData(Tensor input,Tensor label, float[] tmpInput, float[] tmpLabel) {
 //		System.out.println(loadDataStatus);
 		if(this.loadDataStatus) {
@@ -146,9 +238,15 @@ public class CNBpeTokenizer extends BaseTokenizer{
 				try {
 					this.loadDataStatus = false;
 					for(int b = 0;b<batchSize;b++) {
-						int[] onceToken = readIdx();
-						for(int t = 0;t<max_len;t++) {
-							formatToIdx(b, t, onceToken, input, label);
+						int[] onceToken = readIdxData();
+						if(isBin) {
+							for(int t = 0;t<max_len;t++) {
+								formatNotHeadToIdx(b, t, onceToken, input, label);
+							}
+						}else {
+							for(int t = 0;t<max_len;t++) {
+								formatToIdx(b, t, onceToken, input, label);
+							}
 						}
 					}
 				} catch (Exception e) {
@@ -166,9 +264,15 @@ public class CNBpeTokenizer extends BaseTokenizer{
 				try {
 					this.loadDataStatus = false;
 					for(int b = 0;b<batchSize;b++) {
-						int[] onceToken = readIdx();
-						for(int t = 0;t<max_len;t++) {
-							formatToIdx(b, t, onceToken, input, label);
+						int[] onceToken = readIdxData();
+						if(isBin) {
+							for(int t = 0;t<max_len;t++) {
+								formatNotHeadToIdx(b, t, onceToken, input, label);
+							}
+						}else {
+							for(int t = 0;t<max_len;t++) {
+								formatToIdx(b, t, onceToken, input, label);
+							}
 						}
 					}
 				} catch (Exception e) {
@@ -293,21 +397,11 @@ public class CNBpeTokenizer extends BaseTokenizer{
 	}
 	
 	public void formatNotHeadToIdx(int b,int t,int[] onceToken,Tensor input,Tensor label) {
-		if(t + 1 < onceToken.length) {
+		if(t < onceToken.length) {
 			int curr = onceToken[t];
 			int next = onceToken[t + 1];
 			input.data[b * max_len + t] = curr;
 			label.data[b * max_len + t] = next;
-//			label.data[(b * max_len + t) * vocab_size + next] = 1.0f;
-		}else if(t + 1 == onceToken.length){
-			int curr = onceToken[t];
-			input.data[b * max_len + t] = curr;
-			label.data[b * max_len + t] = tokenizer.eos;
-//			label.data[(b * max_len + t) * vocab_size + tokenizer.eos] = 1.0f;
-		}else {
-			input.data[b * max_len + t] = tokenizer.pad;
-			label.data[b * max_len + t] = tokenizer.pad;
-//			label.data[(b * max_len + t) * vocab_size + tokenizer.pad] = 1.0f;
 		}
 	}
 	

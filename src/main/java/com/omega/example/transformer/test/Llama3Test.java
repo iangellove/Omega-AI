@@ -112,19 +112,19 @@ public class Llama3Test {
 			
 			boolean flashAttention = false;
 			
-			int batchSize = 3;
+			int batchSize = 4;
 			
 			int max_len = 512;
 			
 			int embedDim = 512;
 			
-			int head_num = 16;
+			int head_num = 8;
 			
-			int nKVHeadNum = 8;
+			int nKVHeadNum = 4;
 			
 			int decoderNum = 8;
 			
-			String trainPath = "H:\\transformer_dataset\\monkey_idx_6400_vocab.txt";
+			String trainPath = "H:\\transformer_dataset\\monkey_idx_6400_vocab.bin";
 			
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 			
@@ -132,11 +132,11 @@ public class Llama3Test {
 			
 			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
 			
-			CNBpeTokenizer trainData = new CNBpeTokenizer(trainPath, max_len, batchSize, 6250865, tokenizer);
+			CNBpeTokenizer trainData = new CNBpeTokenizer(trainPath, max_len, batchSize, tokenizer);
 			
 			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
 			
-			network.learnRate = 3e-4f;
+			network.learnRate = 1e-4f;
 			
 //			String weightPath = "H:\\model\\torch_weights.json";
 //			
@@ -144,13 +144,15 @@ public class Llama3Test {
 //			
 //			loadWeight(weightMap, network);
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.COSINE, false);
-			optimizer.lr_step = new int[] {1, 2};
-			optimizer.lr = 3e-4f;
-			optimizer.min_lr = 1e-5f;
-			optimizer.setWarmUp(true);
-			optimizer.warmUpTime = 1000;
-			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
+//			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.COSINE, false);
+//			optimizer.lr_step = new int[] {1, 2};
+//			optimizer.lr = 3e-4f;
+//			optimizer.min_lr = 1e-5f;
+//			optimizer.setWarmUp(true);
+//			optimizer.warmUpTime = 1000;
+//			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.CONSTANT, false);
 			optimizer.trainLlama3_chinese(trainData);
 
 			String model_path = "H:\\model\\llama3-26m-chinese.model";

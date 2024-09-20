@@ -201,11 +201,12 @@ public class LlamaTransformerDecoder extends Layer{
 		
 		this.getNorm().back(delta);
 		Tensor decoderDiff = this.getNorm().diff;
-		
+//		long start27 = System.nanoTime();
 		for(int i = n_layers - 1;i>=0;i--) {
 			getDecoderLayers().get(i).back(cos, sin, decoderDiff);
 			decoderDiff = getDecoderLayers().get(i).diff;
 		}
+//		System.out.println("decoders:"+(System.nanoTime() - start27) / 1e6+"ms.");
 //		decoderDiff.showDMByNumber(0);
 		if(dropout) {
 			this.dropoutLayer.back(decoderDiff);
@@ -213,8 +214,9 @@ public class LlamaTransformerDecoder extends Layer{
 		}
 //		System.err.println("decoderDiff:");
 //		decoderDiff.showDM();
+//		long start26 = System.nanoTime();
 		getSrc_emb().back(decoderDiff);
-		
+//		System.out.println("emb:"+(System.nanoTime() - start26) / 1e6+"ms.");
 		this.diff = this.getSrc_emb().diff;
 		
 	}

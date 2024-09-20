@@ -17,10 +17,12 @@ public class FlashAttentionKernel extends BaseKernel{
 
 	private CUfunction forward_function;
 	
-	private CUfunction forward2_function;
+	private CUfunction backward_function;
 	
 	private Pointer kernelParameters;
 
+	private Pointer bwdKernelParameters;
+	
 	private Tensor d_m;
 	private Tensor d_l;
 	
@@ -66,13 +68,13 @@ public class FlashAttentionKernel extends BaseKernel{
 
 			if(forward_function == null) {
 
-				forward_function = CUDAModules.getLocalFunctionByModule("FlashAttentionKernel.cu", "forward_kernel");
+				forward_function = CUDAModules.getLocalFunctionByModule("FlashAttentionKernel.cu", "forward_attention_kernel");
 				
 			}
 			
-			if(forward2_function == null) {
+			if(backward_function == null) {
 
-//				forward2_function = CUDAModules.getLocalFunctionByModule("FlashAttentionKernel.cu", "flash_attention_v1_kernel");
+				backward_function = CUDAModules.getLocalFunctionByModule("FlashAttentionKernel.cu", "backward_kernel");
 				
 			}
 			
@@ -93,14 +95,15 @@ public class FlashAttentionKernel extends BaseKernel{
 			int nh = headNum;
 			int N = time;
 			int d = headDim;
+			
+			long max_shared_memory = CUDAModules.props.sharedMemPerBlock;
+			long max_threads_num = CUDAModules.props.maxThreadsPerBlock;
+			
+			int M = (int) (max_shared_memory / Sizeof.FLOAT);
 
-//			int Bc = (int) Math.ceil(CUDAModules.props.sharedMemPerBlock / 4 / d);
-//			int Br = (int) Math.ceil(Math.min(CUDAModules.props.sharedMemPerBlock / 4 / d, d));
+			int Bc = (int) Math.ceil(M / (4 * d));
+			int Br = (int) Math.min(Math.min(Bc, d), max_threads_num);
 			
-			int Bc = 32;
-			int Br = 32;
-			
-			float scale = (float) (1.0f / Math.sqrt(d));
 			int Tc = (int) Math.ceil((float) N / Bc);
 			int Tr = (int) Math.ceil((float) N / Br);
 			System.out.println(Bc);
@@ -109,37 +112,35 @@ public class FlashAttentionKernel extends BaseKernel{
 			System.out.println(Tr);
 	        /**
 	         * 设置入参
-	         * const float* Q, const float* K, const float* V, const int N, const int d,
-                    const int Tc, const int Tr, const int Bc, const int Br, const float softmax_scale,
-                    float* l, float *m, float* O
+	         * float *Q, float *K, float *V, float *O, float *l, float *m, const int N, const int d,
+                               const int Bc, const int Br, const int Tc, const int Tr
 	         */ 
 			kernelParameters = Pointer.to(
 	        		Pointer.to(Q.getGpuData()),
 	        		Pointer.to(K.getGpuData()),
 	        		Pointer.to(V.getGpuData()),
-	        		Pointer.to(new int[]{N}),
-	        		Pointer.to(new int[]{d}),
-	        		Pointer.to(new int[]{Tc}),
-	        		Pointer.to(new int[]{Tr}),
-	        		Pointer.to(new int[]{Bc}),
-	        		Pointer.to(new int[]{Br}),
-	        		Pointer.to(new float[]{scale}),
+	        		Pointer.to(output.getGpuData()),
 	                Pointer.to(d_l.getGpuData()),
 	                Pointer.to(d_m.getGpuData()),
-	                Pointer.to(output.getGpuData())
+	        		Pointer.to(new int[]{N}),
+	        		Pointer.to(new int[]{d}),
+	        		Pointer.to(new int[]{Bc}),
+	        		Pointer.to(new int[]{Br}),
+	        		Pointer.to(new int[]{Tc}),
+	        		Pointer.to(new int[]{Tr})
 	            );
 	        
-			int sram_size = (3 * Bc * d * Sizeof.FLOAT) + (Bc * Br * Sizeof.FLOAT);
-			
 			int[] grid_dim = new int[] {B, nh, 1};
-			int[] block_dim = new int[] {Bc, 1, 1};
+			int[] block_dim = new int[] {Br, 1, 1};
 			
-			System.out.println("max share memory size:"+CUDAModules.props.sharedMemPerBlock + ".current size:"+sram_size);
+			int shared_memory_size = Sizeof.FLOAT * ((2 * Bc * d) + (Br * d) + (Bc * Br));
+			
+			System.out.println("max share memory size:"+CUDAModules.props.sharedMemPerBlock + ".current size:"+shared_memory_size);
 			
 		    checkCUDA(cuLaunchKernel(forward_function,
 		    		grid_dim[0],  grid_dim[1], grid_dim[2],      // Grid dimension
 		    		block_dim[0], block_dim[1], block_dim[2],      // Block dimension
-		            sram_size, null,               // Shared memory size and stream
+		    		shared_memory_size, null,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
 		        ));
 
@@ -153,7 +154,7 @@ public class FlashAttentionKernel extends BaseKernel{
 		
 	}
 	
-	public void backward(Tensor Q,Tensor K,Tensor V,Tensor diff,Tensor dQ,Tensor dK,Tensor dV) {
+	public void backward(Tensor Q,Tensor K,Tensor V,Tensor O,Tensor delta,Tensor dQ,Tensor dK,Tensor dV) {
 		
 		try {
 			
@@ -164,133 +165,63 @@ public class FlashAttentionKernel extends BaseKernel{
 			int N = time;
 			int d = headDim;
 
-//			int Bc = (int) Math.ceil(CUDAModules.props.sharedMemPerBlock / 4 / d);
-//			int Br = (int) Math.ceil(Math.min(CUDAModules.props.sharedMemPerBlock / 4 / d, d));
+			long max_shared_memory = CUDAModules.props.sharedMemPerBlock;
+			long max_threads_num = CUDAModules.props.maxThreadsPerBlock;
 			
-			int Bc = 16;
-			int Br = 16;
+			int block_size = 16;
 			
-			float scale = (float) (1.0f / Math.sqrt(d));
+			int Bc = block_size;
+			int Br = block_size;
+
 			int Tc = (int) Math.ceil((float) N / Bc);
 			int Tr = (int) Math.ceil((float) N / Br);
 			System.out.println(Bc);
 			System.out.println(Br);
 			System.out.println(Tc);
 			System.out.println(Tr);
+
 	        /**
 	         * 设置入参
-	         * const float* Q, const float* K, const float* V, const int N, const int d,
-                    const int Tc, const int Tr, const int Bc, const int Br, const float softmax_scale,
-                    float* l, float *m, float* O
+	         * float *Q, float *K, float *V, float *O, float *dQ, float *dK, float *dV, float *dO,
+               float *l, float *m, const int N, const int d, const int Tc, const int Tr
 	         */ 
-//			kernelParameters = Pointer.to(
-//	        		Pointer.to(Q.getGpuData()),
-//	        		Pointer.to(K.getGpuData()),
-//	        		Pointer.to(V.getGpuData()),
-//	        		Pointer.to(new int[]{N}),
-//	        		Pointer.to(new int[]{d}),
-//	        		Pointer.to(new int[]{Tc}),
-//	        		Pointer.to(new int[]{Tr}),
-//	        		Pointer.to(new int[]{Bc}),
-//	        		Pointer.to(new int[]{Br}),
-//	        		Pointer.to(new float[]{scale}),
-//	                Pointer.to(d_l.getGpuData()),
-//	                Pointer.to(d_m.getGpuData()),
-//	                Pointer.to(output.getGpuData())
-//	            );
-//	        
-			int sram_size = ((3 * Bc * d * Sizeof.FLOAT) + (Bc * Br * Sizeof.FLOAT)) * 2;
+			bwdKernelParameters = Pointer.to(
+	        		Pointer.to(Q.getGpuData()),
+	        		Pointer.to(K.getGpuData()),
+	        		Pointer.to(V.getGpuData()),
+	        		Pointer.to(O.getGpuData()),
+	        		Pointer.to(dQ.getGpuData()),
+	        		Pointer.to(dK.getGpuData()),
+	        		Pointer.to(dV.getGpuData()),
+	        		Pointer.to(delta.getGpuData()),
+	        		Pointer.to(d_l.getGpuData()),
+	                Pointer.to(d_m.getGpuData()),
+	        		Pointer.to(new int[]{N}),
+	        		Pointer.to(new int[]{d}),
+	        		Pointer.to(new int[]{Tc}),
+	        		Pointer.to(new int[]{Tr})
+	            );
+	        
+			int shared_memory_size = Sizeof.FLOAT * ((7 * block_size * d) + (2 * block_size * block_size));
 			
 			int[] grid_dim = new int[] {B, nh, 1};
-			int[] block_dim = new int[] {Bc, 1, 1};
+			int[] block_dim = new int[] {block_size, 1, 1};
 			
-			System.out.println("max share memory size:"+CUDAModules.props.sharedMemPerBlock + ".current size:"+sram_size);
+			System.out.println("max share memory size:"+CUDAModules.props.sharedMemPerBlock + ".current size:"+shared_memory_size);
 			
-//		    checkCUDA(cuLaunchKernel(forward_function,
-//		    		grid_dim[0],  grid_dim[1], grid_dim[2],      // Grid dimension
-//		    		block_dim[0], block_dim[1], block_dim[2],      // Block dimension
-//		            sram_size, null,               // Shared memory size and stream
-//		            kernelParameters, null // Kernel- and extra parameters
-//		        ));
+		    checkCUDA(cuLaunchKernel(backward_function,
+		    		grid_dim[0],  grid_dim[1], grid_dim[2],      // Grid dimension
+		    		block_dim[0], block_dim[1], block_dim[2],      // Block dimension
+		    		shared_memory_size, null,               // Shared memory size and stream
+		            bwdKernelParameters, null // Kernel- and extra parameters
+		        ));
 
-		    d_m.showDM();
-		    d_l.showDM();
-		    
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
 		
 	}
-	
-//	public void forward2(Tensor Q,Tensor K,Tensor V,Tensor output) {
-//		
-//		try {
-//			
-//			initKernel(Q, headNum, time);
-//			
-//			int B = Q.number;
-//			int nh = headNum;
-//			int N = time;
-//			int d = headDim;
-//
-//			int Bc = 2;
-//			int Br = 2;
-//			
-//			float scale = (float) (1.0f / Math.sqrt(d));
-//			int Tc = (int) Math.ceil((float) N / Bc);
-//			int Tr = (int) Math.ceil((float) N / Br);
-//			System.out.println(Bc);
-//			System.out.println(Br);
-//			System.out.println(Tc);
-//			System.out.println(Tr);
-//	        /**
-//	         * 设置入参
-//	         * float *Q, float *K, float *V, float *O, float *gMax,float *gDenom, int seqlen, int stride_head, float smScale,int kBc,int kBr,int Kdim
-//	         */ 
-//			kernelParameters = Pointer.to(
-//	        		Pointer.to(Q.getGpuData()),
-//	        		Pointer.to(K.getGpuData()),
-//	        		Pointer.to(V.getGpuData()),
-//	        		Pointer.to(output.getGpuData()),
-//	        		Pointer.to(d_l.getGpuData()),
-//	                Pointer.to(d_m.getGpuData()),
-//	        		Pointer.to(new int[]{N}),
-//	        		Pointer.to(new int[]{N * d}),
-//	        		Pointer.to(new float[]{scale}),
-//	        		Pointer.to(new int[]{Bc}),
-//	        		Pointer.to(new int[]{Br}),
-//	        		Pointer.to(new int[]{d})
-//	            );
-//	        
-//			int Gc = B * nh;
-//			int Gr = (N + Br - 1) / Br;
-//			
-//			int[] grid_dim = new int[] {Gc, Gr, 1};
-//			int[] block_dim = new int[] {Bc, Br, 1};
-//			
-//			/**
-//			 * int kBc, int kBr, int kDim
-//			 */
-//			Pointer extra = Pointer.to(
-//						Pointer.to(new int[]{Bc}),
-//		        		Pointer.to(new int[]{Br}),
-//		        		Pointer.to(new int[]{d})
-//					);
-//			
-//		    checkCUDA(cuLaunchKernel(forward2_function,
-//		    		grid_dim[0],  grid_dim[1], grid_dim[2],      // Grid dimension
-//		    		block_dim[0], block_dim[1], block_dim[2],      // Block dimension
-//		            0, null,               // Shared memory size and stream
-//		            kernelParameters, extra // Kernel- and extra parameters
-//		        ));
-//
-//		} catch (Exception e) {
-//			// TODO: handle exception
-//			e.printStackTrace();
-//		}
-//		
-//	}
 	
 	public void checkCUDA(int code) {
 		if(code != cudaError.cudaSuccess) {
@@ -303,17 +234,23 @@ public class FlashAttentionKernel extends BaseKernel{
 		
 		CUDAModules.initContext();
 		
-		int batchSize = 16;
-		int headNum = 12;
-		int time = 64;
-		int headDim = 64; //headDim
+		int batchSize = 8;
+		int headNum = 16;
+		int time = 512;
+		int headDim = 32; //headDim
 		int len = batchSize * headNum * time * headDim;
 		
 		Tensor Q = new Tensor(batchSize, headNum, time, headDim, MatrixUtils.order(len, 0.01f, 0.1f), true);
 		Tensor K = new Tensor(batchSize, headNum, time, headDim, MatrixUtils.order(len, 0.01f, 0.1f), true);
 		Tensor V = new Tensor(batchSize, headNum, time, headDim, MatrixUtils.order(len, 0.01f, 0.1f), true);
 		
+		Tensor dQ = new Tensor(batchSize, headNum, time, headDim, true);
+		Tensor dK = new Tensor(batchSize, headNum, time, headDim, true);
+		Tensor dV = new Tensor(batchSize, headNum, time, headDim, true);
+		
 		Tensor output = new Tensor(batchSize, headNum, time, headDim, true);
+		
+		Tensor delta = new Tensor(batchSize, headNum, time, headDim, MatrixUtils.order(len, 0.01f, 0.1f), true);
 		
 		FlashAttentionKernel kernel = new FlashAttentionKernel(headNum, time, headDim);
 		
@@ -322,9 +259,17 @@ public class FlashAttentionKernel extends BaseKernel{
 		    
 			kernel.forward(Q, K, V, output);
 
-			output.showDM(0);
-			
 			System.out.println((System.nanoTime() - startTime)/1e6+"ms.");
+//			output.showDM(0);
+
+//			long startTime2 = System.nanoTime();
+//			kernel.backward(Q, K, V, output, delta, dQ, dK, dV);
+//			System.out.println((System.nanoTime() - startTime2)/1e6+"ms.");
+//			
+////			dQ.showDM(0);
+//			output.clear();
+//			delta.clear();
+
 		}
 //		
 //		kernel.backward(Q, K, V, null, null, null, null);

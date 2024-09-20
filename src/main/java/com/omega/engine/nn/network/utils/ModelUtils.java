@@ -11,6 +11,15 @@ import jcuda.Sizeof;
 
 public class ModelUtils {
 	
+	
+	public static void saveIntData(RandomAccessFile outputStream,int[] data) throws IOException {
+		writeInt(outputStream, data);
+	}
+	
+	public static void loadIntData(RandomAccessFile inputStream,int[] data) throws IOException {
+		readInt(inputStream, data);
+	}
+	
 	public static void saveParams(RandomAccessFile outputStream,Tensor data) throws IOException {
 		writeFloat(outputStream, data);
 	}
@@ -33,6 +42,17 @@ public class ModelUtils {
 		}
 	}
 	
+	public static void readInt(RandomAccessFile inputStream,int[] data) throws IOException {
+		for(int i = 0;i<data.length;i++) {
+			int v = readInt(inputStream);
+			data[i] = v;
+			if(v == Float.NaN) {
+				System.err.println(v);
+			}
+			
+		}
+	}
+	
 	public static void writeFloat(RandomAccessFile outputStream,Tensor data) throws IOException {
 		if(data.isHasGPU()) {
 			data.syncHost();
@@ -42,8 +62,19 @@ public class ModelUtils {
 		}
 	}
 	
+	public static void writeInt(RandomAccessFile outputStream,int[] data) throws IOException {
+		for(int i = 0;i<data.length;i++) {
+			writeInt(outputStream, data[i]);
+		}
+	}
+	
 	public static void writeFloat(RandomAccessFile outputStream,float val) throws IOException {
 	    byte[] buffer = float2byte(val);
+	    outputStream.write(buffer);
+	}
+	
+	public static void writeInt(RandomAccessFile outputStream,int val) throws IOException {
+	    byte[] buffer = int2byte(val);
 	    outputStream.write(buffer);
 	}
 	
@@ -55,6 +86,56 @@ public class ModelUtils {
 	    wrapped.order(ByteOrder.LITTLE_ENDIAN);
 	    retVal = wrapped.getFloat();
 	    return retVal;
+	}
+	
+	public static int readInt(RandomAccessFile inputStream) throws IOException {
+		int retVal;
+	    byte[] buffer = new byte[Sizeof.INT];
+	    inputStream.readFully(buffer);
+	    ByteBuffer wrapped = ByteBuffer.wrap(buffer);
+	    wrapped.order(ByteOrder.LITTLE_ENDIAN);
+	    retVal = wrapped.getInt();
+	    return retVal;
+	}
+	
+	/**
+	 * 低字节
+	 * @param i
+	 * @return
+	 */
+	public static byte[] int2byte(int val) {
+		byte[] b = new byte[4];    
+	    for (int i = 0; i < 4; i++) {    
+	        b[i] = (byte) (val >> (24 - i * 8));    
+	    }   
+	      
+	    // 翻转数组  
+	    int len = b.length;  
+	    // 建立一个与源数组元素类型相同的数组  
+	    byte[] dest = new byte[len];  
+	    // 为了防止修改源数组，将源数组拷贝一份副本  
+	    System.arraycopy(b, 0, dest, 0, len);  
+	    byte temp;  
+	    // 将顺位第i个与倒数第i个交换  
+	    for (int i = 0; i < len / 2; ++i) {  
+	        temp = dest[i];  
+	        dest[i] = dest[len - i - 1];  
+	        dest[len - i - 1] = temp;  
+	    }  
+	      
+	    return dest;
+	}
+	
+	public static float byte2int(byte[] b, int index) {    
+	    int l;                                             
+	    l = b[index + 0];                                  
+	    l &= 0xff;                                         
+	    l |= ((long) b[index + 1] << 8);                   
+	    l &= 0xffff;                                       
+	    l |= ((long) b[index + 2] << 16);                  
+	    l &= 0xffffff;                                     
+	    l |= ((long) b[index + 3] << 24);                  
+	    return l;                    
 	}
 	
 	public static byte[] float2byte(float f) {
