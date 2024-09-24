@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
@@ -2637,18 +2638,8 @@ public class EDOptimizer extends Optimizer {
 			
 			int pad = -1;
 			
-			trainingData.loadData(input, label, tmpInput, tmpLabel);
-			
-//			batchSize = 2;
-//			
-//			tmpInput = MatrixUtils.order(batchSize * network.time, 0, 1);
-//			
-//			input = new Tensor(batchSize * network.time, 1, 1, 1, tmpInput, true);
-//			
-//			tmpLabel = MatrixUtils.order(batchSize * network.time, 1, 1);
-//			
-//			label = new Tensor(batchSize , 1, 1, network.time, tmpLabel, true);
-			
+			trainingData.loadData(input, label, tmpInput, tmpLabel, 0);
+
 			for(int i = 0;i<this.trainTime;i++) {
 				
 				if(this.trainIndex >= this.minTrainTime) {
@@ -2679,9 +2670,11 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * 读取训练数据
 					 */
-					trainingData.loadData(input, label, tmpInput, tmpLabel);
-//					System.out.println("loadTrainData:"+(System.nanoTime() - start22) / 1e6+"ms.");
+					trainingData.loadData(input, label, tmpInput, tmpLabel, it);
 					
+//					System.out.println("loadTrainData:"+(System.nanoTime() - start22) / 1e6+"ms.");
+//					System.out.println(JsonUtils.toJson(tmpInput));
+//					System.out.println(JsonUtils.toJson(tmpLabel));
 //					long start23 = System.nanoTime();
 					/**
 					 * forward
@@ -2729,10 +2722,10 @@ public class EDOptimizer extends Optimizer {
 
 					output.syncHost();
 					
-					if(it % 20 == 0) {
+					if(it % 100 == 0) {
 						int time = output.number / batchSize;
 						if(trainingData.tokenizer != null) {
-							float error = this.accuracyBatchFisrt(input, tmpInput, output, label, tmpLabel, time, batchSize, trainingData.tokenizer, pad);
+							float error = this.accuracyBatchFisrt(input, tmpInput, output, tmpLabel, time, batchSize, trainingData.tokenizer, pad);
 						}else {
 							float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, pad);
 						}
@@ -2744,13 +2737,13 @@ public class EDOptimizer extends Optimizer {
 
 					this.batchIndex++;
 
-					/**
-					 * update learning rate
-					 */
-					this.updateLR(this.lr_step, it);
-
 				}
-				
+
+				/**
+				 * update learning rate
+				 */
+				this.updateLR(this.lr_step);
+
 				/**
 				 * save model
 				 */

@@ -582,6 +582,17 @@ public class RandomUtils {
 		return temp;
 	}
 	
+	public static float[] normal_(int x,float mean,float std) {
+		
+		float[] temp = new float[x];
+		
+		for(int i = 0;i<x;i++) {
+			temp[i] = (float) (std * getInstance().nextGaussian() + mean);
+		}
+		
+		return temp;
+	}
+	
 	/**
 	 * xavier随机数
 	 * @param x

@@ -105,7 +105,7 @@ public class LlamaTransformerBlock extends Layer{
 		if(flashAttention) {
 			this.setAttn(new LlamaFlashAttentionLayer(embedDim, headNum, time, bias, dropout, network));
 		}else {
-			this.setAttn(new LlamaCausalSelfAttention2Layer(embedDim, headNum, nKVHeads, time, bias, dropout, network));
+			this.setAttn(new LlamaCausalSelfAttentionLayer(embedDim, headNum, nKVHeads, time, bias, dropout, network));
 		}
 
 		this.setNorm2(new RMSLayer(getAttn()));

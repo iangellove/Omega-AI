@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -156,7 +157,7 @@ public class BPETokenizer3 {
 	
 	private Map<String[],Integer> readMerges(String path) {
 		
-		Map<String[], Integer> mapList = new HashMap<String[], Integer>(); 
+		Map<String[], Integer> mapList = new LinkedHashMap<String[], Integer>(); 
 		try {
 			String line = null;
 			FileInputStream fis = new FileInputStream(path);
@@ -322,20 +323,20 @@ public class BPETokenizer3 {
 	public static void main(String args[]) {
 		try {
 			
-//			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
-//			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
-//			
-//			String txt = "wenjie，椭圆和⚪的关系是什么呢？因为明天下午要带家人去下医院，所以申请上午在家办公，因为明天下午要带家人去下医院，所以申请上午在家办公，因为明天下午要带家人去下医院，所以申请上午在家办公，下午请半天假~@LWJWe ";
-//			
-//			BPETokenizer3 bpe = new BPETokenizer3(vocabPath, mergesPath);
-//			
-//			List<Integer> ids = bpe.encode(txt);
-//			
-//			System.out.println(JsonUtils.toJson(ids));
-//			
-//			String decodeTxt = bpe.decode(ids);
-//			
-//			System.out.println(decodeTxt);
+			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
+			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
+			
+			String txt = "我们生产的食品消泡剂，具有可以快速消除泡沫的特点。";
+			
+			BPETokenizer3 bpe = new BPETokenizer3(vocabPath, mergesPath);
+			
+			List<Integer> ids = bpe.encode(txt);
+			
+			System.out.println(JsonUtils.toJson(ids));
+			
+			String decodeTxt = bpe.decode(ids);
+			
+			System.out.println(decodeTxt);
 			
 		} catch (Exception e) {
 			// TODO: handle exception

@@ -116,7 +116,7 @@ public class LlamaTransformerDecoder extends Layer{
 	public void initLayers() {
 		
 		this.setSrc_emb(new EmbeddingIDLayer(vocab_size, embedDim, network));
-		this.getSrc_emb().weight = new Tensor(1, 1, getSrc_emb().width, getSrc_emb().oWidth, RandomUtils.uniform(this.getSrc_emb().width * this.getSrc_emb().oWidth, 0.0f, 0.02f), true);
+		this.getSrc_emb().weight = new Tensor(1, 1, getSrc_emb().width, getSrc_emb().oWidth, RandomUtils.gaussianRandom(this.src_emb.width * this.src_emb.oWidth, 0.0f, 0.02f), true);
 //		this.src_emb.weight = new Tensor(1, 1, src_emb.width, src_emb.oWidth, RandomUtils.order(this.src_emb.width * this.src_emb.oWidth, 0.001f, 0.001f), true);
 
 		setDecoderLayers(new ArrayList<LlamaTransformerBlock>());
@@ -169,7 +169,7 @@ public class LlamaTransformerDecoder extends Layer{
 		getSrc_emb().forward(input);
 
 		Tensor out1 = getSrc_emb().getOutput();
-		
+//		out1.showDMByOffset(0, 100);
 		if(dropout) {
 			this.dropoutLayer.forward(out1);
 			out1 = dropoutLayer.getOutput();
@@ -180,7 +180,12 @@ public class LlamaTransformerDecoder extends Layer{
 			out1 = getDecoderLayers().get(i).getOutput();
 		}
 		
+//		out1.showDMByOffset(0, 100);
+		
 		this.getNorm().forward(out1);
+		
+//		this.getNorm().getOutput().showDMByOffset(0, 100);;
+		
 		this.output = this.getNorm().getOutput();
 	}
 	
@@ -202,6 +207,8 @@ public class LlamaTransformerDecoder extends Layer{
 		this.getNorm().back(delta);
 		Tensor decoderDiff = this.getNorm().diff;
 //		long start27 = System.nanoTime();
+//		System.err.println("---decoder-norm:");
+//		decoderDiff.showDMByOffset(0, 100);
 		for(int i = n_layers - 1;i>=0;i--) {
 			getDecoderLayers().get(i).back(cos, sin, decoderDiff);
 			decoderDiff = getDecoderLayers().get(i).diff;
@@ -212,6 +219,8 @@ public class LlamaTransformerDecoder extends Layer{
 			this.dropoutLayer.back(decoderDiff);
 			decoderDiff = dropoutLayer.diff;
 		}
+//		System.err.println("---decoder:");
+//		decoderDiff.showDMByOffset(0, 100);
 //		System.err.println("decoderDiff:");
 //		decoderDiff.showDM();
 //		long start26 = System.nanoTime();

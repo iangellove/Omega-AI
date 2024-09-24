@@ -7,6 +7,7 @@ import java.io.RandomAccessFile;
 import java.util.concurrent.CompletableFuture;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.PrintUtils;
 import com.omega.engine.nn.network.utils.ModelUtils;
@@ -44,13 +45,13 @@ public class CNBpeTokenizer extends BaseTokenizer{
 	
 	private RandomAccessFile file;
 	
-	private boolean loadDataStatus = false;
-	
 	private int index = 0;
 	
 	private boolean isBin = false;
 	
 	private int[] cache = null;
+	
+	private CompletableFuture<Boolean> cf;
 	
 	public CNBpeTokenizer(String dataPath,int max_len,int batchSize,int number,BPETokenizer3 tokenizer) {
 		this.dataPath = dataPath;
@@ -153,6 +154,7 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		try {
 
 			if((index + 1) * max_len * 4 <= file.length()) {
+//				System.out.println(index);
 				ModelUtils.loadIntData(file, cache);
 				file.seek(file.getFilePointer() - 4);
 				index++;
@@ -225,73 +227,54 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		}
 	}
 	
-	public void loadData(Tensor input,Tensor label, float[] tmpInput, float[] tmpLabel) {
-//		System.out.println(loadDataStatus);
-		if(this.loadDataStatus) {
-			input.hostToDevice();
-			label.hostToDevice();
-			input.syncHost(tmpInput);
-			label.syncHost(tmpLabel);
-			JCuda.cudaDeviceSynchronize();
-			
-			CompletableFuture.supplyAsync(()-> {
-				try {
-					this.loadDataStatus = false;
-					for(int b = 0;b<batchSize;b++) {
-						int[] onceToken = readIdxData();
-						if(isBin) {
-							for(int t = 0;t<max_len;t++) {
-								formatNotHeadToIdx(b, t, onceToken, input, label);
-							}
-						}else {
-							for(int t = 0;t<max_len;t++) {
-								formatToIdx(b, t, onceToken, input, label);
-							}
-						}
-					}
-				} catch (Exception e) {
-					// TODO: handle exception
-					e.printStackTrace();
-				}
-				return "success";
-			}).thenAccept(status->{
-				loadDataStatus = true;
-			});
-			
-		}else {
-
-			CompletableFuture.supplyAsync(()-> {
-				try {
-					this.loadDataStatus = false;
-					for(int b = 0;b<batchSize;b++) {
-						int[] onceToken = readIdxData();
-						if(isBin) {
-							for(int t = 0;t<max_len;t++) {
-								formatNotHeadToIdx(b, t, onceToken, input, label);
-							}
-						}else {
-							for(int t = 0;t<max_len;t++) {
-								formatToIdx(b, t, onceToken, input, label);
-							}
-						}
-					}
-				} catch (Exception e) {
-					// TODO: handle exception
-					e.printStackTrace();
-				}
-				return "success";
-			}).thenAccept(status->{
-				loadDataStatus = true;
-			});
-			
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+	public void loadData(Tensor input,Tensor label, float[] tmpInput, float[] tmpLabel,int it) {
+		try {
+//			System.out.println(it);
+			if(isBin && it == count_it - 4) {
+				initBinReader();
 			}
+			if(cf != null) {
+				boolean success = cf.get();
+//				System.err.println(it+"/"+count_it+":"+success);
+				input.hostToDevice();
+				label.hostToDevice();
+				input.syncHost(tmpInput);
+				label.syncHost(tmpLabel);
+				JCuda.cudaDeviceSynchronize();
+//				System.out.println(JsonUtils.toJson(tmpLabel));
+				cf = loadAsyncData(input, label, tmpInput, tmpLabel);
+			}else {
+				cf = loadAsyncData(input, label, tmpInput, tmpLabel);
+			}
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
 		}
 
+	}
+	
+	public CompletableFuture<Boolean> loadAsyncData(Tensor input,Tensor label, float[] tmpInput, float[] tmpLabel) {
+		CompletableFuture<Boolean> cf = CompletableFuture.supplyAsync(()-> {
+			try {
+				for(int b = 0;b<batchSize;b++) {
+					int[] onceToken = readIdxData();
+					if(isBin) {
+						for(int t = 0;t<max_len;t++) {
+							formatNotHeadToIdx(b, t, onceToken, input, label);
+						}
+					}else {
+						for(int t = 0;t<max_len;t++) {
+							formatToIdx(b, t, onceToken, input, label);
+						}
+					}
+				}
+			} catch (Exception e) {
+				// TODO: handle exception
+				e.printStackTrace();
+			}
+			return true;
+		});
+		return cf;
 	}
 	
 	public String decode(Tensor output) {

@@ -106,6 +106,10 @@ public class Llama3 extends Network {
 			throw new Exception("The softmax function support only cross entropy loss function now.");
 		}
 		
+//		System.out.println("init params.");
+//		
+//		this.fullyLayer.weight = new Tensor(1, 1, this.fullyLayer.oWidth, this.fullyLayer.width, RandomUtils.gaussianRandom(this.fullyLayer.weight.dataLength, 0.0f, 0.02f), true);
+		
 		System.out.println("the network is ready.");
 	}
 
@@ -150,7 +154,9 @@ public class Llama3 extends Network {
 //		long start2 = System.nanoTime();
 		getFullyLayer().forward(getDecoder().getOutput());
 //		System.err.println("fullyLayer:");
-//		fullyLayer.getOutput().showDM();
+//		fullyLayer.weight.showDM();
+//		System.err.println("output:");
+//		fullyLayer.getOutput().showDMByNumber(500);
 //		JCuda.cudaDeviceSynchronize();
 //		System.out.println("forward2:"+(System.nanoTime() - start2) / 1e6+"ms.");
 		return this.getOutput();
@@ -175,12 +181,14 @@ public class Llama3 extends Network {
 //		long start2 = System.nanoTime();
 		this.getFullyLayer().back(lossDiff);
 //		System.err.println("---fully:");
-//		this.fullyLayer.diff.showDM();
+//		this.fullyLayer.diff.showDMByOffset(0, 100);
 //		JCuda.cudaDeviceSynchronize();
 //		System.out.println("backward2:"+(System.nanoTime() - start2) / 1e6+"ms.");
 //		JCuda.cudaDeviceSynchronize();
 //		long start3 = System.nanoTime();
 		this.getDecoder().back(cos, sin, this.getFullyLayer().diff);
+		
+		
 //		JCuda.cudaDeviceSynchronize();
 //		System.out.println("backward3:"+(System.nanoTime() - start3) / 1e6+"ms.");
 	}

@@ -148,7 +148,7 @@ public class RMSLayer extends NormalizationLayer {
 		if(kernel == null) {
 			kernel = new RMSKernel(width, bnType);
 		}
-		
+
 		if(this.gamma == null) {
 			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
 //			if(network != null) {
@@ -175,11 +175,17 @@ public class RMSLayer extends NormalizationLayer {
 		if(this.diff == null) {
 			this.diff = new Tensor(input.number, input.channel, input.height, input.width, true, true);
 		}
+		if(this.diffGamma == null) {
+			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+		}
 	}
 	
 	public void initBack(Tensor diff) {
 		if(this.diff == null) {
 			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true, true);
+		}
+		if(this.diffGamma == null) {
+			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
 		}
 	}
 
@@ -192,7 +198,7 @@ public class RMSLayer extends NormalizationLayer {
 //		System.out.println(JsonUtils.toJson(beta.shape()));
 //		kernel.forward(gamma, beta, input, output);
 //		kernel.forwardAten(gamma, beta, input, output);
-		kernel.forward(gamma, input, output);
+		kernel.forward2(gamma, input, output);
 		
 //		System.err.println("1:");
 //		output.showDMByNumber(0);
@@ -249,7 +255,7 @@ public class RMSLayer extends NormalizationLayer {
 //		System.out.println(index);
 //		kernel.backward(input, delta, diff, gamma, diffGamma, diffBeta);
 //		kernel.backwardAten(input, delta, diff, gamma, diffGamma, diffBeta);
-		kernel.backward(input, delta, diff, gamma, diffGamma);
+		kernel.backward2(input, delta, diff, gamma, diffGamma);
 //		diff.showDMByNumber(0);
 //		diff2.showDMByNumber(0);
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");

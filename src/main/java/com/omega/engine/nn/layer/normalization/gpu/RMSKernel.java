@@ -10,7 +10,6 @@ import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.layer.normalization.BNType;
-import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.layer.normalization.RMSLayer;
 import com.omega.engine.nn.network.Transformer;
 
@@ -19,7 +18,6 @@ import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
 import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
-import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 
 /**
@@ -45,13 +43,17 @@ public class RMSKernel extends BaseKernel{
 	 */
 	private CUfunction forward_function;
 	
+	private CUfunction forward_function2;
+	
 	/**
 	 * 反向传播方法
 	 */
 	private CUfunction backward_function;
 	
+	private CUfunction backward_function2;
 	
-	private int CAFFE_CUDA_NUM_THREADS = 1024;
+	
+	private int CAFFE_CUDA_NUM_THREADS = 512;
 	
 	/**
 	 * 前向方法参数
@@ -93,6 +95,14 @@ public class RMSKernel extends BaseKernel{
 
 			if(backward_function == null) {
 				backward_function = CUDAModules.getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_backward_kernel");
+			}
+			
+			if(forward_function2 == null) {
+				forward_function2 = CUDAModules.getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_forward_kernel1");
+			}
+
+			if(backward_function2 == null) {
+				backward_function2 = CUDAModules.getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_backward_kernel1");
 			}
 
 		} catch (Exception e) {
@@ -175,6 +185,46 @@ public class RMSKernel extends BaseKernel{
 		
 	}
 	
+	public void forward2(Tensor gamma, Tensor input, Tensor output) {
+		
+		try {
+			
+			boolean check = checkBatch(input);
+
+			if(!check) {
+
+				initKernel();
+				
+			}
+
+			/**
+			 * float *out, const float *inp, const float *weight, int N, int C
+			 */
+			forwardParameters = Pointer.to(
+					Pointer.to(output.getGpuData()),
+					Pointer.to(input.getGpuData()),
+					Pointer.to(gamma.getGpuData()),
+					Pointer.to(new int[] {B}),
+					Pointer.to(new int[] {W})
+	            );
+			
+			int grid_size = CAFFE_GET_BLOCKS(B);
+			
+			checkCUDA(cuLaunchKernel(forward_function2,
+					grid_size, 1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					0, null,               // Shared memory size and stream
+					forwardParameters, null // Kernel- and extra parameters
+				));
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void backward(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma) {
 		
 		try {
@@ -212,6 +262,41 @@ public class RMSKernel extends BaseKernel{
 		
 	}
 	
+	public void backward2(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma) {
+		
+		try {
+			
+			dgamma.clearGPU();
+			
+			/**
+			 * float *dinp, float *dweight,const float *dout, const float *inp, const float *weight,int N, int C
+			 */
+			backwardParameters = Pointer.to(
+					Pointer.to(diff.getGpuData()),
+					Pointer.to(dgamma.getGpuData()),
+					Pointer.to(delta.getGpuData()),
+					Pointer.to(input.getGpuData()),
+					Pointer.to(gamma.getGpuData()),
+					Pointer.to(new int[] {B}),
+					Pointer.to(new int[] {W})
+	            );
+			
+			int grid_size = CAFFE_GET_BLOCKS(B);
+			
+			checkCUDA(cuLaunchKernel(backward_function2,
+					grid_size, 1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					0, null,               // Shared memory size and stream
+					backwardParameters, null // Kernel- and extra parameters
+				));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void checkCUDA(int code) {
 		if(code != cudaError.cudaSuccess) {
 			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
@@ -231,14 +316,14 @@ public class RMSKernel extends BaseKernel{
 			CUDAModules.initContext();
 			
 			int N = 4;
-	    	int T = 2;
-	    	int W = 128;
+	    	int T = 512;
+	    	int W = 512;
 
 	    	float[] data = RandomUtils.order(N * T * W, 0.1f, 0.1f);
 	    	
 	    	Tensor input = new Tensor(N * T, 1, 1, W, data, true);
 
-	    	Tensor delta = new Tensor(N * T, 1, 1, W, MatrixUtils.one(N * T * W), true);
+	    	Tensor delta = new Tensor(N * T, 1, 1, W, MatrixUtils.order(N * T * W, 0.1f, 0.1f), true);
 	    	
 //    	    	Tensor delta = new Tensor(N * T, 1, 1, W, MatrixUtils.order(N * T * W, 0.1f, 0.1f), true);
 

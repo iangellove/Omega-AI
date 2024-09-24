@@ -1550,7 +1550,7 @@ public abstract class Optimizer {
 		return error;
 	}
 	
-	public float accuracyBatchFisrt(Tensor input,float[] tmpInput,Tensor output,Tensor labelData,float[] tmpLabel,int time,int batchSize,BPETokenizer3 tokenizer,int igonre) {
+	public float accuracyBatchFisrt(Tensor input,float[] tmpInput,Tensor output,float[] tmpLabel,int time,int batchSize,BPETokenizer3 tokenizer,int igonre) {
 		float error = 0.0f;
 		float trueCount = 0;
 		int max_score = -9999;

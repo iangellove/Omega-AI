@@ -124,7 +124,7 @@ public class Llama3Test {
 			
 			int decoderNum = 8;
 			
-			String trainPath = "H:\\transformer_dataset\\monkey_idx_6400_vocab.bin";
+			String trainPath = "H:\\transformer_dataset\\6400\\monkey_idx_6400_vocab.bin";
 			
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 			
@@ -136,23 +136,10 @@ public class Llama3Test {
 			
 			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
 			
-			network.learnRate = 1e-4f;
+			network.learnRate = 2e-4f;
 			
-//			String weightPath = "H:\\model\\torch_weights.json";
-//			
-//			Map<String, Object> weightMap = LagJsonReader.readJsonFileSmallWeight(weightPath);
-//			
-//			loadWeight(weightMap, network);
-			
-//			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.COSINE, false);
-//			optimizer.lr_step = new int[] {1, 2};
-//			optimizer.lr = 3e-4f;
-//			optimizer.min_lr = 1e-5f;
-//			optimizer.setWarmUp(true);
-//			optimizer.warmUpTime = 1000;
-//			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
-			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.CONSTANT, false);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.0001f, LearnRateUpdate.SMART_HALF, false);
+			optimizer.lr_step = new int[] {1, 2, 4};
 			optimizer.trainLlama3_chinese(trainData);
 
 			String model_path = "H:\\model\\llama3-26m-chinese.model";
@@ -216,16 +203,16 @@ public class Llama3Test {
 			loadData(attn.getkLinerLayer().weight, weightMap.get("layers."+i+".attention.wk.weight"), "layers."+i+".attention.wk.weight");
 			loadData(attn.getvLinerLayer().weight, weightMap.get("layers."+i+".attention.wv.weight"), "layers."+i+".attention.wv.weight");
 			loadData(attn.getoLinerLayer().weight, weightMap.get("layers."+i+".attention.wo.weight"), "layers."+i+".attention.wo.weight");
-			loadData(block.getNorm1().gamma, weightMap.get("layers."+i+".attention_norm.weight"), 1, "layers."+i+".attention_norm.weight");
+			block.getNorm1().gamma = loadData(block.getNorm1().gamma, weightMap.get("layers."+i+".attention_norm.weight"), 1, "layers."+i+".attention_norm.weight");
 			
-			loadData(block.getNorm2().gamma, weightMap.get("layers."+i+".ffn_norm.weight"), 1, "layers."+i+".ffn_norm.weight");
+			block.getNorm2().gamma = loadData(block.getNorm2().gamma, weightMap.get("layers."+i+".ffn_norm.weight"), 1, "layers."+i+".ffn_norm.weight");
 			LlamaMLPLayer mlp = block.getMlp();
 			loadData(mlp.getLinear1().weight, weightMap.get("layers."+i+".feed_forward.w1.weight"), "layers."+i+".feed_forward.w1.weight");
 			loadData(mlp.getLinear2().weight, weightMap.get("layers."+i+".feed_forward.w2.weight"), "layers."+i+".feed_forward.w2.weight");
 			loadData(mlp.getLinear3().weight, weightMap.get("layers."+i+".feed_forward.w3.weight"), "layers."+i+".feed_forward.w3.weight");
 		}
 		
-		loadData(network.getDecoder().getNorm().gamma, weightMap.get("norm.weight"), 1, "norm.weight");
+		network.getDecoder().getNorm().gamma = loadData(network.getDecoder().getNorm().gamma, weightMap.get("norm.weight"), 1, "norm.weight");
 		loadData(network.getFullyLayer().weight, weightMap.get("output.weight"), "output.weight");
 	}
 	
