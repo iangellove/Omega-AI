@@ -6,17 +6,15 @@ import java.util.Map;
 import java.util.Scanner;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.gpu.RoPEKernel;
-import com.omega.engine.nn.layer.llama.LlamaCausalSelfAttentionLayer;
+import com.omega.engine.nn.layer.llama.LlamaCausalSelfAttention2Layer;
 import com.omega.engine.nn.layer.llama.LlamaMLPLayer;
 import com.omega.engine.nn.layer.llama.LlamaTransformerBlock;
-import com.omega.engine.nn.network.DiffusionUNet;
 import com.omega.engine.nn.network.Llama3;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.EDOptimizer;
@@ -26,6 +24,7 @@ import com.omega.example.transformer.utils.CNTokenizer;
 import com.omega.example.transformer.utils.LagJsonReader;
 import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.transformer.utils.bpe.BPETokenizer3;
+import com.omega.example.transformer.utils.bpe.BinDataType;
 import com.omega.example.transformer.utils.bpe.CNBpeTokenizer;
 
 public class Llama3Test {
@@ -112,19 +111,21 @@ public class Llama3Test {
 			
 			boolean flashAttention = false;
 			
-			int batchSize = 4;
+			int batchSize = 3;
 			
 			int max_len = 512;
 			
 			int embedDim = 512;
 			
-			int head_num = 8;
+			int head_num = 16;
 			
-			int nKVHeadNum = 4;
+			int nKVHeadNum = 8;
 			
 			int decoderNum = 8;
 			
-			String trainPath = "H:\\transformer_dataset\\6400\\monkey_idx_6400_vocab.bin";
+//			String trainPath = "H:\\transformer_dataset\\6400\\monkey_idx_6400_vocab.bin";
+			
+			String trainPath = "H:\\model\\pretrain_data_6400.bin";
 			
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 			
@@ -132,19 +133,24 @@ public class Llama3Test {
 			
 			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
 			
-			CNBpeTokenizer trainData = new CNBpeTokenizer(trainPath, max_len, batchSize, tokenizer);
+			CNBpeTokenizer trainData = new CNBpeTokenizer(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
 			
 			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
 			
 			network.learnRate = 2e-4f;
 			
+			String torchWeight = "H:\\model\\torch_weights.json";
+			loadWeight(LagJsonReader.readJsonFileSmallWeight(torchWeight), network);
+			
+//			String model_path = "H:\\model\\llama3-26m-chinese_1_200.model";
+//			ModelUtils.loadModel(network, model_path);
+			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.0001f, LearnRateUpdate.SMART_HALF, false);
 			optimizer.lr_step = new int[] {1, 2, 4};
 			optimizer.trainLlama3_chinese(trainData);
 
-			String model_path = "H:\\model\\llama3-26m-chinese.model";
-			
-			ModelUtils.saveModel(network, model_path);
+			String save_model_path = "H:\\model\\llama3-26m-chinese.model";
+			ModelUtils.saveModel(network, save_model_path);
 			
 			network.RUN_MODEL = RunModel.TEST;
 			Scanner scanner = new Scanner(System.in);
@@ -198,7 +204,7 @@ public class Llama3Test {
 		
 		for(int i = 0;i<8;i++) {
 			LlamaTransformerBlock block = network.getDecoder().getDecoderLayers().get(i);
-			LlamaCausalSelfAttentionLayer attn = (LlamaCausalSelfAttentionLayer) block.getAttn();
+			LlamaCausalSelfAttention2Layer attn = (LlamaCausalSelfAttention2Layer) block.getAttn();
 			loadData(attn.getqLinerLayer().weight, weightMap.get("layers."+i+".attention.wq.weight"), "layers."+i+".attention.wq.weight");
 			loadData(attn.getkLinerLayer().weight, weightMap.get("layers."+i+".attention.wk.weight"), "layers."+i+".attention.wk.weight");
 			loadData(attn.getvLinerLayer().weight, weightMap.get("layers."+i+".attention.wv.weight"), "layers."+i+".attention.wv.weight");

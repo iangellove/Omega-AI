@@ -53,6 +53,27 @@ public class ModelUtils {
 		}
 	}
 	
+	public static void readShort(RandomAccessFile inputStream,short[] data) throws IOException {
+		for(int i = 0;i<data.length;i++) {
+			short v = readShort(inputStream);
+			data[i] = v;
+			if(v == Float.NaN) {
+				System.err.println(v);
+			}
+			
+		}
+	}
+	
+	public static void readShort2Int(RandomAccessFile inputStream,int[] data) throws IOException {
+		for(int i = 0;i<data.length;i++) {
+			short v = readShort(inputStream);
+			data[i] = v;
+			if(v == Float.NaN) {
+				System.err.println(v);
+			}
+		}
+	}
+	
 	public static void writeFloat(RandomAccessFile outputStream,Tensor data) throws IOException {
 		if(data.isHasGPU()) {
 			data.syncHost();
@@ -95,6 +116,22 @@ public class ModelUtils {
 	    ByteBuffer wrapped = ByteBuffer.wrap(buffer);
 	    wrapped.order(ByteOrder.LITTLE_ENDIAN);
 	    retVal = wrapped.getInt();
+	    return retVal;
+	}
+	
+	/**
+	 * unint16
+	 * @param inputStream
+	 * @return
+	 * @throws IOException
+	 */
+	public static short readShort(RandomAccessFile inputStream) throws IOException {
+		short retVal;
+	    byte[] buffer = new byte[Sizeof.SHORT];
+	    inputStream.readFully(buffer);
+	    ByteBuffer wrapped = ByteBuffer.wrap(buffer);
+	    wrapped.order(ByteOrder.LITTLE_ENDIAN);
+	    retVal = wrapped.getShort();
 	    return retVal;
 	}
 	

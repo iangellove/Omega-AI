@@ -127,12 +127,13 @@ public class CUDAModules {
 		}
 
 		MyCUDAModule m = CUDAModules.getModule(fileName);
-		
+
 		if(m.getFunctions().containsKey(functionName)) {
 			return m.getFunctions().get(functionName);
 		}
 		
 		CUfunction function = new CUfunction();
+		
 		checkCUDA(cuModuleGetFunction(function, m, functionName));
         m.getFunctions().put(functionName, function);
         

@@ -7,7 +7,6 @@ import java.io.RandomAccessFile;
 import java.util.concurrent.CompletableFuture;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.PrintUtils;
 import com.omega.engine.nn.network.utils.ModelUtils;
@@ -53,7 +52,15 @@ public class CNBpeTokenizer extends BaseTokenizer{
 	
 	private CompletableFuture<Boolean> cf;
 	
-	public CNBpeTokenizer(String dataPath,int max_len,int batchSize,int number,BPETokenizer3 tokenizer) {
+	private BinDataType dataType = BinDataType.unint32;
+	
+	private int byteUnit = 4;
+	
+	public CNBpeTokenizer(String dataPath,int max_len,int batchSize,int number,BPETokenizer3 tokenizer,BinDataType dataType) {
+		this.dataType = dataType;
+		if(dataType == BinDataType.unint16) {
+			byteUnit = 2;
+		}
 		this.dataPath = dataPath;
 		this.max_len = max_len;
 		this.batchSize = batchSize;
@@ -67,7 +74,11 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		System.out.println("count_it:"+this.count_it);
 	}
 	
-	public CNBpeTokenizer(String dataPath,int max_len,int batchSize,BPETokenizer3 tokenizer) {
+	public CNBpeTokenizer(String dataPath,int max_len,int batchSize,BPETokenizer3 tokenizer,BinDataType dataType) {
+		this.dataType = dataType;
+		if(dataType == BinDataType.unint16) {
+			byteUnit = 2;
+		}
 		this.dataPath = dataPath;
 		this.max_len = max_len;
 		this.batchSize = batchSize;
@@ -153,10 +164,14 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		
 		try {
 
-			if((index + 1) * max_len * 4 <= file.length()) {
+			if((index + 1) * max_len * byteUnit <= file.length()) {
 //				System.out.println(index);
-				ModelUtils.loadIntData(file, cache);
-				file.seek(file.getFilePointer() - 4);
+				if(dataType == BinDataType.unint16) {
+					ModelUtils.readShort2Int(file, cache);
+				}else {
+					ModelUtils.loadIntData(file, cache);
+				}
+				file.seek(file.getFilePointer() - byteUnit);
 				index++;
 			}else {
 				initBinReader();
@@ -227,6 +242,31 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		}
 	}
 	
+	public void loadData2(Tensor input,Tensor label, float[] tmpInput, float[] tmpLabel,int it) {
+		try {
+//			System.out.println(it);
+			if(isBin && it == count_it - 4) {
+				initBinReader();
+			}
+			if(cf != null) {
+				boolean success = cf.get();
+//				System.err.println(it+"/"+count_it+":"+success);
+//				System.out.println(JsonUtils.toJson(input.data));
+				input.hostToDevice(tmpInput);
+				label.hostToDevice(tmpLabel);
+				JCuda.cudaDeviceSynchronize();
+//				System.out.println(JsonUtils.toJson(tmpLabel));
+				cf = loadAsyncData(tmpInput, tmpLabel);
+			}else {
+				cf = loadAsyncData(tmpInput, tmpLabel);
+			}
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
 	public void loadData(Tensor input,Tensor label, float[] tmpInput, float[] tmpLabel,int it) {
 		try {
 //			System.out.println(it);
@@ -236,15 +276,16 @@ public class CNBpeTokenizer extends BaseTokenizer{
 			if(cf != null) {
 				boolean success = cf.get();
 //				System.err.println(it+"/"+count_it+":"+success);
+//				System.out.println(JsonUtils.toJson(input.data));
 				input.hostToDevice();
 				label.hostToDevice();
 				input.syncHost(tmpInput);
 				label.syncHost(tmpLabel);
 				JCuda.cudaDeviceSynchronize();
 //				System.out.println(JsonUtils.toJson(tmpLabel));
-				cf = loadAsyncData(input, label, tmpInput, tmpLabel);
+				cf = loadAsyncData(input, label);
 			}else {
-				cf = loadAsyncData(input, label, tmpInput, tmpLabel);
+				cf = loadAsyncData(input, label);
 			}
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -253,7 +294,31 @@ public class CNBpeTokenizer extends BaseTokenizer{
 
 	}
 	
-	public CompletableFuture<Boolean> loadAsyncData(Tensor input,Tensor label, float[] tmpInput, float[] tmpLabel) {
+	public CompletableFuture<Boolean> loadAsyncData(Tensor input,Tensor label) {
+		CompletableFuture<Boolean> cf = CompletableFuture.supplyAsync(()-> {
+			try {
+				for(int b = 0;b<batchSize;b++) {
+					int[] onceToken = readIdxData();
+					if(isBin) {
+						for(int t = 0;t<max_len;t++) {
+							formatNotHeadToIdx(b, t, onceToken, input, label);
+						}
+					}else {
+						for(int t = 0;t<max_len;t++) {
+							formatToIdx(b, t, onceToken, input, label);
+						}
+					}
+				}
+			} catch (Exception e) {
+				// TODO: handle exception
+				e.printStackTrace();
+			}
+			return true;
+		});
+		return cf;
+	}
+	
+	public CompletableFuture<Boolean> loadAsyncData(float[] input,float[] label) {
 		CompletableFuture<Boolean> cf = CompletableFuture.supplyAsync(()-> {
 			try {
 				for(int b = 0;b<batchSize;b++) {
@@ -379,12 +444,43 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		}
 	}
 	
+	public void formatToIdx(int b,int t,int[] onceToken,float[] input,float[] label) {
+		if(t == 0) {
+			input[b * max_len + t] = tokenizer.sos;
+			label[b * max_len + t] = onceToken[t];
+		}else if(t < onceToken.length) {
+			int curr = onceToken[t - 1];
+			int next = onceToken[t];
+			input[b * max_len + t] = curr;
+			label[b * max_len + t] = next;
+//			label.data[(b * max_len + t) * vocab_size + next] = 1.0f;
+		}else if(t == onceToken.length){
+			int curr = onceToken[t - 1];
+			input[b * max_len + t] = curr;
+			label[b * max_len + t] = tokenizer.eos;
+//			label.data[(b * max_len + t) * vocab_size + tokenizer.eos] = 1.0f;
+		}else {
+			input[b * max_len + t] = tokenizer.pad;
+			label[b * max_len + t] = tokenizer.pad;
+//			label.data[(b * max_len + t) * vocab_size + tokenizer.pad] = 1.0f;
+		}
+	}
+	
 	public void formatNotHeadToIdx(int b,int t,int[] onceToken,Tensor input,Tensor label) {
 		if(t < onceToken.length) {
 			int curr = onceToken[t];
 			int next = onceToken[t + 1];
 			input.data[b * max_len + t] = curr;
 			label.data[b * max_len + t] = next;
+		}
+	}
+	
+	public void formatNotHeadToIdx(int b,int t,int[] onceToken,float[] input,float[] label) {
+		if(t < onceToken.length) {
+			int curr = onceToken[t];
+			int next = onceToken[t + 1];
+			input[b * max_len + t] = curr;
+			label[b * max_len + t] = next;
 		}
 	}
 	

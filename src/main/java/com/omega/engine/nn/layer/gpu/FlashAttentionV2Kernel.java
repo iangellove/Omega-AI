@@ -12,7 +12,7 @@ import com.omega.engine.gpu.CUDAModules;
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
-import jcuda.runtime.JCuda;
+import jcuda.driver.CUgraph;
 import jcuda.runtime.cudaError;
 
 public class FlashAttentionV2Kernel extends BaseKernel{
@@ -32,8 +32,6 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 	private int time;
 	
 	private int headDim;
-	
-	private Tensor sTmp;
 	
 	public FlashAttentionV2Kernel(int headNum,int time,int headDim) {
 		this.headNum = headNum;
@@ -98,27 +96,13 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 			int N = time;
 			int d = headDim;
 			
-			int Br = Math.min(64, N);
-            while (Br > 1){
-                if (N % Br == 0){
-                    break;
-                }
-                Br--;
-            }
-            int Bc = Br;
-
-			float scale = (float) (1.0f / Math.sqrt(d));
+			int Bc = 32;
+			int Br = 32;
+			
 			int Tc = (int) Math.ceil((float) N / Bc);
 			int Tr = (int) Math.ceil((float) N / Br);
-			if (Tr > Br && Tr < 64){
-                //Switch Tr and Br so that we could have more thread in a block
-                int tmp = Br;
-                Br = Tr;
-                Tr = tmp;
-
-                Bc = Br;
-                Tc = Tr;
-            }
+			float scale = (float) (1.0f / Math.sqrt(d));
+			
 //			System.out.println(Bc);
 //			System.out.println(Br);
 //			System.out.println(Tc);
@@ -135,12 +119,10 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 			    const int Bc,
 			    const int Br,
 			    const float softmax_scale,
-			    const int q_start_offset,
 			    float* L,
 			    float* O
 	         */ 
-			int q_start_offset = 0;
-			int startTr = q_start_offset / Br;
+
 			kernelParameters = Pointer.to(
 	        		Pointer.to(Q.getGpuData()),
 	        		Pointer.to(K.getGpuData()),
@@ -152,17 +134,20 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 	        		Pointer.to(new int[]{Bc}),
 	        		Pointer.to(new int[]{Br}),
 	        		Pointer.to(new float[]{scale}),
-	        		Pointer.to(new int[]{startTr}),
 	        		Pointer.to(d_l.getGpuData()),
 	        		Pointer.to(output.getGpuData())
 	            );
 	        
 			int col_tile_size = Bc * d;  // size of Kj, Vj
 		    int row_tile_size = Br * d;  // size of Qi
-		    int sram_size = (col_tile_size * 2) + (row_tile_size * 2);
+		    int sram_size = (col_tile_size * 2 * Sizeof.FLOAT) + (row_tile_size * Sizeof.FLOAT) + (Bc * Br * Sizeof.FLOAT);
 
-			int[] grid_dim = new int[] {B, nh, Tr};
+			int[] grid_dim = new int[] {B, nh, 1};
 			int[] block_dim = new int[] {Br, 1, 1};
+			
+			CUgraph graph = new CUgraph();
+			
+			
 			
 		    checkCUDA(cuLaunchKernel(forward_function,
 		    		grid_dim[0],  grid_dim[1], grid_dim[2],      // Grid dimension
@@ -189,34 +174,20 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 			int N = time;
 			int d = headDim;
 
-			int Br = Math.min(64, N);
-            while (Br > 1){
-                if (N % Br == 0){
-                    break;
-                }
-                Br--;
-            }
-            int Bc = Br;
-
-			float scale = (float) (1.0f / Math.sqrt(d));
+			int Bc = 16;
+			int Br = 16;
+			
 			int Tc = (int) Math.ceil((float) N / Bc);
 			int Tr = (int) Math.ceil((float) N / Br);
+			float scale = (float) (1.0f / Math.sqrt(d));
 			
 			int col_tile_size = Bc * d;  // size of Kj, Vj
 		    int row_tile_size = Br * d;  // size of Qi
-		    int sram_size = (2 * col_tile_size * 2) + (2 * row_tile_size * 2);
+		    int sram_size = (4 * col_tile_size * Sizeof.FLOAT) + (3 * row_tile_size * Sizeof.FLOAT) + (2 * Bc * Br * Sizeof.FLOAT);
 		  
-		    if(sTmp == null || B != sTmp.number) {
-		    	sTmp = new Tensor(B, nh, Br, Br, true);
-		    }else {
-//		    	System.err.println("in");
-//		    	sTmp.clearGPU();
-		    	dQ.clearGPU();
-		    	dK.clearGPU();
-		    	dV.clearGPU();
-//		    	JCuda.cudaDeviceSynchronize();
-//		    	dQ.showDM(0);
-		    }
+	    	dQ.clearGPU();
+	    	dK.clearGPU();
+	    	dV.clearGPU();
 		    
 	        /**
 	         *  设置入参
@@ -235,8 +206,7 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 			    const float softmax_scale,
 			    float* dQ,
 			    float* dK,
-			    float* dV,
-			    float* Stmp
+			    float* dV
 	         */ 
 			backwardKernelParameters = Pointer.to(
 	        		Pointer.to(Q.getGpuData()),
@@ -254,11 +224,10 @@ public class FlashAttentionV2Kernel extends BaseKernel{
 	        		Pointer.to(new float[]{scale}),
 	        		Pointer.to(dQ.getGpuData()),
 	        		Pointer.to(dK.getGpuData()),
-	        		Pointer.to(dV.getGpuData()),
-	        		Pointer.to(sTmp.getGpuData())
+	        		Pointer.to(dV.getGpuData())
 	            );
 	        
-			int[] grid_dim = new int[] {B, nh, Tc};
+			int[] grid_dim = new int[] {B, nh, 1};
 			int[] block_dim = new int[] {Br, 1, 1};
 			
 //			if(CUDAModules.props.sharedMemPerBlock < sram_size) {

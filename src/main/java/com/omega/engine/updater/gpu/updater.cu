@@ -19,13 +19,13 @@ __global__ void adamw(float *diffW, float *weight,float *mw,float *vw,float beta
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if (i >= n) return;
-    float diff = diffW[i] / batch;
-    weight[i] = weight[i] * (1.0f - learnRate * weight_decay);
+    float diff = diffW[i];
+    //weight[i] = weight[i] * (1.0f - learnRate * weight_decay);
     mw[i] = beta1 * mw[i] + (1.0f - beta1) * diff;
 	vw[i] = beta2 * vw[i] + (1.0f - beta2) * diff * diff;
 	float mhat = mw[i] / (1.0f - powf(beta1, t));
 	float vhat = vw[i] / (1.0f - powf(beta2, t));
-	weight[i] = weight[i] - learnRate * mhat / (sqrt(vhat) + ETA);
+	weight[i] -= learnRate * (mhat / (sqrt(vhat) + ETA) + weight_decay * weight[i]);
 }
 
 __device__ inline float lerp(float start, float end, float weight) {
@@ -82,13 +82,14 @@ __global__ void adamw_bn(float *diffW, float *weight,float *mw,float *vw,float b
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if (i >= n) return;
-    float tmp = weight[i] - learnRate * weight_decay * weight[i];
-    float diff = diffW[i] / batch;
+    //float tmp = weight[i] - learnRate * weight_decay * weight[i];
+    float diff = diffW[i];
     mw[i] = beta1 * mw[i] + (1 - beta1) * diff;
 	vw[i] = beta2 * vw[i] + (1 - beta2) * diff * diff;
 	float mhat = mw[i] / (1 - powf(beta1, t));
 	float vhat = vw[i] / (1 - powf(beta2, t));
-	weight[i] = tmp - learnRate * (mhat / (sqrt(vhat) + ETA));
+	weight[i] -= learnRate * (mhat / (sqrt(vhat) + ETA) + weight_decay * weight[i]);
+	//weight[i] = tmp - learnRate * (mhat / (sqrt(vhat) + ETA));
 }
 
 extern "C"

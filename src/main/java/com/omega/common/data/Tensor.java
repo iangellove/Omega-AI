@@ -514,6 +514,16 @@ public class Tensor implements Serializable{
 		}
 	}
 	
+	public void hostToDevice(float[] data) {
+		if(hasGPU) {
+			if(gpuData == null) {
+				gpuData = CUDAMemoryManager.getPointer(dataLength);
+			}
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaDeviceSynchronize();
+		}
+	}
+	
 	public void freeGPU() {
 		if(gpuData != null) {
 			JCuda.cudaFree(gpuData);

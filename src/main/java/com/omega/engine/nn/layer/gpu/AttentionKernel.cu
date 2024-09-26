@@ -772,6 +772,13 @@ __global__ void softmax_forward_kernel52(float* out, float inv_temperature, cons
     }
 }
 
+__device__ float warpReduceSum2(float val) {
+    for (int offset = 16; offset > 0; offset /= 2) {
+        val += __shfl_xor_sync(0xFFFFFFFF, val, offset);
+    }
+    return val;
+}
+
 __device__ inline float blockReduceSum(float val, bool final_sync, float out_of_bounds) {
     // two reductions of up to 1024 threads:
     // 1) inside warp (shuffle), 2) cross-warp (shared memory), 3) inside warp (shuffle)
@@ -780,11 +787,11 @@ __device__ inline float blockReduceSum(float val, bool final_sync, float out_of_
     const int warp_id = threadIdx.x / WARP_SIZE;
     const int num_warps = blockDim.x / WARP_SIZE;
 
-    float warp_val = warpReduceSum(val);
+    float warp_val = warpReduceSum2(val);
     if (lane_id == 0) { shared_val[warp_id] = warp_val; }
     __syncthreads();
     warp_val = (lane_id < num_warps) ? shared_val[lane_id] : out_of_bounds;
-    float block_val = warpReduceSum(warp_val);
+    float block_val = warpReduceSum2(warp_val);
 
     if (final_sync) {
         __syncthreads(); // only needed in loops when effectively reusing shared memory etc.

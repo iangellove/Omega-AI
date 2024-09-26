@@ -2638,7 +2638,7 @@ public class EDOptimizer extends Optimizer {
 			
 			int pad = -1;
 			
-			trainingData.loadData(input, label, tmpInput, tmpLabel, 0);
+			trainingData.loadData2(input, label, tmpInput, tmpLabel, 0);
 
 			for(int i = 0;i<this.trainTime;i++) {
 				
@@ -2654,7 +2654,7 @@ public class EDOptimizer extends Optimizer {
 				 * 遍历整个训练集
 				 */
 				for(int it = 0;it<trainingData.count_it;it++) {
-					this.network.train_time = it + 1;
+
 					if(Math.abs(this.currentError) <= this.error) {
 						break;
 					}
@@ -2670,7 +2670,7 @@ public class EDOptimizer extends Optimizer {
 					/**
 					 * 读取训练数据
 					 */
-					trainingData.loadData(input, label, tmpInput, tmpLabel, it);
+					trainingData.loadData2(input, label, tmpInput, tmpLabel, it);
 					
 //					System.out.println("loadTrainData:"+(System.nanoTime() - start22) / 1e6+"ms.");
 //					System.out.println(JsonUtils.toJson(tmpInput));
@@ -2720,12 +2720,10 @@ public class EDOptimizer extends Optimizer {
 						this.currentError = MatrixOperation.sum(this.loss.data) / input.number;
 					}
 
-					output.syncHost();
-					
 					if(it % 100 == 0) {
 						int time = output.number / batchSize;
 						if(trainingData.tokenizer != null) {
-							float error = this.accuracyBatchFisrt(input, tmpInput, output, tmpLabel, time, batchSize, trainingData.tokenizer, pad);
+							float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.tokenizer, pad);
 						}else {
 							float error = this.accuracyBatchFisrt(input, output, label, time, batchSize, trainingData.vocab, pad);
 						}
@@ -2736,6 +2734,15 @@ public class EDOptimizer extends Optimizer {
 					System.out.println(msg);
 
 					this.batchIndex++;
+					
+					if(it > 1 && it % 20000 == 0) {
+						/**
+						 * save model
+						 */
+						String model_path = "/omega/models/llama3-26m-chinese_"+trainIndex+"_"+it+".model";
+						
+						ModelUtils.saveModel(network, model_path);
+					}
 
 				}
 

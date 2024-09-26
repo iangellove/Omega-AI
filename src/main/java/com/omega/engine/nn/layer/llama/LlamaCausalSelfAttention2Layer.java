@@ -161,14 +161,14 @@ public class LlamaCausalSelfAttention2Layer extends LlamaAttentionLayer{
 	public void initLayers() {
 		
 		this.setqLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
-		this.getqLinerLayer().weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+//		this.getqLinerLayer().weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
 //		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.001f, 0.001f), true);
 //		Tensor qw = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.qLinerLayer.weight, qw, new int[] {0, 1, 3, 2});
 //		this.qLinerLayer.weight = qw;
 		
 		this.setkLinerLayer(new FullyLayer(embedDim, nKVHeads * dk, bias, this.network));
-		this.getkLinerLayer().weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.uniform(this.embedDim * nKVHeads * dk, 0.0f, 0.02f), true);
+//		this.getkLinerLayer().weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.uniform(this.embedDim * nKVHeads * dk, 0.0f, 0.02f), true);
 //		this.kLinerLayer.weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.order(this.embedDim * this.nKVHeads * dk, 0.001f, 0.001f), true);
 //		Tensor kw = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.kLinerLayer.weight, kw, new int[] {0, 1, 3, 2});
@@ -176,7 +176,7 @@ public class LlamaCausalSelfAttention2Layer extends LlamaAttentionLayer{
 //		this.kLinerLayer.weight.showDM();
 		
 		this.setvLinerLayer(new FullyLayer(embedDim, nKVHeads * dk, bias, this.network));
-		this.getvLinerLayer().weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.uniform(this.embedDim * nKVHeads * dk, 0.0f, 0.02f), true);
+//		this.getvLinerLayer().weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.uniform(this.embedDim * nKVHeads * dk, 0.0f, 0.02f), true);
 //		this.vLinerLayer.weight = new Tensor(1, 1, nKVHeads * dk, embedDim, RandomUtils.order(this.embedDim * nKVHeads * dk, 0.001f, 0.001f), true);
 //		Tensor vw = new Tensor(1, 1, embedDim, embedDim, true);
 //		TensorOP.permute(this.vLinerLayer.weight, vw, new int[] {0, 1, 3, 2});
@@ -186,7 +186,7 @@ public class LlamaCausalSelfAttention2Layer extends LlamaAttentionLayer{
 //		this.vLinerLayer.weight.showDM();
 		
 		this.setoLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
-		this.getoLinerLayer().weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
+//		this.getoLinerLayer().weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.uniform(this.embedDim * this.embedDim, 0.0f, 0.02f), true);
 //		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, RandomUtils.order(this.embedDim * this.embedDim, 0.001f, 0.001f), true);
 
 		if(this.dropout) {
@@ -339,7 +339,12 @@ public class LlamaCausalSelfAttention2Layer extends LlamaAttentionLayer{
 		
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, key.getGpuData(), dk, time * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), time, time * time, batchSize * headNum);
 		
-		attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time, d_k);
+		if(network.RUN_MODEL == RunModel.TEST) {
+			attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
+			attentionKernel.softmax_test_forward(preatt, attn, batchSize, headNum, time);
+		}else {
+			attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time, d_k);
+		}
 
 		Tensor tmp = attn;
 		

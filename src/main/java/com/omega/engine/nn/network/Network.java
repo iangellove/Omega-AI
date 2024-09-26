@@ -224,7 +224,7 @@ public abstract class Network {
 	public void update(int count) {
 		
 		this.train_time += 1;
-		
+
 		for(int i = layerCount - 1;i>=0;i--) {
 			
 			Layer layer = layerList.get(i);
