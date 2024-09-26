@@ -139,8 +139,8 @@ public class Llama3Test {
 			
 			network.learnRate = 2e-4f;
 			
-			String torchWeight = "H:\\model\\torch_weights.json";
-			loadWeight(LagJsonReader.readJsonFileSmallWeight(torchWeight), network);
+//			String torchWeight = "H:\\model\\torch_weights.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(torchWeight), network);
 			
 //			String model_path = "H:\\model\\llama3-26m-chinese_1_200.model";
 //			ModelUtils.loadModel(network, model_path);
