@@ -200,7 +200,7 @@ public class CNWikiTokenizer4 extends BaseTokenizer{
 
 	public Tensor loadByTxtToIdx(String txt) {
 		
-		int[] idx = tokenizer.encode(txt);
+		int[] idx = tokenizer.encodeInt(txt);
 		testInput = Tensor.createTensor(testInput, txt.length(), 1, 1, 1, true);
 		for(int t = 0;t<txt.length();t++) {
 			testInput.data[t] = idx[t];
@@ -223,7 +223,7 @@ public class CNWikiTokenizer4 extends BaseTokenizer{
 	
 	public Tensor loadByTxtToIdx(String txt,int maxLen) {
 		
-		int[] idx = tokenizer.encode(txt);
+		int[] idx = tokenizer.encodeInt(txt);
 		testInput = Tensor.createTensor(testInput, maxLen, 1, 1, 1, true);
 		for(int t = 0;t<idx.length;t++) {
 			testInput.data[t] = idx[t];

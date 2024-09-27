@@ -23,6 +23,7 @@ import com.omega.engine.updater.UpdaterType;
 import com.omega.example.transformer.utils.CNTokenizer;
 import com.omega.example.transformer.utils.LagJsonReader;
 import com.omega.example.transformer.utils.ModelUtils;
+import com.omega.example.transformer.utils.SentencePieceTokenizer;
 import com.omega.example.transformer.utils.bpe.BPETokenizer3;
 import com.omega.example.transformer.utils.bpe.BinDataType;
 import com.omega.example.transformer.utils.bpe.CNBpeTokenizer;
@@ -139,17 +140,105 @@ public class Llama3Test {
 			
 			network.learnRate = 1e-4f;
 			
-			String torchWeight = "H:\\model\\test\\torch_weights.json";
-			loadWeight(LagJsonReader.readJsonFileSmallWeight(torchWeight), network);
+			initWeight(network);
+			
+//			String torchWeight = "H:\\model\\torch_weights.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(torchWeight), network);
 			
 //			String model_path = "H:\\model\\llama3-26m-chinese_1_200.model";
 //			ModelUtils.loadModel(network, model_path);
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {1, 2, 4};
-			optimizer.trainLlama3_chinese(trainData);
+			optimizer.trainLlama3_chinese(trainData, true);
 
 			String save_model_path = "H:\\model\\llama3-26m-chinese.model";
+			ModelUtils.saveModel(network, save_model_path);
+			
+			network.RUN_MODEL = RunModel.TEST;
+			Scanner scanner = new Scanner(System.in);
+			
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase();
+				System.out.println("user:"+input_txt);
+				int[] idx = tokenizer.encodeInt(input_txt);
+				int startLen = idx.length;
+				Tensor input = trainData.loadByTxtToIdx(idx);
+//				input.showDM();
+				Tensor[] pos = RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum);
+
+				for(int t = 0;t<max_len - startLen;t++) {
+					network.time = input.number;
+					Tensor cos = pos[0];
+					Tensor sin = pos[1];
+					Tensor output = network.forward(cos, sin, input);
+					output.syncHost();
+					int nextIDX = output2NextIDX(output, idx.length - 1);
+					idx = Arrays.copyOf(idx, idx.length + 1);
+					idx[idx.length - 1] = nextIDX;
+					if(nextIDX == tokenizer.eos) {
+						break;
+					}
+					input = trainData.loadByTxtToIdx(idx);
+					RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
+				}
+				System.out.println("chatbot:"+tokenizer.decode(idx));
+			}
+			scanner.close();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void llama3_monkey_chatglm() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			boolean flashAttention = false;
+			
+			int batchSize = 3;
+			
+			int max_len = 512;
+			
+			int embedDim = 512;
+			
+			int head_num = 16;
+			
+			int nKVHeadNum = 8;
+			
+			int decoderNum = 8;
+
+			String trainPath = "H:\\transformer_dataset\\monkey_idx_64793_vocab.bin";
+			
+			String tokenizer_path = "H:\\transformer_dataset\\tokenizer.model";
+			
+			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path, 64793);
+			
+			CNBpeTokenizer trainData = new CNBpeTokenizer(trainPath, max_len, batchSize, tokenizer, BinDataType.unint32);
+			
+			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
+			
+			network.learnRate = 1e-4f;
+			
+			initWeight(network);
+
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {1, 2, 4};
+			optimizer.trainLlama3_chinese(trainData, false);
+
+			String save_model_path = "H:\\model\\llama3-110m-chinese.model";
 			ModelUtils.saveModel(network, save_model_path);
 			
 			network.RUN_MODEL = RunModel.TEST;
@@ -220,6 +309,31 @@ public class Llama3Test {
 		
 		network.getDecoder().getNorm().gamma = loadData(network.getDecoder().getNorm().gamma, weightMap.get("norm.weight"), 1, "norm.weight");
 		loadData(network.getFullyLayer().weight, weightMap.get("output.weight"), "output.weight");
+	}
+	
+	public static void initWeight(Llama3 network) {
+
+		initParams(network.getDecoder().getSrc_emb().weight, 0.0f, 0.02f);
+		
+		for(int i = 0;i<8;i++) {
+			LlamaTransformerBlock block = network.getDecoder().getDecoderLayers().get(i);
+			LlamaCausalSelfAttention2Layer attn = (LlamaCausalSelfAttention2Layer) block.getAttn();
+			initParams(attn.getqLinerLayer().weight, 0.0f, 0.02f);
+			initParams(attn.getkLinerLayer().weight, 0.0f, 0.02f);
+			initParams(attn.getvLinerLayer().weight, 0.0f, 0.02f);
+			initParams(attn.getoLinerLayer().weight, 0.0f, (float)(0.02f / Math.sqrt(2 * 8)));
+
+			LlamaMLPLayer mlp = block.getMlp();
+			initParams(mlp.getLinear1().weight, 0.0f, 0.02f);
+			initParams(mlp.getLinear2().weight, 0.0f, 0.02f);
+			initParams(mlp.getLinear3().weight, 0.0f, (float)(0.02f / Math.sqrt(2 * 8)));
+		}
+
+		initParams(network.getFullyLayer().weight, 0.0f, 0.02f);
+	}
+	
+	public static void initParams(Tensor p,float mean,float std) {
+		p.setData(RandomUtils.normal_(p.dataLength, mean, std));
 	}
 	
 	public static String genTxt(Tensor input,Tensor output,Llama3 network,CNTokenizer trainData,int time,Tensor[] pos) {

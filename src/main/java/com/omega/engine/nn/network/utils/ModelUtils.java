@@ -213,4 +213,11 @@ public class ModelUtils {
 	    return Float.intBitsToFloat(l);                    
 	}
 	
+	public static byte[] short2byte(short s) {
+		byte[] bytes = new byte[2];
+		bytes[0] = (byte)(s >> 8);
+		bytes[1] = (byte)s;
+		return bytes;
+	}
+	
 }

@@ -308,7 +308,7 @@ public class CNWikiTokenizer extends BaseTokenizer{
 	public Tensor loadByTxtToIdx(String txt) {
 		
 		if(tokenizer != null){
-			int[] idx = tokenizer.encode(txt);
+			int[] idx = tokenizer.encodeInt(txt);
 			testInput = Tensor.createTensor(testInput, txt.length(), 1, 1, 1, true);
 			for(int t = 0;t<txt.length();t++) {
 				testInput.data[t] = idx[t];

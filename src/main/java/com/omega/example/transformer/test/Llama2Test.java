@@ -301,7 +301,7 @@ public class Llama2Test {
 				}
 				input_txt = input_txt.toLowerCase();
 				System.out.println("user:"+input_txt);
-				int[] idx = tokenizer.encode(input_txt);
+				int[] idx = tokenizer.encodeInt(input_txt);
 				Tensor input = trainData.loadByTxtToIdx(idx);
 				input.showDM();
 				Tensor[] pos = RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum);
@@ -641,7 +641,7 @@ public class Llama2Test {
 				}
 				input_txt = input_txt.toLowerCase();
 				System.out.println("user:"+input_txt);
-				int[] idx = tokenizer.encode(input_txt);
+				int[] idx = tokenizer.encodeInt(input_txt);
 				int startLen = idx.length;
 				Tensor input = trainData.loadByTxtToIdx(idx);
 //				input.showDM();
@@ -733,7 +733,7 @@ public class Llama2Test {
 				}
 				input_txt = input_txt.toLowerCase();
 				System.out.println("user:"+input_txt);
-				int[] idx = tokenizer.encode(input_txt);
+				int[] idx = tokenizer.encodeInt(input_txt);
 				int startLen = idx.length;
 				Tensor input = trainData.loadByTxtToIdx(idx);
 //				input.showDM();
@@ -825,7 +825,7 @@ public class Llama2Test {
 				}
 				input_txt = input_txt.toLowerCase();
 				System.out.println("user:"+input_txt);
-				int[] idx = tokenizer.encode(input_txt);
+				int[] idx = tokenizer.encodeInt(input_txt);
 				int startLen = idx.length;
 				Tensor input = trainData.loadByTxtToIdx(idx);
 //				input.showDM();
@@ -906,7 +906,7 @@ public class Llama2Test {
 				}
 				input_txt = input_txt.toLowerCase();
 				System.out.println("user:"+input_txt);
-				int[] idx = tokenizer.encode(input_txt);
+				int[] idx = tokenizer.encodeInt(input_txt);
 				idx = Arrays.copyOf(idx, idx.length + 1);
 				idx[idx.length - 1] = tokenizer.bos;
 				int startLen = idx.length;

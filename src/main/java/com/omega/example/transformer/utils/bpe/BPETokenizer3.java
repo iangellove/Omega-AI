@@ -15,13 +15,14 @@ import java.util.Map;
 
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.example.transformer.utils.tokenizers.Tokenizer;
 
 /**
  * bpe tokenizer
  * @author Administrator
  *
  */
-public class BPETokenizer3 {
+public class BPETokenizer3 extends Tokenizer{
 	
 	public Map<String,Integer> vocab;
 	
@@ -342,6 +343,30 @@ public class BPETokenizer3 {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public int sos() {
+		// TODO Auto-generated method stub
+		return sos;
+	}
+
+	@Override
+	public int eos() {
+		// TODO Auto-generated method stub
+		return eos;
+	}
+
+	@Override
+	public int pad() {
+		// TODO Auto-generated method stub
+		return pad;
+	}
+
+	@Override
+	public int voc_size() {
+		// TODO Auto-generated method stub
+		return voc_size;
 	}
 	
 }

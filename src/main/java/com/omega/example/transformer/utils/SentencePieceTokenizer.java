@@ -15,12 +15,13 @@ import java.util.List;
 import java.util.Map;
 
 import com.omega.common.utils.JsonUtils;
+import com.omega.example.transformer.utils.tokenizers.Tokenizer;
 
 import ai.djl.sentencepiece.SpProcessor;
 import ai.djl.sentencepiece.SpTokenizer;
 import ai.djl.sentencepiece.SpVocabulary;
 
-public class SentencePieceTokenizer extends BaseTokenizer{
+public class SentencePieceTokenizer extends Tokenizer{
 	
 	/** SentencePiece tokenizer. */
     private final SpProcessor tokenizer;
@@ -93,7 +94,7 @@ public class SentencePieceTokenizer extends BaseTokenizer{
         System.out.println("UNK ID: "+unk+" | BOS ID: "+bos+" | EOS ID: "+eos+" | PAD ID: "+pad);
     }
 	
-    public int[] encode(String text) {
+    public int[] encodeInt(String text) {
         return encode(text, false, false);
     }
     
@@ -145,7 +146,7 @@ public class SentencePieceTokenizer extends BaseTokenizer{
             	}	
     			if(!strTmp.equals(" ") && !strTmp.equals("")) {
     				String idxStr = "";
-    				int[] idx = encode(strTmp);
+    				int[] idx = encodeInt(strTmp);
     				for(int id:idx) {
     					idxStr += id + " ";
     				}
@@ -183,7 +184,7 @@ public class SentencePieceTokenizer extends BaseTokenizer{
     			}
     			if(!strTmp.equals(" ") && !strTmp.equals("")) {
     				String idxStr = "";
-    				int[] idx = encode(strTmp);
+    				int[] idx = encodeInt(strTmp);
     				for(int id:idx) {
     					idxStr += id + " ";
     				}
@@ -244,7 +245,7 @@ public class SentencePieceTokenizer extends BaseTokenizer{
     			}
     			if(!strTmp.equals(" ") && !strTmp.equals("")) {
     				String idxStr = "";
-    				int[] idx = encode(strTmp);
+    				int[] idx = encodeInt(strTmp);
     				for(int id:idx) {
     					idxStr += id + " ";
     				}
@@ -277,8 +278,8 @@ public class SentencePieceTokenizer extends BaseTokenizer{
 	        	if(idx > 0) {
 		        	String[] list = strTmp.split(",");
 		        	System.out.println(JsonUtils.toJson(list));
-		        	int[] idx_p = encode(list[0]);
-		        	int[] idx_a = encode(list[1]);
+		        	int[] idx_p = encodeInt(list[0]);
+		        	int[] idx_a = encodeInt(list[1]);
 		        	int[] idx_i = new int[idx_p.length + idx_a.length + 1];
 		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
 		        	idx_i[idx_p.length] = bos;
@@ -319,8 +320,8 @@ public class SentencePieceTokenizer extends BaseTokenizer{
     			output = list.get(i).get("output");	
     			if(!instruction.equals(" ") && !instruction.equals("")) {
     				String idxStr = "";
-    				int[] idx_p = encode(instruction);
-    				int[] idx_a = encode(output);
+    				int[] idx_p = encodeInt(instruction);
+    				int[] idx_a = encodeInt(output);
     				int[] idx_i = new int[idx_p.length + idx_a.length + 1];
 		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
 		        	idx_i[idx_p.length] = bos;
@@ -361,8 +362,8 @@ public class SentencePieceTokenizer extends BaseTokenizer{
     			output = list.get(i).get("output");	
     			if(!instruction.equals(" ") && !instruction.equals("")) {
     				String idxStr = "";
-    				int[] idx_p = encode(instruction);
-    				int[] idx_a = encode(output);
+    				int[] idx_p = encodeInt(instruction);
+    				int[] idx_a = encodeInt(output);
     				int[] idx_i = new int[idx_p.length + idx_a.length + 1];
 		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
 		        	idx_i[idx_p.length] = bos;
@@ -403,8 +404,8 @@ public class SentencePieceTokenizer extends BaseTokenizer{
     			output = list.get(i).get("response");	
     			if(!instruction.equals(" ") && !instruction.equals("")) {
     				String idxStr = "";
-    				int[] idx_p = encode(instruction);
-    				int[] idx_a = encode(output);
+    				int[] idx_p = encodeInt(instruction);
+    				int[] idx_a = encodeInt(output);
     				int[] idx_i = new int[idx_p.length + idx_a.length + 1];
 		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
 		        	idx_i[idx_p.length] = bos;
@@ -447,8 +448,8 @@ public class SentencePieceTokenizer extends BaseTokenizer{
         			output = conversation.get(1).get("content");	
         			if(!instruction.equals(" ") && !instruction.equals("")) {
         				String idxStr = "";
-        				int[] idx_p = encode(instruction);
-        				int[] idx_a = encode(output);
+        				int[] idx_p = encodeInt(instruction);
+        				int[] idx_a = encodeInt(output);
         				int[] idx_i = new int[idx_p.length + idx_a.length + 1];
     		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
     		        	idx_i[idx_p.length] = bos;
@@ -492,8 +493,8 @@ public class SentencePieceTokenizer extends BaseTokenizer{
     				output = conversation.get(1).substring(2, conversation.get(1).length());	
         			if(!instruction.equals(" ") && !instruction.equals("")) {
         				String idxStr = "";
-        				int[] idx_p = encode(instruction);
-        				int[] idx_a = encode(output);
+        				int[] idx_p = encodeInt(instruction);
+        				int[] idx_a = encodeInt(output);
         				int[] idx_i = new int[idx_p.length + idx_a.length + 1];
     		        	System.arraycopy(idx_p, 0, idx_i, 0, idx_p.length);
     		        	idx_i[idx_p.length] = bos;
@@ -644,6 +645,48 @@ public class SentencePieceTokenizer extends BaseTokenizer{
 
 	public void setVoc(SpVocabulary voc) {
 		this.voc = voc;
+	}
+
+	@Override
+	public String decode(List<Integer> ids) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<Integer> encode(String txt) {
+		// TODO Auto-generated method stub
+		int[] idx = this.encodeInt(txt);
+		List<Integer> idxs = new ArrayList<Integer>();
+		
+		for(int v:idx) {
+			idxs.add(v);
+		}
+		return idxs;
+	}
+
+	@Override
+	public int sos() {
+		// TODO Auto-generated method stub
+		return bos;
+	}
+
+	@Override
+	public int eos() {
+		// TODO Auto-generated method stub
+		return eos;
+	}
+
+	@Override
+	public int pad() {
+		// TODO Auto-generated method stub
+		return pad;
+	}
+
+	@Override
+	public int voc_size() {
+		// TODO Auto-generated method stub
+		return voc_size;
 	}
     
 }

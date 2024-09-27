@@ -2604,7 +2604,7 @@ public class EDOptimizer extends Optimizer {
 		}
 	}
 	
-	public void trainLlama3_chinese(CNBpeTokenizer trainingData) {
+	public void trainLlama3_chinese(CNBpeTokenizer trainingData,boolean saveWeight) {
 		// TODO Auto-generated method stub
 		try {
 			
@@ -2669,7 +2669,8 @@ public class EDOptimizer extends Optimizer {
 					 * 读取训练数据
 					 */
 					trainingData.loadData2(input, label, tmpInput, tmpLabel, it);
-					
+//					input.showDM(0);
+//					label.showDM(0);
 //					System.out.println("loadTrainData:"+(System.nanoTime() - start22) / 1e6+"ms.");
 //					System.out.println(JsonUtils.toJson(tmpInput));
 //					System.out.println(JsonUtils.toJson(tmpLabel));
@@ -2738,7 +2739,7 @@ public class EDOptimizer extends Optimizer {
 					
 					this.batchIndex++;
 					
-					if(it > 1 && it % 20000 == 0) {
+					if(saveWeight && it > 1 && it % 20000 == 0) {
 						/**
 						 * save model
 						 */
@@ -2749,18 +2750,15 @@ public class EDOptimizer extends Optimizer {
 					
 				}
 
-//				/**
-//				 * update learning rate
-//				 */
-//				this.updateLR(this.lr_step);
-
-				/**
-				 * save model
-				 */
-				String model_path = "/omega/models/llama3-26m-chinese_"+trainIndex+".model";
+				if(saveWeight) {
+					/**
+					 * save model
+					 */
+					String model_path = "/omega/models/llama3-26m-chinese_"+trainIndex+".model";
+					
+					ModelUtils.saveModel(network, model_path);
+				}
 				
-				ModelUtils.saveModel(network, model_path);
-
 			}
 			
 			/**
@@ -2800,6 +2798,7 @@ public class EDOptimizer extends Optimizer {
 	    
 	    BigDecimal tlr = new BigDecimal(min_lr).add(coeff.multiply(new BigDecimal((this.lr - min_lr))));
 	    tlr = tlr.setScale(24, BigDecimal.ROUND_HALF_DOWN);
+
 	    network.learnRate = (float)tlr.doubleValue();
 	}
 	

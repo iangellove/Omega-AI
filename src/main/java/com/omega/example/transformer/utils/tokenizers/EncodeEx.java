@@ -1,10 +1,11 @@
-package com.omega.example.transformer.utils.bpe;
+package com.omega.example.transformer.utils.tokenizers;
 
 import java.util.List;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 
 import com.omega.common.task.ForkJobEngine;
+import com.omega.example.transformer.utils.bpe.BPETokenizer3;
 
 /**
  * FileDataLoader
@@ -24,21 +25,21 @@ public class EncodeEx extends RecursiveAction {
 	
 	private List<String> txtList;
 	
-	private BPETokenizer3 bpe;
+	private Tokenizer tokenizer;
 	
 	private String[] idxList;
 	
 	private static EncodeEx job;
 	
-	public static EncodeEx getInstance(List<String> txtList,String[] idxList,BPETokenizer3 bpe,int start,int end) {
+	public static EncodeEx getInstance(List<String> txtList,String[] idxList,Tokenizer tokenizer,int start,int end) {
 		if(job == null) {
-			job = new EncodeEx(txtList, idxList, bpe, start, end);
+			job = new EncodeEx(txtList, idxList, tokenizer, start, end);
 		}else {
 			if(txtList != job.getTxtList()){
 				job.setTxtList(txtList);
 			}
 			job.setIdxList(idxList);
-			job.setBpe(bpe);
+			job.setTokenizer(tokenizer);
 			job.setStart(0);
 			job.setEnd(end);
 			job.reinitialize();
@@ -46,12 +47,12 @@ public class EncodeEx extends RecursiveAction {
 		return job;
 	}
 	
-	public EncodeEx(List<String> txtList,String[] idxList,BPETokenizer3 bpe,int start,int end) {
+	public EncodeEx(List<String> txtList,String[] idxList,Tokenizer tokenizer,int start,int end) {
 		this.setStart(start);
 		this.setEnd(end);
 		this.setIdxList(idxList);
 		this.txtList = txtList;
-		this.bpe = bpe;
+		this.tokenizer = tokenizer;
 	}
 	
 	@Override
@@ -66,8 +67,8 @@ public class EncodeEx extends RecursiveAction {
 		} else {
 
 			int mid = (getStart() + getEnd() + 1) >>> 1;
-			EncodeEx left = new EncodeEx(txtList, idxList, bpe, getStart(), mid - 1);
-			EncodeEx right = new EncodeEx(txtList, idxList, bpe, mid, getEnd());
+			EncodeEx left = new EncodeEx(txtList, idxList, tokenizer, getStart(), mid - 1);
+			EncodeEx right = new EncodeEx(txtList, idxList, tokenizer, mid, getEnd());
 
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
@@ -81,7 +82,7 @@ public class EncodeEx extends RecursiveAction {
 	private void load() {
 		
 		for (int i = getStart(); i <= getEnd(); i++) {
-			List<Integer> ids = bpe.encode(txtList.get(i));
+			List<Integer> ids = tokenizer.encode(txtList.get(i));
 			String txt = "";
 			for(Integer id:ids) {
 				txt += id + " ";
@@ -92,9 +93,9 @@ public class EncodeEx extends RecursiveAction {
 		
 	}
 	
-	public static void encode(List<String> txtList,String[] idxList,BPETokenizer3 bpe) {
+	public static void encode(List<String> txtList,String[] idxList,Tokenizer tokenizer) {
 //		System.out.println("encoding.");
-		EncodeEx job = getInstance(txtList, idxList, bpe, 0, txtList.size() - 1);
+		EncodeEx job = getInstance(txtList, idxList, tokenizer, 0, txtList.size() - 1);
 		ForkJobEngine.run(job);
 //		System.out.println("encode finish.");
 	}
@@ -123,16 +124,16 @@ public class EncodeEx extends RecursiveAction {
 		this.txtList = txtList;
 	}
 
-	public BPETokenizer3 getBpe() {
-		return bpe;
-	}
-
-	public void setBpe(BPETokenizer3 bpe) {
-		this.bpe = bpe;
-	}
-
 	public void setIdxList(String[] idxList) {
 		this.idxList = idxList;
+	}
+
+	public Tokenizer getTokenizer() {
+		return tokenizer;
+	}
+
+	public void setTokenizer(Tokenizer tokenizer) {
+		this.tokenizer = tokenizer;
 	}
 	
 }

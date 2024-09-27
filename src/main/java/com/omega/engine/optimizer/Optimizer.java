@@ -26,6 +26,7 @@ import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 import com.omega.example.transformer.utils.BPETokenizer;
 import com.omega.example.transformer.utils.SentencePieceTokenizer;
 import com.omega.example.transformer.utils.bpe.BPETokenizer3;
+import com.omega.example.transformer.utils.tokenizers.Tokenizer;
 import com.omega.example.yolo.data.BaseDataLoader;
 import com.omega.example.yolo.data.DetectionDataLoader;
 import com.omega.example.yolo.model.YoloBox;
@@ -1551,7 +1552,7 @@ public abstract class Optimizer {
 		return error;
 	}
 	
-	public float accuracyBatchFisrt(Tensor input,float[] tmpInput,Tensor output,float[] tmpLabel,int time,int batchSize,BPETokenizer3 tokenizer,int igonre) {
+	public float accuracyBatchFisrt(Tensor input,float[] tmpInput,Tensor output,float[] tmpLabel,int time,int batchSize,Tokenizer tokenizer,int igonre) {
 		float error = 0.0f;
 		float trueCount = 0;
 		int max_score = -9999;
@@ -1602,7 +1603,7 @@ public abstract class Optimizer {
 		return error;
 	}
 	
-	public float accuracyBatchFisrt(Tensor input,Tensor output,Tensor label,int time,int batchSize,BPETokenizer3 tokenizer,int igonre) {
+	public float accuracyBatchFisrt(Tensor input,Tensor output,Tensor label,int time,int batchSize,Tokenizer tokenizer,int igonre) {
 		float error = 0.0f;
 		float trueCount = 0;
 		int max_score = -9999;
@@ -1614,29 +1615,28 @@ public abstract class Optimizer {
 		input.syncHost();
 		output.syncHost();
 		for(int n = 0;n<batchSize;n++) {
-			if(n == 0) {
-				boolean allRight = true;
-				int score = time;
-				for(int t = 0;t<time;t++) {
-					int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+			
+			boolean allRight = true;
+			int score = time;
+			for(int t = 0;t<time;t++) {
+				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
 //					int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
-					int labelIndex = (int) label.data[n * time + t];
-					if(labelIndex != igonre && labelIndex != predictIndex) {
-						allRight = false;
-						score--;
-					}
-				}
-				
-				if(max_score <= score) {
-					max_score = score;
-					max_index = n;
-				}
-
-				if(allRight) {
-					trueCount++;
+				int labelIndex = (int) label.data[n * time + t];
+				if(labelIndex != igonre && labelIndex != predictIndex) {
+					allRight = false;
+					score--;
 				}
 			}
 			
+			if(max_score <= score) {
+				max_score = score;
+				max_index = n;
+			}
+
+			if(allRight) {
+				trueCount++;
+			}
+
 		}
 		
 		for(int t = 0;t<time;t++) {

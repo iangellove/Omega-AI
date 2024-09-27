@@ -11,6 +11,7 @@ import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.PrintUtils;
 import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.example.transformer.utils.BaseTokenizer;
+import com.omega.example.transformer.utils.tokenizers.Tokenizer;
 
 import jcuda.runtime.JCuda;
 
@@ -24,7 +25,7 @@ public class CNBpeTokenizer extends BaseTokenizer{
 	
 	private String dataPath;
 	
-	public BPETokenizer3 tokenizer;
+	public Tokenizer tokenizer;
 	
 	public int max_len = 256;
 	
@@ -56,7 +57,7 @@ public class CNBpeTokenizer extends BaseTokenizer{
 	
 	private int byteUnit = 4;
 	
-	public CNBpeTokenizer(String dataPath,int max_len,int batchSize,int number,BPETokenizer3 tokenizer,BinDataType dataType) {
+	public CNBpeTokenizer(String dataPath,int max_len,int batchSize,int number,Tokenizer tokenizer,BinDataType dataType) {
 		this.dataType = dataType;
 		if(dataType == BinDataType.unint16) {
 			byteUnit = 2;
@@ -65,7 +66,7 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		this.max_len = max_len;
 		this.batchSize = batchSize;
 		this.tokenizer = tokenizer;
-		this.vocab_size = tokenizer.voc_size;
+		this.vocab_size = tokenizer.voc_size();
 		initReader();
 		this.number = number;
 		this.count_it = this.number / batchSize;
@@ -74,7 +75,7 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		System.out.println("count_it:"+this.count_it);
 	}
 	
-	public CNBpeTokenizer(String dataPath,int max_len,int batchSize,BPETokenizer3 tokenizer,BinDataType dataType) {
+	public CNBpeTokenizer(String dataPath,int max_len,int batchSize,Tokenizer tokenizer,BinDataType dataType) {
 		this.dataType = dataType;
 		if(dataType == BinDataType.unint16) {
 			byteUnit = 2;
@@ -83,7 +84,7 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		this.max_len = max_len;
 		this.batchSize = batchSize;
 		this.tokenizer = tokenizer;
-		this.vocab_size = tokenizer.voc_size;
+		this.vocab_size = tokenizer.voc_size();
 		if(dataPath.contains(".bin")) {
 			this.isBin = true;
 		}
@@ -424,7 +425,7 @@ public class CNBpeTokenizer extends BaseTokenizer{
 	
 	public void formatToIdx(int b,int t,int[] onceToken,Tensor input,Tensor label) {
 		if(t == 0) {
-			input.data[b * max_len + t] = tokenizer.sos;
+			input.data[b * max_len + t] = tokenizer.sos();
 			label.data[b * max_len + t] = onceToken[t];
 		}else if(t < onceToken.length) {
 			int curr = onceToken[t - 1];
@@ -435,18 +436,18 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		}else if(t == onceToken.length){
 			int curr = onceToken[t - 1];
 			input.data[b * max_len + t] = curr;
-			label.data[b * max_len + t] = tokenizer.eos;
+			label.data[b * max_len + t] = tokenizer.eos();
 //			label.data[(b * max_len + t) * vocab_size + tokenizer.eos] = 1.0f;
 		}else {
-			input.data[b * max_len + t] = tokenizer.pad;
-			label.data[b * max_len + t] = tokenizer.pad;
+			input.data[b * max_len + t] = tokenizer.pad();
+			label.data[b * max_len + t] = tokenizer.pad();
 //			label.data[(b * max_len + t) * vocab_size + tokenizer.pad] = 1.0f;
 		}
 	}
 	
 	public void formatToIdx(int b,int t,int[] onceToken,float[] input,float[] label) {
 		if(t == 0) {
-			input[b * max_len + t] = tokenizer.sos;
+			input[b * max_len + t] = tokenizer.sos();
 			label[b * max_len + t] = onceToken[t];
 		}else if(t < onceToken.length) {
 			int curr = onceToken[t - 1];
@@ -457,11 +458,11 @@ public class CNBpeTokenizer extends BaseTokenizer{
 		}else if(t == onceToken.length){
 			int curr = onceToken[t - 1];
 			input[b * max_len + t] = curr;
-			label[b * max_len + t] = tokenizer.eos;
+			label[b * max_len + t] = tokenizer.eos();
 //			label.data[(b * max_len + t) * vocab_size + tokenizer.eos] = 1.0f;
 		}else {
-			input[b * max_len + t] = tokenizer.pad;
-			label[b * max_len + t] = tokenizer.pad;
+			input[b * max_len + t] = tokenizer.pad();
+			label[b * max_len + t] = tokenizer.pad();
 //			label.data[(b * max_len + t) * vocab_size + tokenizer.pad] = 1.0f;
 		}
 	}
