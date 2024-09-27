@@ -130,7 +130,7 @@ public class CNBpeTokenizer extends BaseTokenizer{
 	public int loadBinCount() {
 		try {
 			file = new RandomAccessFile(dataPath, "r");
-			number = (int) (file.length() / max_len / 4);
+			number = (int) (file.length() / max_len / byteUnit);
 			cache = new int[max_len + 1];
 		} catch (Exception e) {
 			// TODO: handle exception

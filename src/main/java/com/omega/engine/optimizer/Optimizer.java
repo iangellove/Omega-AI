@@ -1614,26 +1614,29 @@ public abstract class Optimizer {
 		input.syncHost();
 		output.syncHost();
 		for(int n = 0;n<batchSize;n++) {
-			boolean allRight = true;
-			int score = time;
-			for(int t = 0;t<time;t++) {
-				int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
-//				int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
-				int labelIndex = (int) label.data[n * time + t];
-				if(labelIndex != igonre && labelIndex != predictIndex) {
-					allRight = false;
-					score--;
+			if(n == 0) {
+				boolean allRight = true;
+				int score = time;
+				for(int t = 0;t<time;t++) {
+					int predictIndex = MatrixOperation.maxIndex(output.getByNumber(n * time + t));
+//					int labelIndex = MatrixOperation.maxIndex(labelData.getByNumber(n * time + t));
+					int labelIndex = (int) label.data[n * time + t];
+					if(labelIndex != igonre && labelIndex != predictIndex) {
+						allRight = false;
+						score--;
+					}
+				}
+				
+				if(max_score <= score) {
+					max_score = score;
+					max_index = n;
+				}
+
+				if(allRight) {
+					trueCount++;
 				}
 			}
 			
-			if(max_score <= score) {
-				max_score = score;
-				max_index = n;
-			}
-
-			if(allRight) {
-				trueCount++;
-			}
 		}
 		
 		for(int t = 0;t<time;t++) {

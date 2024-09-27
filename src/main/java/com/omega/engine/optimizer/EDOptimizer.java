@@ -6,10 +6,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
@@ -39,7 +37,6 @@ import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.transformer.utils.bpe.CNBpeTokenizer;
 
 import jcuda.driver.JCudaDriver;
-import jcuda.runtime.JCuda;
 
 public class EDOptimizer extends Optimizer {
 
@@ -47,6 +44,7 @@ public class EDOptimizer extends Optimizer {
 	
 	public EDOptimizer(Network network, int batchSize, int trainTime, float error,LearnRateUpdate learnRateUpdate, boolean warmUp) throws Exception {
 		super(network, batchSize, trainTime, error, warmUp);
+		this.lr = network.learnRate;
 		this.batchSize = batchSize;
 		this.trainTime = trainTime;
 		this.learnRateUpdate = learnRateUpdate;
@@ -2732,7 +2730,12 @@ public class EDOptimizer extends Optimizer {
 					String msg = "training["+this.trainIndex+"]{"+it+"/"+trainingData.count_it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
 					
 					System.out.println(msg);
-
+					
+					/**
+					 * dynamic update learnRate
+					 */
+					updateLRDynamic(i * trainingData.count_it + it, this.trainTime * trainingData.count_it);
+					
 					this.batchIndex++;
 					
 					if(it > 1 && it % 20000 == 0) {
@@ -2743,13 +2746,13 @@ public class EDOptimizer extends Optimizer {
 						
 						ModelUtils.saveModel(network, model_path);
 					}
-
+					
 				}
 
-				/**
-				 * update learning rate
-				 */
-				this.updateLR(this.lr_step);
+//				/**
+//				 * update learning rate
+//				 */
+//				this.updateLR(this.lr_step);
 
 				/**
 				 * save model
@@ -2769,6 +2772,35 @@ public class EDOptimizer extends Optimizer {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
+	}
+	
+	public void updateLRDynamic(int it,int count) {
+		int warmup_iters = 0;
+		int lr_decay_iters = count;
+//		System.out.println(this.lr);
+//		System.out.println(lr_decay_iters);
+	    double min_lr = this.lr / 10.0d;
+		
+	    if (it < warmup_iters){
+	    	network.learnRate = this.lr * it / warmup_iters;
+	        return;
+	    }
+	    if(it > lr_decay_iters) {
+	    	network.learnRate = (float) min_lr;
+	    	return;
+	    }
+	    BigDecimal decay_ratio = new BigDecimal(0);
+	    
+	    if(it > 0) {
+	    	decay_ratio = new BigDecimal(it - warmup_iters).divide(new BigDecimal(lr_decay_iters - warmup_iters), 24, BigDecimal.ROUND_HALF_DOWN);
+	    }
+//	    System.out.println(decay_ratio.doubleValue());
+	    
+	    BigDecimal coeff = new BigDecimal(0.5d).multiply(new BigDecimal(1).add(new BigDecimal(Math.cos(new BigDecimal(Math.PI).multiply(decay_ratio).doubleValue()))));
+	    
+	    BigDecimal tlr = new BigDecimal(min_lr).add(coeff.multiply(new BigDecimal((this.lr - min_lr))));
+	    tlr = tlr.setScale(24, BigDecimal.ROUND_HALF_DOWN);
+	    network.learnRate = (float)tlr.doubleValue();
 	}
 	
 	@Override

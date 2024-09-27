@@ -137,16 +137,16 @@ public class Llama3Test {
 			
 			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
 			
-			network.learnRate = 2e-4f;
+			network.learnRate = 1e-4f;
 			
-//			String torchWeight = "H:\\model\\torch_weights.json";
-//			loadWeight(LagJsonReader.readJsonFileSmallWeight(torchWeight), network);
+			String torchWeight = "H:\\model\\test\\torch_weights.json";
+			loadWeight(LagJsonReader.readJsonFileSmallWeight(torchWeight), network);
 			
 //			String model_path = "H:\\model\\llama3-26m-chinese_1_200.model";
 //			ModelUtils.loadModel(network, model_path);
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 5, 0.0001f, LearnRateUpdate.SMART_HALF, false);
-			optimizer.lr_step = new int[] {1, 2, 4};
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {1, 2, 4};
 			optimizer.trainLlama3_chinese(trainData);
 
 			String save_model_path = "H:\\model\\llama3-26m-chinese.model";
