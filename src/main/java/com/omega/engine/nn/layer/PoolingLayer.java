@@ -234,5 +234,11 @@ public class PoolingLayer extends Layer {
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

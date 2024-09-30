@@ -328,5 +328,14 @@ public class TransformerBlock extends Layer{
 		ln2.loadModel(inputStream);
 		mlp.loadModel(inputStream);
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		ln1.accGrad(scale);
+		attn.accGrad(scale);
+		ln2.accGrad(scale);
+		mlp.accGrad(scale);
+	}
 	
 }

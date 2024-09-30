@@ -64,12 +64,14 @@ public class RMSLayer extends NormalizationLayer {
 	
 	public RMSLayer(Network network) {
 		this.network = network;
+		network.paramLayers.add(this);
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
 	public RMSLayer(Network network,boolean hasBias) {
 		this.network = network;
 		this.hasBias = false;
+		network.paramLayers.add(this);
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
@@ -284,16 +286,17 @@ public class RMSLayer extends NormalizationLayer {
 	public void update() {
 		// TODO Auto-generated method stub
 		if(!this.freeze) {
+			if(accDW != null) {
+				this.accDW.copy(diffGamma);
+			}
 			if(this.updater != null){
 				this.updater.updateForBN(this);
 			}else{
 				for(int i = 0;i<this.gamma.dataLength;i++) {
 					this.gamma.data[i] -= this.learnRate * this.diffGamma.data[i];
 				}
-				for(int i = 0;i<this.beta.dataLength;i++) {
-					this.beta.data[i] -= this.learnRate * this.diffBeta.data[i];
-				}
 			}
+			this.clearAccGrad();
 		}
 	}
 
@@ -389,6 +392,16 @@ public class RMSLayer extends NormalizationLayer {
 		init();
 		ModelUtils.loadParams(inputStream, gamma);
 		
+	}
+	
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		if(accDW == null) {
+			accDW = diffGamma.copyGPU();
+		}else {
+			kernel.axpy_gpu(diffGamma, accDW, accDW.dataLength, scale, 1, 1);
+		}
 	}
 
 }

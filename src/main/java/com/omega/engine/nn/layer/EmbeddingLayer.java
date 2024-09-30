@@ -3,6 +3,7 @@ package com.omega.engine.nn.layer;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.GPUOP;
+import com.omega.engine.nn.layer.gpu.EmbeddingKernel;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
@@ -16,6 +17,8 @@ import jcuda.jcublas.cublasOperation;
  *
  */
 public class EmbeddingLayer extends Layer{
+	
+	private EmbeddingKernel kernel;
 	
 	public EmbeddingLayer(int inputNum,int outputNum) {
 		this.channel = 1;
@@ -31,6 +34,7 @@ public class EmbeddingLayer extends Layer{
 
 	public EmbeddingLayer(int inputNum,int outputNum,Network network) {
 		this.network = network;
+		network.paramLayers.add(this);
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
 		}
@@ -74,6 +78,9 @@ public class EmbeddingLayer extends Layer{
 	@Override
 	public void initParam() {
 		// TODO Auto-generated method stub
+		if(kernel == null) {
+			kernel = new EmbeddingKernel();
+		}
 		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_uniform(this.width * this.oWidth, this.width, this.paramsInit), true);
 		if(this.network != null) {
 			this.diffW = this.network.createParamterGrad(1, 1, width, oWidth, true);
@@ -160,18 +167,30 @@ public class EmbeddingLayer extends Layer{
 	public void update() {
 		// TODO Auto-generated method stub
 		if(!this.freeze) {
+			if(accDW != null) {
+				this.accDW.copy(diffW);
+			}
 			if(this.updater != null){
 				this.updater.update(this);
 			}else{
+				
 				for(int i = 0;i<this.weight.getDataLength();i++) {
 					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
 				}
-				if(hasBias) {
-					for(int i = 0;i<this.bias.getDataLength();i++) {
-						this.bias.data[i] -= this.learnRate * this.diffB.data[i];
-					}
-				}
+				
 			}
+			this.clearAccGrad();
+		}
+
+	}
+	
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		if(accDW == null) {
+			accDW = diffW.copyGPU();
+		}else {
+			kernel.axpy_gpu(diffW, accDW, accDW.dataLength, scale, 1, 1);
 		}
 	}
 

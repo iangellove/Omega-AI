@@ -670,4 +670,13 @@ public class CausalSelfAttentionLayer extends Layer{
 		return true;
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		qLinerLayer.accGrad(scale);
+		kLinerLayer.accGrad(scale);
+		vLinerLayer.accGrad(scale);
+		oLinerLayer.accGrad(scale);
+	}
+
 }

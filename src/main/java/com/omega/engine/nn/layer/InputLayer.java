@@ -140,4 +140,10 @@ public class InputLayer extends Layer {
 		
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

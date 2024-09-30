@@ -708,4 +708,13 @@ public class LlamaCausalSelfAttentionLayer extends LlamaAttentionLayer{
 		this.oLinerLayer = oLinerLayer;
 	}
 	
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		qLinerLayer.accGrad(scale);
+		kLinerLayer.accGrad(scale);
+		vLinerLayer.accGrad(scale);
+		oLinerLayer.accGrad(scale);
+	}
+	
 }

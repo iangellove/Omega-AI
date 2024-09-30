@@ -558,5 +558,12 @@ public class FastCausalSelfAttentionLayer extends Layer{
 		qkvLinerLayer.loadModel(inputStream);
 		oLinerLayer.loadModel(inputStream);
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		qkvLinerLayer.accGrad(scale);
+		oLinerLayer.accGrad(scale);
+	}
 	
 }

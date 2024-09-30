@@ -2604,7 +2604,7 @@ public class EDOptimizer extends Optimizer {
 		}
 	}
 	
-	public void trainLlama3_chinese(CNBpeTokenizer trainingData,boolean saveWeight) {
+	public void trainLlama3_chinese(CNBpeTokenizer trainingData,int gradAccSteps,boolean saveWeight) {
 		// TODO Auto-generated method stub
 		try {
 			
@@ -2704,11 +2704,17 @@ public class EDOptimizer extends Optimizer {
 					 */
 					network.back(cos, sin, this.lossDiff);
 //					System.out.println("back:"+(System.nanoTime() - start26) / 1e6+"ms.");
-					
+
 					/**
 					 * update
 					 */
-					this.network.update();
+					if(gradAccSteps > 1) {
+						this.network.accGrad(gradAccSteps);
+					}
+					if(it > 1 && it % gradAccSteps == 0) {
+						this.network.clipGradNorm(1.0f);
+						this.network.update();
+					}
 					
 					/**
 					 * current time error

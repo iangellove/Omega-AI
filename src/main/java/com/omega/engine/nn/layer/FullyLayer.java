@@ -62,6 +62,7 @@ public class FullyLayer extends Layer{
 		this.hasBias = hasBias;
 		this.hasParams = true;
 		this.initParam();
+		network.paramLayers.add(this);
 		this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
 	}
 	
@@ -75,6 +76,7 @@ public class FullyLayer extends Layer{
 		this.oWidth = outputNum;
 		this.hasBias = hasBias;
 		this.hasParams = true;
+		network.paramLayers.add(this);
 		this.initParamRNNCell();
 		this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
 	}
@@ -550,17 +552,40 @@ public class FullyLayer extends Layer{
 	public void update() {
 		// TODO Auto-generated method stub
 		if(!this.freeze) {
+			if(accDW != null) {
+				this.accDW.copy(diffW);
+				if(hasBias) {
+					this.accDB.copy(diffB);
+				}
+			}
 			if(this.updater != null){
 				this.updater.update(this);
 			}else{
 				for(int i = 0;i<this.weight.getDataLength();i++) {
 					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
 				}
-				if(hasBias) {
-					for(int i = 0;i<this.bias.getDataLength();i++) {
-						this.bias.data[i] -= this.learnRate * this.diffB.data[i];
-					}
+				for(int i = 0;i<this.bias.getDataLength();i++) {
+					this.bias.data[i] -= this.learnRate * this.diffB.data[i];
 				}
+			}
+			this.clearAccGrad();
+		}
+
+	}
+	
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		if(accDW == null) {
+			accDW = diffW.copyGPU();
+		}else {
+			kernel.axpy_gpu(diffW, accDW, accDW.dataLength, scale, 1, 1);
+		}
+		if(hasBias) {
+			if(accDB == null) {
+				accDB = diffB.copyGPU();
+			}else {
+				kernel.axpy_gpu(diffB, accDB, accDB.dataLength, scale, 1, 1);
 			}
 		}
 	}

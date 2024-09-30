@@ -264,4 +264,11 @@ public class MLPLayer extends Layer{
 		
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		linear1.accGrad(scale);
+		linear2.accGrad(scale);
+	}
+
 }

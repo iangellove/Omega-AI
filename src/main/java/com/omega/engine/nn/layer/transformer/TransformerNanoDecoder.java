@@ -416,5 +416,16 @@ public class TransformerNanoDecoder extends Layer{
 		}
 		ln.loadModel(inputStream);
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		src_emb.accGrad(scale);
+		pos_emb.accGrad(scale);
+		for(int i = 0;i<n_layers;i++) {
+			decoderLayers.get(i).accGrad(scale);
+		}
+		ln.accGrad(scale);
+	}
 	
 }

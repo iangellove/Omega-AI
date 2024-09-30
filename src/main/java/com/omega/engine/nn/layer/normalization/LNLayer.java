@@ -64,11 +64,13 @@ public class LNLayer extends NormalizationLayer {
 	
 	public LNLayer(Network network) {
 		this.network = network;
+		network.paramLayers.add(this);
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
 	public LNLayer(Network network,boolean hasBias) {
 		this.network = network;
+		network.paramLayers.add(this);
 		this.hasBias = true;
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
@@ -295,6 +297,12 @@ public class LNLayer extends NormalizationLayer {
 	public void update() {
 		// TODO Auto-generated method stub
 		if(!this.freeze) {
+			if(accDW != null) {
+				this.accDW.copy(diffGamma);
+				if(hasBias) {
+					this.accDB.copy(diffBeta);
+				}
+			}
 			if(this.updater != null){
 				this.updater.updateForBN(this);
 			}else{
@@ -305,6 +313,7 @@ public class LNLayer extends NormalizationLayer {
 					this.beta.data[i] -= this.learnRate * this.diffBeta.data[i];
 				}
 			}
+			this.clearAccGrad();
 		}
 	}
 
@@ -402,6 +411,23 @@ public class LNLayer extends NormalizationLayer {
 		ModelUtils.loadParams(inputStream, gamma);
 		if(hasBias) {
 			ModelUtils.loadParams(inputStream, beta);
+		}
+	}
+	
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		if(accDW == null) {
+			accDW = diffGamma.copyGPU();
+		}else {
+			kernel.axpy_gpu(diffGamma, accDW, accDW.dataLength, scale, 1, 1);
+		}
+		if(hasBias) {
+			if(accDB == null) {
+				accDB = diffBeta.copyGPU();
+			}else {
+				kernel.axpy_gpu(diffBeta, accDB, accDB.dataLength, scale, 1, 1);
+			}
 		}
 	}
 	

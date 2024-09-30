@@ -314,4 +314,13 @@ public class DoubleConvLayer extends Layer{
 		return bnLayer;
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		convLayer.accGrad(scale);
+		bnLayer.accGrad(scale);
+		convLayer2.accGrad(scale);
+		bnLayer2.accGrad(scale);
+	}
+
 }

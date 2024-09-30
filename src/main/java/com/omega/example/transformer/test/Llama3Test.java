@@ -112,7 +112,7 @@ public class Llama3Test {
 			
 			boolean flashAttention = false;
 			
-			int batchSize = 3;
+			int batchSize = 2;
 			
 			int max_len = 512;
 			
@@ -139,18 +139,19 @@ public class Llama3Test {
 			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
 			
 			network.learnRate = 1e-4f;
+			network.CLIP_GRAD_NORM = true;
 			
-			initWeight(network);
+//			initWeight(network, decoderNum);
 			
 //			String torchWeight = "H:\\model\\torch_weights.json";
 //			loadWeight(LagJsonReader.readJsonFileSmallWeight(torchWeight), network);
 			
-//			String model_path = "H:\\model\\llama3-26m-chinese_1_200.model";
-//			ModelUtils.loadModel(network, model_path);
+			String model_path = "H:\\model\\llama3-26m-chinese.model";
+			ModelUtils.loadModel(network, model_path);
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {1, 2, 4};
-			optimizer.trainLlama3_chinese(trainData, true);
+			optimizer.trainLlama3_chinese(trainData, 8, true);
 
 			String save_model_path = "H:\\model\\llama3-26m-chinese.model";
 			ModelUtils.saveModel(network, save_model_path);
@@ -208,15 +209,15 @@ public class Llama3Test {
 			
 			boolean flashAttention = false;
 			
-			int batchSize = 3;
+			int batchSize = 2;
 			
-			int max_len = 512;
+			int max_len = 256;
 			
 			int embedDim = 512;
 			
-			int head_num = 16;
+			int head_num = 8;
 			
-			int nKVHeadNum = 8;
+			int nKVHeadNum = 4;
 			
 			int decoderNum = 8;
 
@@ -232,11 +233,11 @@ public class Llama3Test {
 			
 			network.learnRate = 1e-4f;
 			
-			initWeight(network);
+			initWeight(network, decoderNum);
 
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {1, 2, 4};
-			optimizer.trainLlama3_chinese(trainData, false);
+			optimizer.trainLlama3_chinese(trainData, 8, false);
 
 			String save_model_path = "H:\\model\\llama3-110m-chinese.model";
 			ModelUtils.saveModel(network, save_model_path);
@@ -311,22 +312,22 @@ public class Llama3Test {
 		loadData(network.getFullyLayer().weight, weightMap.get("output.weight"), "output.weight");
 	}
 	
-	public static void initWeight(Llama3 network) {
+	public static void initWeight(Llama3 network,int n_layers) {
 
 		initParams(network.getDecoder().getSrc_emb().weight, 0.0f, 0.02f);
 		
-		for(int i = 0;i<8;i++) {
+		for(int i = 0;i<n_layers;i++) {
 			LlamaTransformerBlock block = network.getDecoder().getDecoderLayers().get(i);
 			LlamaCausalSelfAttention2Layer attn = (LlamaCausalSelfAttention2Layer) block.getAttn();
 			initParams(attn.getqLinerLayer().weight, 0.0f, 0.02f);
 			initParams(attn.getkLinerLayer().weight, 0.0f, 0.02f);
 			initParams(attn.getvLinerLayer().weight, 0.0f, 0.02f);
-			initParams(attn.getoLinerLayer().weight, 0.0f, (float)(0.02f / Math.sqrt(2 * 8)));
+			initParams(attn.getoLinerLayer().weight, 0.0f, (float)(0.02f / Math.sqrt(2 * n_layers)));
 
 			LlamaMLPLayer mlp = block.getMlp();
 			initParams(mlp.getLinear1().weight, 0.0f, 0.02f);
 			initParams(mlp.getLinear2().weight, 0.0f, 0.02f);
-			initParams(mlp.getLinear3().weight, 0.0f, (float)(0.02f / Math.sqrt(2 * 8)));
+			initParams(mlp.getLinear3().weight, 0.0f, (float)(0.02f / Math.sqrt(2 * n_layers)));
 		}
 
 		initParams(network.getFullyLayer().weight, 0.0f, 0.02f);
@@ -528,6 +529,8 @@ public class Llama3Test {
 			
 			llama3_monkey();
 
+//			llama3_monkey_chatglm();
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

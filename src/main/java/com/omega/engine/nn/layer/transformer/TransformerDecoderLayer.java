@@ -289,6 +289,8 @@ public class TransformerDecoderLayer extends Layer{
 		// TODO Auto-generated method stub
 		attn.update();
 		feed_forward.update();
+		ln1.update();
+		ln2.update();
 	}
 
 	@Override
@@ -360,6 +362,15 @@ public class TransformerDecoderLayer extends Layer{
 //		mal.diff.showShape();
 		mal.diff.showDM();
 		
+	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		attn.accGrad(scale);
+		feed_forward.accGrad(scale);
+		ln1.accGrad(scale);
+		ln2.accGrad(scale);
 	}
 
 }

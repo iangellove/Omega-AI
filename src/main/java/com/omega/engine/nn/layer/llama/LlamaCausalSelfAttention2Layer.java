@@ -709,5 +709,14 @@ public class LlamaCausalSelfAttention2Layer extends LlamaAttentionLayer{
 	public void setoLinerLayer(FullyLayer oLinerLayer) {
 		this.oLinerLayer = oLinerLayer;
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		qLinerLayer.accGrad(scale);
+		kLinerLayer.accGrad(scale);
+		vLinerLayer.accGrad(scale);
+		oLinerLayer.accGrad(scale);
+	}
 	
 }

@@ -119,6 +119,7 @@ public class ConvolutionLayer extends Layer {
 		this.stride = stride;
 		this.hasBias = hasBias;
 		this.network = network;
+		network.paramLayers.add(this);
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 		this.hasParams = true;
 		this.initParam();
@@ -150,6 +151,7 @@ public class ConvolutionLayer extends Layer {
 		this.stride = stride;
 		this.hasBias = hasBias;
 		this.network = network;
+		network.paramLayers.add(this);
 		this.hasParams = true;
 		this.paramsInit = paramsInit;
 		this.initParam();
@@ -166,6 +168,7 @@ public class ConvolutionLayer extends Layer {
 		this.stride = stride;
 		this.hasBias = hasBias;
 		this.network = network;
+		network.paramLayers.add(this);
 		this.hasParams = true;
 		switch (activeType) {
 		case sigmoid:
@@ -405,6 +408,13 @@ public class ConvolutionLayer extends Layer {
 //		long start = System.nanoTime();
 //		System.out.println(this.index+":"+this.freeze);
 		if(!this.freeze) {
+			if(accDW != null) {
+				this.accDW.copy(diffW);
+				if(hasBias) {
+					this.accDB.copy(diffB);
+				}
+			}
+			
 			if(this.updater != null){
 				this.updater.update(this);
 			}else{
@@ -418,6 +428,7 @@ public class ConvolutionLayer extends Layer {
 				}
 				
 			}
+			this.clearAccGrad();
 		}
 		
 //		System.out.println((System.nanoTime() - start) / 1e6+"ms->all update========>");
@@ -592,6 +603,23 @@ public class ConvolutionLayer extends Layer {
 		conv1.diff = difft;
 		conv1.diff.showDM();
 		
+	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		if(accDW == null) {
+			accDW = diffW.copyGPU();
+		}else {
+			kernel.axpy_gpu(diffW, accDW, accDW.dataLength, scale, 1, 1);
+		}
+		if(hasBias) {
+			if(accDB == null) {
+				accDB = diffB.copyGPU();
+			}else {
+				kernel.axpy_gpu(diffB, accDB, accDB.dataLength, scale, 1, 1);
+			}
+		}
 	}
 	
 }

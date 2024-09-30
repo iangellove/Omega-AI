@@ -265,4 +265,10 @@ public class LeakyReluLayer extends ActiveFunctionLayer {
 		}
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

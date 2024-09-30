@@ -261,4 +261,10 @@ public class ReluLayer extends ActiveFunctionLayer {
 		kernel.backward(input, delta, diff, step * batch * diff.getOnceSize(), batch * diff.getOnceSize());
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

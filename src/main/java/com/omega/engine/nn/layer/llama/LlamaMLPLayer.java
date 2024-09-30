@@ -337,5 +337,13 @@ public class LlamaMLPLayer extends Layer{
 	public void setLinear3(FullyLayer linear3) {
 		this.linear3 = linear3;
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		linear1.accGrad(scale);
+		linear2.accGrad(scale);
+		linear3.accGrad(scale);
+	}
 	
 }

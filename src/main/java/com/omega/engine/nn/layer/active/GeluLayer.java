@@ -245,4 +245,16 @@ public class GeluLayer extends ActiveFunctionLayer {
 		
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void clearAccGrad() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

@@ -348,5 +348,15 @@ public class TransformerDecoder2 extends Layer{
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		src_emb.accGrad(scale);
+		pos_emb.accGrad(scale);
+		for(int i = 0;i<n_layers;i++) {
+			decoderLayers.get(i).accGrad(scale);
+		}
+	}
 	
 }

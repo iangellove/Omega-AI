@@ -44,11 +44,18 @@ public abstract class NormalizationLayer extends Layer {
 		this.oChannel = this.channel;
 		this.oHeight = this.height;
 		this.oWidth = this.width;
+		network.paramLayers.add(this);
 	}
 	
 	@Override
 	public void initBack() {
 		
+	}
+	
+	public void getGradNorm() {
+		if(network.CLIP_GRAD_NORM && diffGamma != null) {
+			network.getGradNorm(this);
+		}
 	}
 	
 }

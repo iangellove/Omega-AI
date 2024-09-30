@@ -197,4 +197,10 @@ public class UNetDownLayer extends Layer{
 		
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		conv.accGrad(scale);
+	}
+
 }

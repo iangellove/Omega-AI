@@ -545,5 +545,21 @@ public class ResidualBlockLayer extends Layer{
 			}
 
 	   }
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		block1[0].accGrad(scale);
+		block1[2].accGrad(scale);
+		temb_proj[1].accGrad(scale);
+		block2[0].accGrad(scale);
+		block2[2].accGrad(scale);
+		if(channel != oChannel){
+			shortcut.accGrad(scale);
+		}
+		if(hasAttn) {
+			attn.accGrad(scale);
+		}
+	}
 	
 }

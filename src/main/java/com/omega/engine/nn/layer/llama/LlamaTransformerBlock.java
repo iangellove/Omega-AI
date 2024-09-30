@@ -351,5 +351,14 @@ public class LlamaTransformerBlock extends Layer{
 	public void setNorm2(RMSLayer norm2) {
 		this.norm2 = norm2;
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		getNorm1().accGrad(scale);
+		getAttn().accGrad(scale);
+		getNorm2().accGrad(scale);
+		getMlp().accGrad(scale);
+	}
 	
 }

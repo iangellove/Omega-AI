@@ -377,5 +377,15 @@ public class LlamaTransformerDecoder extends Layer{
 	public void setNorm(RMSLayer norm) {
 		this.norm = norm;
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		getSrc_emb().accGrad(scale);
+		for(int i = 0;i<n_layers;i++) {
+			getDecoderLayers().get(i).accGrad(scale);
+		}
+		getNorm().accGrad(scale);
+	}
 	
 }

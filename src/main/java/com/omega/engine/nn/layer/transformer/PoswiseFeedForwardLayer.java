@@ -324,4 +324,12 @@ public class PoswiseFeedForwardLayer extends Layer{
 		
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		conv1.accGrad(scale);
+		conv2.accGrad(scale);
+		lnLayer.accGrad(scale);
+	}
+
 }

@@ -389,4 +389,10 @@ public class RNNLayer extends Layer{
 		return h_0;
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

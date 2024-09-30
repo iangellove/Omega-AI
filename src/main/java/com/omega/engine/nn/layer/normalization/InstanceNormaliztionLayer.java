@@ -189,6 +189,12 @@ public class InstanceNormaliztionLayer extends NormalizationLayer {
 	public void update() {
 		// TODO Auto-generated method stub
 		if(!this.freeze) {
+			if(accDW != null) {
+				this.accDW.copy(diffGamma);
+				if(hasBias) {
+					this.accDB.copy(diffBeta);
+				}
+			}
 			if(this.updater != null){
 				this.updater.updateForBN(this);
 			}else{
@@ -199,6 +205,7 @@ public class InstanceNormaliztionLayer extends NormalizationLayer {
 					this.beta.data[i] -= this.learnRate * this.diffBeta.data[i];
 				}
 			}
+			this.clearAccGrad();
 		}
 	}
 
@@ -315,6 +322,23 @@ public class InstanceNormaliztionLayer extends NormalizationLayer {
 //			}
 		}
 		
+	}
+	
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		if(accDW == null) {
+			accDW = diffGamma.copyGPU();
+		}else {
+			kernel.axpy_gpu(diffGamma, accDW, accDW.dataLength, scale, 1, 1);
+		}
+		if(hasBias) {
+			if(accDB == null) {
+				accDB = diffBeta.copyGPU();
+			}else {
+				kernel.axpy_gpu(diffBeta, accDB, accDB.dataLength, scale, 1, 1);
+			}
+		}
 	}
 	
 	public static void main(String[] args) {

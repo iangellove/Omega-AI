@@ -231,4 +231,11 @@ public class UNetUPLayer extends Layer{
 		
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		up.accGrad(scale);
+		conv.accGrad(scale);
+	}
+
 }

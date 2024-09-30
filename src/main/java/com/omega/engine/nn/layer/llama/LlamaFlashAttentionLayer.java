@@ -508,5 +508,14 @@ public class LlamaFlashAttentionLayer extends LlamaAttentionLayer{
 		// TODO Auto-generated method stub
 		
 	}
+	
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		qLinerLayer.accGrad(scale);
+		kLinerLayer.accGrad(scale);
+		vLinerLayer.accGrad(scale);
+		oLinerLayer.accGrad(scale);
+	}
 
 }

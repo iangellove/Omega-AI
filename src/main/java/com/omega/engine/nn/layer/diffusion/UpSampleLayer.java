@@ -205,6 +205,12 @@ public class UpSampleLayer extends Layer{
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
 		conv.loadModel(inputStream);
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		conv.accGrad(scale);
+	}
 	
 
 }

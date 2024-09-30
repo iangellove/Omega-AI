@@ -51,7 +51,11 @@ public abstract class Layer {
 	
 	public Tensor diffW;
 	
+	public Tensor accDW;
+	
 	public Tensor diffB;
+	
+	public Tensor accDB;
 	
 	public Tensor cache_delta;
 	
@@ -112,6 +116,8 @@ public abstract class Layer {
 	public abstract void back(Tensor delta);
 	
 	public abstract void update();
+	
+	public abstract void accGrad(float scale);
 	
 	public abstract void showDiff();
 	
@@ -238,6 +244,21 @@ public abstract class Layer {
 
 	public int[] outputShape() {
 		return new int[] {number, oChannel, oHeight, oWidth};
+	}
+	
+	public void clearAccGrad() {
+		if(accDW != null) {
+			accDW.clearGPU();
+			if(accDB != null) {
+				accDB.clearGPU();
+			}
+		}
+	}
+	
+	public void getGradNorm() {
+		if(network.CLIP_GRAD_NORM && diffW != null) {
+			network.getGradNorm(this);
+		}
 	}
 	
 }

@@ -470,4 +470,10 @@ public class RNNBlockLayer extends BaseRNNLayer{
 		return dcy;
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

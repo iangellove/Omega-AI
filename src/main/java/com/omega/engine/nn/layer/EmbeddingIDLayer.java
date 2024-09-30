@@ -49,6 +49,7 @@ public class EmbeddingIDLayer extends Layer{
 		this.oWidth = embedding_dim;
 		this.hasParams = true;
 		this.hasBias = false;
+		network.paramLayers.add(this);
 		this.initParam();
 	}
 	
@@ -66,6 +67,7 @@ public class EmbeddingIDLayer extends Layer{
 		this.oWidth = embedding_dim;
 		this.hasParams = true;
 		this.hasBias = false;
+		network.paramLayers.add(this);
 		this.initParam();
 	}
 
@@ -175,16 +177,28 @@ public class EmbeddingIDLayer extends Layer{
 	public void update() {
 		// TODO Auto-generated method stub
 		if(!this.freeze) {
+			if(accDW != null) {
+				this.accDW.copy(diffW);
+			}
 			if(this.updater != null){
 				this.updater.update(this);
 			}else{
 				for(int i = 0;i<this.weight.getDataLength();i++) {
 					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
 				}
-				for(int i = 0;i<this.bias.getDataLength();i++) {
-					this.bias.data[i] -= this.learnRate * this.diffB.data[i];
-				}
 			}
+			this.clearAccGrad();
+		}
+
+	}
+	
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		if(accDW == null) {
+			accDW = diffW.copyGPU();
+		}else {
+			kernel.axpy_gpu(diffW, accDW, accDW.dataLength, scale, 1, 1);
 		}
 	}
 

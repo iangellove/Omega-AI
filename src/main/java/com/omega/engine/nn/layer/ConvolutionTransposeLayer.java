@@ -124,6 +124,7 @@ public class ConvolutionTransposeLayer extends Layer {
 		this.hasBias = hasBias;
 		this.network = network;
 		this.hasParams = true;
+		network.paramLayers.add(this);
 		this.initParam();
 	}
 	
@@ -294,9 +295,13 @@ public class ConvolutionTransposeLayer extends Layer {
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-//		long start = System.nanoTime();
-//		System.out.println(this.index+":"+this.freeze);
 		if(!this.freeze) {
+			if(accDW != null) {
+				this.accDW.copy(diffW);
+				if(hasBias) {
+					this.accDB.copy(diffB);
+				}
+			}
 			if(this.updater != null){
 				this.updater.update(this);
 			}else{
@@ -310,9 +315,26 @@ public class ConvolutionTransposeLayer extends Layer {
 				}
 				
 			}
+			this.clearAccGrad();
 		}
-		
-//		System.out.println((System.nanoTime() - start) / 1e6+"ms->all update========>");
+
+	}
+	
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		if(accDW == null) {
+			accDW = diffW.copyGPU();
+		}else {
+			kernel.axpy_gpu(diffW, accDW, accDW.dataLength, scale, 1, 1);
+		}
+		if(hasBias) {
+			if(accDB == null) {
+				accDB = diffB.copyGPU();
+			}else {
+				kernel.axpy_gpu(diffB, accDB, accDB.dataLength, scale, 1, 1);
+			}
+		}
 	}
 
 	@Override

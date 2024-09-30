@@ -537,5 +537,11 @@ public class DiffusionAttentionBlockLayer extends Layer{
 		}
 		return true;
 	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

@@ -267,4 +267,11 @@ public class CBLLayer extends Layer{
 		return bnLayer;
 	}
 
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		convLayer.accGrad(scale);
+		bnLayer.accGrad(scale);
+	}
+
 }

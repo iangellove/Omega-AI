@@ -7,7 +7,6 @@ import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.active.GeluLayer;
-import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
@@ -274,6 +273,14 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	
 	public static void main(String[] args) {
 		
+	}
+
+	@Override
+	public void accGrad(float scale) {
+		// TODO Auto-generated method stub
+		linear1.accGrad(scale);
+		linear2.accGrad(scale);
+		lnLayer.accGrad(scale);
 	}
 
 }
