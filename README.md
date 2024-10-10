@@ -216,7 +216,6 @@ sft_train_loss = 1.6f //微调训练最终训练集损失在1.6左右
 ![输入图片说明](images/diffusion_11_anime.gif)
 ![输入图片说明](images/diffusion_5_anime.gif)
 
-
 ##  功能介绍
 #### 支持的网络层类型：
 
