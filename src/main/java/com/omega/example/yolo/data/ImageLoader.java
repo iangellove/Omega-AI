@@ -364,7 +364,7 @@ public class ImageLoader {
 		
 		float w_scale = (oim.getWidth() - 1) * 1.0f / (w - 1);
 		float h_scale = (oim.getHeight() - 1) * 1.0f / (h - 1);
-		
+
 		for(int k = 0; k < oim.getChannel(); ++k){
 	        for(int r = 0; r < oim.getHeight(); ++r){
 	            for(int c = 0; c < w; ++c){
@@ -1114,6 +1114,28 @@ public class ImageLoader {
 		}
 		
 		return image;
+	}
+	
+	public static Tensor loadImage(String filePath,int tw,int th,float[] mean,float[] std) {
+		
+		Tensor input = null;
+		
+		try {
+			
+			File file = new File(filePath);
+
+			if(file.exists()) {
+				OMImage image =  YoloImageUtils.IU().loadOMImgAndResize(file, tw, th, mean, std);
+				input = new Tensor(1, image.getChannel(), image.getHeight(), image.getWidth(), image.getData(), true);
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			System.out.println("=====================>:"+filePath);
+		}
+		
+		return input;
 	}
 	
 	public static OMImage loadImage(File file) {

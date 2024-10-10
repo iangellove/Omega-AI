@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -689,4 +688,22 @@ public class SentencePieceTokenizer extends Tokenizer{
 		return voc_size;
 	}
     
+	@Override
+	public String sos_str() {
+		// TODO Auto-generated method stub
+		return "<s>";
+	}
+
+	@Override
+	public String eos_str() {
+		// TODO Auto-generated method stub
+		return "</s>";
+	}
+
+	@Override
+	public String pad_str() {
+		// TODO Auto-generated method stub
+		return "<pad>";
+	}
+	
 }

@@ -638,6 +638,16 @@ public class MatrixUtils {
 		return x;
 	}
 	
+	public static int countOccurrences(float[] arr, float target) {
+	    int count = 0;
+	    for (int i = 0; i < arr.length; i++) {
+	        if (arr[i] == target) {
+	            count++;
+	        }
+	    }
+	    return count;
+	}
+	
 	/**
 	 * 
 	 * @Title: zero

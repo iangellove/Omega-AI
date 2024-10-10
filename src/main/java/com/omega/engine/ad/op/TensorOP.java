@@ -29,6 +29,16 @@ public class TensorOP {
 		
 	}
 	
+	public static void addAxis(Tensor a,Tensor b,Tensor c,int axis) {
+		
+		if(c.isHasGPU()) {
+			OPKernel.getInstance().add_axis_gpu(a, b, c, axis);
+		}else {
+			c.data = MatrixOperation.add(a.data, b.data);
+		}
+		
+	}
+	
 	public static void add(Tensor a,Tensor b,Tensor c, int offset,int N) {
 		
 		if(c.isHasGPU()) {
@@ -572,6 +582,16 @@ public class TensorOP {
 		
 		if(a.isHasGPU()) {
 			OPKernel.getInstance().permute_gpu(a, b, permutes);
+		}else {
+//			c.data = MatrixOperation.add(a.data, b.data);
+		}
+		
+	}
+	
+	public static void expand(Tensor a,Tensor b,int num) {
+		
+		if(a.isHasGPU()) {
+			OPKernel.getInstance().expand_gpu(a, b, num);
 		}else {
 //			c.data = MatrixOperation.add(a.data, b.data);
 		}

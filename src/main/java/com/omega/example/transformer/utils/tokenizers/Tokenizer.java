@@ -18,6 +18,12 @@ public abstract class Tokenizer {
 	
 	public abstract int pad();
 	
+	public abstract String sos_str();
+	
+	public abstract String eos_str();
+	
+	public abstract String pad_str();
+	
 	public abstract int voc_size();
 	
 }

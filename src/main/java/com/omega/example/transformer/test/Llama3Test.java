@@ -6,10 +6,12 @@ import java.util.Map;
 import java.util.Scanner;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
+import com.omega.engine.gpu.SoftmaxKernel;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.gpu.RoPEKernel;
 import com.omega.engine.nn.layer.llama.LlamaCausalSelfAttention2Layer;
@@ -20,8 +22,8 @@ import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.EDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
+import com.omega.example.transformer.dataset.SFTDataset;
 import com.omega.example.transformer.utils.CNTokenizer;
-import com.omega.example.transformer.utils.LagJsonReader;
 import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.transformer.utils.SentencePieceTokenizer;
 import com.omega.example.transformer.utils.bpe.BPETokenizer3;
@@ -285,6 +287,188 @@ public class Llama3Test {
 		
 	}
 	
+	public static void llama3_monkey_sft() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			boolean flashAttention = false;
+			
+			int batchSize = 3;
+			
+			int max_len = 512;
+			
+			int embedDim = 512;
+			
+			int head_num = 16;
+			
+			int nKVHeadNum = 8;
+			
+			int decoderNum = 8;
+			
+			String trainPath = "H:\\transformer_dataset\\6400\\sft_data_single.csv";
+			
+			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
+			
+			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
+			
+			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
+			
+			SFTDataset trainData = new SFTDataset(trainPath, max_len, batchSize, tokenizer);
+			
+			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
+			
+			network.learnRate = 1e-4f;
+//			network.CLIP_GRAD_NORM = true;
+			
+			String model_path = "H:\\model\\llama3-26m-chinese.model";
+			ModelUtils.loadModel(network, model_path);
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {1, 2, 4};
+			optimizer.trainLlama3_chinese_sft(trainData, 8, true);
+
+			String save_model_path = "H:\\model\\llama3-26m-chinese.model";
+			ModelUtils.saveModel(network, save_model_path);
+			
+			network.RUN_MODEL = RunModel.TEST;
+			Scanner scanner = new Scanner(System.in);
+			
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase();
+				String qaStr = tokenizer.sos_str() + "user\n" + input_txt + tokenizer.eos_str() + "\n";
+				System.out.println(qaStr);
+				int[] idx = tokenizer.encodeInt(qaStr);
+				int startLen = idx.length;
+				Tensor input = trainData.loadByTxtToIdx(idx);
+//				input.showDM();
+				Tensor[] pos = RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum);
+
+				for(int t = 0;t<max_len - startLen;t++) {
+					network.time = input.number;
+					Tensor cos = pos[0];
+					Tensor sin = pos[1];
+					Tensor output = network.forward(cos, sin, input);
+					output.syncHost();
+					int nextIDX = output2NextIDX(output, idx.length - 1);
+					idx = Arrays.copyOf(idx, idx.length + 1);
+					idx[idx.length - 1] = nextIDX;
+					if(nextIDX == tokenizer.eos) {
+						break;
+					}
+					input = trainData.loadByTxtToIdx(idx);
+					RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
+				}
+				System.out.println("chatbot:"+tokenizer.decode(idx));
+			}
+			scanner.close();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void llama3_monkey_sft_test() {
+		
+		try {
+			
+			boolean bias = false;
+			
+			boolean dropout = false;
+			
+			boolean flashAttention = false;
+			
+			int max_len = 512;
+			
+			int embedDim = 512;
+			
+			int head_num = 16;
+			
+			int nKVHeadNum = 8;
+			
+			int decoderNum = 8;
+			
+			int vocab_size = 6400;
+			
+			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
+			
+			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
+			
+			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
+			
+			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, vocab_size, max_len, embedDim, bias, dropout, flashAttention);
+			
+			String model_path = "H:\\model\\llama3-26m-chinese-sft2.model";
+			ModelUtils.loadModel(network, model_path);
+
+			network.RUN_MODEL = RunModel.TEST;
+			Scanner scanner = new Scanner(System.in);
+			
+			Tensor testInput = null;
+			
+			while (true) {
+				System.out.println("请输入中文:");
+				String input_txt = scanner.nextLine();
+				if(input_txt.equals("exit")){
+					break;
+				}
+				input_txt = input_txt.toLowerCase();
+				String qaStr = tokenizer.sos_str() + "user\n" + input_txt + tokenizer.eos_str() + "\n";
+//				System.out.println(qaStr);
+				int[] idx = tokenizer.encodeInt(qaStr);
+				int startLen = idx.length;
+				Tensor input = loadByTxtToIdx(testInput, idx);
+//				input.showDM();
+				Tensor[] pos = RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum);
+
+				for(int t = 0;t<max_len - startLen;t++) {
+					network.time = input.number;
+					Tensor cos = pos[0];
+					Tensor sin = pos[1];
+					Tensor output = network.forward(cos, sin, input);
+					output.syncHost();
+					int nextIDX = output2NextIDXTopN(output, idx.length - 1, 5);
+					idx = Arrays.copyOf(idx, idx.length + 1);
+					idx[idx.length - 1] = nextIDX;
+					if(nextIDX == tokenizer.eos) {
+						break;
+					}
+					input = loadByTxtToIdx(testInput, idx);
+					RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
+				}
+
+				int[] awIdx = Arrays.copyOfRange(idx, startLen, idx.length);
+				System.out.println("chatbot:"+tokenizer.decode(awIdx).replaceAll("<s>assistant\n", ""));
+			}
+			scanner.close();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static Tensor loadByTxtToIdx(Tensor testInput,int[] idxs) {
+//		System.out.println(idxs.length);
+		testInput = Tensor.createTensor(testInput, idxs.length, 1, 1, 1, true);
+		for(int t = 0;t<idxs.length;t++) {
+			testInput.data[t] = idxs[t];
+		}
+		testInput.hostToDevice();
+		return testInput;
+	}
+	
 	public static void loadWeight(Map<String, Object> weightMap,Llama3 network) {
 		for(String key:weightMap.keySet()) {
 			System.out.println(key);
@@ -405,7 +589,19 @@ public class Llama3Test {
 	
 	public static int output2NextIDX(Tensor output,int nextTokenIdx) {
 		if(nextTokenIdx < output.number) {
-			return pickTopN(output.getByNumber(nextTokenIdx), 3);
+			return pickTopN(output.getByNumber(nextTokenIdx), 1);
+		}
+		return 0;
+	}
+	
+	public static int output2NextIDXTopN(Tensor output,int nextTokenIdx,int topK) {
+		SoftmaxKernel kernel = new SoftmaxKernel();
+		Tensor tmp = new Tensor(1, 1, 1, output.width, true);
+		Tensor prof = new Tensor(1, 1, 1, output.width, true);
+		if(nextTokenIdx < output.number) {
+			tmp.hostToDevice(MatrixOperation.multiplication(output.getByNumber(nextTokenIdx), 0.7f));
+			kernel.softmax_out(tmp, prof);
+			return pickTopN(prof.syncHost(), topK);
 		}
 		return 0;
 	}
@@ -527,9 +723,13 @@ public class Llama3Test {
 			
 //			llama3_dp();
 			
-			llama3_monkey();
+//			llama3_monkey();
 
 //			llama3_monkey_chatglm();
+			
+//			llama3_monkey_sft();
+			
+			llama3_monkey_sft_test();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

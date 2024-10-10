@@ -5,6 +5,7 @@ import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAModules;
@@ -464,7 +465,13 @@ public class CrossEntropyKernel extends BaseKernel {
 	}
 	
 	public void backwardIDX2(Tensor prods,Tensor label,Tensor output,int igonre) {
-
+		
+		int N = prods.number;
+		
+		if(igonre > -1){
+			N = N - MatrixUtils.countOccurrences(label.data, igonre);
+		}
+		
 		/**
 		 * float* out, const float* inp, const float* label, int igone, int N, int C
 		 */
@@ -473,13 +480,13 @@ public class CrossEntropyKernel extends BaseKernel {
                 Pointer.to(prods.getGpuData()),
                 Pointer.to(label.getGpuData()),
                 Pointer.to(new int[] {igonre}),
-                Pointer.to(new int[] {prods.number}),
+                Pointer.to(new int[] {N}),
                 Pointer.to(new int[] {prods.width})
             );
 		
 		this.N = prods.number;
 
-		int grid_size = N;
+		int grid_size = this.N;
 		
 		cuLaunchKernel(cross_softmax_back_function,
 				grid_size,  1, 1,      // Grid dimension
@@ -610,24 +617,26 @@ public class CrossEntropyKernel extends BaseKernel {
 	}
 	
 	public void backwardIDX(Tensor input,Tensor currentLabel,Tensor diff,int igonre) {
-
-		if(backKernelParameters == null || this.BN != input.number) {
-			
-			/**
-			 * float *input, float *currentLabel, float *diff, int n, int batch
-			 */
-			backKernelParameters = Pointer.to(
-	                Pointer.to(input.getGpuData()),
-	                Pointer.to(currentLabel.getGpuData()),
-	                Pointer.to(diff.getGpuData()),
-	                Pointer.to(new int[] {input.number}),
-	                Pointer.to(new int[] {input.width}),
-	                Pointer.to(new int[] {igonre})
-	            );
-			
-			 this.BN = input.number;
-			
+		
+		int N = input.number;
+		
+		if(igonre > -1){
+			N = N - MatrixUtils.countOccurrences(currentLabel.data, igonre);
 		}
+		System.out.println(N);
+		/**
+		 * float *input, float *currentLabel, float *diff, int n, int batch
+		 */
+		backKernelParameters = Pointer.to(
+                Pointer.to(input.getGpuData()),
+                Pointer.to(currentLabel.getGpuData()),
+                Pointer.to(diff.getGpuData()),
+                Pointer.to(new int[] {N}),
+                Pointer.to(new int[] {input.width}),
+                Pointer.to(new int[] {igonre})
+            );
+		
+		 this.BN = input.number;
 		
 		cuLaunchKernel(loss_igonre_backward_idx_function,
 				input.number,  1, 1,      // Grid dimension

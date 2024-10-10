@@ -41,6 +41,7 @@ public enum LayerType {
 	mutli_head_attention("mutli_head_attention"),
 	poswise_feed_forward("poswise_feed_forward"),
 	mlp("mlp"),
+	clip_mlp("clip_mlp"),
 	feed_forward("feed_forward"),
 	transformer_decoder("transformer_decoder"),
 	transformer_block("transformer_block"),
@@ -48,6 +49,7 @@ public enum LayerType {
 	embedding("embedding"),
 	rope("rope"),
 	dropout("dropout"),
+	clip_vision_embedding("clip_vision_embedding"),
 	time_embedding("time_embedding");
 	
 	private String key;

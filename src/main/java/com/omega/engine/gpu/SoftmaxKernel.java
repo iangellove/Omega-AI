@@ -3,11 +3,8 @@ package com.omega.engine.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.lib.LibPaths;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
-import com.omega.example.transformer.utils.ENTokenizer;
 
 import jcuda.Pointer;
 import jcuda.driver.CUfunction;

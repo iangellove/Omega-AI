@@ -117,6 +117,26 @@ __global__ void add_axis_kernel(int N, float *X, float *Y, float *R,int axis)
 }
 
 extern "C"
+__global__ void add_axis_kernel2(int N, float *X, float *Y, float *R,int axis)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N){
+    	int yi = i % axis;
+    	R[i] = X[i] + Y[yi];
+    } 
+}
+
+extern "C"
+__global__ void expand_kernel(int N, float *X, float *Y, int axis)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N){
+    	int xi = i % axis;
+    	Y[i] = X[xi];
+    } 
+}
+
+extern "C"
 __global__ void sum_kernel(int N, float *X, float *Y)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;

@@ -1,17 +1,18 @@
 package com.omega.example.transformer.dataset;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
-import com.omega.engine.nn.network.utils.ModelUtils;
-import com.omega.example.transformer.utils.bpe.BinDataType;
 import com.omega.example.transformer.utils.tokenizers.Tokenizer;
 
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.text.csv.CsvData;
+import cn.hutool.core.text.csv.CsvReader;
+import cn.hutool.core.text.csv.CsvRow;
+import cn.hutool.core.text.csv.CsvUtil;
 import jcuda.runtime.JCuda;
 
 public class SFTDataset {
@@ -36,17 +37,13 @@ public class SFTDataset {
 	
 	private int min_len = 30;
 	
-	private FileReader fileReader;
+//	private CsvReader reader;
 	
-	private BufferedReader	bufferedReader;
-	
-	private RandomAccessFile file;
-	
-	private int index = 0;
-	
-	private int[] cache = null;
+	private List<CsvRow> rows;
 	
 	private CompletableFuture<Boolean> cf;
+	
+	private int current = 1;
 	
 	public SFTDataset(String dataPath,int max_len,int batchSize,Tokenizer tokenizer) {
 		this.dataPath = dataPath;
@@ -61,28 +58,12 @@ public class SFTDataset {
 		System.out.println("count_it:"+this.count_it);
 	}
 	
-	public void close() {
-		try {
-			if(bufferedReader!=null) {
-				bufferedReader.close();
-			}
-			if(fileReader!=null) {
-				fileReader.close();
-			}
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-	}
-	
 	public int loadCount() {
 		try {
-			fileReader = new FileReader(this.dataPath);
-			bufferedReader = new BufferedReader(fileReader);
-			while (bufferedReader.readLine() != null) {
-				number++;
-			}
-			bufferedReader.reset();
+			CsvReader reader = CsvUtil.getReader();
+			CsvData data = reader.read(FileUtil.file(this.dataPath));
+			rows = data.getRows();
+			number = data.getRowCount();
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -91,52 +72,23 @@ public class SFTDataset {
 	}
 	
 	public void initReader() {
-		try {
-			fileReader = new FileReader(this.dataPath);
-			bufferedReader = new BufferedReader(fileReader);
-			System.out.println("dataset is ready.");
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-	}
-	
-	public int[] readIdx() throws IOException {
-		String line = bufferedReader.readLine();
-		if(line == null) {
-			close();
-			initReader();
-			line = bufferedReader.readLine();
-		}
-		String[] ids = line.split(" ");
-		if(ids.length >= min_len) {
-			int[] tokens = null;
-			if(ids.length > max_len) {
-				tokens = new int[max_len];	
-			}else {
-				tokens = new int[ids.length];	
-			}
-			for(int i = 0;i<tokens.length;i++) {
-				tokens[i] = Integer.parseInt(ids[i]);
-			}
-			return tokens;
-    	}else {
-    		return readIdx();
-    	}
+		current = 1;
 	}
 	
 	public void loadData(Tensor input,Tensor label, float[] tmpInput, float[] tmpLabel,int it) {
 		try {
 //			System.out.println(it);
-
 			if(cf != null) {
 				boolean success = cf.get();
-//				System.err.println(it+"/"+count_it+":"+success);
-//				System.out.println(JsonUtils.toJson(input.data));
-				input.hostToDevice(tmpInput);
-				label.hostToDevice(tmpLabel);
-				JCuda.cudaDeviceSynchronize();
-//				System.out.println(JsonUtils.toJson(tmpLabel));
+				if(success) {
+//					System.err.println(it+"/"+count_it+":"+success);
+//					System.out.println(JsonUtils.toJson(input.data));
+					input.hostToDevice(tmpInput);
+					label.hostToDevice(tmpLabel);
+					System.arraycopy(tmpLabel, 0, label.data, 0, tmpLabel.length);
+					JCuda.cudaDeviceSynchronize();
+//					System.out.println(JsonUtils.toJson(tmpLabel));
+				}
 				cf = loadAsyncData(tmpInput, tmpLabel);
 			}else {
 				cf = loadAsyncData(tmpInput, tmpLabel);
@@ -145,16 +97,56 @@ public class SFTDataset {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
-
 	}
 
+	public int[] readIdx() throws IOException {
+		CsvRow csvRow = rows.get(current);
+		current++;
+		if(current >= number - 1) {
+			current = 1;
+		}
+
+		String q = csvRow.get(1);
+		String a = csvRow.get(2);
+		
+		String qaStr = tokenizer.sos_str() + "user\n" + q + tokenizer.eos_str() + "\n" + tokenizer.sos_str() + "assistant\n" + a + tokenizer.eos_str();
+		
+		int[] ids = tokenizer.encodeInt(qaStr);
+		if(ids.length >= min_len) {
+			return ids;
+    	}else {
+    		return readIdx();
+    	}
+	}
+	
+	public String[] readQA() throws IOException {
+		
+		CsvRow csvRow = rows.get(current);
+		current++;
+		if(current >= number - 1) {
+			current = 1;
+		}
+
+		String q = csvRow.get(1);
+		String a = csvRow.get(2);
+		String[] qa = new String[] {q, a};
+		return qa;
+	}
+	
 	public CompletableFuture<Boolean> loadAsyncData(float[] input,float[] label) {
 		CompletableFuture<Boolean> cf = CompletableFuture.supplyAsync(()-> {
 			try {
 				for(int b = 0;b<batchSize;b++) {
-					int[] onceToken = readIdx();
+
+					String[] qa = readQA();
+					String q = qa[0];
+					String a = qa[1];
+					String qStr = tokenizer.sos_str() + "user\n" + q + tokenizer.eos_str() + "\n";
+					String qaStr = tokenizer.sos_str() + "user\n" + q + tokenizer.eos_str() + "\n" + tokenizer.sos_str() + "assistant\n" + a + tokenizer.eos_str();
+					int qLen = tokenizer.encodeInt(qStr).length;
+					int[] onceToken = tokenizer.encodeInt(qaStr);
 					for(int t = 0;t<max_len;t++) {
-						formatToIdx(b, t, onceToken, input, label);
+						formatToIdxPad(b, t, onceToken, qLen, input, label);
 					}
 				}
 			} catch (Exception e) {
@@ -176,13 +168,11 @@ public class SFTDataset {
 	}
 
 	public Tensor loadByTxtToIdx(String txt) {
-		
 		int[] idx = tokenizer.encodeInt(txt);
 		testInput = Tensor.createTensor(testInput, txt.length(), 1, 1, 1, true);
 		for(int t = 0;t<txt.length();t++) {
 			testInput.data[t] = idx[t];
 		}
-		
 		testInput.hostToDevice();
 		return testInput;
 	}
@@ -193,19 +183,16 @@ public class SFTDataset {
 		for(int t = 0;t<idxs.length;t++) {
 			testInput.data[t] = idxs[t];
 		}
-		
 		testInput.hostToDevice();
 		return testInput;
 	}
 	
 	public Tensor loadByTxtToIdx(String txt,int maxLen) {
-		
 		int[] idx = tokenizer.encodeInt(txt);
 		testInput = Tensor.createTensor(testInput, maxLen, 1, 1, 1, true);
 		for(int t = 0;t<idx.length;t++) {
 			testInput.data[t] = idx[t];
 		}
-		
 		testInput.hostToDevice();
 		return testInput;
 	}
@@ -224,68 +211,46 @@ public class SFTDataset {
 		return testInput;
 	}
 
-	public void formatToIdx(int b,int t,int[] onceToken,Tensor input,Tensor label) {
-		if(t == 0) {
-			input.data[b * max_len + t] = tokenizer.sos();
-			label.data[b * max_len + t] = onceToken[t];
-		}else if(t < onceToken.length) {
-			int curr = onceToken[t - 1];
-			int next = onceToken[t];
-			input.data[b * max_len + t] = curr;
-			label.data[b * max_len + t] = next;
-//			label.data[(b * max_len + t) * vocab_size + next] = 1.0f;
-		}else if(t == onceToken.length){
-			int curr = onceToken[t - 1];
-			input.data[b * max_len + t] = curr;
-			label.data[b * max_len + t] = tokenizer.eos();
-//			label.data[(b * max_len + t) * vocab_size + tokenizer.eos] = 1.0f;
-		}else {
-			input.data[b * max_len + t] = tokenizer.pad();
-			label.data[b * max_len + t] = tokenizer.pad();
-//			label.data[(b * max_len + t) * vocab_size + tokenizer.pad] = 1.0f;
-		}
-	}
-	
-	public void formatToIdx(int b,int t,int[] onceToken,float[] input,float[] label) {
-		if(t == 0) {
-			input[b * max_len + t] = tokenizer.sos();
-			label[b * max_len + t] = onceToken[t];
-		}else if(t < onceToken.length) {
-			int curr = onceToken[t - 1];
-			int next = onceToken[t];
+	public void formatToIdxPad(int b,int t,int[] onceToken,float[] input,float[] label) {
+		if(t < onceToken.length - 2) {
+			int curr = onceToken[t];
+			int next = onceToken[t+1];
 			input[b * max_len + t] = curr;
 			label[b * max_len + t] = next;
-//			label.data[(b * max_len + t) * vocab_size + next] = 1.0f;
-		}else if(t == onceToken.length){
-			int curr = onceToken[t - 1];
+		}else if(t == onceToken.length - 2){
+			int curr = onceToken[t];
+			int next = onceToken[t+1];
 			input[b * max_len + t] = curr;
-			label[b * max_len + t] = tokenizer.eos();
-//			label.data[(b * max_len + t) * vocab_size + tokenizer.eos] = 1.0f;
+			label[b * max_len + t] = next;
 		}else {
 			input[b * max_len + t] = tokenizer.pad();
 			label[b * max_len + t] = tokenizer.pad();
-//			label.data[(b * max_len + t) * vocab_size + tokenizer.pad] = 1.0f;
 		}
 	}
 	
-	public void formatNotHeadToIdx(int b,int t,int[] onceToken,Tensor input,Tensor label) {
-		if(t < onceToken.length) {
+	public void formatToIdxPad(int b,int t,int[] onceToken,int qLen,float[] input,float[] label) {
+		if(t < onceToken.length - 2) {
 			int curr = onceToken[t];
-			int next = onceToken[t + 1];
-			input.data[b * max_len + t] = curr;
-			label.data[b * max_len + t] = next;
-		}
-	}
-	
-	public void formatNotHeadToIdx(int b,int t,int[] onceToken,float[] input,float[] label) {
-		if(t < onceToken.length) {
-			int curr = onceToken[t];
-			int next = onceToken[t + 1];
+			int next = onceToken[t+1];
+			if(t < qLen - 1) {
+				next = tokenizer.pad();
+			}
 			input[b * max_len + t] = curr;
 			label[b * max_len + t] = next;
+		}else if(t == onceToken.length - 2){
+			int curr = onceToken[t];
+			int next = onceToken[t+1];
+			if(t < qLen - 1) {
+				next = tokenizer.pad();
+			}
+			input[b * max_len + t] = curr;
+			label[b * max_len + t] = next;
+		}else {
+			input[b * max_len + t] = tokenizer.pad();
+			label[b * max_len + t] = tokenizer.pad();
 		}
 	}
-	
+
 	public static Tensor getPositions(int b,int time) {
 		float[] data = new float[b * time];
 		for(int n = 0;n<b;n++) {

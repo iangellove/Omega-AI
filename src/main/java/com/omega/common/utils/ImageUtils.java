@@ -386,6 +386,52 @@ public class ImageUtils {
 		return color;
 	}
 	
+	public OMImage loadOMImgAndResize(File file,int tw,int th,float[] mean,float[] std) throws Exception {
+		
+		BufferedImage bi = null;
+		try {
+			bi = ImageIO.read(file);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		int width = bi.getWidth();
+		int height = bi.getHeight();
+		int minx = bi.getMinX();
+		int miny = bi.getMinY();
+		
+		if(width != tw || height != th) {
+			bi = resizeImage(bi, tw, th);
+			width = bi.getWidth();
+			height = bi.getHeight();
+			minx = bi.getMinX();
+			miny = bi.getMinY();
+		}
+
+		int size = height * width * 3;
+		float[] color = new float[size];
+		
+		float n = 255.0f;
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		int pixel = 0;
+		
+		for (int j = miny; j < height; j++) {
+			for (int i = minx; i < width; i++) {
+				pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+				r = (pixel & 0xff0000) >> 16;
+				g = (pixel & 0xff00) >> 8;
+				b = (pixel & 0xff);
+				
+				color[0 * width * height + j * width + i] = (r * 1.0f / n - mean[0]) / std[0];
+				color[1 * width * height + j * width + i] = (g * 1.0f / n - mean[1]) / std[1];
+				color[2 * width * height + j * width + i] = (b * 1.0f / n - mean[2]) / std[2];
+			}
+		}
+		
+		return new OMImage(3, height, width, color);
+	}
+	
 	public OMImage loadOMImage(File file) throws Exception {
 		
 		BufferedImage bi = null;
