@@ -78,11 +78,11 @@ public static void main(String[] args) {
 ### GAN对抗生成神经网络系列
 #### [基于GAN生成对抗神经网络实现生成手写体数字图片](#gan-mnist-demo-生成手写数字)
 
-![输入图片说明](images/gan-3000.gif)
+![gan-3000](images/gan-3000.gif)
 
 #### [基于DCGAN生成对抗神经网络实现生成动漫头像图片](#dcgan-anime-demo-生成动漫头像)
 
-![输入图片说明](images/dcgan-20.gif)
+![dcgan-20](images/dcgan-20.gif)
 
 ### 时序模型系列
 #### [基于RNN循环神经网络实现小说生成器](#rnn-中文小说生成器)
@@ -209,12 +209,12 @@ sft_train_loss = 1.6f //微调训练最终训练集损失在1.6左右
 ### Diffusion model 扩散模型系列
 #### [基于diffusion扩散模型实现生成动漫头像图片](#diffusion-动漫头像生成)
 #### 训练过程演示图
-![输入图片说明](images/diffusion_anime-min.gif)
+![diffusion_anime-min](images/diffusion_anime-min.gif)
 #### 50次循环训练后反向去噪生成过程图
-![输入图片说明](images/diffusion_0_anime.gif)
-![输入图片说明](images/diffusion_11(2)_anime.gif)
-![输入图片说明](images/diffusion_11_anime.gif)
-![输入图片说明](images/diffusion_5_anime.gif)
+![diffusion_0_anime](images/diffusion_0_anime.gif)
+![diffusion_11(2)_anime](images/diffusion_11(2)_anime.gif)
+![diffusion_11_anime](images/diffusion_11_anime.gif)
+![diffusion_5_anime](images/diffusion_5_anime.gif)
 
 ##  功能介绍
 #### 支持的网络层类型：
