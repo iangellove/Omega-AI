@@ -185,6 +185,27 @@ train_loss = 2.0f //最终训练集损失在2.0左右
 ###### 推理效果图
 ![Llama2医疗问答系统](images/llama2-medical.png)
 
+#### [基于llama3.1实现对话机器人](#llama3.1-对话机器人)
+##### tokenizer（BPE）
+###### 模型参数
+```java
+// llama3.1 26M参数量
+maxLen = 512//最大token数
+embedDim = 512//embeding编码维度
+headNum = 16  //多头注意力头数
+nKVHeadNum = 8 //kv注意力头数
+decoderNum = 8  //解码器层数
+maxLearnRate = 1e-4f  //最大学习率
+minLearnRate = 1e-5f  //最小学习率
+epoch = 5 //循环训练次数
+dropoutRate = 0.0f
+pre_train_loss = 2.3f //预训练最终训练集损失在2.3左右
+sft_train_loss = 1.6f //微调训练最终训练集损失在1.6左右
+````
+###### 推理效果图
+![基于llama3.1实现对话机器人](images/QQ%E6%88%AA%E5%9B%BE20241010175301.png)
+
+
 ### Diffusion model 扩散模型系列
 #### [基于diffusion扩散模型实现生成动漫头像图片](#diffusion-动漫头像生成)
 #### 训练过程演示图
@@ -1327,6 +1348,41 @@ public static void gan_anime() {
 			optimizer.trainLlama2_chinese(trainData);
 			String model_path = "H:\\model\\llama2-92m-chinese.model";
 			ModelUtils.saveModel(network, model_path);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+```
+
+#### llama3.1-对话机器人
+```java
+        public static void llama3_monkey() {
+		try {
+			boolean bias = false;
+			boolean dropout = false;
+			boolean flashAttention = false;
+			int batchSize = 2;
+			int max_len = 512;
+			int embedDim = 512;
+			int head_num = 16;
+			int nKVHeadNum = 8;
+			int decoderNum = 8;
+			
+			String trainPath = "H:\\model\\pretrain_data_6400.bin";
+			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
+			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
+			
+			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
+			CNBpeTokenizer trainData = new CNBpeTokenizer(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
+			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
+			network.learnRate = 1e-4f;
+			network.CLIP_GRAD_NORM = true;
+			initWeight(network, decoderNum);
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
+			optimizer.trainLlama3_chinese(trainData, 8, true);
+			String save_model_path = "H:\\model\\llama3-26m-chinese.model";
+			ModelUtils.saveModel(network, save_model_path);
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
