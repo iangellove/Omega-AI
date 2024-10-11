@@ -183,7 +183,7 @@ public class BPETokenizer3 extends Tokenizer{
 		String unicodeToken = unicodeToken(encode(txt, "utf-8"), unicodeMap);
 //		System.out.println("index2:"+i);
 //		System.out.println(unicodeToken);
-		
+//		
 		String[] bbpeTokens = bbpe(unicodeToken, merges);
 //		System.out.println("index3:"+i);
 //		System.out.println(JsonUtils.toJson(bbpeTokens));
@@ -213,6 +213,7 @@ public class BPETokenizer3 extends Tokenizer{
 	
 	public String[] bbpe(String unicodeToken, Map<String[],Integer> merges) {
 		String[] chars = unicodeToken.split("");
+		chars = mergeSP(chars);
 		for(String[] pair:merges.keySet()) {
 			int i = 0;
 			while (i < chars.length - 1) {
@@ -225,6 +226,45 @@ public class BPETokenizer3 extends Tokenizer{
 			}
 		}
 		return chars;
+	}
+	
+	public String[] mergeSP(String[] chars) {
+		List<String> mergeSp = new ArrayList<String>();
+		for(int i = 0;i<chars.length;i++) {
+			String tmp = "";
+			if(i + this.sos_str().length() <= chars.length) {
+				for(int j = 0;j<this.sos_str().length();j++) {
+					tmp += chars[i + j];
+				}
+			}
+			
+			if(tmp.equals(this.sos_str())) {
+				mergeSp.add(this.sos_str());
+				i += this.sos_str().length() - 1;
+			}else {
+				mergeSp.add(chars[i]);
+			}
+		}
+		String[] tmp1 = new String[mergeSp.size()];
+		tmp1 = mergeSp.toArray(tmp1);
+		mergeSp.clear();
+		for(int i = 0;i<tmp1.length;i++) {
+			String tmp = "";
+			if(i + this.eos_str().length() <= tmp1.length) {
+				for(int j = 0;j<this.eos_str().length();j++) {
+					tmp += tmp1[i + j];
+				}
+			}
+			if(tmp.equals(this.eos_str())) {
+				mergeSp.add(this.eos_str());
+				i += this.eos_str().length() - 1;
+			}else {
+				mergeSp.add(tmp1[i]);
+			}
+		}
+		String[] tmp2 = new String[mergeSp.size()];
+		tmp2 = mergeSp.toArray(tmp2);
+		return tmp2;
 	}
 	
 	public static String[] mergeToken(String[] chars,int index,String pair) {
@@ -327,7 +367,7 @@ public class BPETokenizer3 extends Tokenizer{
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
 			
-			String txt = "我们生产的食品消泡剂，具有可以快速消除泡沫的特点。";
+			String txt = "<s>user你</s>";
 			
 			BPETokenizer3 bpe = new BPETokenizer3(vocabPath, mergesPath);
 			
@@ -367,6 +407,24 @@ public class BPETokenizer3 extends Tokenizer{
 	public int voc_size() {
 		// TODO Auto-generated method stub
 		return voc_size;
+	}
+
+	@Override
+	public String sos_str() {
+		// TODO Auto-generated method stub
+		return decoder.get(sos);
+	}
+
+	@Override
+	public String eos_str() {
+		// TODO Auto-generated method stub
+		return decoder.get(eos);
+	}
+
+	@Override
+	public String pad_str() {
+		// TODO Auto-generated method stub
+		return decoder.get(pad);
 	}
 	
 }
