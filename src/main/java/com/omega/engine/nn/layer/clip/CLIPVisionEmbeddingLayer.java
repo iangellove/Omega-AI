@@ -64,7 +64,7 @@ public class CLIPVisionEmbeddingLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = network.number;
 		if(patchEmbedsT == null || patchEmbedsT.number != this.number) {
-			int pChannel = this.patchEmbedding.oHeight * this.patchEmbedding.oWidth;
+			int pChannel = this.getPatchEmbedding().oHeight * this.getPatchEmbedding().oWidth;
 			patchEmbedsT = Tensor.createGPUTensor(patchEmbedsT, this.number, pChannel, 1, embedDim, true);
 			embeddings = Tensor.createGPUTensor(embeddings, this.number, pChannel + 1, 1, embedDim, true);
 			classEmbeddingEx = Tensor.createGPUTensor(classEmbeddingEx, this.number, 1, 1, embedDim, true);
@@ -76,7 +76,7 @@ public class CLIPVisionEmbeddingLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = input.number;
 		if(patchEmbedsT == null || patchEmbedsT.number != this.number) {
-			int pChannel = this.patchEmbedding.oHeight * this.patchEmbedding.oWidth;
+			int pChannel = this.getPatchEmbedding().oHeight * this.getPatchEmbedding().oWidth;
 			patchEmbedsT = Tensor.createGPUTensor(patchEmbedsT, this.number, pChannel, 1, embedDim, true);
 			embeddings = Tensor.createGPUTensor(embeddings, this.number, pChannel + 1, 1, embedDim, true);
 			classEmbeddingEx = Tensor.createGPUTensor(classEmbeddingEx, this.number, 1, 1, embedDim, true);
@@ -85,17 +85,17 @@ public class CLIPVisionEmbeddingLayer extends Layer{
 	
 	public void initLayers(int inChannel,int height,int width,int patchSize,boolean bias) {
 		
-		this.patchEmbedding = new ConvolutionLayer(inChannel, embedDim, height, width, patchSize, patchSize, 0, patchSize, bias, network);
-		float[] wdata = RandomUtils.order(patchEmbedding.weight.dataLength, 0.001f, 0.001f);
-		patchEmbedding.weight = new Tensor(embedDim, inChannel, patchSize, patchSize, wdata, true);
+		this.patchEmbedding = new ConvolutionLayer(inChannel, embedDim, height, width, patchSize, patchSize, 0, patchSize, false, network);
+//		float[] wdata = RandomUtils.order(patchEmbedding.weight.dataLength, 0.001f, 0.001f);
+//		patchEmbedding.weight = new Tensor(embedDim, inChannel, patchSize, patchSize, wdata, true);
 		
 		this.positionEmbedding = new EmbeddingIDLayer(numPositions, embedDim, false, network);
-		float[] ewdata = RandomUtils.order(positionEmbedding.weight.dataLength, 0.01f, 0.01f);
-		positionEmbedding.weight = new Tensor(1, 1, numPositions, embedDim, ewdata, true);
+//		float[] ewdata = RandomUtils.order(positionEmbedding.weight.dataLength, 0.01f, 0.01f);
+//		positionEmbedding.weight = new Tensor(1, 1, numPositions, embedDim, ewdata, true);
 		
 		if(classEmbedding == null) {
-			float[] data = RandomUtils.order(embedDim, 0.1f, 0.1f);
-			classEmbedding = new Tensor(1, 1, 1, embedDim, data, true);
+//			float[] data = RandomUtils.order(embedDim, 0.1f, 0.1f);
+			classEmbedding = new Tensor(1, 1, 1, embedDim, true);
 		}
 		
 		if(positionIDS == null) {
@@ -124,15 +124,22 @@ public class CLIPVisionEmbeddingLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+		getPatchEmbedding().weight.showShape();
+		getPatchEmbedding().weight.showDMByNumber(0);
+		getPatchEmbedding().weight.showDMByNumber(767);
 		
-		patchEmbedding.forward(this.input);
-
-		TensorOP.permute(patchEmbedding.getOutput().view(this.number, patchEmbedding.getOutput().channel, 1, patchEmbedding.getOutput().height * patchEmbedding.getOutput().width), patchEmbedsT, new int[] {0, 3, 2, 1});
+		getPatchEmbedding().forward(this.input);
+		
+		getPatchEmbedding().getOutput().showDM();
+		
+		TensorOP.permute(getPatchEmbedding().getOutput().view(this.number, getPatchEmbedding().getOutput().channel, 1, getPatchEmbedding().getOutput().height * getPatchEmbedding().getOutput().width), patchEmbedsT, new int[] {0, 3, 2, 1});
+		
+//		patchEmbedsT.showDM();
 		
 		/**
 		 * embeddings = torch.cat([class_embeds, patch_embeds], dim=1)
 		 */
-		TensorOP.expand(classEmbedding, classEmbeddingEx, classEmbedding.getDataLength());
+		TensorOP.expand(getClassEmbedding(), classEmbeddingEx, getClassEmbedding().getDataLength());
 //		classEmbeddingEx.showDM();
 		int offset = 0;
 		int part_input_size = classEmbeddingEx.getOnceSize() / 1;
@@ -150,11 +157,11 @@ public class CLIPVisionEmbeddingLayer extends Layer{
 		/**
 		 * embeddings = embeddings + self.position_embedding(self.position_ids)
 		 */
-		positionEmbedding.forward(positionIDS);
+		getPositionEmbedding().forward(positionIDS);
 		
 //		positionEmbedding.getOutput().showDM();
 		
-		TensorOP.addAxis(this.embeddings, positionEmbedding.getOutput(), this.embeddings, positionEmbedding.getOutput().getOnceSize());
+		TensorOP.addAxis(this.embeddings, getPositionEmbedding().getOutput(), this.embeddings, getPositionEmbedding().getOutput().getOnceSize());
 		
 		this.output = this.embeddings;
 		
@@ -305,6 +312,18 @@ public class CLIPVisionEmbeddingLayer extends Layer{
 	public void accGrad(float scale) {
 		// TODO Auto-generated method stub
 		
+	}
+
+	public Tensor getClassEmbedding() {
+		return classEmbedding;
+	}
+
+	public ConvolutionLayer getPatchEmbedding() {
+		return patchEmbedding;
+	}
+
+	public EmbeddingIDLayer getPositionEmbedding() {
+		return positionEmbedding;
 	}
 
 }

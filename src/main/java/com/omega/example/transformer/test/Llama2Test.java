@@ -13,11 +13,16 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.gpu.RoPEKernel;
+import com.omega.engine.nn.layer.llama.LlamaCausalSelfAttention2Layer;
+import com.omega.engine.nn.layer.llama.LlamaMLPLayer;
+import com.omega.engine.nn.layer.llama.LlamaTransformerBlock;
 import com.omega.engine.nn.network.Llama2;
+import com.omega.engine.nn.network.Llama3;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.EDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
+import com.omega.example.transformer.dataset.PreTrainDataset;
 import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 import com.omega.example.transformer.utils.CNChatTokenizer;
 import com.omega.example.transformer.utils.CNTokenizer;
@@ -27,6 +32,7 @@ import com.omega.example.transformer.utils.CNWikiTokenizer3;
 import com.omega.example.transformer.utils.CNWikiTokenizer4;
 import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.transformer.utils.SentencePieceTokenizer;
+import com.omega.example.transformer.utils.bpe.BinDataType;
 
 public class Llama2Test {
 	
@@ -117,9 +123,9 @@ public class Llama2Test {
 			
 			network.learnRate = 0.0002f;
 			
-			String model_path = "H:\\model\\llama2-110m-qa.model";
-			
-			ModelUtils.loadModel(network, model_path);
+//			String model_path = "H:\\model\\llama2-110m-qa.model";
+//			
+//			ModelUtils.loadModel(network, model_path);
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 3, 0.0001f, LearnRateUpdate.SMART_HALF, false);
 			optimizer.lr_step = new int[] {1, 2};
@@ -595,7 +601,7 @@ public class Llama2Test {
 			
 			boolean flashAttention = false;
 			
-			int batchSize = 8;
+			int batchSize = 2;
 			
 			int max_len = 512;
 			
@@ -605,29 +611,24 @@ public class Llama2Test {
 			
 			int decoderNum = 8;
 			
-			String trainPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.txt";
+			String trainPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.bin";
 			
 			String tokenizer_path = "H:\\transformer_dataset\\tokenizer.model";
 			
 			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path, 64793);
 			
-			CNWikiTokenizer4 trainData = new CNWikiTokenizer4(trainPath, max_len, batchSize, 6250865, tokenizer);
+			PreTrainDataset trainData = new PreTrainDataset(trainPath, max_len, batchSize, tokenizer, BinDataType.unint32);
 			
 			Llama2 network = new Llama2(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
 			
-			network.learnRate = 3e-4f;
+			network.learnRate = 2e-4f;
 			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.COSINE, false);
-			optimizer.lr_step = new int[] {1, 2};
-			optimizer.lr = 3e-4f;
-			optimizer.min_lr = 1e-5f;
-			optimizer.setWarmUp(true);
-			optimizer.warmUpTime = 1000;
-			optimizer.lrDecayIters = (int) (trainData.count_it * 0.96);
-			optimizer.trainLlama2_chinese(trainData);
-
-			String model_path = "H:\\model\\llama2-92m-chinese.model";
-	    
+			initWeight(network, decoderNum);
+			
+			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 1, 0.0001f, LearnRateUpdate.CONSTANT, false);
+			optimizer.trainLlama2_chinese(trainData, 8, true);
+			
+			String model_path = "H:\\model\\llama2-92m-chinese2.model";
 			ModelUtils.saveModel(network, model_path);
 			
 			network.RUN_MODEL = RunModel.TEST;
@@ -1331,6 +1332,31 @@ public class Llama2Test {
 		return input;
 	}
 	
+	public static void initParams(Tensor p,float mean,float std) {
+		p.setData(RandomUtils.normal_(p.dataLength, mean, std));
+	}
+	
+	public static void initWeight(Llama2 network,int n_layers) {
+
+		initParams(network.getDecoder().getSrc_emb().weight, 0.0f, 0.02f);
+		
+		for(int i = 0;i<n_layers;i++) {
+			LlamaTransformerBlock block = network.getDecoder().getDecoderLayers().get(i);
+			LlamaCausalSelfAttention2Layer attn = (LlamaCausalSelfAttention2Layer) block.getAttn();
+			initParams(attn.getqLinerLayer().weight, 0.0f, 0.02f);
+			initParams(attn.getkLinerLayer().weight, 0.0f, 0.02f);
+			initParams(attn.getvLinerLayer().weight, 0.0f, 0.02f);
+			initParams(attn.getoLinerLayer().weight, 0.0f, (float)(0.02f / Math.sqrt(2 * n_layers)));
+
+			LlamaMLPLayer mlp = block.getMlp();
+			initParams(mlp.getLinear1().weight, 0.0f, 0.02f);
+			initParams(mlp.getLinear2().weight, 0.0f, 0.02f);
+			initParams(mlp.getLinear3().weight, 0.0f, (float)(0.02f / Math.sqrt(2 * n_layers)));
+		}
+
+		initParams(network.getFullyLayer().weight, 0.0f, 0.02f);
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -1355,11 +1381,11 @@ public class Llama2Test {
 			
 //			test_llama2();
 			
-//			llama2_chinese_chatglm_vocab_predict();
+			llama2_chinese_chatglm_vocab();
 			
 //			llama2_chinese_smallvocab_predict();
 			
-			llama2_chinese_chatglm_vocab_predict();
+//			llama2_chinese_chatglm_vocab_predict();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

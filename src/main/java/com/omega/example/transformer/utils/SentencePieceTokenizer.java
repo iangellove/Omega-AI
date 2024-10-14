@@ -621,15 +621,15 @@ public class SentencePieceTokenizer extends Tokenizer{
 //			
 //			t.mergeData(paths, outputSFTPath);
 			
-			String[] paths = new String[] {
-				"H:\\transformer_dataset\\medical\\ChatMed_idx_chatglm_vocab.txt",
-				"H:\\transformer_dataset\\medical\\DISC-Med-SFT_idx_chatglm_vocab.txt",
-				"H:\\transformer_dataset\\medical\\HuatuoGPT_idx_chatglm_vocab.txt"
-			};
-			
-			String outputSFTPath = "H:\\transformer_dataset\\medical\\medical_sft_data_chatglm_vocab.txt";
-
-			t.mergeData(paths, outputSFTPath);
+//			String[] paths = new String[] {
+//				"H:\\transformer_dataset\\medical\\ChatMed_idx_chatglm_vocab.txt",
+//				"H:\\transformer_dataset\\medical\\DISC-Med-SFT_idx_chatglm_vocab.txt",
+//				"H:\\transformer_dataset\\medical\\HuatuoGPT_idx_chatglm_vocab.txt"
+//			};
+//			
+//			String outputSFTPath = "H:\\transformer_dataset\\medical\\medical_sft_data_chatglm_vocab.txt";
+//
+//			t.mergeData(paths, outputSFTPath);
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

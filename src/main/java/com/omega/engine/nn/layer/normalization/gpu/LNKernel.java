@@ -64,7 +64,6 @@ public class LNKernel extends BaseKernel{
 	 * 反向传播方法
 	 */
 	private CUfunction backward_aten_function;
-	private CUfunction backward_aten_function2;
 	private CUfunction backward_aten_gamma_function2;
 	
 	private CUfunction backward_ig_function;
@@ -157,7 +156,6 @@ public class LNKernel extends BaseKernel{
 //			this.d_var = CUDAMemoryManager.getDevice(B);
 //			this.aten_mean = Tensor.createTensor(this.aten_mean, B, 1, 1, 1, true);
 //			this.aten_var = Tensor.createTensor(this.aten_var, B, 1, 1, 1, true);
-//			System.out.println(B);
 			this.aten_mean = CUDAMemoryManager.getPointer(B);
 			this.aten_var = CUDAMemoryManager.getPointer(B);
 			this.scratch = CUDAMemoryManager.getDevice(W * 2 + 1);
@@ -1189,9 +1187,9 @@ public class LNKernel extends BaseKernel{
 //        	System.out.println("========================");
 //    	}
 //    	
-    	float[] data2 = RandomUtils.order(128 * W, 0.1f, 0.1f);
-
-    	Tensor input2 = new Tensor(128, 1, 1, W, data2, true);
+//    	float[] data2 = RandomUtils.order(128 * W, 0.1f, 0.1f);
+//
+//    	Tensor input2 = new Tensor(128, 1, 1, W, data2, true);
 //    	
 //    	Tensor output3 = new Tensor(1, T, 1, W, true);
 //    	

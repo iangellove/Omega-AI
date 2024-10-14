@@ -50,24 +50,25 @@ public class LlamaMLPLayer extends Layer{
 		this.oWidth = embedDim;
 		this.nChannel = 4 * this.embedDim;
 		this.nChannel = (int)(2 * this.nChannel / 3);
-		this.nChannel = multiple_of * ((this.nChannel + multiple_of - 1) / multiple_of);
+		this.nChannel = multiple_of * ((this.nChannel + this.multiple_of - 1) / this.multiple_of);
 		this.initLayers();
 	}
 	
-	public LlamaMLPLayer(int embedDim,int nChannel,boolean bias,Network network) {
+	public LlamaMLPLayer(int embedDim,int nChannel,int multiple_of,boolean bias,Network network) {
 		this.network = network;
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
 		}
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
+		this.multiple_of = multiple_of;
 		this.bias = bias;
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
 		this.nChannel = 4 * this.embedDim;
 		this.nChannel = (int)(2 * this.nChannel / 3);
-		this.nChannel = multiple_of * ((this.nChannel + multiple_of - 1) / multiple_of);
+		this.nChannel = multiple_of * ((this.nChannel + this.multiple_of - 1) / this.multiple_of);
 		this.initLayers();
 	}
 	

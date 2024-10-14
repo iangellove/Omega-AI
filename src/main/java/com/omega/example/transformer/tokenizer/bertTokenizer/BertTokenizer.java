@@ -445,7 +445,7 @@ public class BertTokenizer implements Tokenizer {
 //			String outpath = "H:\\transformer_dataset\\wbm_idx_smallvocab.txt";
 			
 			String[] paths = new String[] {
-					"H:\\transformer_dataset\\wiki_idx_chatglm_vocab.txt",
+					"H:\\transformer_dataset\\wiki_idx_chatglm_voc.txt",
 					"H:\\transformer_dataset\\medical_idx_chatglm_vocab.txt",
 					"H:\\transformer_dataset\\baike_idx_chatglm_vocab.txt"
 			};

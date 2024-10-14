@@ -14,7 +14,6 @@ import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.normalization.RMSLayer;
 import com.omega.engine.nn.network.Network;
-import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
@@ -36,6 +35,8 @@ public class LlamaTransformerDecoder extends Layer{
 	
 	private boolean dropout = false;
 	
+	private int multiple_of = 64;
+	
 	private int headNum = 8;
 	
 	private int nKVHeadNum = 8;
@@ -49,9 +50,10 @@ public class LlamaTransformerDecoder extends Layer{
 	
 	private BaseKernel baseKernel;
 	
-	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout) {
+	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,int multiple_of,boolean bias,boolean dropout) {
 		this.headNum = headNum;
 		this.nKVHeadNum = headNum;
+		this.multiple_of = multiple_of;
 		this.n_layers = n_layers;
 		this.vocab_size = vocab_size;
 		this.time = time;
@@ -67,10 +69,11 @@ public class LlamaTransformerDecoder extends Layer{
 		this.initLayers();
 	}
 	
-	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention,Network network) {
+	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,int multiple_of,boolean bias,boolean dropout,boolean flashAttention,Network network) {
 		this.flashAttention = flashAttention;
 		this.headNum = headNum;
 		this.nKVHeadNum = headNum;
+		this.multiple_of = multiple_of;
 		this.n_layers = n_layers;
 		this.network = network;
 		if(this.updater == null) {
@@ -90,10 +93,11 @@ public class LlamaTransformerDecoder extends Layer{
 		this.initLayers();
 	}
 	
-	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int nKVHeadNum,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention,Network network) {
+	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int nKVHeadNum,int time,int embedDim,int multiple_of,boolean bias,boolean dropout,boolean flashAttention,Network network) {
 		this.flashAttention = flashAttention;
 		this.headNum = headNum;
 		this.nKVHeadNum = nKVHeadNum;
+		this.multiple_of = multiple_of;
 		this.n_layers = n_layers;
 		this.network = network;
 		if(this.updater == null) {
@@ -122,7 +126,7 @@ public class LlamaTransformerDecoder extends Layer{
 		setDecoderLayers(new ArrayList<LlamaTransformerBlock>());
 		
 		for(int i = 0;i<n_layers;i++) {
-			LlamaTransformerBlock decoderLayer = new LlamaTransformerBlock(headNum, nKVHeadNum, time, embedDim, bias, dropout, flashAttention, network);
+			LlamaTransformerBlock decoderLayer = new LlamaTransformerBlock(headNum, nKVHeadNum, time, embedDim, multiple_of, bias, dropout, flashAttention, network);
 			getDecoderLayers().add(decoderLayer);
 		}
 		

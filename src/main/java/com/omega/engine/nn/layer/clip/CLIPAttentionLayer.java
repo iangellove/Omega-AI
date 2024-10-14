@@ -57,17 +57,11 @@ public class CLIPAttentionLayer extends Layer{
 	private Tensor kt;
 	private Tensor vt;
 	
-	private Tensor dqt;
-	private Tensor dkt;
-	private Tensor dvt;
-	
 	private Tensor temp;
 	
 	private Tensor attn;
 	
 	private Tensor oi;
-	
-	private Tensor dattn;
 	
 	private int batchSize = 1;
 	
@@ -165,10 +159,11 @@ public class CLIPAttentionLayer extends Layer{
 	
 	public void init(Tensor input) {
 		// TODO Auto-generated method stub
+
 		this.number = input.number;
 		this.time = this.network.time;
-		this.batchSize = this.number / time;
-		
+		this.batchSize = this.number / this.time;
+
 		if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
 			// [batch_size，time，head_num，d_k]
 			this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
@@ -199,17 +194,7 @@ public class CLIPAttentionLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-		if(this.dattn == null){
-//			this.dvaccum = Tensor.createGPUTensor(this.dvaccum, batchSize, headNum, time, dk, true);
-			this.dqt = Tensor.createGPUTensor(this.dqt, batchSize, headNum, time, dk, true);
-			this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, time, dk, true);
-			this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, time, dk, true);
-			this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
-//			this.dpreatt = Tensor.createGPUTensor(this.dpreatt, batchSize, headNum, time, time, true);
-//			this.dpreatt2 = Tensor.createGPUTensor(this.dpreatt2, batchSize, headNum, time, time, true);
-		}else {
-//			this.dvaccum.clearGPU();
-		}
+
 	}
 
 	@Override
@@ -221,8 +206,7 @@ public class CLIPAttentionLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-//		System.out.println("in");
-//		this.input.showDM();
+
 		this.getqLinerLayer().forward(this.input);
 		this.getkLinerLayer().forward(this.input);
 		this.getvLinerLayer().forward(this.input);
@@ -236,11 +220,12 @@ public class CLIPAttentionLayer extends Layer{
 		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
 
 		scaledDotProductAttention(qt, kt, vt);
-//		System.err.println("------------vaccum");
-//		vaccum.showDM();
-		Tensor vaccum = temp;
-		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
 		
+		Tensor vaccum = temp;
+
+		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
+//		System.err.println("oi:");
+//		oi.showDM();
 		this.getoLinerLayer().forward(oi);
 		
 		this.output = this.getoLinerLayer().getOutput();
@@ -261,8 +246,8 @@ public class CLIPAttentionLayer extends Layer{
 		
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, key.getGpuData(), dk, time * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), time, time * time, batchSize * headNum);
 		
-		attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, time, d_k);
-
+		attentionKernel.softmax_unmask_test_forward(preatt, attn, batchSize, headNum, time, d_k);
+		
 		Tensor tmp = attn;
 		
 		if(dropout) {

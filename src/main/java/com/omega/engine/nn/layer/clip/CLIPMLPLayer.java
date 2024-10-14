@@ -56,7 +56,7 @@ public class CLIPMLPLayer extends Layer{
 
 		this.linear1 = new FullyLayer(embedDim, nChannel, bias, network);
 
-		this.active = new GeluLayer(linear1);
+		this.active = new GeluLayer(getLinear1());
 		
 		this.linear2 = new FullyLayer(nChannel, embedDim, bias, network);
 
@@ -84,13 +84,13 @@ public class CLIPMLPLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		linear1.forward(input);
+		getLinear1().forward(input);
 		
-		active.forward(linear1.getOutput());
+		active.forward(getLinear1().getOutput());
 
-		linear2.forward(active.getOutput());
+		getLinear2().forward(active.getOutput());
 		
-		this.output = linear2.getOutput();
+		this.output = getLinear2().getOutput();
 
 	}
 	
@@ -184,8 +184,8 @@ public class CLIPMLPLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		linear1.update();
-		linear2.update();
+		getLinear1().update();
+		getLinear2().update();
 	}
 
 	@Override
@@ -219,13 +219,13 @@ public class CLIPMLPLayer extends Layer{
 	}
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
-		linear1.saveModel(outputStream);
-		linear2.saveModel(outputStream);
+		getLinear1().saveModel(outputStream);
+		getLinear2().saveModel(outputStream);
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-		linear1.loadModel(inputStream);
-		linear2.loadModel(inputStream);
+		getLinear1().loadModel(inputStream);
+		getLinear2().loadModel(inputStream);
 	}
 	
 	public static void main(String[] args) {
@@ -235,8 +235,16 @@ public class CLIPMLPLayer extends Layer{
 	@Override
 	public void accGrad(float scale) {
 		// TODO Auto-generated method stub
-		linear1.accGrad(scale);
-		linear2.accGrad(scale);
+		getLinear1().accGrad(scale);
+		getLinear2().accGrad(scale);
+	}
+
+	public FullyLayer getLinear1() {
+		return linear1;
+	}
+
+	public FullyLayer getLinear2() {
+		return linear2;
 	}
 
 }

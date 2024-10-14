@@ -43,6 +43,8 @@ public class CLIPVisionTransformer extends Layer{
 	
 	private BaseKernel baseKernel;
 	
+	private Tensor imageEncoders;
+	
 	public CLIPVisionTransformer(int channel,int imgSize,int patchSize,int n_layers,int headNum,int time,int embedDim,boolean bias) {
 		this.imgSize = imgSize;
 		this.channel = channel;
@@ -74,7 +76,6 @@ public class CLIPVisionTransformer extends Layer{
 		this.time = time;
 		this.embedDim = embedDim;
 		this.bias = bias;
-		this.channel = 1;
 		this.height = 1;
 		this.width = embedDim;
 		this.oChannel = 1;
@@ -87,16 +88,16 @@ public class CLIPVisionTransformer extends Layer{
 		
 		embeddings = new CLIPVisionEmbeddingLayer(channel, imgSize, imgSize, embedDim, imgSize, patchSize, bias, network);
 		
-		preLayrnorm = new LNLayer(embeddings);
+		preLayrnorm = new LNLayer(getEmbeddings());
 		
 		encoders = new ArrayList<CLIPEncoderLayer>();
 		
 		for(int i = 0;i<n_layers;i++) {
 			CLIPEncoderLayer encoder = new CLIPEncoderLayer(headNum, time, embedDim, bias, false, network);
-			encoders.add(encoder);
+			getEncoders().add(encoder);
 		}
 		
-		postLayernorm = new LNLayer(encoders.get(n_layers - 1));
+		postLayernorm = new LNLayer(getEncoders().get(n_layers - 1));
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
@@ -127,27 +128,30 @@ public class CLIPVisionTransformer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 
-	}
-	
-	public void output(Tensor cos,Tensor sin) {
-		// TODO Auto-generated method stub
-	
-		embeddings.forward(input);
+		getEmbeddings().forward(input);
 		
-		preLayrnorm.forward(embeddings.getOutput());
+		Tensor emb = getEmbeddings().getOutput().view(getEmbeddings().getOutput().number * getEmbeddings().getOutput().channel, 1, 1, getEmbeddings().getOutput().width);
+		System.err.println("emb:");
+		emb.showDM();
 		
-		Tensor out1 = preLayrnorm.getOutput();
+		getPreLayrnorm().forward(emb);
+		
+		Tensor out1 = getPreLayrnorm().getOutput();
 
 		for(int i = 0;i<n_layers;i++) {
-			encoders.get(i).forward(out1);
-			out1 = encoders.get(i).getOutput();
+			getEncoders().get(i).forward(out1);
+			out1 = getEncoders().get(i).getOutput();
 		}
 		
-		postLayernorm.forward(out1);
-
-		this.output = postLayernorm.getOutput();
+		imageEncoders = out1;
+		
+		getPostLayernorm().forward(out1);
+		
+		getEmbeddings().getOutput().viewOrg();
+		
+		this.output = getPostLayernorm().getOutput();
 	}
-	
+
 	@Override
 	public Tensor getOutput() {
 		// TODO Auto-generated method stub
@@ -175,11 +179,6 @@ public class CLIPVisionTransformer extends Layer{
 	@Override
 	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
-		
-	}
-	
-	public void forward(Tensor cos,Tensor sin,Tensor input) {
-		// TODO Auto-generated method stub
 		/**
 		 * 设置输入
 		 */
@@ -191,7 +190,7 @@ public class CLIPVisionTransformer extends Layer{
 		/**
 		 * 计算输出
 		 */
-		this.output(cos, sin);
+		this.output();
 		
 	}
 	
@@ -279,6 +278,26 @@ public class CLIPVisionTransformer extends Layer{
 	public void accGrad(float scale) {
 		// TODO Auto-generated method stub
 		
+	}
+
+	public CLIPVisionEmbeddingLayer getEmbeddings() {
+		return embeddings;
+	}
+
+	public LNLayer getPreLayrnorm() {
+		return preLayrnorm;
+	}
+
+	public List<CLIPEncoderLayer> getEncoders() {
+		return encoders;
+	}
+
+	public LNLayer getPostLayernorm() {
+		return postLayernorm;
+	}
+
+	public Tensor getImageEncoders() {
+		return imageEncoders;
 	}
 	
 }

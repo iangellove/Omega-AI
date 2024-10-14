@@ -188,6 +188,49 @@ public class BatchTokenizerUtils {
          
     }
 	
+	public static void pretrainTXT2Bin(String dataPath,String outputPath,String tokenizerPath,BinDataType dataType) {
+		
+		try {
+			File file = new File(outputPath);
+			FileOutputStream writer = new FileOutputStream(file);
+			
+			String line = null;
+			FileInputStream fis = new FileInputStream(dataPath);
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
+			
+			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizerPath);
+			
+			int batchSize = 100000;
+			
+			List<String> txtList = new ArrayList<String>();
+
+			int i = 1;
+			while ((line = bufferedReader.readLine()) != null) {
+		    	
+				txtList.add(line);
+		    	
+		    	if(i > 1 && i % batchSize == 0) {
+		    		writeBin(txtList, writer, tokenizer, dataType);
+		    		txtList.clear();
+		    	}
+
+    			System.out.println(i);
+    			i++;
+		    	
+		    }
+			if(txtList.size() > 0) {
+				writeBin(txtList, writer, tokenizer, dataType);
+			}
+		    bufferedReader.close();
+		    writer.close();
+		} catch (IOException e) {
+		    e.printStackTrace();
+		}
+
+        System.out.println("Data has been written to the file.");
+         
+    }
+	
 	public static void writeIn(List<String> txtList,String[] ids,FileWriter writer) throws IOException {
 		System.out.println("writing.");
 		for(int i = 0;i<txtList.size();i++) {
@@ -204,11 +247,32 @@ public class BatchTokenizerUtils {
 		}
 	}
 	
+	public static void writeBin(List<String> txtList, FileOutputStream writer, Tokenizer tokenizer,BinDataType dataType) throws IOException {
+		if(dataType == BinDataType.unint16) {
+			writeShort(txtList, writer, tokenizer);
+		}else {
+			writeInt(txtList, writer, tokenizer);
+		}
+	}
+	
 	public static void writeBin(List<String> txtList,String[] ids, FileOutputStream writer, Tokenizer tokenizer,BinDataType dataType) throws IOException {
 		if(dataType == BinDataType.unint16) {
 			writeShort(txtList, ids, writer, tokenizer);
 		}else {
 			writeInt(txtList, ids, writer, tokenizer);
+		}
+	}
+	
+	public static void writeShort(List<String> txtList, FileOutputStream writer, Tokenizer tokenizer) throws IOException {
+		System.out.println("writing.");
+		for(int i = 0;i<txtList.size();i++) {
+			String txt = tokenizer.sos() + " " + txtList.get(i) + " " + tokenizer.eos();
+			String[] idList = txt.split(" ");
+			for(String str:idList) {
+				short s = Short.parseShort(str);
+				byte[] bs = ModelUtils.short2byte(s);
+				writer.write(bs);
+			}
 		}
 	}
 	
@@ -221,6 +285,21 @@ public class BatchTokenizerUtils {
 				short s = Short.parseShort(str);
 				byte[] bs = ModelUtils.short2byte(s);
 				writer.write(bs);
+			}
+		}
+	}
+	
+	public static void writeInt(List<String> txtList, FileOutputStream writer, Tokenizer tokenizer) throws IOException {
+		System.out.println("writing.");
+		for(int i = 0;i<txtList.size();i++) {
+			String txt = tokenizer.sos() + " " + txtList.get(i) + " " + tokenizer.eos();
+			String[] idList = txt.split(" ");
+			for(String str:idList) {
+				if(!str.equals("")) {
+					int s = Integer.parseInt(str);
+					byte[] bs = ModelUtils.int2byte(s);
+					writer.write(bs);
+				}
 			}
 		}
 	}
@@ -318,9 +397,14 @@ public class BatchTokenizerUtils {
 //		System.out.println(txt);
 		
 		String tokenizerPath = "H:\\transformer_dataset\\tokenizer.model";
-		String binPath = "H:\\transformer_dataset\\monkey_idx_64793_vocab.bin";
+//		String binPath = "H:\\transformer_dataset\\monkey_idx_64793_vocab.bin";
+//		
+//		encodeMonkeyDatasetBySentencePiece2Bin(dataPath, binPath, tokenizerPath, BinDataType.unint32);
 		
-		encodeMonkeyDatasetBySentencePiece2Bin(dataPath, binPath, tokenizerPath, BinDataType.unint32);
+		String txtPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.txt";
+		String outputPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.bin";
+		
+		pretrainTXT2Bin(txtPath, outputPath, tokenizerPath, BinDataType.unint32);
 		
 	}
 	

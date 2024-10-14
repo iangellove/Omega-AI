@@ -25,6 +25,8 @@ public class CLIPEncoderLayer extends Layer{
 	
 	private int embedDim = 0;
 	
+	private int intermediateSize = 3072;
+	
 	private boolean bias = false;
 	
 	private CLIPAttentionLayer attn;
@@ -78,7 +80,7 @@ public class CLIPEncoderLayer extends Layer{
 
 		norm2 = new LNLayer(attn);
 		
-		mlp = new CLIPMLPLayer(embedDim, embedDim, bias, network);
+		mlp = new CLIPMLPLayer(embedDim, intermediateSize, bias, network);
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();
@@ -89,12 +91,19 @@ public class CLIPEncoderLayer extends Layer{
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
-		this.number = this.input.number;
+		this.number = this.network.number;
 		this.time = this.network.time;
 		if(this.tmp1 == null || this.tmp1.number != this.number) {
-//			if(this.tmp1 == null) {
-//				System.out.println(number+":"+embedDim);
-//			}
+			this.tmp1 = Tensor.createGPUTensor(this.tmp1, number, 1, 1, embedDim, true);
+			this.tmp2 = Tensor.createGPUTensor(this.tmp2, number, 1, 1, embedDim, true);
+		}
+	}
+	
+	public void init(Tensor input) {
+		// TODO Auto-generated method stub
+		this.number = input.number;
+		this.time = this.network.time;
+		if(this.tmp1 == null || this.tmp1.number != this.number) {
 			this.tmp1 = Tensor.createGPUTensor(this.tmp1, number, 1, 1, embedDim, true);
 			this.tmp2 = Tensor.createGPUTensor(this.tmp2, number, 1, 1, embedDim, true);
 		}
@@ -116,17 +125,13 @@ public class CLIPEncoderLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 
-	}
-	
-	public void output(Tensor cos,Tensor sin) {
-		// TODO Auto-generated method stub
-		
 		getNorm1().forward(input);
 
 		getAttn().forward(getNorm1().getOutput());
-
+//		System.err.println("attn:");
+//		getAttn().getOutput().showDM();
 		TensorOP.add(getAttn().getOutput(), input, tmp1);
-
+		
 		getNorm2().forward(tmp1);
 		
 		getMlp().forward(getNorm2().getOutput());
@@ -134,8 +139,6 @@ public class CLIPEncoderLayer extends Layer{
 		TensorOP.add(getMlp().getOutput(), tmp1, tmp2);
 		
 		this.output = tmp2;
-//		System.err.println("---------------------------------");
-//		this.output.showDM();
 	}
 	
 	@Override
@@ -177,7 +180,7 @@ public class CLIPEncoderLayer extends Layer{
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 计算输出
 		 */
@@ -293,10 +296,7 @@ public class CLIPEncoderLayer extends Layer{
 	@Override
 	public void accGrad(float scale) {
 		// TODO Auto-generated method stub
-		getNorm1().accGrad(scale);
-		getAttn().accGrad(scale);
-		getNorm2().accGrad(scale);
-		getMlp().accGrad(scale);
+
 	}
 	
 }

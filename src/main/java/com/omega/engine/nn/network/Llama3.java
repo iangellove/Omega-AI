@@ -30,6 +30,8 @@ public class Llama3 extends Network {
 	
 	public int decoderNum = 1;
 	
+	public int multiple_of = 64;
+	
 	private boolean bias = true;
 	
 	private boolean flashAttention = false;
@@ -54,7 +56,7 @@ public class Llama3 extends Network {
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.setDecoder(new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.bias, this.dropout, this.flashAttention, this));
+		this.setDecoder(new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.multiple_of, this.bias, this.dropout, this.flashAttention, this));
 		this.setFullyLayer(new FullyLayer(embedDim, vocabSize, false, this));
 		this.addLayer(inputLayer);
 		this.addLayer(getDecoder());
@@ -74,7 +76,7 @@ public class Llama3 extends Network {
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.setDecoder(new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.bias, this.dropout, this.flashAttention, this));
+		this.setDecoder(new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.multiple_of, this.bias, this.dropout, this.flashAttention, this));
 		this.setFullyLayer(new FullyLayer(embedDim, vocabSize, false, this));
 		this.addLayer(inputLayer);
 		this.addLayer(getDecoder());

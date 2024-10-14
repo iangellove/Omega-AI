@@ -1138,6 +1138,25 @@ public class ImageLoader {
 		return input;
 	}
 	
+	public static void loadImage(Tensor input,int index,String filePath,int tw,int th,float[] mean,float[] std) {
+		
+		try {
+			
+			File file = new File(filePath);
+
+			if(file.exists()) {
+				OMImage image = YoloImageUtils.IU().loadOMImgAndResize(file, tw, th, mean, std);
+				System.arraycopy(image.getData(), 0, input.data, index * input.getOnceSize(), input.getOnceSize());
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			System.out.println("=====================>:"+filePath);
+		}
+
+	}
+	
 	public static OMImage loadImage(File file) {
 		
 		OMImage image = null;

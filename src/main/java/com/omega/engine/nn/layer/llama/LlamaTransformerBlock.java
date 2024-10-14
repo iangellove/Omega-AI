@@ -19,6 +19,8 @@ import com.omega.engine.updater.UpdaterFactory;
  */
 public class LlamaTransformerBlock extends Layer{
 	
+	private int multiple_of = 64;
+	
 	private int time;
 	
 	private int headNum = 8;
@@ -49,9 +51,10 @@ public class LlamaTransformerBlock extends Layer{
 	
 	private Tensor tmp2;
 	
-	public LlamaTransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout) {
+	public LlamaTransformerBlock(int headNum,int time,int embedDim,int multiple_of,boolean bias,boolean dropout) {
 		this.headNum = headNum;
 		this.nKVHeads = headNum;
+		this.multiple_of = multiple_of;
 		this.time = time;
 		this.embedDim = embedDim;
 		this.bias = bias;
@@ -62,10 +65,11 @@ public class LlamaTransformerBlock extends Layer{
 		this.initLayers();
 	}
 	
-	public LlamaTransformerBlock(int headNum,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention,Network network) {
+	public LlamaTransformerBlock(int headNum,int time,int embedDim,int multiple_of,boolean bias,boolean dropout,boolean flashAttention,Network network) {
 		this.flashAttention = flashAttention;
 		this.headNum = headNum;
 		this.nKVHeads = headNum;
+		this.multiple_of = multiple_of;
 		this.network = network;
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
@@ -80,10 +84,11 @@ public class LlamaTransformerBlock extends Layer{
 		this.initLayers();
 	}
 	
-	public LlamaTransformerBlock(int headNum,int nKVHeads,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention,Network network) {
+	public LlamaTransformerBlock(int headNum,int nKVHeads,int time,int embedDim,int multiple_of,boolean bias,boolean dropout,boolean flashAttention,Network network) {
 		this.flashAttention = flashAttention;
 		this.headNum = headNum;
 		this.nKVHeads = nKVHeads;
+		this.multiple_of = multiple_of;
 		this.network = network;
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
@@ -110,7 +115,7 @@ public class LlamaTransformerBlock extends Layer{
 
 		this.setNorm2(new RMSLayer(getAttn()));
 		
-		this.setMlp(new LlamaMLPLayer(embedDim, embedDim, bias, network));
+		this.setMlp(new LlamaMLPLayer(embedDim, embedDim, multiple_of, bias, network));
 		
 		if(baseKernel == null) {
 			baseKernel = new BaseKernel();

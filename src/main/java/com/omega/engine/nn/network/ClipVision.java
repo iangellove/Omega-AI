@@ -96,12 +96,6 @@ public class ClipVision extends Network {
 	@Override
 	public Tensor forward(Tensor input) {
 		// TODO Auto-generated method stub
-
-		return this.getOutput();
-	}
-	
-	public Tensor forward(Tensor cos,Tensor sin,Tensor input) {
-//		System.out.println("en_time:"+en_time+",de_time:"+de_time);
 		/**
 		 * 设置输入数据
 		 */
@@ -109,7 +103,7 @@ public class ClipVision extends Network {
 		
 		inputLayer.forward();
 		
-		encoder.forward(input);
+		getEncoder().forward(input);
 
 		return this.getOutput();
 	}
@@ -187,7 +181,11 @@ public class ClipVision extends Network {
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-		encoder.loadModel(inputStream);
+		getEncoder().loadModel(inputStream);
+	}
+
+	public CLIPVisionTransformer getEncoder() {
+		return encoder;
 	}
 
 }
