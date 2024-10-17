@@ -124,44 +124,24 @@ public class CLIPVisionEmbeddingLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		getPatchEmbedding().weight.showShape();
-		getPatchEmbedding().weight.showDMByNumber(0);
-		getPatchEmbedding().weight.showDMByNumber(767);
-		
+
 		getPatchEmbedding().forward(this.input);
 		
-		getPatchEmbedding().getOutput().showDM();
-		
 		TensorOP.permute(getPatchEmbedding().getOutput().view(this.number, getPatchEmbedding().getOutput().channel, 1, getPatchEmbedding().getOutput().height * getPatchEmbedding().getOutput().width), patchEmbedsT, new int[] {0, 3, 2, 1});
-		
-//		patchEmbedsT.showDM();
 		
 		/**
 		 * embeddings = torch.cat([class_embeds, patch_embeds], dim=1)
 		 */
 		TensorOP.expand(getClassEmbedding(), classEmbeddingEx, getClassEmbedding().getDataLength());
-//		classEmbeddingEx.showDM();
-		int offset = 0;
-		int part_input_size = classEmbeddingEx.getOnceSize() / 1;
-		for(int n = 0;n<this.number;n++) {
-			kernel.copy_gpu(classEmbeddingEx, this.embeddings, part_input_size, n * classEmbeddingEx.getOnceSize(), 1, offset + n * embeddings.getOnceSize(), 1);
-		}
-		offset += part_input_size;
-		part_input_size = patchEmbedsT.getOnceSize() / 1;
-		for(int n = 0;n<this.number;n++) {
-			kernel.copy_gpu(patchEmbedsT, this.embeddings, part_input_size, n * patchEmbedsT.getOnceSize(), 1, offset + n * embeddings.getOnceSize(), 1);
-		}
-//		embeddings.showShape();
-//		embeddings.showDM();
+		
+		kernel.concat_channel_forward(classEmbeddingEx, patchEmbedsT, embeddings, patchEmbedsT.number, classEmbeddingEx.channel, patchEmbedsT.channel, patchEmbedsT.height, patchEmbedsT.width);
 		
 		/**
 		 * embeddings = embeddings + self.position_embedding(self.position_ids)
 		 */
-		getPositionEmbedding().forward(positionIDS);
+		positionEmbedding.forward(positionIDS);
 		
-//		positionEmbedding.getOutput().showDM();
-		
-		TensorOP.addAxis(this.embeddings, getPositionEmbedding().getOutput(), this.embeddings, getPositionEmbedding().getOutput().getOnceSize());
+		TensorOP.addAxis(this.embeddings, positionEmbedding.getOutput(), this.embeddings, this.embeddings.getOnceSize());
 		
 		this.output = this.embeddings;
 		

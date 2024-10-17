@@ -131,13 +131,11 @@ public class CLIPVisionTransformer extends Layer{
 		getEmbeddings().forward(input);
 		
 		Tensor emb = getEmbeddings().getOutput().view(getEmbeddings().getOutput().number * getEmbeddings().getOutput().channel, 1, 1, getEmbeddings().getOutput().width);
-		System.err.println("emb:");
-		emb.showDM();
 		
 		getPreLayrnorm().forward(emb);
-		
-		Tensor out1 = getPreLayrnorm().getOutput();
 
+		Tensor out1 = getPreLayrnorm().getOutput();
+		
 		for(int i = 0;i<n_layers;i++) {
 			getEncoders().get(i).forward(out1);
 			out1 = getEncoders().get(i).getOutput();

@@ -1138,15 +1138,44 @@ public class ImageLoader {
 		return input;
 	}
 	
-	public static void loadImage(Tensor input,int index,String filePath,int tw,int th,float[] mean,float[] std) {
+	public static void loadImage(Tensor input,int index,String filePath,int tw,int th,float[] mean,float[] std,boolean bicubic) {
 		
 		try {
 			
 			File file = new File(filePath);
 
 			if(file.exists()) {
-				OMImage image = YoloImageUtils.IU().loadOMImgAndResize(file, tw, th, mean, std);
+				OMImage image = null;
+				if(bicubic) {
+					image = YoloImageUtils.IU().loadOMImgAndResizeToBicubic(file, tw, th, mean, std);
+				}else {
+					image = YoloImageUtils.IU().loadOMImgAndResize(file, tw, th, mean, std);
+				}
 				System.arraycopy(image.getData(), 0, input.data, index * input.getOnceSize(), input.getOnceSize());
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			System.out.println("=====================>:"+filePath);
+		}
+
+	}
+	
+	public static void loadImage(float[] input,int len,int index,String filePath,int tw,int th,float[] mean,float[] std,boolean bicubic) {
+		
+		try {
+			
+			File file = new File(filePath);
+
+			if(file.exists()) {
+				OMImage image = null;
+				if(bicubic) {
+					image = YoloImageUtils.IU().loadOMImgAndResizeToBicubic(file, tw, th, mean, std);
+				}else {
+					image = YoloImageUtils.IU().loadOMImgAndResize(file, tw, th, mean, std);
+				}
+				System.arraycopy(image.getData(), 0, input, index * len, len);
 			}
 			
 		} catch (Exception e) {

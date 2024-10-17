@@ -10,15 +10,15 @@ import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
-import com.omega.engine.nn.layer.llama.LlamaTransformerDecoder;
+import com.omega.engine.nn.layer.llava.LlavaTransformerDecoder;
 import com.omega.engine.updater.UpdaterType;
 
 /**
- * Llama-2
+ * LlaVA
  * @author Administrator
  *
  */
-public class Llama3 extends Network {
+public class Llava extends Network {
 
 	public int vocabSize;
 	
@@ -40,11 +40,11 @@ public class Llama3 extends Network {
 	
 	private InputLayer inputLayer;
 	
-	private LlamaTransformerDecoder decoder;
+	private LlavaTransformerDecoder decoder;
 	
 	private FullyLayer fullyLayer;
 	
-	public Llama3(LossType lossType,UpdaterType updater,int headNum,int nKVHeadNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout) {
+	public Llava(LossType lossType,UpdaterType updater,int headNum,int nKVHeadNum,int decoderNum,int vocabSize,int time,int imageTime,int embedDim,int visionOutDim,boolean bias,boolean dropout) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.bias = bias;
 		this.dropout = dropout;
@@ -56,14 +56,15 @@ public class Llama3 extends Network {
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.setDecoder(new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.multiple_of, this.bias, this.dropout, this.flashAttention, this));
+		// int vocab_size,int n_layers,int headNum,int nKVHeadNum,int time,int imageTime,int embedDim,int visionOutDim,int multiple_of,boolean bias,boolean dropout,boolean flashAttention,Network network
+		this.decoder = new LlavaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, imageTime, this.embedDim, visionOutDim, this.multiple_of, this.bias, this.dropout, false, this);
 		this.setFullyLayer(new FullyLayer(embedDim, vocabSize, false, this));
 		this.addLayer(inputLayer);
 		this.addLayer(getDecoder());
 		this.addLayer(getFullyLayer());
 	}
 	
-	public Llama3(LossType lossType,UpdaterType updater,int headNum,int nKVHeadNum,int decoderNum,int vocabSize,int time,int embedDim,boolean bias,boolean dropout,boolean flashAttention) {
+	public Llava(LossType lossType,UpdaterType updater,int headNum,int nKVHeadNum,int decoderNum,int vocabSize,int time,int imageTime,int embedDim,int visionOutDim,boolean bias,boolean dropout,boolean flashAttention) {
 		this.flashAttention = flashAttention;
 		this.lossFunction = LossFactory.create(lossType);
 		this.bias = bias;
@@ -76,7 +77,7 @@ public class Llama3 extends Network {
 		this.vocabSize = vocabSize;
 		this.embedDim = embedDim;
 		this.inputLayer = new InputLayer(1, 1, vocabSize);
-		this.setDecoder(new LlamaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, this.embedDim, this.multiple_of, this.bias, this.dropout, this.flashAttention, this));
+		this.decoder = new LlavaTransformerDecoder(this.vocabSize, this.decoderNum, this.headNum, this.nKVHeadNum, this.time, imageTime, this.embedDim, visionOutDim, this.multiple_of, this.bias, this.dropout, this.flashAttention, this);
 		this.setFullyLayer(new FullyLayer(embedDim, vocabSize, false, this));
 		this.addLayer(inputLayer);
 		this.addLayer(getDecoder());
@@ -118,7 +119,7 @@ public class Llama3 extends Network {
 	@Override
 	public NetworkType getNetworkType() {
 		// TODO Auto-generated method stub
-		return NetworkType.LLAMA;
+		return NetworkType.LLAVA;
 	}
 
 	@Override
@@ -136,7 +137,7 @@ public class Llama3 extends Network {
 		return this.getOutput();
 	}
 	
-	public Tensor forward(Tensor cos,Tensor sin,Tensor input) {
+	public Tensor forward(Tensor imageEncode,Tensor indice,Tensor cos,Tensor sin,Tensor input) {
 //		System.out.println("en_time:"+en_time+",de_time:"+de_time);
 		/**
 		 * 设置输入数据
@@ -148,7 +149,7 @@ public class Llama3 extends Network {
 //		long start = System.nanoTime();
 //		System.err.println("input:");
 //		input.showDM();
-		getDecoder().forward(cos, sin, input);
+		getDecoder().forward(imageEncode, indice,cos, sin, input);
 //		System.err.println("decoder:");
 //		decoder.getOutput().showDM();
 //		JCuda.cudaDeviceSynchronize();
@@ -170,7 +171,7 @@ public class Llama3 extends Network {
 
 	}
 	
-	public void back(Tensor cos,Tensor sin,Tensor lossDiff) {
+	public void back(Tensor indice,Tensor cos,Tensor sin,Tensor lossDiff) {
 		// TODO Auto-generated method stub
 //		lossDiff.showDMByNumber(0);
 		/**
@@ -188,7 +189,7 @@ public class Llama3 extends Network {
 //		System.out.println("backward2:"+(System.nanoTime() - start2) / 1e6+"ms.");
 //		JCuda.cudaDeviceSynchronize();
 //		long start3 = System.nanoTime();
-		this.getDecoder().back(cos, sin, this.getFullyLayer().diff);
+		this.getDecoder().back(indice, cos, sin, this.getFullyLayer().diff);
 		
 		
 //		JCuda.cudaDeviceSynchronize();
@@ -261,11 +262,18 @@ public class Llama3 extends Network {
 		getFullyLayer().loadModel(inputStream);
 	}
 	
-	public LlamaTransformerDecoder getDecoder() {
+
+	public void loadPertrainModel(RandomAccessFile inputStream) throws IOException {
+		getDecoder().loadPertrainModel(inputStream);
+		getFullyLayer().loadModel(inputStream);
+	}
+
+
+	public LlavaTransformerDecoder getDecoder() {
 		return decoder;
 	}
 
-	public void setDecoder(LlamaTransformerDecoder decoder) {
+	public void setDecoder(LlavaTransformerDecoder decoder) {
 		this.decoder = decoder;
 	}
 

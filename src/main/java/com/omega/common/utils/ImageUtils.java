@@ -4,16 +4,20 @@ import java.awt.AWTException;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.Robot;
 import java.awt.Toolkit;
+import java.awt.Transparency;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
 import javax.imageio.ImageIO;
+
 import com.madgag.gif.fmsware.AnimatedGifEncoder;
 import com.omega.engine.nn.data.ImageData;
 import com.omega.example.yolo.utils.OMImage;
@@ -24,7 +28,26 @@ public class ImageUtils {
 	public static float[] std = new float[] {0.247f, 0.243f, 0.261f};
 	
 	public static Color[] colors = new Color[] {Color.red,Color.blue,Color.green,Color.yellow,Color.white,Color.gray,Color.pink,Color.orange};
-	 
+	
+	static class Interpolation {
+
+        public double oneDimensionalBicubicInterpolation(double[] p, double x) {
+            return p[1] + 0.5d * x * (p[2] - p[0] + x * (2.0d * p[0] - 5.0d * p[1] + 4.0d * p[2] - p[3] + x * (3.0d * (p[1] - p[2]) + p[3] - p[0])));
+        }
+
+        public double twoDimensionalBicubicInterpolation(double[][] p, double x, double y) {
+
+            final double[] arr = new double[4];
+
+            arr[0] = oneDimensionalBicubicInterpolation(p[0], y);
+            arr[1] = oneDimensionalBicubicInterpolation(p[1], y);
+            arr[2] = oneDimensionalBicubicInterpolation(p[2], y);
+            arr[3] = oneDimensionalBicubicInterpolation(p[3], y);
+
+            return oneDimensionalBicubicInterpolation(arr, x);
+        }
+    }
+	
 	/**
 	 * 读取一张图片的RGB值
 	 * 
@@ -422,6 +445,57 @@ public class ImageUtils {
 				r = (pixel & 0xff0000) >> 16;
 				g = (pixel & 0xff00) >> 8;
 				b = (pixel & 0xff);
+				System.out.println(b);
+				color[0 * width * height + j * width + i] = (r * 1.0f / n - mean[0]) / std[0];
+				color[1 * width * height + j * width + i] = (g * 1.0f / n - mean[1]) / std[1];
+				color[2 * width * height + j * width + i] = (b * 1.0f / n - mean[2]) / std[2];
+			}
+		}
+		
+		return new OMImage(3, height, width, color);
+	}
+	
+	public OMImage loadOMImgAndResizeToBicubic(File file,int tw,int th,float[] mean,float[] std) throws Exception {
+		
+		BufferedImage bi = null;
+		try {
+			bi = ImageIO.read(file);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		int width = bi.getWidth();
+		int height = bi.getHeight();
+		int minx = bi.getMinX();
+		int miny = bi.getMinY();
+		
+		if(width != tw || height != th) {
+//			bi = resizeImageBicubic2(bi, tw, th);
+			bi = resizeImageFromBicubic(bi, tw, th);
+			width = bi.getWidth();
+			height = bi.getHeight();
+			minx = bi.getMinX();
+			miny = bi.getMinY();
+		}
+		
+		int size = height * width * 3;
+		float[] color = new float[size];
+		
+		float n = 255.0f;
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		int pixel = 0;
+		
+		for (int j = miny; j < height; j++) {
+			for (int i = minx; i < width; i++) {
+				pixel = bi.getRGB(i, j); // 下面三行代码将一个数字转换为RGB数字
+				r = (pixel & 0xff0000) >> 16;
+				g = (pixel & 0xff00) >> 8;
+				b = (pixel & 0xff);
+//				color[0 * width * height + j * width + i] = r;
+//				color[1 * width * height + j * width + i] = g;
+//				color[2 * width * height + j * width + i] = b;
 				
 				color[0 * width * height + j * width + i] = (r * 1.0f / n - mean[0]) / std[0];
 				color[1 * width * height + j * width + i] = (g * 1.0f / n - mean[1]) / std[1];
@@ -920,6 +994,290 @@ public class ImageUtils {
         BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
         outputImage.getGraphics().drawImage(resultingImage, 0, 0, null);
         return outputImage;
+    }
+    
+	/**
+     * 通过BufferedImage图片流调整图片大小
+     * 指定压缩后长宽
+     */
+    public static BufferedImage resizeImageFromBicubic(BufferedImage originalImage, int targetWidth, int targetHeight) throws IOException {
+    	BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = (Graphics2D) outputImage.getGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
+        return outputImage;
+    }
+    
+    public static BufferedImage getScaledInstance(BufferedImage img,
+
+    		int targetWidth,
+
+    		int targetHeight,
+
+    		Object hint,
+
+    		boolean higherQuality) {
+
+    		int type = (img.getTransparency() == Transparency.OPAQUE) ?
+
+    		BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB;
+
+    		BufferedImage ret = (BufferedImage) img;
+
+    		int w, h;
+
+    		if (higherQuality) {
+
+    		// Use multi-step technique: start with original size, then
+
+    		// scale down in multiple passes with drawImage()
+
+    		// until the target size is reached
+
+    		w = img.getWidth();
+
+    		h = img.getHeight();
+
+    		} else {
+
+    		// Use one-step technique: scale directly from original
+
+    		// size to target size with a single drawImage() call
+
+    		w = targetWidth;
+
+    		h = targetHeight;
+
+    		}
+
+    		do {
+
+    		if (higherQuality && w > targetWidth) {
+
+    		w /= 2;
+
+    		if (w < targetWidth) {
+
+    		w = targetWidth;
+
+    		}
+
+    		}
+
+    		if (higherQuality && h > targetHeight) {
+
+    		h /= 2;
+
+    		if (h < targetHeight) {
+
+    		h = targetHeight;
+
+    		}
+
+    		}
+
+    		BufferedImage tmp = new BufferedImage(w, h, type);
+
+    		Graphics2D g2 = tmp.createGraphics();
+
+    		g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, hint);
+
+    		g2.drawImage(ret, 0, 0, w, h, null);
+
+    		g2.dispose();
+
+    		ret = tmp;
+
+    		} while (w != targetWidth || h != targetHeight);
+
+    		return ret;
+
+    }
+    
+    public static  BufferedImage resizeImageBicubic2(BufferedImage originalImage, int newWidth, int newHeight) throws IOException {
+    	BufferedImage outputImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+    	int oldWidth = originalImage.getWidth();
+    	int oldHeight = originalImage.getHeight();
+    	int ox, oy;        // position in old image
+        double dx, dy;        // delta_x, delta_y
+        double tx = (double)oldWidth / newWidth;
+        double ty = (double)oldHeight / newHeight;
+        double Bmdx, Bdyn;
+        int newPixelR = 0;
+        int newPixelG = 0;
+        int newPixelB = 0;
+        int oxm;
+        int oyn;
+        int oldPixel;
+        double oldPixelR;
+        double oldPixelG;
+        double oldPixelB;
+
+        for (int ny = 0; ny < newHeight; ny++) {
+            for (int nx = 0; nx < newWidth; nx++) {
+                newPixelR = 0;
+                newPixelG = 0;
+                newPixelB = 0;
+
+                ox = (int)(tx * nx);
+                oy = (int)(ty * ny);
+                dx = tx * nx - ox;
+                dy = ty * ny - oy;
+
+                // Bicubic algorithm
+                for (int m = -1; m <= 2; m++) {
+                    Bmdx = BSpline(m - dx);
+
+                    for (int n = -1; n <= 2; n++) {
+                        oxm = ox + m;
+                        oyn = oy + n;
+                        if(oxm >= 0 && oyn >= 0 && oxm < oldWidth && oyn < oldHeight) {
+                            oldPixel = originalImage.getRGB(oxm, oyn);
+                            oldPixelR = (oldPixel >> 16) & 0xFF;
+                            oldPixelG = (oldPixel >> 8) & 0xFF;
+                            oldPixelB = oldPixel & 0xFF;
+
+                            Bdyn = BSpline(dy - n);
+                            newPixelR += (int)(oldPixelR * Bmdx * Bdyn);
+                            newPixelG += (int)(oldPixelG * Bmdx * Bdyn);
+                            newPixelB += (int)(oldPixelB * Bmdx * Bdyn);
+                        }
+                    }
+                }
+                System.out.println(nx+":"+ny+":"+newPixelR);
+                int interpolatedRgb = (newPixelR << 16) | (newPixelG << 8) | newPixelB;
+//                System.err.println(interpolatedRgb);
+                outputImage.setRGB(nx, ny, interpolatedRgb);
+            }
+        }
+
+    	return outputImage;
+    }
+    
+	/**
+     * 通过BufferedImage图片流调整图片大小
+     * 指定压缩后长宽
+     */
+    public static BufferedImage resizeImageBicubic(BufferedImage originalImage, int targetWidth, int targetHeight) throws IOException {
+        BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+//        Interpolation interpolation = new Interpolation();
+        
+        int oldWidth = originalImage.getWidth();
+        int oldHeight = originalImage.getHeight();
+        
+        int ox, oy;        // position in old image
+        double dx, dy;        // delta_x, delta_y
+        
+        double oldPixelR;
+        double oldPixelG;
+        double oldPixelB;
+        double Bmdx, Bdyn;
+        int oxm;
+        int oyn;
+        int newPixelR = 0;
+        int newPixelG = 0;
+        int newPixelB = 0;
+        int oldPixel;
+        
+        for (int ny = 0; ny < targetHeight; ny++) {
+            for (int nx = 0; nx < targetWidth; nx++) {
+                newPixelR = 0;
+                newPixelG = 0;
+                newPixelB = 0;
+
+                ox = (int)(targetWidth * nx);
+                oy = (int)(targetHeight * ny);
+                dx = targetWidth * nx - ox;
+                dy = targetHeight * ny - oy;
+
+                // Bicubic algorithm
+                for (int m = -1; m <= 2; m++) {
+                    Bmdx = BSpline(m - dx);
+
+                    for (int n = -1; n <= 2; n++) {
+                        oxm = ox + m;
+                        oyn = oy + n;
+                        if(oxm >= 0 && oyn >= 0 && oxm < oldWidth && oyn < oldHeight) {
+                            oldPixel = originalImage.getRGB(oxm, oyn);
+                            oldPixelR = (oldPixel >> 16) & 0xFF;
+                            oldPixelG = (oldPixel >> 8) & 0xFF;
+                            oldPixelB = oldPixel & 0xFF;
+                            System.out.println(oldPixelR);
+                            Bdyn = BSpline(dy - n);
+                            newPixelR += (int)(oldPixelR * Bmdx * Bdyn);
+                            newPixelG += (int)(oldPixelG * Bmdx * Bdyn);
+                            newPixelB += (int)(oldPixelB * Bmdx * Bdyn);
+                        }
+                    }
+                }
+                
+                int interpolatedRgb = (newPixelR << 16) | (newPixelG << 8) | newPixelB;
+                System.err.println(interpolatedRgb);
+                outputImage.setRGB(nx, ny, interpolatedRgb);
+            }
+        }
+        
+//        for (int x = 0; x < targetWidth; x++) {
+//            for (int y = 0; y < targetHeight; y++) {
+//
+//                double u = x * 1.0d / targetWidth * (width - 1);
+//                double v = y * 1.0d / targetHeight * (height - 1);
+//                
+//                int upperLeftX = (int) Math.ceil(u) - 1;
+//                int upperLeftY = (int) Math.ceil(v) - 1;
+//
+//                double[][] redMatrixForPixelXY = new double[4][4];
+//                double[][] greenMatrixForPixelXY = new double[4][4];
+//                double[][] blueMatrixForPixelXY = new double[4][4];
+//
+//                for (int m = 0; m < 4; m++) {
+//                    for (int n = 0; n < 4; n++) {
+//                        int suitableX = checkBounds(upperLeftX + m, 0, width - 1);
+//                        int suitableY = checkBounds(upperLeftY + n, 0, height - 1);
+//                        int rgb = originalImage.getRGB(suitableX, suitableY);
+//
+//                        redMatrixForPixelXY[m][n] = (rgb >> 16) & 0xFF;
+//                        greenMatrixForPixelXY[m][n] = (rgb >> 8) & 0xFF;
+//                        blueMatrixForPixelXY[m][n] = rgb & 0xFF;
+//                    }
+//                }
+//
+//                double xFraction = u - Math.floor(u);
+//                double yFraction = v - Math.floor(v);
+//
+//                int combinedRed = (int) checkBounds(interpolation.twoDimensionalBicubicInterpolation(redMatrixForPixelXY, xFraction, yFraction), 0, 255);
+//                int combinedGreen = (int) checkBounds(interpolation.twoDimensionalBicubicInterpolation(greenMatrixForPixelXY, xFraction, yFraction), 0, 255);
+//                int combinedBlue = (int) checkBounds(interpolation.twoDimensionalBicubicInterpolation(blueMatrixForPixelXY, xFraction, yFraction), 0, 255);
+//
+//                int interpolatedRgb = (combinedRed << 16) | (combinedGreen << 8) | combinedBlue;
+//
+//                outputImage.setRGB(x, y, interpolatedRgb);
+//            }
+//        }
+        
+        return outputImage;
+    }
+    
+
+    private static double BSpline(double x) {
+        if(x < 0.0)
+            x = Math.abs(x);
+
+        if(x >= 0.0 && x <= 1.0)
+            return (2.0 / 3.0) + 0.5 * Math.pow(x, 3.0) - Math.pow(x, 2.0);
+        else if(x > 1.0 && x <= 2.0)
+            return 1.0 / 6.0 * Math.pow(2 - x, 3.0);
+
+        return 1.0;
+    }
+    
+    
+    private static int checkBounds(int value, int min, int max) {
+        return Math.round(Math.max(min, Math.min(value, max)));
+    }
+
+    private static double checkBounds(double value, double min, double max) {
+        return Math.round(Math.max(min, Math.min(value, max)));
     }
     
 	/**

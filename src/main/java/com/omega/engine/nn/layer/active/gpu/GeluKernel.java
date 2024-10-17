@@ -3,7 +3,6 @@ package com.omega.engine.nn.layer.active.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
@@ -18,6 +17,10 @@ public class GeluKernel extends BaseKernel{
 	private CUfunction function;
 	
 	private CUfunction function_back;
+	
+	private CUfunction fast_function;
+	
+	private CUfunction fast_function_back;
 	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
@@ -42,16 +45,26 @@ public class GeluKernel extends BaseKernel{
 
 			if(function == null) {
 
-//				function = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "gelu_fwd_cuda");
 				function = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "gelu_forward");
 				
 			}
 			
 			if(function_back == null) {
 
-//				function_back = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "gelu_bwd_cuda");
 				function_back = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "gelu_backward");
 				
+			}
+			
+			if(fast_function == null) {
+
+				fast_function = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "gelu_fwd_cuda");
+				
+			}
+			
+			if(fast_function_back == null) {
+
+				fast_function_back = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "gelu_bwd_cuda");
+
 			}
 			
 		} catch (Exception e) {
@@ -85,6 +98,41 @@ public class GeluKernel extends BaseKernel{
 //			}
 
 			cuLaunchKernel(function,
+		            this.CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            forwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
+//			JCudaDriver.cuCtxSynchronize();
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void fast_forward(Tensor input,Tensor output) {
+		
+		try {
+			
+//			if(forwardKernelParameters == null || this.N != output.number) {
+					/**
+			         * 设置入参
+			         * float *x, float *output, int N
+			         */ 
+					forwardKernelParameters = Pointer.to(
+			        		Pointer.to(input.getGpuData()),
+			                Pointer.to(output.getGpuData()),
+			                Pointer.to(new int[]{output.dataLength})
+			            );
+					
+					this.N = output.number;
+					
+//			}
+
+			cuLaunchKernel(fast_function,
 		            this.CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
@@ -174,6 +222,39 @@ public class GeluKernel extends BaseKernel{
 //			}
 			
 			cuLaunchKernel(function_back,
+		            this.CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            backwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
+//	        JCudaDriver.cuCtxSynchronize();
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void fast_backward(Tensor input,Tensor delta,Tensor diff) {
+		
+		try {
+			
+//			if(backwardKernelParameters == null) {
+				/**
+		         * 设置入参
+		         * float* dinp, const float* inp, const float* dout, int N
+		         */ 
+				backwardKernelParameters = Pointer.to(
+						Pointer.to(diff.getGpuData()),
+						Pointer.to(input.getGpuData()),
+		        		Pointer.to(delta.getGpuData()),
+		                Pointer.to(new int[]{input.dataLength})
+		            );
+//			}
+			
+			cuLaunchKernel(fast_function_back,
 		            this.CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream

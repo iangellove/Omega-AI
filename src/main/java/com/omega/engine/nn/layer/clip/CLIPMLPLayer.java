@@ -56,7 +56,7 @@ public class CLIPMLPLayer extends Layer{
 
 		this.linear1 = new FullyLayer(embedDim, nChannel, bias, network);
 
-		this.active = new GeluLayer(getLinear1());
+		this.active = new GeluLayer(getLinear1(), true);
 		
 		this.linear2 = new FullyLayer(nChannel, embedDim, bias, network);
 
@@ -85,7 +85,7 @@ public class CLIPMLPLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		getLinear1().forward(input);
-		
+
 		active.forward(getLinear1().getOutput());
 
 		getLinear2().forward(active.getOutput());

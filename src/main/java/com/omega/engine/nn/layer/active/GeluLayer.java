@@ -19,11 +19,18 @@ public class GeluLayer extends ActiveFunctionLayer {
 	
 	private GeluKernel kernel;
 	
+	private boolean fast = false;
+	
 	public GeluLayer() {
 
 	}
 	
 	public GeluLayer(Layer preLayer) {
+		this.setPreLayer(preLayer);
+	}
+	
+	public GeluLayer(Layer preLayer,boolean fast) {
+		this.fast = fast;
 		this.setPreLayer(preLayer);
 	}
 	
@@ -54,7 +61,11 @@ public class GeluLayer extends ActiveFunctionLayer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		kernel.forward(input, output);
+		if(fast) {
+			kernel.fast_forward(input, output);
+		}else {
+			kernel.forward(input, output);
+		}
 	}
 
 	@Override
@@ -66,7 +77,11 @@ public class GeluLayer extends ActiveFunctionLayer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		kernel.backward(input, delta, diff);
+		if(fast) {
+			kernel.fast_backward(input, delta, diff);
+		}else {
+			kernel.backward(input, delta, diff);
+		}
 	}
 	
 	@Override

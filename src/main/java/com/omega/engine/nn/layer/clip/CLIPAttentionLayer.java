@@ -211,9 +211,13 @@ public class CLIPAttentionLayer extends Layer{
 		this.getkLinerLayer().forward(this.input);
 		this.getvLinerLayer().forward(this.input);
 		
+		float d_k = (float) (1.0f / Math.sqrt(dk));
+		
 		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
 		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, time, headNum, dk);
 		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, time, headNum, dk);
+		
+		TensorOP.mul(query, d_k, query);
 
 		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
@@ -240,12 +244,14 @@ public class CLIPAttentionLayer extends Layer{
 	
 	public void scaledDotProductAttention(Tensor query,Tensor key,Tensor value) {
 
-		float d_k = (float) (1.0f / Math.sqrt(dk));
+//		float d_k = (float) (1.0f / Math.sqrt(dk));
+		
+		float d_k = 1.0f;
 		
 		Tensor preatt = temp;
 		
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, key.getGpuData(), dk, time * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), time, time * time, batchSize * headNum);
-		
+
 		attentionKernel.softmax_unmask_test_forward(preatt, attn, batchSize, headNum, time, d_k);
 		
 		Tensor tmp = attn;
@@ -254,7 +260,7 @@ public class CLIPAttentionLayer extends Layer{
 			dropoutLayer.forward(attn);
 			tmp = dropoutLayer.getOutput();
 		}
-//		value.showDM();
+
 		Tensor vaccum = temp;
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, value.getGpuData(), dk, time * dk, tmp.getGpuData(), time, time * time, 0.0f, vaccum.getGpuData(), dk, time * dk, batchSize * headNum);
 	}

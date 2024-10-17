@@ -30,6 +30,14 @@ public class BaseKernel {
 	
 	private CUfunction constrain_function;
 	
+	private CUfunction concat_channel_function;
+	
+	private CUfunction concat_channel_backward_function;
+	
+	private CUfunction replace_channel_forward_function;
+	
+	private CUfunction replace_channel_backward_function;
+	
 	public BaseKernel() {
 		
 		copy_gpu_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "copy_kernel");
@@ -41,6 +49,240 @@ public class BaseKernel {
 		scal_add_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "scal_add_kernel");
 		
 		constrain_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "constrain_kernel");
+		
+		concat_channel_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "concat_channel_forward_kernel");
+		
+		concat_channel_backward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "concat_channel_backward_kernel");
+		
+		replace_channel_forward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "replace_channel_forward_kernel");
+		
+		replace_channel_backward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "replace_channel_backward_kernel");
+		
+	}
+	
+	public void concat_channel_forward(Tensor x1,Tensor x2,Tensor output,int B,int C1,int C2,int H,int W) {
+		
+		try {
+
+			if(concat_channel_function == null) {
+				concat_channel_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "concat_channel_forward_kernel");
+			}
+			
+			/**
+			 *  const float* x1, const float* x2,float* out,int B, int C1, int C2, int H, int W
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(x1.getGpuData()),
+	        		Pointer.to(x2.getGpuData()),
+	        		Pointer.to(output.getGpuData()),
+	                Pointer.to(new int[]{B}),
+	                Pointer.to(new int[]{C1}),
+	                Pointer.to(new int[]{C2}),
+	                Pointer.to(new int[]{H}),
+	                Pointer.to(new int[]{W})
+	            );
+			
+			int N = B * (int)Math.max(C1, C2) * H * W;
+			
+			checkCUDA(cuLaunchKernel(concat_channel_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void concat_channel_backward(Tensor diff,Tensor dx1,Tensor dx2,int B,int C1,int C2,int H,int W) {
+		
+		try {
+
+			if(concat_channel_backward_function == null) {
+				concat_channel_backward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "concat_channel_backward_kernel");
+			}
+			
+			/**
+			 *   const float* dout, float* dx1, float* dx2,int B, int C1, int C2, int H, int W
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(diff.getGpuData()),
+	        		Pointer.to(dx1.getGpuData()),
+	        		Pointer.to(dx2.getGpuData()),
+	                Pointer.to(new int[]{B}),
+	                Pointer.to(new int[]{C1}),
+	                Pointer.to(new int[]{C2}),
+	                Pointer.to(new int[]{H}),
+	                Pointer.to(new int[]{W})
+	            );
+			
+			int N = B * (int)Math.max(C1, C2) * H * W;
+			
+			checkCUDA(cuLaunchKernel(concat_channel_backward_function,
+	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void replace_channel_forward(Tensor x1,Tensor x2,Tensor output,Tensor indices,int size) {
+		
+		try {
+
+			if(replace_channel_forward_function == null) {
+				replace_channel_forward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "replace_channel_forward_kernel");
+			}
+			
+			/**
+			 *   const float* out,float* x1, float* x2,int B, int C, int H, int W,int N, int* indices,int size
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(output.getGpuData()),
+	        		Pointer.to(x1.getGpuData()),
+	        		Pointer.to(x2.getGpuData()),
+	                Pointer.to(new int[]{x1.number}),
+	                Pointer.to(new int[]{x1.channel}),
+	                Pointer.to(new int[]{x1.height}),
+	                Pointer.to(new int[]{x1.width}),
+	                Pointer.to(new int[]{x1.getDataLength()}),
+	                Pointer.to(indices.getGpuData()),
+	                Pointer.to(new int[]{size})
+	            );
+			
+			checkCUDA(cuLaunchKernel(replace_channel_forward_function,
+	        		CAFFE_GET_BLOCKS(x1.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void replace_channel_forward(Tensor x1,Tensor x2,Tensor output,Tensor indices,int size,int B,int C,int H,int W) {
+		
+		try {
+
+			if(replace_channel_forward_function == null) {
+				replace_channel_forward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "replace_channel_forward_kernel");
+			}
+			
+			/**
+			 *   const float* out,float* x1, float* x2,int B, int C, int H, int W,int N, int* indices,int size
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(output.getGpuData()),
+	        		Pointer.to(x1.getGpuData()),
+	        		Pointer.to(x2.getGpuData()),
+	                Pointer.to(new int[]{B}),
+	                Pointer.to(new int[]{C}),
+	                Pointer.to(new int[]{H}),
+	                Pointer.to(new int[]{W}),
+	                Pointer.to(new int[]{x1.getDataLength()}),
+	                Pointer.to(indices.getGpuData()),
+	                Pointer.to(new int[]{size})
+	            );
+			
+			checkCUDA(cuLaunchKernel(replace_channel_forward_function,
+	        		CAFFE_GET_BLOCKS(x1.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void replace_channel_backward(Tensor diff,Tensor dx,Tensor indices,int size) {
+		
+		try {
+
+			if(replace_channel_backward_function == null) {
+				replace_channel_backward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "replace_channel_backward_kernel");
+			}
+			
+			/**
+			 *   const float* diff,float* dx,int B, int C, int H, int W,int N, int* indices,int size
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(diff.getGpuData()),
+	        		Pointer.to(dx.getGpuData()),
+	                Pointer.to(new int[]{diff.number}),
+	                Pointer.to(new int[]{diff.channel}),
+	                Pointer.to(new int[]{diff.height}),
+	                Pointer.to(new int[]{diff.width}),
+	                Pointer.to(new int[]{diff.getDataLength()}),
+	                Pointer.to(indices.getGpuData()),
+	                Pointer.to(new int[]{size})
+	            );
+			
+			checkCUDA(cuLaunchKernel(replace_channel_backward_function,
+	        		CAFFE_GET_BLOCKS(diff.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void replace_channel_backward(Tensor diff,Tensor dx,Tensor indices,int size,int B,int C,int H,int W) {
+		
+		try {
+
+			if(replace_channel_backward_function == null) {
+				replace_channel_backward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "replace_channel_backward_kernel");
+			}
+			
+			/**
+			 *   const float* diff,float* dx,int B, int C, int H, int W,int N, int* indices,int size
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(diff.getGpuData()),
+	        		Pointer.to(dx.getGpuData()),
+	                Pointer.to(new int[]{B}),
+	                Pointer.to(new int[]{C}),
+	                Pointer.to(new int[]{H}),
+	                Pointer.to(new int[]{W}),
+	                Pointer.to(new int[]{diff.getDataLength()}),
+	                Pointer.to(indices.getGpuData()),
+	                Pointer.to(new int[]{size})
+	            );
+			
+			checkCUDA(cuLaunchKernel(replace_channel_backward_function,
+	        		CAFFE_GET_BLOCKS(diff.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
 		
 	}
 	

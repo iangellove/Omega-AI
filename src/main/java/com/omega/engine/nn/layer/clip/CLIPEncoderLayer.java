@@ -128,17 +128,17 @@ public class CLIPEncoderLayer extends Layer{
 		getNorm1().forward(input);
 
 		getAttn().forward(getNorm1().getOutput());
-//		System.err.println("attn:");
-//		getAttn().getOutput().showDM();
+
 		TensorOP.add(getAttn().getOutput(), input, tmp1);
 		
 		getNorm2().forward(tmp1);
-		
+
 		getMlp().forward(getNorm2().getOutput());
 		
 		TensorOP.add(getMlp().getOutput(), tmp1, tmp2);
 		
 		this.output = tmp2;
+		
 	}
 	
 	@Override

@@ -37,6 +37,21 @@ public class LagJsonReader {
 	    return null;
 	}
 	
+	public static List<Map<String,Object>> readJsonDataSamll(String path) {
+		
+		List<Map<String,Object>> mapList = new ArrayList<Map<String,Object>>(); 
+		
+		try {
+			String jsonString = new String(Files.readAllBytes(Paths.get(path)));
+			mapList = JsonUtils.gson.fromJson(jsonString, mapList.getClass());
+			return mapList;
+        } catch (IOException e) {
+           e.printStackTrace();
+        }
+    	
+	    return null;
+	}
+	
 	public static Map<String,Object> readJsonFileSmallWeight(String path) {
 		
 		Map<String,Object> mapList = new LinkedHashMap<String, Object>();

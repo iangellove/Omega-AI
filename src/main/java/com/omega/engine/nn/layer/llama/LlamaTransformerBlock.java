@@ -128,6 +128,7 @@ public class LlamaTransformerBlock extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
 		this.time = this.network.time;
+		
 		if(this.tmp1 == null || this.tmp1.number != this.number) {
 //			if(this.tmp1 == null) {
 //				System.out.println(number+":"+embedDim);
