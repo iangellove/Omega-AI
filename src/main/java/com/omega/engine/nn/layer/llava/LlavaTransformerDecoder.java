@@ -170,7 +170,7 @@ public class LlavaTransformerDecoder extends Layer{
 		this.time = this.network.time;
 		this.batchSize = this.number / this.time;
 		if(tiTokens == null || tiTokens.number != this.number) {
-			tiTokens = Tensor.createGPUTensor(tiTokens, this.number, this.input.channel, this.input.height, this.input.width, true);
+			tiTokens = Tensor.createGPUTensor(tiTokens, this.number, 1, 1, embedDim, true);
 		}
 		
 	}
@@ -203,12 +203,6 @@ public class LlavaTransformerDecoder extends Layer{
 		getVersionProj().forward(imageEncode);
 
 		baseKernel.replace_channel_forward(src_emb.getOutput(), getVersionProj().getOutput(), tiTokens, indices, imageTime, batchSize, time, 1, embedDim);
-		
-		src_emb.getOutput().showShape();
-		getVersionProj().getOutput().showShape();
-		tiTokens.showShape();
-		System.out.println(batchSize+":"+time+":"+embedDim);
-		tiTokens.showDM();
 		
 		Tensor out1 = tiTokens;
 //		out1.showDMByOffset(0, 100);

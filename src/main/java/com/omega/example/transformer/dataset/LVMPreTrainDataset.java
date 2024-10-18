@@ -37,6 +37,8 @@ public class LVMPreTrainDataset {
 	
 	private String imagePath;
 	
+	private String imagePrefix = "";
+	
 	public Tokenizer tokenizer;
 	
 	public int max_len = 256;
@@ -65,10 +67,11 @@ public class LVMPreTrainDataset {
 	private float[] tmpImageInput;
 	private float[] tmpIndice;
 
-	public LVMPreTrainDataset(String dataPath,String imagePath,int imageSize,int max_len,int batchSize,boolean shuffle,Tokenizer tokenizer) {
+	public LVMPreTrainDataset(String dataPath,String imagePath,String imagePrefix,int imageSize,int max_len,int batchSize,boolean shuffle,Tokenizer tokenizer) {
 		this.shuffle = shuffle;
 		this.dataPath = dataPath;
 		this.imagePath = imagePath;
+		this.imagePrefix = imagePrefix;
 		this.imageSize = imageSize;
 		this.onceImgSize = 3 * this.imageSize * this.imageSize;
 		this.max_len = max_len;
@@ -152,7 +155,7 @@ public class LVMPreTrainDataset {
 		String q = conversations.get(0).get("value").replaceAll("<image>", image_special_token);
 		String a = conversations.get(1).get("value");
 		String[] qa = new String[] {q, a};
-		String imgPath = imagePath + item.get("image").toString();
+		String imgPath = imagePath + imagePrefix + item.get("image").toString();
 //		long start = System.nanoTime();
 //		System.err.println(imgPath);
 		imageProcessor(imgPath, b);
