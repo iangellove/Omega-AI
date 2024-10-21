@@ -1,4 +1,5 @@
-#define BLOCK 1024 
+#include <cuda.h>
+#include <cuda_runtime.h>
 
 extern "C"
 __global__ void flash_attention_2_forward_kernel(

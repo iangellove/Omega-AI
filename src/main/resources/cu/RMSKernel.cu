@@ -110,3 +110,73 @@ __global__ void rmsnorm_backward_kernel(float* __restrict__ out, float* __restri
         atomicAddX(&dweight[i], (float)dweight_shared[i]);
     }
 }
+
+extern "C"
+__global__ void rmsnorm_forward_kernel1(float *out, const float *inp, const float *weight, int N, int C)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float eps = 1e-5f;
+
+    if (idx < N) {
+        // seek to the input position inp[idx,:]
+        const float *x = inp + idx * C;
+        // calculate the rms (root mean square)
+        float rms = 0.0f;
+        for (int i = 0; i < C; i++)
+        {
+            rms += x[i] * x[i];
+        }
+        rms = sqrtf(rms / C + eps);
+        // seek to the output position in out[idx,:]
+        float *out_idx = out + idx * C;
+        for (int i = 0; i < C; i++)
+        {
+            float n = x[i] / rms;              // normalized output
+            float o = n * weight[i]; // scale and shift it
+            out_idx[i] = o;                    // write
+        }
+    }
+}
+
+extern "C"
+__global__ void rmsnorm_backward_kernel1(float *dinp, float *dweight,const float *dout, const float *inp, const float *weight,int N, int C)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= N)
+        return;
+
+    float eps = 1e-5f;
+    const float *dout_bt = dout + idx * C;
+    const float *inp_bt = inp + idx * C;
+    float *dinp_bt = dinp + idx * C;
+
+    // Calculate the rms
+    float rms = 0.0f;
+    for (int i = 0; i < C; i++)
+    {
+        rms += inp_bt[i] * inp_bt[i];
+    }
+    rms = sqrtf(rms / C + eps);
+
+    // First, calculate the gradients for the weights and biases
+    for (int i = 0; i < C; i++)
+    {
+        float norm = inp_bt[i] / rms;
+        atomicAdd(&dweight[i], norm * dout_bt[i]);
+    }
+
+    // Calculate drms
+    float drms = 0.0f;
+    for (int i = 0; i < C; i++)
+    {
+        drms += inp_bt[i] * dout_bt[i] * weight[i];
+    }
+    drms = drms * (-1.0f / (rms * rms * rms * C));
+
+    // Now, calculate the gradients for the inputs
+    for (int i = 0; i < C; i++)
+    {
+        float norm = inp_bt[i] / rms;
+        dinp_bt[i] = dout_bt[i] * weight[i] / rms + drms * inp_bt[i];
+    }
+}

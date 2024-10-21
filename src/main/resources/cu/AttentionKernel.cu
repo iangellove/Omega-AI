@@ -1,6 +1,7 @@
 #define BLOCK 1024 
 #define BlockSize 256
 #define BlockSize32 32
+#define WARP_SIZE 32
 
 #include <float.h>
 #include <cooperative_groups.h>
@@ -356,6 +357,188 @@ __global__ void softmax_forward_kernel4(float* out, const float* inp, int N, int
 }
 
 extern "C"
+__global__ void softmax_scale_forward_kernel4(float* out, const float* inp, int N, int C,float scale) {
+    // out is (N, C) just like inp. Each row of inp will get softmaxed.
+    // same as kernel3, but can handle any block size (multiple of 32)
+    // each row of C elements is handled by block_size threads
+    // furthermore, each block_size threads get executed in warps of 32 threads
+
+    // special reduction operations warpReduceMax/warpReduceSum are used for intra-warp reductions
+    // shared memory is used for inter-warp reduction
+    extern __shared__ float shared[];
+    int idx = blockIdx.x;
+    int tid = threadIdx.x;
+    int warpId = threadIdx.x / 32; // warp index within a block
+    int laneId = threadIdx.x % 32; // thread index within a warp
+
+    // the number of warps per block. recall that blockDim.x is block_size
+    int warpsPerBlock = blockDim.x / 32;
+
+    // shared[] must be allocated to have 2 * warpsPerBlock elements
+    // first half for max values, the second half for sum values
+    float* maxvals = shared;
+    float* sumvals = &shared[warpsPerBlock];
+
+    // one row of inp, i.e. inp[idx, :] of shape (C,)
+    const float* x = inp + idx * C;
+
+    // first, thread coarsening by directly accessing global memory in series
+    float maxval = -INFINITY;
+    for (int i = tid; i < C; i += blockDim.x) {
+        maxval = fmaxf(maxval, x[i] * scale);
+    }
+    // now within-warp reductions for maxval
+    maxval = warpReduceMax(maxval);
+
+    // the 0th thread of each warp writes the maxval of that warp to shared memory
+    if (laneId == 0) maxvals[warpId] = maxval;
+    __syncthreads();
+
+    // now the 0th thread reduces the maxvals in shared memory, i.e. across warps
+    if (tid == 0) {
+        float val = maxvals[tid];
+        for (int i = 1; i < warpsPerBlock; i++) {
+            val = fmaxf(val, maxvals[i]);
+        }
+        // store the final max in the first position
+        maxvals[0] = val;
+    }
+    __syncthreads();
+    // broadcast the max to all threads
+    float offset = maxvals[0];
+
+    // compute expf and write the result to global memory
+    for (int i = tid; i < C; i += blockDim.x) {
+        // subtract max for numerical stability
+        out[idx * C + i] = expf(x[i] * scale - offset);
+    }
+
+    // okay now we calculated exp(x - max(x))
+    // step 2: sum all the values and divide by the sum
+
+    // thread coarsening for sum
+    x = out + idx * C;
+    float sumval = 0.0f;
+    for (int i = tid; i < C; i += blockDim.x) {
+        sumval += x[i] * scale;
+    }
+    // within-warp reduction for sumval
+    sumval = warpReduceSum(sumval);
+
+    // write sumval to shared memory
+    if (laneId == 0) sumvals[warpId] = sumval;
+    __syncthreads();
+
+    // inter-thread reduction of sum
+    if (tid == 0) {
+        float val = sumvals[tid];
+        for (int i = 1; i < warpsPerBlock; ++i) {
+            val += sumvals[i];
+        }
+        sumvals[0] = val;
+    }
+    __syncthreads();
+    // broadcast the sum to all threads
+    float sum = sumvals[0];
+
+    // divide the whole row by the sum
+    for (int i = tid; i < C; i += blockDim.x) {
+        out[idx * C + i] = x[i] * scale / sum;
+    }
+}
+
+extern "C"
+__global__ void softmax_unmask_forward_kernel4(float* out, const float* inp, int N, int C,float scale) {
+    // out is (N, C) just like inp. Each row of inp will get softmaxed.
+    // same as kernel3, but can handle any block size (multiple of 32)
+    // each row of C elements is handled by block_size threads
+    // furthermore, each block_size threads get executed in warps of 32 threads
+
+    // special reduction operations warpReduceMax/warpReduceSum are used for intra-warp reductions
+    // shared memory is used for inter-warp reduction
+    extern __shared__ float shared[];
+    int idx = blockIdx.x;
+    int tid = threadIdx.x;
+    int warpId = threadIdx.x / 32; // warp index within a block
+    int laneId = threadIdx.x % 32; // thread index within a warp
+
+    // the number of warps per block. recall that blockDim.x is block_size
+    int warpsPerBlock = blockDim.x / 32;
+
+    // shared[] must be allocated to have 2 * warpsPerBlock elements
+    // first half for max values, the second half for sum values
+    float* maxvals = shared;
+    float* sumvals = &shared[warpsPerBlock];
+
+    // one row of inp, i.e. inp[idx, :] of shape (C,)
+    const float* x = inp + idx * C;
+
+    // first, thread coarsening by directly accessing global memory in series
+    float maxval = -INFINITY;
+    for (int i = 0; i < C; i++) {
+        maxval = fmaxf(maxval, x[i] * scale);
+    }
+    // now within-warp reductions for maxval
+    maxval = warpReduceMax(maxval);
+
+    // the 0th thread of each warp writes the maxval of that warp to shared memory
+    if (laneId == 0) maxvals[warpId] = maxval;
+    __syncthreads();
+
+    // now the 0th thread reduces the maxvals in shared memory, i.e. across warps
+    if (tid == 0) {
+        float val = maxvals[tid];
+        for (int i = 1; i < warpsPerBlock; i += blockDim.x) {
+            val = fmaxf(val, maxvals[i]);
+        }
+        // store the final max in the first position
+        maxvals[0] = val;
+    }
+    __syncthreads();
+    // broadcast the max to all threads
+    float offset = maxvals[0];
+
+    // compute expf and write the result to global memory
+    for (int i = tid; i < C; i += blockDim.x) {
+        // subtract max for numerical stability
+        out[idx * C + i] = expf(x[i] * scale - offset);
+    }
+
+    // okay now we calculated exp(x - max(x))
+    // step 2: sum all the values and divide by the sum
+
+    // thread coarsening for sum
+    x = out + idx * C;
+    float sumval = 0.0f;
+    for (int i = tid; i < C; i += blockDim.x) {
+        sumval += x[i] * scale;
+    }
+    // within-warp reduction for sumval
+    sumval = warpReduceSum(sumval);
+
+    // write sumval to shared memory
+    if (laneId == 0) sumvals[warpId] = sumval;
+    __syncthreads();
+
+    // inter-thread reduction of sum
+    if (tid == 0) {
+        float val = sumvals[tid];
+        for (int i = 1; i < warpsPerBlock; ++i) {
+            val += sumvals[i];
+        }
+        sumvals[0] = val;
+    }
+    __syncthreads();
+    // broadcast the sum to all threads
+    float sum = sumvals[0];
+
+    // divide the whole row by the sum
+    for (int i = tid; i < C; i += blockDim.x) {
+        out[idx * C + i] = x[i] * scale / sum;
+    }
+}
+
+extern "C"
 __global__ void softmax_autoregressive_backward_kernel4(float* __restrict__ dpreatt, const float* __restrict__ datt,
                                                         const float* __restrict__ att,
                                                         int B, int T, int C, int NH) {
@@ -423,7 +606,7 @@ __global__ void scale_kernel(float* inp, float scale, int B, int NH, int T) {
         int t2 = rest / T;
         int t = rest % T;
         if (t > t2) {
-            inp[idx] = -INFINITY;
+            inp[idx] = 0;
         } else {
             inp[idx] *= scale;
         }
@@ -699,6 +882,141 @@ __global__ void softmax_autoregressive_nomask_backward_kernel8(float* dpreatt, c
             // we want to exploit those.
             float acc = __ldcs(att_bth + t3) * (__ldcs(datt_bth + t3) - local_sum);
             __stcs(dpreatt_bth + t3, scale * acc);
+        }
+    }
+}
+
+extern "C"
+__global__ void softmax_forward_kernel52(float* out, float inv_temperature, const float* inp, int N, int T) {
+    // inp, out shape: (N, T, T), where N = B * NH
+    // fuses the multiplication by scale inside attention
+    // directly autoregressive, so we only compute the lower triangular part
+    // uses the online softmax algorithm
+    // assert(T % 4  == 0);
+    int lane_id = threadIdx.x % WARP_SIZE;
+    int warp_id = threadIdx.x / WARP_SIZE;
+    int num_warps = blockDim.x / WARP_SIZE;
+
+    // micro-optimization: we iterate backwards so that
+    // after the softmax backward operation completes, the cache retains the
+    // part of the matrix close to the upper left corner, which benefits the
+    // matmul operation that immediately follows.
+    // int idx = blockIdx.x * warp.meta_group_size() + warp.meta_group_rank(); // forward order
+    int idx = (gridDim.x - blockIdx.x - 1) * num_warps + warp_id; // backward order
+    if(idx >= N * T) {
+        return;
+    }
+    int own_pos = idx % T;
+    int pos_by_4 = own_pos / 4;
+
+    // one row of inp, i.e. inp[idx, :] of shape (T,)
+    const float* x = inp + idx * T;
+
+    // not INF, so we don't get NaNs accidentally when subtracting two values.
+    const float flt_max = 340282346638528859811704183484516925440.0f; // to avoid including float.h
+    float maxval = -flt_max;
+    float sumval = 0.0f;
+
+    const float* x_aligned = reinterpret_cast<const float*>(__builtin_assume_aligned(x, 16));
+    for (int i = lane_id; i < pos_by_4; i += WARP_SIZE) {
+        float regarray[4];
+        for (int k = 0; k < 4; ++k) {
+            regarray[k] = (float)x_aligned[4*i + k];
+        }
+        float old_maxval = maxval;
+        for(int k = 0; k < 4; ++k) {
+            maxval = fmaxf(maxval, regarray[k]);
+        }
+        sumval *= expf(inv_temperature * (old_maxval - maxval));
+        for(int k = 0; k < 4; ++k) {
+            sumval += expf(inv_temperature * (regarray[k] - maxval));
+        }
+    }
+
+    if(4*pos_by_4 + lane_id <= own_pos) {
+        float old_maxval = maxval;
+        maxval = fmaxf(maxval, (float)x[4*pos_by_4 + lane_id]);
+        sumval *= expf(inv_temperature * (old_maxval - maxval));
+        sumval += expf(inv_temperature * ((float)x[4*pos_by_4 + lane_id] - maxval));
+    }
+
+    float global_maxval = warpReduceMax(maxval);
+    sumval *= expf(inv_temperature * (maxval - global_maxval));
+
+    float sum = warpReduceSum(sumval);
+    float norm = 1.f / sum;
+
+    // divide the whole row by the sum
+    for (int i = lane_id; i <= own_pos; i += WARP_SIZE) {
+        // recalculation is faster than doing the round-trip through memory.
+        float ev = expf(inv_temperature * ((float)__ldcs(x + i) - global_maxval));
+        __stcs(out + idx * T + i, (float)(ev * norm));
+    }
+}
+
+__device__ float warpReduceSum2(float val) {
+    for (int offset = 16; offset > 0; offset /= 2) {
+        val += __shfl_xor_sync(0xFFFFFFFF, val, offset);
+    }
+    return val;
+}
+
+__device__ inline float blockReduceSum(float val, bool final_sync, float out_of_bounds) {
+    // two reductions of up to 1024 threads:
+    // 1) inside warp (shuffle), 2) cross-warp (shared memory), 3) inside warp (shuffle)
+    __shared__ float shared_val[WARP_SIZE];
+    const int lane_id = threadIdx.x % WARP_SIZE;
+    const int warp_id = threadIdx.x / WARP_SIZE;
+    const int num_warps = blockDim.x / WARP_SIZE;
+
+    float warp_val = warpReduceSum2(val);
+    if (lane_id == 0) { shared_val[warp_id] = warp_val; }
+    __syncthreads();
+    warp_val = (lane_id < num_warps) ? shared_val[lane_id] : out_of_bounds;
+    float block_val = warpReduceSum2(warp_val);
+
+    if (final_sync) {
+        __syncthreads(); // only needed in loops when effectively reusing shared memory etc.
+    }
+    return block_val;
+}
+
+extern "C"
+__global__ void softmax_autoregressive_backward_inplace_kernel(float* datt, const float* att, int B, int T, int C, float scale) {
+
+    int T_per_block = 4;
+
+    // go through blocks in reverse order, so the slowest block starts first
+    int t0 = T - 1 - T_per_block*blockIdx.x;
+    int idx = blockIdx.y;
+
+    att += idx * T * T;
+    datt += idx * T * T;
+
+    for(int to = 0; to < T_per_block; ++to) {
+        int t = t0 - to;
+        if(t < 0) return;
+        const float* att_bth = att + t * T;
+        const float* datt_bth = datt + t * T;
+        float* dpreatt_bth = datt + t * T;
+
+        float local_sum = 0;
+        for (int t2 = threadIdx.x; t2 <= t; t2 += BlockSize) {
+            local_sum += (float)att_bth[t2] * (float)datt_bth[t2];
+        }
+
+        local_sum = blockReduceSum(local_sum, false, 0.0f);
+
+        for (int t3 = threadIdx.x; t3 < T; t3 += BlockSize) {
+            // don't touch the cache. Some parts will still be here from the previous loop, and
+            // we want to exploit those.
+            if(t3 <= t) {
+                float acc = (float) __ldcs(att_bth + t3) * ((float) __ldcs(datt_bth + t3) - local_sum);
+                __stcs(dpreatt_bth + t3, (float) (scale * acc));
+            } else {
+                // explicitly set non-causal elements to zero
+                __stcs(dpreatt_bth + t3, (float)0.f);
+            }
         }
     }
 }
