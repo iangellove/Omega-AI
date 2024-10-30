@@ -236,8 +236,6 @@ public class LlavaTest {
 			
 			boolean dropout = false;
 			
-			int batchSize = 2;
-			
 			int imageSize = 224;
 			
 			int max_len = 512;
@@ -271,7 +269,7 @@ public class LlavaTest {
 			
 			ClipVision clipVision = createClipVision();
 
-			String model_path = "H:\\model\\llava-26m-chinese-sft.model";
+			String model_path = "H:\\model\\llava-26m-chinese-sft3.model";
 			ModelUtils.loadModel(network, model_path);
 			
 			network.RUN_MODEL = RunModel.TEST;
@@ -316,7 +314,7 @@ public class LlavaTest {
 					Tensor sin = pos[1];
 					Tensor output = network.forward(clipVision.getEncoder().getImageEncoders(), indice, cos, sin, input);
 					output.syncHost();
-					int nextIDX = output2NextIDXTopN(output, idx.length - 1, 8);
+					int nextIDX = output2NextIDXTopN(output, idx.length - 1, 3);
 					idx = Arrays.copyOf(idx, idx.length + 1);
 					idx[idx.length - 1] = nextIDX;
 					if(nextIDX == tokenizer.eos) {
@@ -385,7 +383,11 @@ public class LlavaTest {
 
 			CUDAModules.initContext();
 			
-			llava_pertrain();
+//			llava_pertrain();
+			
+//			llava_sft();
+			
+			llava_sft_predict();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

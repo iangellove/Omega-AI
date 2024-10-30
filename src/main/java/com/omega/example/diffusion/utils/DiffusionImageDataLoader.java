@@ -4,7 +4,6 @@ import java.io.File;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MathUtils;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.example.unet.utils.SegImageLoader;
 import com.omega.example.yolo.data.BaseDataLoader;
@@ -32,8 +31,12 @@ public class DiffusionImageDataLoader extends BaseDataLoader{
 	
 	private boolean horizontalFilp;
 
-	public static final float[] mean = new float[] {0.5f, 0.5f, 0.5f};
-	public static final float[] std = new float[] {0.5f, 0.5f, 0.5f};
+	public float[] mean;
+	public float[] std;
+	
+	public int count;
+	
+	public int count_it;
 	
 	public DiffusionImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize,boolean horizontalFilp) {
 		this.horizontalFilp = horizontalFilp;
@@ -41,6 +44,17 @@ public class DiffusionImageDataLoader extends BaseDataLoader{
 		this.img_w = img_w;
 		this.img_h = img_h;
 		this.batchSize = batchSize;
+		init();
+	}
+	
+	public DiffusionImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize,boolean horizontalFilp,float[] mean,float[] std) {
+		this.horizontalFilp = horizontalFilp;
+		this.imgDirPath = imgDirPath;
+		this.img_w = img_w;
+		this.img_h = img_h;
+		this.batchSize = batchSize;
+		this.mean = mean;
+		this.std = std;
 		init();
 	}
 	
@@ -63,7 +77,8 @@ public class DiffusionImageDataLoader extends BaseDataLoader{
 					this.idxSet[i] = filenames[i];
 				}
 			}
-			
+			count = this.idxSet.length;
+			count_it = this.idxSet.length / batchSize;
 			System.err.println("data count["+this.idxSet.length+"].");
 			
 		} catch (Exception e) {
@@ -162,7 +177,11 @@ public class DiffusionImageDataLoader extends BaseDataLoader{
 		/**
 		 * 加载input数据
 		 */
-		SegImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false, true);
+		if(mean != null) {
+			SegImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false, true, mean , std);
+		}else {
+			SegImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false, true);
+		}
 		
 		/**
 		 * copy data to gpu.

@@ -341,7 +341,6 @@ public class ConvolutionLayer extends Layer {
 		/**
 		 * 计算diff
 		 */
-		
 		if(PROPAGATE_DOWN || this.network.PROPAGATE_DOWN) {
 			/**
 			 * dx = col2im(a)

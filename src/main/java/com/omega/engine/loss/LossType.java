@@ -17,6 +17,7 @@ public enum LossType {
 	yolov3,
 	yolov7,
 	MSE,
+	MSE_SUM,
 	BCE,
 	BCEWithLogits
 	

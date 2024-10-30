@@ -30,6 +30,8 @@ public class LossFactory {
 		switch (type) {
 		case MSE:
 			return new MSELoss();
+		case MSE_SUM:
+			return new MSESumLoss();
 		case BCE:
 			return new BCELoss();
 		case cross_entropy:

@@ -7,7 +7,6 @@ import com.omega.common.task.Task;
 import com.omega.common.task.TaskEngine;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.active.gpu.LeakyReluKernel;
 import com.omega.engine.nn.layer.active.gpu.ReluKernel;
 import com.omega.engine.nn.network.Network;
 

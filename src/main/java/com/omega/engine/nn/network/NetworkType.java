@@ -17,6 +17,7 @@ public enum NetworkType {
 	GPT("GPT"),
 	LLAMA("LLAMA"),
 	LLAVA("LLAVA"),
+	VAE("VAE"),
 	CLIP_VISION("CLIP_VISION"),
 	UNET("UNET"),
 	DUFFSION_UNET("DUFFSION_UNET"),

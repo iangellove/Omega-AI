@@ -41,9 +41,30 @@ public class SegImageLoader extends RecursiveAction {
 	
 	private boolean gray = false;
 	
+	private float[] mean;
+	
+	private float[] std;
+	
 	public static SegImageLoader getInstance(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,boolean gray,boolean normalization,int start,int end) {
 		if(job == null) {
 			job = new SegImageLoader(path, extName, names, indexs, batchSize, input, gray, normalization, start, end);
+		}else {
+			if(input != job.getInput()){
+				job.setInput(input);
+			}
+			job.setPath(path);
+			job.setNames(names);
+			job.setStart(0);
+			job.setEnd(end);
+			job.setIndexs(indexs);
+			job.reinitialize();
+		}
+		return job;
+	}
+	
+	public static SegImageLoader getInstance(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,boolean gray,boolean normalization,float[] mean,float[] std,int start,int end) {
+		if(job == null) {
+			job = new SegImageLoader(path, extName, names, indexs, batchSize, input, gray, normalization, mean, std, start, end);
 		}else {
 			if(input != job.getInput()){
 				job.setInput(input);
@@ -71,6 +92,21 @@ public class SegImageLoader extends RecursiveAction {
 		this.normalization = normalization;
 	}
 	
+	public SegImageLoader(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,boolean gray,boolean normalization,float[] mean,float[] std,int start,int end) {
+		this.setStart(start);
+		this.setEnd(end);
+		this.batchSize = batchSize;
+		this.setPath(path);
+		this.extName = extName;
+		this.setNames(names);
+		this.setIndexs(indexs);
+		this.setInput(input);
+		this.mean = mean;
+		this.std = std;
+		this.gray = gray;
+		this.normalization = normalization;
+	}
+	
 	@Override
 	protected void compute() {
 		// TODO Auto-generated method stub
@@ -83,9 +119,17 @@ public class SegImageLoader extends RecursiveAction {
 		} else {
 
 			int mid = (getStart() + getEnd() + 1) >>> 1;
-			SegImageLoader left = new SegImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), gray, normalization, getStart(), mid - 1);
-			SegImageLoader right = new SegImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), gray, normalization, mid, getEnd());
-
+		
+			SegImageLoader left = null;
+			SegImageLoader right = null;
+		
+			if(mean != null) {
+				left = new SegImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), gray, normalization, mean, std, getStart(), mid - 1);
+				right = new SegImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), gray, normalization, mean, std, mid, getEnd());
+			}else {
+				left = new SegImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), gray, normalization, getStart(), mid - 1);
+				right = new SegImageLoader(getPath(), extName, getNames(), getIndexs(), batchSize, getInput(), gray, normalization, mid, getEnd());
+			}
 			ForkJoinTask<Void> leftTask = left.fork();
 			ForkJoinTask<Void> rightTask = right.fork();
 
@@ -108,7 +152,12 @@ public class SegImageLoader extends RecursiveAction {
 				float[] data = YoloImageUtils.loadImgDataToGrayArray(filePath, normalization);
 				System.arraycopy(data, 0, getInput().data, i * getInput().channel * getInput().height * getInput().width, getInput().channel * getInput().height * getInput().width);
 			}else {
-				float[] data = YoloImageUtils.loadImgDataToArray(filePath, normalization);
+				float[] data = null;
+				if(mean != null) {
+					data = YoloImageUtils.loadImgDataToArray(filePath, normalization, mean, std);
+				}else {
+					data = YoloImageUtils.loadImgDataToArray(filePath, normalization);
+				}
 				System.arraycopy(data, 0, getInput().data, i * getInput().channel * getInput().height * getInput().width, getInput().channel * getInput().height * getInput().width);
 			}
 		}
@@ -119,6 +168,12 @@ public class SegImageLoader extends RecursiveAction {
 		
 //		FileDataLoader job = new FileDataLoader(path, extName, names, indexs, batchSize, input, 0, batchSize - 1);
 		SegImageLoader job = getInstance(path, extName, names, indexs, batchSize, input, gray, normalization, 0, batchSize - 1);
+		ForkJobEngine.run(job);
+		
+	}
+	
+	public static void load(String path,String extName,String[] names,int[] indexs,int batchSize,Tensor input,boolean gray,boolean normalization,float[] mean,float[] std) {
+		SegImageLoader job = getInstance(path, extName, names, indexs, batchSize, input, gray, normalization, mean, std, 0, batchSize - 1);
 		ForkJobEngine.run(job);
 		
 	}

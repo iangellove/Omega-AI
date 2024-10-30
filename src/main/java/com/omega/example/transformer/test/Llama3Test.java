@@ -22,13 +22,13 @@ import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.optimizer.EDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
+import com.omega.example.transformer.dataset.PreTrainDataset;
 import com.omega.example.transformer.dataset.SFTDataset;
 import com.omega.example.transformer.utils.CNTokenizer;
 import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.transformer.utils.SentencePieceTokenizer;
 import com.omega.example.transformer.utils.bpe.BPETokenizer3;
 import com.omega.example.transformer.utils.bpe.BinDataType;
-import com.omega.example.transformer.utils.bpe.CNBpeTokenizer;
 
 public class Llama3Test {
 	
@@ -105,54 +105,37 @@ public class Llama3Test {
 	}
 	
 	public static void llama3_monkey() {
-		
 		try {
-			
 			boolean bias = false;
-			
 			boolean dropout = false;
-			
 			boolean flashAttention = false;
-			
 			int batchSize = 2;
-			
 			int max_len = 512;
-			
 			int embedDim = 512;
-			
 			int head_num = 16;
-			
 			int nKVHeadNum = 8;
-			
 			int decoderNum = 8;
 			
 //			String trainPath = "H:\\transformer_dataset\\6400\\monkey_idx_6400_vocab.bin";
 			
 			String trainPath = "H:\\model\\pretrain_data_6400.bin";
-			
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
-			
 			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
 			
 			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
 			
-			CNBpeTokenizer trainData = new CNBpeTokenizer(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
+			PreTrainDataset trainData = new PreTrainDataset(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
+//			CNBpeTokenizer trainData = new CNBpeTokenizer(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
 			
 			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
 			
 			network.learnRate = 1e-4f;
 			network.CLIP_GRAD_NORM = true;
-			
-//			initWeight(network, decoderNum);
-			
-//			String torchWeight = "H:\\model\\torch_weights.json";
-//			loadWeight(LagJsonReader.readJsonFileSmallWeight(torchWeight), network);
-			
+
 			String model_path = "H:\\model\\llama3-26m-chinese.model";
 			ModelUtils.loadModel(network, model_path);
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
-//			optimizer.lr_step = new int[] {1, 2, 4};
 			optimizer.trainLlama3_chinese(trainData, 8, true);
 
 			String save_model_path = "H:\\model\\llama3-26m-chinese.model";
@@ -198,7 +181,6 @@ public class Llama3Test {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
-		
 	}
 	
 	public static void llama3_monkey_chatglm() {
@@ -229,7 +211,9 @@ public class Llama3Test {
 			
 			SentencePieceTokenizer tokenizer = new SentencePieceTokenizer(tokenizer_path, 64793);
 			
-			CNBpeTokenizer trainData = new CNBpeTokenizer(trainPath, max_len, batchSize, tokenizer, BinDataType.unint32);
+			PreTrainDataset trainData = new PreTrainDataset(trainPath, max_len, batchSize, tokenizer, BinDataType.unint32);
+			
+//			CNBpeTokenizer trainData = new CNBpeTokenizer(trainPath, max_len, batchSize, tokenizer, BinDataType.unint32);
 			
 			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
 			
@@ -238,7 +222,7 @@ public class Llama3Test {
 			initWeight(network, decoderNum);
 
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
-//			optimizer.lr_step = new int[] {1, 2, 4};
+
 			optimizer.trainLlama3_chinese(trainData, 8, false);
 
 			String save_model_path = "H:\\model\\llama3-110m-chinese.model";

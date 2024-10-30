@@ -3,7 +3,7 @@ package com.omega.engine.loss;
 import com.omega.common.data.Tensor;
 import com.omega.common.data.Tensors;
 import com.omega.common.utils.MatrixUtils;
-import com.omega.engine.loss.gpu.MSELossKernel;
+import com.omega.engine.loss.gpu.MSESumLossKernel;
 
 /**
  * Square loss
@@ -11,27 +11,27 @@ import com.omega.engine.loss.gpu.MSELossKernel;
  * @loss: ∑ (y - f(x))^2
  * @diff: 2 * (y - f(x))
  */
-public class MSELoss extends LossFunction {
+public class MSESumLoss extends LossFunction {
 	
 	public final LossType lossType = LossType.MSE;
 	
-	private static MSELoss instance;
+	private static MSESumLoss instance;
 	
-	private MSELossKernel kernel;
+	private MSESumLossKernel kernel;
 	
 	private Tensor loss;
 	
 	private Tensor diff;
 	
-	public static MSELoss operation() {
+	public static MSESumLoss operation() {
 		if(instance == null) {
-			instance = new MSELoss();
+			instance = new MSESumLoss();
 		}
 		return instance;
 	}
 	
-	public MSELoss() {
-		kernel = new MSELossKernel();
+	public MSESumLoss() {
+		kernel = new MSESumLossKernel();
 	}
 	
 	public void init(Tensor input) {
@@ -101,10 +101,10 @@ public class MSELoss extends LossFunction {
 		Tensor xt = Tensors.tensor(N, 1, 1, W, x, true);
 		float[] label = MatrixUtils.order(N * W, 0.1f, 0.1f);
 		Tensor labelt = Tensors.tensor(N, 1, 1, W, label, true);
-		Tensor loss = MSELoss.operation().loss(xt, labelt);
+		Tensor loss = MSESumLoss.operation().loss(xt, labelt);
 		
 		loss.showDM();
-		Tensor diff = MSELoss.operation().diff(xt, labelt);
+		Tensor diff = MSESumLoss.operation().diff(xt, labelt);
 		diff.showDM();
 
 	}

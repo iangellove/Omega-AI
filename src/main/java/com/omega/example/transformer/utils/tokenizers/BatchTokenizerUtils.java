@@ -371,13 +371,13 @@ public class BatchTokenizerUtils {
 	
 	public static void main(String[] args) {
 		
-		String dataPath = "H:\\transformer_dataset\\mobvoi_seq_monkey_general_open_corpus\\mobvoi_seq_monkey_general_open_corpus.jsonl";
+//		String dataPath = "H:\\transformer_dataset\\mobvoi_seq_monkey_general_open_corpus\\mobvoi_seq_monkey_general_open_corpus.jsonl";
 //		String outputPath = "H:\\transformer_dataset\\monkey_idx_6400_all_vocab.txt";
 //		
 //		String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 //		String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt"; 
 //		
-//		encodeMonkeyDataset(dataPath, outputPath, vocabPath, mergesPath);
+//		encodeMonkeyDatasetByBPE(dataPath, outputPath, vocabPath, mergesPath);
 		
 //		String txtPath = "H:\\transformer_dataset\\monkey_idx_6400_vocab.txt";
 //		String binPath = "H:\\transformer_dataset\\monkey_idx_6400_vocab.bin";

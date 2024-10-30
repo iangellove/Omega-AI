@@ -35,7 +35,6 @@ public class ResidualBlockLayer extends Layer{
 	public ConvolutionLayer shortcut;
 	
 	public DiffusionAttentionBlockLayer attn;
-//	private DuffsionSelfAttentionLayer2 attn;
 	
 	private Tensor h;
 	

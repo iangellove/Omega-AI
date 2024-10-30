@@ -16,27 +16,22 @@ import static jcuda.runtime.JCuda.cudaMalloc;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Random;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.PrintUtils;
 import com.omega.common.utils.RandomUtils;
 
 import jcuda.CudaException;
 import jcuda.Pointer;
 import jcuda.Sizeof;
+import jcuda.cudaDataType;
 import jcuda.driver.CUdeviceptr;
 import jcuda.driver.CUfunction;
 import jcuda.driver.JCudaDriver;
-import jcuda.jcublas.JCublas;
 import jcuda.jcublas.JCublas2;
-import jcuda.jcublas.cublasComputeType;
-import jcuda.jcublas.cublasDataType;
 import jcuda.jcublas.cublasGemmAlgo;
 import jcuda.jcublas.cublasHandle;
 import jcuda.jcublas.cublasOperation;
-import jcuda.jcublas.cublasPointerMode;
 import jcuda.jcublas.cublasStatus;
 import jcuda.jcurand.JCurand;
 import jcuda.jcurand.curandGenerator;
@@ -44,7 +39,6 @@ import jcuda.jcurand.curandRngType;
 import jcuda.jcurand.curandStatus;
 import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaMemcpyKind;
-import jcuda.cudaDataType;
 
 public class GPUOP {
     
@@ -754,6 +748,19 @@ public class GPUOP {
     	try {
     		checkCURANDResult(JCurand.curandSetPseudoRandomGeneratorSeed(getGenerator(), RandomUtils.rand()));
     		checkCURANDResult(JCurand.curandGenerateUniform(getGenerator(), x.getGpuData(), x.getDataLength()));
+//    		System.out.println("in");
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+    	
+    }
+    
+    public void cudaRandn(Tensor x) {
+    	
+    	try {
+    		checkCURANDResult(JCurand.curandSetPseudoRandomGeneratorSeed(getGenerator(), RandomUtils.rand()));
+    		checkCURANDResult(JCurand.curandGenerateNormal(getGenerator(), x.getGpuData(), x.getDataLength(), 0, 1));
 //    		System.out.println("in");
 		} catch (Exception e) {
 			// TODO: handle exception
