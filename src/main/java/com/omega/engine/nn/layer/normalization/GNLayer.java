@@ -54,6 +54,14 @@ public class GNLayer extends NormalizationLayer {
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
+	public GNLayer(int groupNum,Layer preLayer,BNType bnType) {
+		this.setPreLayer(preLayer);
+		this.bnType = bnType;
+		this.groupNum = groupNum;
+		this.hasParams = false;
+		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+	}
+	
 	public GNLayer(int groupNum,Layer preLayer,boolean hasBias) {
 		this.setPreLayer(preLayer);
 		this.groupNum = groupNum;
@@ -120,6 +128,10 @@ public class GNLayer extends NormalizationLayer {
 				this.numChannel = this.height * this.width;
 			}
 			
+		}else if(this.bnType == BNType.conv_bn) {
+			this.numChannel = this.channel;
+		}else {
+			this.numChannel = this.height * this.width;
 		}
 
 		if(kernel == null) {

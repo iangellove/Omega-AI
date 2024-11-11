@@ -8,7 +8,6 @@ import com.omega.common.task.TaskEngine;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.active.gpu.LeakyReluKernel;
-import com.omega.engine.nn.layer.active.gpu.TanhKernel;
 import com.omega.engine.nn.network.Network;
 
 /**
@@ -18,7 +17,7 @@ import com.omega.engine.nn.network.Network;
  */
 public class LeakyReluLayer extends ActiveFunctionLayer {
 	
-	private float leak = 0.1f;
+	private float leak = 0.2f;
 	
 	private LeakyReluKernel kernel;
 	

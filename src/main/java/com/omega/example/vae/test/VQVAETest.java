@@ -2,12 +2,12 @@ package com.omega.example.vae.test;
 
 import java.util.Map;
 
-import com.omega.common.data.Tensor;
-import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.network.vae.TinyVAE;
+import com.omega.engine.nn.network.vae.TinyVQVAE;
+import com.omega.engine.nn.network.vae.VQVAE;
 import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
@@ -15,10 +15,10 @@ import com.omega.example.clip.utils.ClipModelUtils;
 import com.omega.example.diffusion.utils.DiffusionImageDataLoader;
 import com.omega.example.transformer.utils.LagJsonReader;
 
-public class VAETest {
+public class VQVAETest {
 	
 	
-	public static void loadWeight(Map<String, Object> weightMap, TinyVAE network, boolean showLayers) {
+	public static void loadWeight(Map<String, Object> weightMap, TinyVQVAE network, boolean showLayers) {
 		if(showLayers) {
 			for(String key:weightMap.keySet()) {
 				System.out.println(key);
@@ -54,15 +54,14 @@ public class VAETest {
 		network.encoder.block3.norm.runingVar = ClipModelUtils.loadData(network.encoder.block1.norm.runingVar, weightMap, 1, "encoder.2.1.running_var");
 		
 		/**
-		 * conv_mu
+		 * pre_quant_conv
 		 */
-		network.conv_mu.weight = ClipModelUtils.loadData(network.conv_mu.weight, weightMap, 4, "fc_mu.weight");
-		ClipModelUtils.loadData(network.conv_mu.bias, weightMap, "fc_mu.bias");
+		network.pre_quant_conv.weight = ClipModelUtils.loadData(network.pre_quant_conv.weight, weightMap, 4, "preConv.weight");
+		ClipModelUtils.loadData(network.pre_quant_conv.bias, weightMap, "preConv.bias");
 		/**
-		 * conv_var
+		 * embedding
 		 */
-		network.conv_var.weight = ClipModelUtils.loadData(network.conv_var.weight, weightMap, 4, "fc_var.weight");
-		ClipModelUtils.loadData(network.conv_var.bias, weightMap, "fc_var.bias");
+		ClipModelUtils.loadData(network.embedding.weight, weightMap, "vq_layer.embedding.weight");
 		
 		/**
 		 * decoder input
@@ -107,32 +106,76 @@ public class VAETest {
 		network.decoder.block3.norm.runingVar = ClipModelUtils.loadData(network.decoder.block3.norm.runingVar, weightMap, 1, "decoder.2.1.running_var");
 	}
 	
-	public static void tiny_vae() {
+	public static void vq_vae() {
 
 		try {
 			
-			int batchSize = 8;
-			int imageSize = 256;
+			int batchSize = 16;
+			int imageSize = 128;
 			int latendDim = 4;
+			
+			int numLayers = 1;
+			int headNum = 4;
+			int num_vq_embeddings = 512;
+			int[] downChannels = new int[] {32, 64, 128, 128};
+			int[] midChannels = new int[] {128, 128};
+			boolean[] downSample = new boolean[] {true, true, true};
+			
 			
 			float[] mean = new float[] {0.5f, 0.5f,0.5f};
 			float[] std = new float[] {0.5f, 0.5f,0.5f};
 			
-			String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset\\";
+			String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset128\\";
 
 			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, false, mean, std);
 			
-			TinyVAE network = new TinyVAE(LossType.MSE_SUM, UpdaterType.adamw, latendDim, imageSize);
+			VQVAE network = new VQVAE(LossType.MSE, UpdaterType.adamw, latendDim, imageSize, numLayers, headNum, num_vq_embeddings, downChannels, downSample, midChannels);
 			
 			network.CUDNN = true;
-			network.learnRate = 0.001f;
+			network.learnRate = 0.0001f;
 			
 //			String clipWeight = "H:\\model\\tiny_vae.json";
 //			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
-			optimizer.trainTinyVAE(dataLoader);
+			optimizer.trainVQVAE(dataLoader);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	
+	}
+	
+	public static void tiny_vq_vae() {
+
+		try {
+			
+			int batchSize = 32;
+			int imageSize = 256;
+			int latendDim = 4;
+			
+			int num_vq_embeddings = 512;
+			
+			float[] mean = new float[] {0.5f, 0.5f,0.5f};
+			float[] std = new float[] {0.5f, 0.5f,0.5f};
+			
+			String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
+
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, true, mean, std);
+			
+			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, latendDim, num_vq_embeddings, imageSize);
+			
+			network.CUDNN = true;
+			network.learnRate = 0.001f;
+			
+//			String clipWeight = "H:\\model\\tiny_vqvae.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
+			optimizer.trainTinyVQVAE(dataLoader);
 
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -147,7 +190,9 @@ public class VAETest {
 
 			CUDAModules.initContext();
 			
-			tiny_vae();
+//			vq_vae();
+			
+			tiny_vq_vae();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

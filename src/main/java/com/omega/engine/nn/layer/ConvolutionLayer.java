@@ -253,6 +253,11 @@ public class ConvolutionLayer extends Layer {
 		// TODO Auto-generated method stub
 //		long start = System.nanoTime();
 //		weight.showDM(weight.dataLength-1);
+//		System.err.println("input:"+input.checkNan());
+//		input.showShape();
+//		System.err.println("weight:"+weight.checkNan());
+//		weight.showShape();
+//		output.showShape();
 		kernel.conv(input, weight, output);
 		if(this.hasBias) {
 			biasKernel.addConvBias(output, bias);

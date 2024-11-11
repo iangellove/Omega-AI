@@ -1,8 +1,11 @@
 package com.omega.example.diffusion.utils;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Comparator;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.example.unet.utils.SegImageLoader;
@@ -38,6 +41,8 @@ public class DiffusionImageDataLoader extends BaseDataLoader{
 	
 	public int count_it;
 	
+	public boolean sort = false;
+	
 	public DiffusionImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize,boolean horizontalFilp) {
 		this.horizontalFilp = horizontalFilp;
 		this.imgDirPath = imgDirPath;
@@ -49,6 +54,18 @@ public class DiffusionImageDataLoader extends BaseDataLoader{
 	
 	public DiffusionImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize,boolean horizontalFilp,float[] mean,float[] std) {
 		this.horizontalFilp = horizontalFilp;
+		this.imgDirPath = imgDirPath;
+		this.img_w = img_w;
+		this.img_h = img_h;
+		this.batchSize = batchSize;
+		this.mean = mean;
+		this.std = std;
+		init();
+	}
+	
+	public DiffusionImageDataLoader(String imgDirPath,int img_w,int img_h,int batchSize,boolean horizontalFilp,boolean sort,float[] mean,float[] std) {
+		this.horizontalFilp = horizontalFilp;
+		this.sort = sort;
 		this.imgDirPath = imgDirPath;
 		this.img_w = img_w;
 		this.img_h = img_h;
@@ -76,6 +93,27 @@ public class DiffusionImageDataLoader extends BaseDataLoader{
 				for(int i = 0;i<number;i++) {
 					this.idxSet[i] = filenames[i];
 				}
+				if(sort) {
+					Arrays.sort(idxSet, new Comparator<String>() {
+
+						@Override
+						public int compare(String o1, String o2) {
+							// TODO Auto-generated method stub
+							int r = 0;
+							int o1i = Integer.parseInt(o1.split("\\.")[0]);
+							int o2i = Integer.parseInt(o2.split("\\.")[0]);
+							if(o1i == o2i) {
+								r = 0;
+							}else if(o1i > o2i) {
+								r = 1;
+							}else {
+								r = -1;
+							}
+							return r;
+						}
+					});
+				}
+				
 			}
 			count = this.idxSet.length;
 			count_it = this.idxSet.length / batchSize;

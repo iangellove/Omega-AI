@@ -74,9 +74,11 @@ public class TinyVAEConvBlock extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		
+
 		conv.forward(this.input);
+
 		norm.forward(conv.getOutput());
+
 		act.forward(norm.getOutput());
 		
 		this.output = act.getOutput();

@@ -3,7 +3,6 @@ package com.omega.engine.nn.layer.active.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
@@ -28,7 +27,7 @@ public class LeakyReluKernel extends BaseKernel{
 	
 	private Pointer backwardKernelParameters;
 	
-	private float scale = 0.1f;
+	private float scale = 0.2f;
 	
 	public LeakyReluKernel() {
 		init();

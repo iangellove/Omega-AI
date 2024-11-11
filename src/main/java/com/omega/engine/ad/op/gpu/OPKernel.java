@@ -115,6 +115,12 @@ public class OPKernel implements Serializable{
 	
 	private CUfunction sum_height_gpu_function;
 	
+	private CUfunction sum_pow_gpu_function;
+	
+	private CUfunction sum_pow_channel_gpu_function;
+	
+	private CUfunction sum_pow_height_gpu_function;
+	
 	private CUfunction max_gpu_function;
 	
 	private CUfunction max_channel_gpu_function;
@@ -147,11 +153,17 @@ public class OPKernel implements Serializable{
 	
 	private CUfunction permute_gpu_function;
 	
+	private CUfunction permute_add_gpu_function;
+	
 	private CUfunction sqrt_gpu_function;
 	
 	private CUfunction bool_gpu_function;
 	
 	private CUfunction expand_function;
+	
+	private CUfunction broadcast_row_plus_gpu_function;
+	
+	private CUfunction onehot_function;
 	
 	public OPKernel() {
 		
@@ -241,6 +253,12 @@ public class OPKernel implements Serializable{
 		
 		sum_height_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "sum_height_kernel");
 		
+		sum_pow_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "sum_pow_kernel");
+		
+		sum_pow_channel_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "sum_pow_channel_kernel");
+		
+		sum_pow_height_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "sum_pow_height_kernel");
+		
 		max_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "max_kernel");
 		
 		max_channel_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "max_channel_kernel");
@@ -256,6 +274,8 @@ public class OPKernel implements Serializable{
 		broadcast_plus_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "broadcast_plus_kernel");
 		
 		broadcast_channel_plus_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "broadcast_number_plus_kernel");
+		
+		broadcast_row_plus_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "broadcast_row_plus_kernel");
 		
 		clamp_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "clamp_kernel");
 		
@@ -278,6 +298,10 @@ public class OPKernel implements Serializable{
 		bool_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "bool_kernel");
 		
 		expand_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "expand_kernel");
+		
+		permute_add_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "permute_add_kernel");
+		
+		onehot_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "one_hot_kernel");
 		
 	}
 	
@@ -1615,6 +1639,82 @@ public class OPKernel implements Serializable{
 		
 	}
 	
+	public void sum_pow_gpu(Tensor a,Tensor y,double p,int axis) {
+		
+		try {
+
+			if(axis == 0) {
+				
+				/**
+				 * int N,double p, float *X, float *Y
+				 */
+				Pointer kernelParameter = Pointer.to(
+		        		Pointer.to(new int[]{a.dataLength}),
+		        		Pointer.to(new double[]{p}),
+		                Pointer.to(a.getGpuData()),
+		        		Pointer.to(y.getGpuData())
+		            );
+				
+				checkCUDA(cuLaunchKernel(sum_pow_gpu_function,
+		        		1, 1, 1,      // Grid dimension
+			            1, 1, 1,      // Block dimension
+			            0, null,               // Shared memory size and stream
+			            kernelParameter, null // Kernel- and extra parameters
+			        ));
+				
+			}else if(axis == 2){
+
+				/**
+				 * int N, float *X, float *Y,int C,int H,int W
+				 */
+				Pointer kernelParameter = Pointer.to(
+		        		Pointer.to(new int[]{y.getDataLength()}),
+		        		Pointer.to(new double[]{p}),
+		                Pointer.to(a.getGpuData()),
+		        		Pointer.to(y.getGpuData()),
+		        		Pointer.to(new int[]{a.channel}),
+		        		Pointer.to(new int[]{a.height}),
+		        		Pointer.to(new int[]{a.width})
+		            );
+				
+				checkCUDA(cuLaunchKernel(sum_pow_height_gpu_function,
+		        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+			            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+			            0, null,               // Shared memory size and stream
+			            kernelParameter, null // Kernel- and extra parameters
+			        ));
+				
+			}else {
+
+				/**
+				 * int N, float *X, float *Y,int C,int H,int W
+				 */
+				Pointer kernelParameter = Pointer.to(
+		        		Pointer.to(new int[]{y.getDataLength()}),
+		        		Pointer.to(new double[]{p}),
+		                Pointer.to(a.getGpuData()),
+		        		Pointer.to(y.getGpuData()),
+		        		Pointer.to(new int[]{a.channel}),
+		        		Pointer.to(new int[]{a.height}),
+		        		Pointer.to(new int[]{a.width})
+		            );
+				
+				checkCUDA(cuLaunchKernel(sum_pow_channel_gpu_function,
+		        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+			            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+			            0, null,               // Shared memory size and stream
+			            kernelParameter, null // Kernel- and extra parameters
+			        ));
+				
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void max_gpu(Tensor a,Tensor y,int axis) {
 		
 		try {
@@ -2010,6 +2110,37 @@ public class OPKernel implements Serializable{
 		
 	}
 	
+	public void broadcast_row_plus_gpu(Tensor a,Tensor y) {
+		
+		try {
+			
+
+			/**
+			 * int N, float *X, float *Y,int C,int H,int W
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{y.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(y.getGpuData()),
+	        		Pointer.to(new int[]{y.channel}),
+	        		Pointer.to(new int[]{y.height}),
+	        		Pointer.to(new int[]{y.width})
+	            );
+			
+			checkCUDA(cuLaunchKernel(broadcast_row_plus_gpu_function,
+	        		CAFFE_GET_BLOCKS(y.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void clamp_gpu(Tensor a,float b1,float b2,Tensor y) {
 		
 		try {
@@ -2228,6 +2359,53 @@ public class OPKernel implements Serializable{
 		
 	}
 	
+	public void permute_add_gpu(Tensor x,Tensor y,int[] permutes) {
+		
+		try {
+			
+			int[] strides_in = getStrides(x.shape());
+			int[] strides_out = getStrides(y.shape());
+			
+			Pointer permutes_p = CUDAMemoryManager.getPointer(permutes.length);
+			JCuda.cudaMemcpy(permutes_p, Pointer.to(permutes), permutes.length * Sizeof.INT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			
+			Pointer sip = CUDAMemoryManager.getPointer(permutes.length);
+			JCuda.cudaMemcpy(sip, Pointer.to(strides_in), permutes.length * Sizeof.INT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			
+			Pointer sop = CUDAMemoryManager.getPointer(permutes.length);
+			JCuda.cudaMemcpy(sop, Pointer.to(strides_out), permutes.length * Sizeof.INT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			
+			/**
+			 * int N, float *data_in, float *data_out, int *perms, int *strides_in, int *strides_out, int NUM_AXES
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{x.getDataLength()}),
+	                Pointer.to(x.getGpuData()),
+	        		Pointer.to(y.getGpuData()),
+	        		Pointer.to(permutes_p),
+	        		Pointer.to(sip),
+	        		Pointer.to(sop),
+	        		Pointer.to(new int[] {permutes.length})
+	            );
+
+			checkCUDA(cuLaunchKernel(permute_add_gpu_function,
+					CAFFE_GET_BLOCKS(x.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+			CUDAMemoryManager.free(permutes_p);
+			CUDAMemoryManager.free(sip);
+			CUDAMemoryManager.free(sop);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public int[] dim_out(int[] dim_in,int[] permutes) {
 		int[] dim_out = new int[dim_in.length];
 		for (int i = 0; i < permutes.length; ++i) {
@@ -2325,6 +2503,33 @@ public class OPKernel implements Serializable{
 		}
 	}
 	
+	public void one_hot(Tensor a,Tensor b) {
+		
+		try {
+			/**
+			 * int N, float *X, float *Y, int K
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{a.getDataLength()}),
+	                Pointer.to(a.getGpuData()),
+	        		Pointer.to(b.getGpuData()),
+	        		Pointer.to(new int[]{b.width})
+	            );
+			
+			
+			checkCUDA(cuLaunchKernel(onehot_function,
+	        		CAFFE_GET_BLOCKS(a.getDataLength()),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
 	
 	public int CAFFE_GET_BLOCKS(int N) {
 	    return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;

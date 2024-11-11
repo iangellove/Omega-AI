@@ -1,59 +1,73 @@
-package com.omega.engine.nn.layer.vae;
+package com.omega.engine.nn.layer.vqvae;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.ParamsInit;
+import com.omega.engine.nn.layer.vae.VAEAttentionLayer;
+import com.omega.engine.nn.layer.vae.VAEResnetBlock;
 import com.omega.engine.nn.network.Network;
-import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * resnet block layer
  * @author Administrator
  *
  */
-public class VAEDownEncoderBlock extends Layer {
+public class VQVAEMidBlock extends Layer {
 	
 	private int numLayers;
 	
-	private int group = 32;
-	
-	private List<VAEResnetBlock> resnets;
-	
-	private boolean addDownsampler = false;
-	
-	private ConvolutionLayer downsampler;
+	private int groups = 32;
 	
 	private float outputScale = 1.0f;
 	
-	public VAEDownEncoderBlock(int channel,int oChannel,int height,int width,int numLayers,int group,float outputScale,boolean addDownsampler, Network network) {
+	private VAEResnetBlock res0;
+	
+	private List<VAEResnetBlock> resnets;
+	
+	private List<VAEAttentionLayer> attns;
+	
+	private int numHead;
+	
+	private boolean addAttns = false;
+	
+	public VQVAEMidBlock(int channel,int oChannel,int height,int width,int numLayers,int groups,int numHead,float outputScale,boolean addAttns, Network network) {
 		this.network = network;
-		this.addDownsampler = addDownsampler;
+		this.addAttns = addAttns;
+		this.numHead = numHead;
 		this.channel = channel;
 		this.oChannel = oChannel;
 		this.height = height;
 		this.width = width;
-		this.group = group;
+		this.groups = groups;
 		this.outputScale = outputScale;
 		this.numLayers = numLayers;
 		
 		initLayers();
-		
+
 	}
 	
 	public void initLayers() {
 		
+		res0 = new VAEResnetBlock(channel, oChannel, height, width, groups, outputScale, network);
+		
 		resnets = new ArrayList<VAEResnetBlock>(numLayers);
 		
-		int ic = channel;
+		attns = new ArrayList<VAEAttentionLayer>();
+		
+		int ic = oChannel;
 		int ih = height;
 		int iw = width;
 		for(int i = 0;i<numLayers;i++) {
-			VAEResnetBlock res = new VAEResnetBlock(ic, oChannel, ih, iw, group, outputScale, network);
+			
+			if(addAttns) {
+				VAEAttentionLayer attn = new VAEAttentionLayer(ic, numHead, ih * iw, ic, ih, iw, groups, true, false, true, network);
+				attns.add(attn);
+			}
+			
+			VAEResnetBlock res = new VAEResnetBlock(ic, oChannel, ih, iw, groups, 1.0f, network);
 			resnets.add(res);
 			ic = oChannel;
 			ih = res.oHeight;
@@ -63,14 +77,6 @@ public class VAEDownEncoderBlock extends Layer {
 		this.oHeight = ih;
 		this.oWidth = iw;
 		
-		if(addDownsampler) {
-			downsampler = new ConvolutionLayer(ic, oChannel, iw, ih, 3, 3, 1, 2, false, this.network); 
-			downsampler.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
-			downsampler.paramsInit = ParamsInit.silu;
-			this.oHeight = downsampler.oHeight;
-			this.oWidth = downsampler.oWidth;
-		}
-
 	}
 
 	@Override
@@ -92,21 +98,21 @@ public class VAEDownEncoderBlock extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+
+		res0.forward(this.input);
 		
-		Tensor x = this.input;
-		
+		Tensor x = res0.getOutput();
+
 		for(int i = 0;i<numLayers;i++) {
+			if(addAttns) {
+				attns.get(i).forward(x);
+				x = attns.get(i).getOutput();
+			}
 			resnets.get(i).forward(x);
 			x = resnets.get(i).getOutput();
 		}
 		
 		this.output = x;
-		
-		if(addDownsampler) {
-			downsampler.forward(x);
-			this.output = downsampler.getOutput();
-		}
-		
 	}
 
 	@Override
@@ -119,18 +125,19 @@ public class VAEDownEncoderBlock extends Layer {
 	public void diff() {
 		// TODO Auto-generated method stub
 //		System.out.println(index);
-		Tensor diffOut = delta;
-		if(addDownsampler) {
-			downsampler.back(diffOut);
-			diffOut = downsampler.diff;
-		}
-		
+		Tensor dx = delta;
 		for(int i = numLayers - 1;i>=0;i--) {
-			resnets.get(i).back(diffOut);
-			diffOut = resnets.get(i).diff;
+			resnets.get(i).back(dx);
+			dx = resnets.get(i).diff;
+			if(addAttns) {
+				attns.get(i).back(dx);
+				dx = attns.get(i).diff;
+			}
 		}
+
+		res0.back(dx);
 		
-		this.diff = diffOut;
+		this.diff = res0.diff;
 	}
 
 	@Override
@@ -174,12 +181,13 @@ public class VAEDownEncoderBlock extends Layer {
 	public void update() {
 		// TODO Auto-generated method stub
 		
-		for(int i = 0;i<numLayers;i++) {
-			resnets.get(i).update();
-		}
+		res0.update();
 		
-		if(addDownsampler) {
-			downsampler.update();
+		for(int i = 0;i<numLayers;i++) {
+			if(addAttns) {
+				attns.get(i).update();
+			}
+			resnets.get(i).update();
 		}
 		
 	}

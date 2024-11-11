@@ -3,7 +3,6 @@ package com.omega.engine.nn.layer.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.lib.LibPaths;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
@@ -11,7 +10,6 @@ import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
 import jcuda.driver.CUfunction;
-import jcuda.driver.JCudaDriver;
 import jcuda.runtime.cudaError;
 
 public class EmbeddingKernel extends BaseKernel{

@@ -15,6 +15,7 @@ import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
+import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
@@ -37,11 +38,15 @@ public class VAEAttentionLayer extends Layer{
 	
 	private int dk = 0;
 	
+	private int channel;
+	
+	private int height;
+	
+	private int width;
+	
 	private boolean bias = false;
 	
 	private boolean residualConnect = false;
-	
-	private float rescaleOutput = 1.0f;
 	
 	private GNLayer gn;
 	
@@ -58,7 +63,9 @@ public class VAEAttentionLayer extends Layer{
 	private BaseKernel baseKernel;
 	
 	private AttentionKernel attentionKernel;
-
+	
+	private Tensor xt;
+	
 	private Tensor qt;
 	private Tensor kt;
 	private Tensor vt;
@@ -79,9 +86,8 @@ public class VAEAttentionLayer extends Layer{
 	
 	private boolean dropout = false;
 	
-	public VAEAttentionLayer(int embedDim,int headNum,int time,float rescaleOutput,boolean bias,boolean dropout,boolean residualConnect) {
+	public VAEAttentionLayer(int embedDim,int headNum,int time,int channel,int height,int width,boolean bias,boolean dropout,boolean residualConnect) {
 		this.bias = bias;
-		this.rescaleOutput = rescaleOutput;
 		this.residualConnect = residualConnect;
 		this.time = time;
 		this.embedDim = embedDim;
@@ -91,16 +97,18 @@ public class VAEAttentionLayer extends Layer{
 		}
 		this.dk = embedDim / headNum;
 		this.bias = bias;
-		this.oChannel = 1;
-		this.oHeight = 1;
-		this.oWidth = embedDim;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.oChannel = channel;
+		this.oHeight = height;
+		this.oWidth = width;
 		this.dropout = dropout;
 		this.initLayers();
 	}
 	
-	public VAEAttentionLayer(int embedDim,int headNum,int time,float rescaleOutput,boolean bias,boolean dropout,boolean residualConnect,Network network) {
+	public VAEAttentionLayer(int embedDim,int headNum,int time,int channel,int height,int width,boolean bias,boolean dropout,boolean residualConnect,Network network) {
 		this.bias = bias;
-		this.rescaleOutput = rescaleOutput;
 		this.residualConnect = residualConnect;
 		this.network = network;
 		if(this.updater == null) {
@@ -114,17 +122,19 @@ public class VAEAttentionLayer extends Layer{
 		}
 		this.dk = embedDim / headNum;
 		this.bias = bias;
-		this.oChannel = 1;
-		this.oHeight = 1;
-		this.oWidth = embedDim;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.oChannel = channel;
+		this.oHeight = height;
+		this.oWidth = width;
 		this.dropout = dropout;
 		this.initLayers();
 	}
 	
-	public VAEAttentionLayer(int embedDim,int headNum,int time,int groups,float rescaleOutput,boolean bias,boolean dropout,boolean residualConnect,Network network) {
+	public VAEAttentionLayer(int embedDim,int headNum,int time,int channel,int height,int width,int groups,boolean bias,boolean dropout,boolean residualConnect,Network network) {
 		this.bias = bias;
 		this.groups = groups;
-		this.rescaleOutput = rescaleOutput;
 		this.residualConnect = residualConnect;
 		this.network = network;
 		if(this.updater == null) {
@@ -138,17 +148,20 @@ public class VAEAttentionLayer extends Layer{
 		}
 		this.dk = embedDim / headNum;
 		this.bias = bias;
-		this.oChannel = 1;
-		this.oHeight = 1;
-		this.oWidth = embedDim;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.oChannel = channel;
+		this.oHeight = height;
+		this.oWidth = width;
 		this.dropout = dropout;
 		this.initLayers();
 	}
 	
 	public void initLayers() {
-		
+
 		if(groups > 0) {
-			gn = new GNLayer(groups, this);
+			gn = new GNLayer(groups, this, BNType.conv_bn);
 		}
 		
 		this.setqLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
@@ -183,11 +196,11 @@ public class VAEAttentionLayer extends Layer{
 	public void init(Tensor input) {
 		// TODO Auto-generated method stub
 		this.number = input.number;
-		this.time = this.network.time;
-		this.batchSize = this.number / time;
+		this.batchSize = this.number;
 		
 		if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
 			// [batch_size，time，head_num，d_k]
+			this.xt = Tensor.createGPUTensor(this.xt, batchSize, time, 1, channel, true);
 			this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
 			this.kt = Tensor.createGPUTensor(this.kt, batchSize, headNum, time, dk, true);
 			this.vt = Tensor.createGPUTensor(this.vt, batchSize, headNum, time, dk, true);
@@ -201,11 +214,13 @@ public class VAEAttentionLayer extends Layer{
 			this.attn = Tensor.createGPUTensor(this.attn, batchSize, headNum, time, time, true);
 			// [batch_size, len_q, n_heads * dim_v]
 			this.oi = Tensor.createGPUTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
+			this.output = Tensor.createGPUTensor(this.output, batchSize, channel, height, width, true);
 		}
-		
+		this.output.viewOrg();
 		this.qt.viewOrg();
 		this.kt.viewOrg();
 		this.vt.viewOrg();
+		this.xt.viewOrg();
 		if(this.getqLinerLayer().getOutput() != null) {
 			this.getqLinerLayer().getOutput().viewOrg();
 			this.getkLinerLayer().getOutput().viewOrg();
@@ -236,20 +251,25 @@ public class VAEAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		Tensor x = this.input;
-		
+
 		if(gn != null) {
 			gn.forward(x);
 			x = gn.getOutput();
 		}
 		
-		this.getqLinerLayer().forward(x);
-		this.getkLinerLayer().forward(x);
-		this.getvLinerLayer().forward(x);
+		x = x.view(batchSize, channel, 1, height * width);
+		// B,C,HW ==> B,HW,C
+		TensorOP.permute(x, xt, new int[] {0, 3, 2, 1});
+		xt = xt.view(batchSize * time, 1, 1, channel);
+		
+		this.getqLinerLayer().forward(xt);
+		this.getkLinerLayer().forward(xt);
+		this.getvLinerLayer().forward(xt);
 		
 		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
 		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, time, headNum, dk);
 		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, time, headNum, dk);
-
+		
 		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
@@ -261,31 +281,31 @@ public class VAEAttentionLayer extends Layer{
 		
 		this.getoLinerLayer().forward(oi);
 		
-		this.output = this.getoLinerLayer().getOutput();
+		Tensor out = this.getoLinerLayer().getOutput();
 		
 		if(dropout) {
 			dropoutLayer2.forward(this.getoLinerLayer().getOutput());
-			this.output = dropoutLayer2.getOutput();
+			out = dropoutLayer2.getOutput();
 		}
 		
+		this.output.view(batchSize, channel, 1, time);
 		if(residualConnect) {
-			TensorOP.add(this.output, this.input, this.output);
+			TensorOP.permuteAdd(out, this.output, new int[] {0, 3, 2, 1}); //B,HW,C ==> B,C,HW
+		}else {
+			TensorOP.permute(out, this.output, new int[] {0, 3, 2, 1}); //B,HW,C ==> B,C,HW
 		}
 		
-		if(rescaleOutput != 1.0f){
-			TensorOP.div(this.output, rescaleOutput, this.output);
-		}
-
+		this.output.viewOrg();
 	}
 	
 	public void scaledDotProductAttention(Tensor query,Tensor key,Tensor value) {
 
 		float d_k = (float) (1.0f / Math.sqrt(dk));
-		
+
 		Tensor preatt = temp;
-		
+
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, key.getGpuData(), dk, time * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), time, time * time, batchSize * headNum);
-		
+
 		if(network.RUN_MODEL == RunModel.TEST) {
 			attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
 			attentionKernel.softmax_test_forward(preatt, attn, batchSize, headNum, time);
@@ -299,9 +319,11 @@ public class VAEAttentionLayer extends Layer{
 			dropoutLayer.forward(attn);
 			tmp = dropoutLayer.getOutput();
 		}
+
 //		value.showDM();
 		Tensor vaccum = temp;
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, value.getGpuData(), dk, time * dk, tmp.getGpuData(), time, time * time, 0.0f, vaccum.getGpuData(), dk, time * dk, batchSize * headNum);
+
 	}
 
 	public void scaledDotProductAttentionBackward() {
@@ -328,10 +350,7 @@ public class VAEAttentionLayer extends Layer{
 //		attentionKernel.softmax_backward(dpreatt, dattn, attn, batchSize, time, embedDim, headNum, d_k);
 		attentionKernel.softmax2_backward(dattn, attn, batchSize, time, embedDim, headNum, d_k);
 		Tensor dpreatt = dattn;
-//		System.err.println("dpreatt:");
-//		System.err.println("error:"+MatrixUtils.check(dpreatt.syncHost(), dpreatt2.syncHost()));
-//		dpreatt.checkDMZero();
-		// backward into q
+
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, kt.getGpuData(), dk, time * dk, dpreatt.getGpuData(), time, time * time, 0.0f, dqt.getGpuData(), dk, time * dk, batchSize * headNum);
 		
 		// backward into k
@@ -348,21 +367,22 @@ public class VAEAttentionLayer extends Layer{
 	public void diff() {
 		// TODO Auto-generated method stub
 		
-		if(rescaleOutput != 1.0f){
-			TensorOP.div(this.delta, rescaleOutput, this.delta);
-		}
-		
+		// B,C,H,W ==> B,HW,C
+		this.output.view(batchSize, height, width, channel);
+		TensorOP.permute(delta, this.output, new int[] {0, 2, 3, 1});
+		this.output.view(batchSize, time, 1, channel);
+
 		if(dropout) {
-			dropoutLayer2.back(delta);
+			dropoutLayer2.back(this.output);
 			this.getoLinerLayer().back(dropoutLayer2.diff, oi);
 		}else {
-			this.getoLinerLayer().back(delta, oi);
+			this.getoLinerLayer().back(this.output, oi);
 		}
-		
-		attentionKernel.unpermute_backward(temp, oi, batchSize, time, headNum, dk);
-		
-		scaledDotProductAttentionBackward();
 
+		attentionKernel.unpermute_backward(temp, oi, batchSize, time, headNum, dk);
+
+		scaledDotProductAttentionBackward();
+		
 		qt.view(this.getqLinerLayer().getOutput().shape());
 		kt.view(this.getqLinerLayer().getOutput().shape());
 		vt.view(this.getqLinerLayer().getOutput().shape());
@@ -382,11 +402,18 @@ public class VAEAttentionLayer extends Layer{
 		TensorOP.add(this.getqLinerLayer().diff, this.getkLinerLayer().diff, this.getqLinerLayer().diff);
 		TensorOP.add(this.getqLinerLayer().diff, this.getvLinerLayer().diff, this.getqLinerLayer().diff);
 		
-		this.diff = this.getqLinerLayer().diff;
-		
+		// dxt
+		Tensor dxt = this.getqLinerLayer().diff;
+
+		// B,HW,C ==> B,C,H,W
+		xt = xt.view(batchSize , channel, 1, time);
+		TensorOP.permute(dxt, xt, new int[] {0, 3, 2, 1});
+		xt = xt.view(batchSize , channel, height, width);
 		if(gn != null) {
-			gn.back(this.diff);
+			gn.back(xt);
 			this.diff = gn.diff;
+		}else {
+			this.diff = xt;
 		}
 		
 		if(residualConnect) {
@@ -448,6 +475,9 @@ public class VAEAttentionLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
+		if(gn != null) {
+			gn.update();
+		}
 		getqLinerLayer().update();
 		getkLinerLayer().update();
 		getvLinerLayer().update();

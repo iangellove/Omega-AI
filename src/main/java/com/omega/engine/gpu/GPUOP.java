@@ -317,7 +317,7 @@ public class GPUOP {
             
             int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
             int ldb = CUBLAS_OP_N_B == CUBLAS_OP_N ? n : k;
-            
+
             int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, alphaP, 
                 dB, ldb, dA, lda, betaP, dC, n);
             checkCUBLASResult(status);

@@ -19,7 +19,7 @@ public class TinyVAEEncoder extends Layer {
 	public TinyVAEEncoder(int channel,int height,int width, Network network) {
 		this.network = network;
 		this.channel = channel;
-		this.oChannel = 64;
+		this.oChannel = 256;
 		this.height = height;
 		this.width = width;
 		
@@ -54,7 +54,6 @@ public class TinyVAEEncoder extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		
 		block1.forward(this.input);
 		block2.forward(block1.getOutput());
 		block3.forward(block2.getOutput());
@@ -74,7 +73,7 @@ public class TinyVAEEncoder extends Layer {
 		block3.back(this.delta);
 		block2.back(block3.diff);
 		block1.back(block2.diff);
-		
+
 		this.diff = block1.diff;
 	}
 

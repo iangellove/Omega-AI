@@ -1,15 +1,20 @@
 package com.omega.example.transformer.utils;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.omega.common.utils.JsonUtils;
+import cn.hutool.core.text.csv.CsvUtil;
+import cn.hutool.core.text.csv.CsvWriteConfig;
+import cn.hutool.core.text.csv.CsvWriter;
 
 public class QADataFormatter {
 	
@@ -94,12 +99,84 @@ public class QADataFormatter {
 
 	}
 	
-	public static void main(String[] args) {
-		String questionPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\question\\question.csv";
-		String answerPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\answer\\answer.csv";
-		String outPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\qaData.txt";
+	static class SQLQA{
+		private String his;
+		private String q;
+		private String a;
+		public SQLQA(String q,String a) {
+			this.q = q;
+			this.a = a;
+		}
+		public String getQ() {
+			return q;
+		}
+		public void setQ(String q) {
+			this.q = q;
+		}
+		public String getA() {
+			return a;
+		}
+		public void setA(String a) {
+			this.a = a;
+		}
+		public String getHis() {
+			return his;
+		}
+		public void setHis(String his) {
+			this.his = his;
+		}
+	}
+	
+	public static void formatQA2CSV(String[] dataPaths,String outputPath) {
 		
-		formatQAFormCSV(questionPath, answerPath, outPath);
+		try {
+
+			List<SQLQA> qas = new ArrayList<SQLQA>();
+			
+			for(String dataPath:dataPaths) {
+
+				List<Map<String, Object>> datas = LagJsonReader.readJsonDataSamll(dataPath);
+				
+				for(Map<String, Object> once:datas) {
+					String q = once.get("question").toString();
+					String a = once.get("query").toString();
+					SQLQA qa = new SQLQA(q, a);
+					qas.add(qa);
+				}
+				
+			}
+			
+			CsvWriteConfig csvWriteConfig = new CsvWriteConfig();
+			csvWriteConfig.setFieldSeparator(',');
+			Map<String,String> headerAlias = new LinkedHashMap<String, String>();
+			headerAlias.put("his", "历史");
+			headerAlias.put("q", "问题");
+			headerAlias.put("a", "回答");
+			csvWriteConfig.setHeaderAlias(headerAlias);
+			FileWriter fileWriter = new FileWriter(outputPath);
+			CsvWriter cw = CsvUtil.getWriter(fileWriter, csvWriteConfig);
+			cw.writeBeans(qas);
+			cw.flush();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void main(String[] args) {
+//		String questionPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\question\\question.csv";
+//		String answerPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\answer\\answer.csv";
+//		String outPath = "H:\\transformer_dataset\\gpt\\cMedQA2\\qaData.txt";
+//		
+//		formatQAFormCSV(questionPath, answerPath, outPath);
+		
+		String[] dataPaths = new String[] {
+				"H:\\sql_dataset\\full_CSpider\\CSpider\\train.json",
+				"D:\\chroms_download\\SeSQL\\single-round-question-completed\\train.json"
+		};
+		String outputPath = "H:\\sql_dataset\\full_CSpider\\CSpider\\train_sql.csv";
+		formatQA2CSV(dataPaths, outputPath);
 	}
 	
 }

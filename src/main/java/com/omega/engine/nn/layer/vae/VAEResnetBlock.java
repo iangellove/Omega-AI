@@ -10,6 +10,7 @@ import com.omega.engine.nn.layer.ParamsInit;
 import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
 import com.omega.engine.nn.layer.active.SiLULayer;
 import com.omega.engine.nn.layer.gpu.BasicBlockKernel;
+import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
@@ -72,8 +73,7 @@ public class VAEResnetBlock extends Layer {
 	
 	public void initLayers() {
 		
-		norm1 = new GNLayer(group, this);
-		
+		norm1 = new GNLayer(group, this, BNType.conv_bn);
 		a1 = new SiLULayer(norm1);
 		
 		conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, 1, false, this.network);
@@ -81,7 +81,6 @@ public class VAEResnetBlock extends Layer {
 		conv1.paramsInit = ParamsInit.silu;
 		
 		norm2 = new GNLayer(group, conv1);
-		
 		a2 = new SiLULayer(norm2);
 		
 		conv2 = new ConvolutionLayer(conv1.oChannel, oChannel, conv1.oWidth, conv1.oHeight, 3, 3, 1, 1, false, this.network);
@@ -107,8 +106,8 @@ public class VAEResnetBlock extends Layer {
 	@Override
 	public void initBack() {
 		if(this.diff == null || norm1.number != norm1.diff.number){
-			norm1.initBack();
-			this.diff = conv1.diff;
+//			norm1.initBack();
+//			this.diff = conv1.diff;
 			this.cache_delta = Tensor.createGPUTensor(this.cache_delta, number, oChannel, oHeight, oWidth, true);
 		}
 	}
@@ -126,7 +125,6 @@ public class VAEResnetBlock extends Layer {
 		norm1.forward(this.input);
 		a1.forward(norm1.getOutput());
 		conv1.forward(a1.getOutput());
-		
 		norm2.forward(conv1.getOutput());
 		a2.forward(norm2.getOutput());
 		conv2.forward(a2.getOutput());
@@ -172,11 +170,12 @@ public class VAEResnetBlock extends Layer {
 
 		if(shortcut) {
 			conv_shortcut.back(this.cache_delta);
-			kernel.add(norm1.diff, conv_shortcut.diff, this.diff);
+			kernel.add(norm1.diff, conv_shortcut.diff, conv1.diff);
 		}else {
-			kernel.add(norm1.diff, this.cache_delta, this.diff);
+			kernel.add(norm1.diff, this.cache_delta, conv1.diff);
 		}
-
+		
+		this.diff = conv1.diff;
 	}
 
 	@Override

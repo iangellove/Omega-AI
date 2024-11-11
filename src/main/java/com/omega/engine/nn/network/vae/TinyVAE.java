@@ -22,7 +22,7 @@ import com.omega.engine.updater.UpdaterFactory;
 import com.omega.engine.updater.UpdaterType;
 
 /**
- * Llama-2
+ * TinyVAE
  * @author Administrator
  *
  */

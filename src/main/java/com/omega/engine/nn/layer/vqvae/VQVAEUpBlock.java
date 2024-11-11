@@ -1,46 +1,42 @@
-package com.omega.engine.nn.layer.vae;
+package com.omega.engine.nn.layer.vqvae;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.nn.layer.ConvolutionTransposeLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
+import com.omega.engine.nn.layer.ParamsInit;
+import com.omega.engine.nn.layer.vae.VAEResnetBlock;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 /**
- * resnet block layer
+ * VQVAEUpBlock
  * @author Administrator
  *
  */
-public class VAEMidBlock extends Layer {
+public class VQVAEUpBlock extends Layer {
+	
+	private boolean upSample;
 	
 	private int numLayers;
 	
-	private int groups = 32;
-	
-	private float outputScale = 1.0f;
-	
-	private VAEResnetBlock res0;
+	private int group = 32;
 	
 	private List<VAEResnetBlock> resnets;
 	
-	private List<VAEAttentionLayer> attns;
+	private ConvolutionTransposeLayer upSampleConv;
 	
-	private int attenHeadDim;
-	
-	private boolean addAttns = false;
-	
-	public VAEMidBlock(int channel,int height,int width,int numLayers,int groups,int attenHeadDim,float outputScale,boolean addAttns, Network network) {
+	public VQVAEUpBlock(int channel,int oChannel,int height,int width,int numLayers,int group,boolean upSample, Network network) {
 		this.network = network;
-		this.addAttns = addAttns;
-		this.attenHeadDim = attenHeadDim;
+		this.upSample = upSample;
 		this.channel = channel;
-		this.oChannel = channel;
+		this.oChannel = oChannel;
 		this.height = height;
 		this.width = width;
-		this.groups = groups;
-		this.outputScale = outputScale;
+		this.group = group;
 		this.numLayers = numLayers;
 		
 		initLayers();
@@ -49,23 +45,26 @@ public class VAEMidBlock extends Layer {
 	
 	public void initLayers() {
 		
-		res0 = new VAEResnetBlock(channel, channel, height, width, groups, outputScale, network);
-		
 		resnets = new ArrayList<VAEResnetBlock>(numLayers);
-		
+
 		int ic = channel;
 		int ih = height;
 		int iw = width;
+		
+		if(upSample) {
+			upSampleConv = new ConvolutionTransposeLayer(channel, channel, iw, ih, 4, 4, 1, 2, 1, 0, true, network);
+			upSampleConv.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+			upSampleConv.paramsInit = ParamsInit.silu;
+			ih = upSampleConv.oHeight;
+			iw = upSampleConv.oWidth;
+		}
+		
 		for(int i = 0;i<numLayers;i++) {
-			if(addAttns) {
-				VAEAttentionLayer attn = new VAEAttentionLayer(channel, channel / attenHeadDim, ih * iw, ic, ih, iw, groups, true, false, true, network);
-				attns.add(attn);
-			}
-			VAEResnetBlock res = new VAEResnetBlock(ic, channel, ih, iw, groups, 1.0f, network);
-			resnets.add(res);
+			VAEResnetBlock res = new VAEResnetBlock(ic, oChannel, ih, iw, group, 1.0f, network);
 			ic = oChannel;
 			ih = res.oHeight;
 			iw = res.oWidth;
+			resnets.add(res);
 		}
 		
 		this.oHeight = ih;
@@ -93,20 +92,20 @@ public class VAEMidBlock extends Layer {
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		res0.forward(this.input);
-		
-		Tensor x = res0.getOutput();
+		Tensor x = this.input;
+
+		if(upSample) {
+			upSampleConv.forward(x);
+			x = upSampleConv.getOutput();
+		}
 		
 		for(int i = 0;i<numLayers;i++) {
-			if(addAttns) {
-				attns.get(i).forward(x);
-				x = attns.get(i).getOutput();
-			}
 			resnets.get(i).forward(x);
 			x = resnets.get(i).getOutput();
 		}
 		
 		this.output = x;
+		
 	}
 
 	@Override
@@ -118,20 +117,19 @@ public class VAEMidBlock extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-//		System.out.println(index);
-		Tensor dx = delta;
+		Tensor diffOut = delta;
+		
 		for(int i = numLayers - 1;i>=0;i--) {
-			resnets.get(i).back(dx);
-			dx = resnets.get(i).diff;
-			if(addAttns) {
-				attns.get(i).back(dx);
-				dx = attns.get(i).diff;
-			}
+			resnets.get(i).back(diffOut);
+			diffOut = resnets.get(i).diff;
 		}
 		
-		res0.back(dx);
+		if(upSample) {
+			upSampleConv.back(diffOut);
+			diffOut = upSampleConv.diff;
+		}
 		
-		this.diff = res0.diff;
+		this.diff = diffOut;
 	}
 
 	@Override
@@ -174,13 +172,12 @@ public class VAEMidBlock extends Layer {
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		
-		res0.update();
+
+		if(upSample) {
+			upSampleConv.update();
+		}
 		
 		for(int i = 0;i<numLayers;i++) {
-			if(addAttns) {
-				attns.get(i).update();
-			}
 			resnets.get(i).update();
 		}
 		

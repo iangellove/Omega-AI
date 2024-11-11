@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.UUID;
 
 import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.Graph;
@@ -109,6 +110,7 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = new float[this.dataLength];
+		this.orgShape = new int[] {number, channel, height, width};
 	}
 	
 	public Tensor(int number,int channel,int height,int width,boolean hasGPU) {
@@ -170,6 +172,7 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = data;
+		this.orgShape = new int[] {number, channel, height, width};
 	}
 	
 	public Tensor(int number,int channel,int height,int width,float[] data,boolean hasGPU) {
@@ -179,6 +182,7 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = data;
+		this.orgShape = new int[] {number, channel, height, width};
 		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
@@ -195,6 +199,7 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = data;
+		this.orgShape = new int[] {number, channel, height, width};
 		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
@@ -210,6 +215,7 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = MatrixUtils.val(this.dataLength, val);
+		this.orgShape = new int[] {number, channel, height, width};
 		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			hostToDevice();
@@ -224,6 +230,7 @@ public class Tensor implements Serializable{
 		this.width = width;
 		this.dataLength = number * channel * height * width;
 		this.data = MatrixUtils.val(this.dataLength, val);
+		this.orgShape = new int[] {number, channel, height, width};
 		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			hostToDevice();
@@ -235,6 +242,7 @@ public class Tensor implements Serializable{
 			t = new Tensor(number, channel, height, width, data, hasGPU);
 		}else {
 			t.resize(number, channel, height, width, data);
+			t.orgShape = new int[] {number, channel, height, width};
 		}
 		return t;
 	}
@@ -568,6 +576,14 @@ public class Tensor implements Serializable{
 			}
 		}
 	    return false;
+	}
+	
+	public boolean checkNan() {
+		return MatrixOperation.isNaN(syncHost());
+	}
+	
+	public boolean checkInf() {
+		return MatrixOperation.isInfinite(syncHost());
 	}
 	
 	public void clearGPU(cudaStream_t stream) {
