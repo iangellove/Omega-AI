@@ -15,7 +15,7 @@ public class AdamW extends Updater {
 
 	private AdamWKernel kernel;
 	
-	private float weight_decay = 0.0001f;
+	private float weight_decay = 1e-4f;
 	
 	public AdamW(Map<String,Float> params) {
 		this.params = params;

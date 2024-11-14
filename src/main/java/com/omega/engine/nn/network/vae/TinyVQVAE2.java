@@ -16,8 +16,8 @@ import com.omega.engine.nn.layer.EmbeddingIDLayer;
 import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.ParamsInit;
-import com.omega.engine.nn.layer.vae.tiny.TinyVAEDecoder;
-import com.omega.engine.nn.layer.vae.tiny.TinyVAEEncoder;
+import com.omega.engine.nn.layer.vqvae.tiny.TinyVQVAEDecoder;
+import com.omega.engine.nn.layer.vqvae.tiny.TinyVQVAEEncoder;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.NetworkType;
 import com.omega.engine.nn.network.RunModel;
@@ -31,11 +31,17 @@ import jcuda.jcublas.cublasOperation;
  * @author Administrator
  *
  */
-public class TinyVQVAE extends Network {
+public class TinyVQVAE2 extends Network {
 	
 	public float beta = 0.25f;
 	
 	public float decay = 0.999f;
+	
+	private int groups = 32;
+	
+	private int headNum = 4;
+	
+	public int num_res_blocks;
 	
 	public int num_vq_embeddings;
 	
@@ -43,15 +49,21 @@ public class TinyVQVAE extends Network {
 	
 	public int imageSize;
 	
+	private int[] channels;
+	
+	private boolean[] attn_resolutions;
+	
 	private InputLayer inputLayer;
 	
-	public TinyVAEEncoder encoder;
+	public TinyVQVAEEncoder encoder;
 	
-	public TinyVAEDecoder decoder;
+	public TinyVQVAEDecoder decoder;
 	
 	public ConvolutionLayer pre_quant_conv;
 	
 	public EmbeddingIDLayer embedding;
+	
+	public ConvolutionLayer post_quant_conv;
 	
 	private Tensor zq;
 	
@@ -89,32 +101,40 @@ public class TinyVQVAE extends Network {
 	
 	private Tensor ema_count_n;
 	
-	public TinyVQVAE(LossType lossType,UpdaterType updater,int latendDim,int num_vq_embeddings,int imageSize) {
+	public TinyVQVAE2(LossType lossType,UpdaterType updater,int latendDim,int num_vq_embeddings,int imageSize,int[] channels,boolean[] attn_resolutions,int num_res_blocks) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.latendDim = latendDim;
 		this.num_vq_embeddings = num_vq_embeddings;
 		this.imageSize = imageSize;
+		this.channels = channels;
+		this.num_res_blocks = num_res_blocks;
+		this.attn_resolutions = attn_resolutions;
 		this.updater = updater;
 		initLayers();
 	}
 	
 	public void initLayers() {
 		this.inputLayer = new InputLayer(3, imageSize, imageSize);
-		this.encoder = new TinyVAEEncoder(3, imageSize, imageSize, this);
+		this.encoder = new TinyVQVAEEncoder(3, latendDim, imageSize, imageSize, num_res_blocks, groups, headNum, channels, attn_resolutions, this);
 		
-		pre_quant_conv = new ConvolutionLayer(256, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
+		pre_quant_conv = new ConvolutionLayer(latendDim, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
 		pre_quant_conv.setUpdater(UpdaterFactory.create(this.updater, this.updaterParams));
-		pre_quant_conv.paramsInit = ParamsInit.leaky_relu;
+		pre_quant_conv.paramsInit = ParamsInit.silu;
 		
 		embedding = new EmbeddingIDLayer(num_vq_embeddings, latendDim, true, this);
 		float initrange = 1.0f / num_vq_embeddings;
 		embedding.weight = new Tensor(1, 1, num_vq_embeddings, latendDim, RandomUtils.uniform(num_vq_embeddings * latendDim, -initrange, initrange), true);
 		
-		this.decoder = new TinyVAEDecoder(latendDim, 3, encoder.oHeight, encoder.oWidth, this);
+		post_quant_conv = new ConvolutionLayer(latendDim, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
+		post_quant_conv.setUpdater(UpdaterFactory.create(this.updater, this.updaterParams));
+		post_quant_conv.paramsInit = ParamsInit.silu;
+		
+		this.decoder = new TinyVQVAEDecoder(latendDim, 3, encoder.oHeight, encoder.oWidth, num_res_blocks, groups, headNum, channels, attn_resolutions, this);
 		this.addLayer(inputLayer);
 		this.addLayer(encoder);
 		this.addLayer(pre_quant_conv);
 		this.addLayer(embedding);
+		this.addLayer(post_quant_conv);
 		this.addLayer(decoder);
 		
 		vaeKernel = new VAEKernel();
@@ -177,7 +197,9 @@ public class TinyVQVAE extends Network {
 		
 		quantizer();
 		
-		decoder.forward(this.zq);
+		post_quant_conv.forward(this.zq);
+		
+		decoder.forward(post_quant_conv.getOutput());
 		
 //		System.err.println("in==========>out:");
 //		this.decoder.getOutput().showDMByOffset(0, 256);
@@ -204,7 +226,9 @@ public class TinyVQVAE extends Network {
 	
 	public Tensor decode(Tensor latent) {
 		
-		decoder.forward(latent);
+		post_quant_conv.forward(latent);
+		
+		decoder.forward(post_quant_conv.getOutput());
 		
 		return decoder.getOutput();
 	}
@@ -423,7 +447,9 @@ public class TinyVQVAE extends Network {
 		
 //		decoder.diff.showDMByOffset(0, 32);
 		
-		Tensor encoderDelta = quantizer_back(decoder.diff);
+		post_quant_conv.back(decoder.diff);
+		
+		Tensor encoderDelta = quantizer_back(post_quant_conv.diff);
 		
 		pre_quant_conv.back(encoderDelta);
 //		System.err.println("pre_quant_conv-diff:");

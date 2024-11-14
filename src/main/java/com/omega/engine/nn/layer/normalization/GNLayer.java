@@ -209,6 +209,7 @@ public class GNLayer extends NormalizationLayer {
 	}
 	
 	public void initBack(Tensor diff) {
+//		diff.showDMByOffset(0, 100);
 		if(this.diff == null) {
 			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true, true);
 			this.diffGamma = new Tensor(1, 1, 1, numChannel, true);

@@ -145,6 +145,8 @@ public class Tensor implements Serializable{
 			if(!onlyGPU) {
 				JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 				JCuda.cudaDeviceSynchronize();
+			}else {
+				this.clearGPU();
 			}
 		}
 	}

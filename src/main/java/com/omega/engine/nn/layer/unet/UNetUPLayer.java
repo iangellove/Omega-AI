@@ -63,7 +63,7 @@ public class UNetUPLayer extends Layer{
 		Layer[] layers = new Layer[2];
 		
 		if(bilinear) {
-			this.up = new UPSampleLayer(0, 2, 2, 1, network);
+			this.up = new UPSampleLayer(channel, 2, 2, 1, network);
 			this.conv = new DoubleConvLayer(channel, oChannel, channel / 2, up.oHeight, up.oWidth, activeType, network);
 		}else {
 			this.up = new ConvolutionTransposeLayer(channel, channel / 2, width, height, 2, 2, 0, 2, 1, 0);

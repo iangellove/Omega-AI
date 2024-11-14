@@ -729,7 +729,7 @@ public class VAEKernel extends BaseKernel{
 	
 			/**
 	         * 设置入参
-	         * float *dw,float *weight, float *emb_weight,float *ema_count, float decay,int n
+	         * float *dw,float *weight, float *emb_weight,float *ema_count, float decay,int batch, int n
 	         */ 
 			forwardKernelParameters = Pointer.to(
 					Pointer.to(dw.getGpuData()),

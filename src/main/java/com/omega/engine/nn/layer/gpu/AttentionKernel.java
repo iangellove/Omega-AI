@@ -62,6 +62,8 @@ public class AttentionKernel extends BaseKernel{
 	
 	private CUfunction softmax_backward_2_function;
 	
+	private CUfunction softmax_backward_unmask_2_function;
+	
 	public AttentionKernel() {
 		init();
 	}
@@ -142,6 +144,10 @@ public class AttentionKernel extends BaseKernel{
 			
 			if(softmax_backward_2_function == null) {
 				softmax_backward_2_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_autoregressive_backward_inplace_kernel");
+			}
+			
+			if(softmax_backward_unmask_2_function == null) {
+				softmax_backward_unmask_2_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_autoregressive_unmask_backward_inplace_kernel");
 			}
 			
 			if(scale_function == null) {
@@ -794,6 +800,41 @@ public class AttentionKernel extends BaseKernel{
 			int[] grids = new int[] {grid_size, B * NH, 1};
 
 		    checkCUDA(cuLaunchKernel(softmax_backward_2_function,
+		    		grids[0],  grids[1], grids[2],      // Grid dimension
+		    		block_size, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            softmaxBackwardParameters, null // Kernel- and extra parameters
+		        ));
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void softmax2_unmask_backward(Tensor datt,Tensor att,int B,int T,int C,int NH,float scale) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float* datt, const float* att, int B, int T, int C, float scale
+	         */ 
+			int block_size = 256;
+			softmaxBackwardParameters = Pointer.to(
+	        		Pointer.to(datt.getGpuData()),
+	        		Pointer.to(att.getGpuData()),
+	                Pointer.to(new int[]{B}),
+	                Pointer.to(new int[]{T}),
+	                Pointer.to(new int[]{C}),
+	                Pointer.to(new float[]{scale})
+	            );
+			
+			int grid_size = get_number_of_blocks(T, 4);
+			int[] grids = new int[] {grid_size, B * NH, 1};
+
+		    checkCUDA(cuLaunchKernel(softmax_backward_unmask_2_function,
 		    		grids[0],  grids[1], grids[2],      // Grid dimension
 		    		block_size, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream

@@ -174,6 +174,7 @@ __global__ void sum_kernel(int N, float *X, float *Y)
 	    for(int index = 0;index<N;index++){
 	    	Y[0] += X[index];
 	    }
+	    
     }
 }
 

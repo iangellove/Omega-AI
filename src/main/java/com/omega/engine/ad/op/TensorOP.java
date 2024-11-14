@@ -632,4 +632,10 @@ public class TensorOP {
 		
 	}
 	
+	public static void copyGPU(Tensor a,Tensor b) {
+		
+		OPKernel.getInstance().copy_gpu(a, b);
+		
+	}
+	
 }

@@ -7,6 +7,7 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.network.vae.TinyVAE;
 import com.omega.engine.nn.network.vae.TinyVQVAE;
+import com.omega.engine.nn.network.vae.TinyVQVAE2;
 import com.omega.engine.nn.network.vae.VQVAE;
 import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
@@ -184,6 +185,121 @@ public class VQVAETest {
 	
 	}
 	
+	public static void tiny_vq_vae_nature() {
+
+		try {
+			
+			int batchSize = 32;
+			int imageSize = 256;
+			int latendDim = 4;
+			
+			int num_vq_embeddings = 512;
+			
+			float[] mean = new float[] {0.5f, 0.5f,0.5f};
+			float[] std = new float[] {0.5f, 0.5f,0.5f};
+			
+			String imgDirPath = "I:\\dataset\\LHQ256\\lhq_256\\";
+
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
+			
+			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, latendDim, num_vq_embeddings, imageSize);
+			
+			network.CUDNN = true;
+			network.learnRate = 0.001f;
+			
+//			String clipWeight = "H:\\model\\tiny_vqvae.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
+			optimizer.trainTinyVQVAE(dataLoader);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	
+	}
+	
+	public static void tiny_vqvae() {
+
+		try {
+			
+			int batchSize = 32;
+			int imageSize = 256;
+			int latendDim = 4;
+			
+			int num_vq_embeddings = 512;
+			
+			float[] mean = new float[] {0.5f, 0.5f,0.5f};
+			float[] std = new float[] {0.5f, 0.5f,0.5f};
+			
+			String imgDirPath = "I:\\BaiduNetdiskDownload\\dataset\\pretrain_images\\";
+
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, false, false, mean, std);
+			
+			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, latendDim, num_vq_embeddings, imageSize);
+			
+			network.CUDNN = true;
+			network.learnRate = 0.001f;
+			
+//			String clipWeight = "H:\\model\\tiny_vqvae.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
+			optimizer.trainTinyVQVAE(dataLoader);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	
+	}
+	
+	public static void tiny_vqvae2() {
+
+		try {
+			
+			int batchSize = 6;
+			int imageSize = 128;
+			int latendDim = 4;
+			
+			int num_vq_embeddings = 512;
+			
+			int num_res_blocks = 1;
+			
+			int[] channels = new int[] {64, 128, 256};
+			boolean[] attn_resolutions = new boolean[] {false, false, false};
+			
+			float[] mean = new float[] {0.5f, 0.5f,0.5f};
+			float[] std = new float[] {0.5f, 0.5f,0.5f};
+			
+//			String imgDirPath = "I:\\dataset\\LHQ256\\lhq_256\\";
+
+			String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset128\\";
+			
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, false, false, mean, std);
+			
+			TinyVQVAE2 network = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+			
+			network.CUDNN = true;
+			network.learnRate = 0.001f;
+			
+//			String clipWeight = "H:\\model\\tiny_vqvae.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
+			optimizer.trainTinyVQVAE2(dataLoader);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -192,7 +308,13 @@ public class VQVAETest {
 			
 //			vq_vae();
 			
-			tiny_vq_vae();
+//			tiny_vq_vae();
+			
+//			tiny_vq_vae_nature();
+			
+//			tiny_vqvae();
+			
+			tiny_vqvae2();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

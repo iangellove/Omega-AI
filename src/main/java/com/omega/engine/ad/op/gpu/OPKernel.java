@@ -6,6 +6,7 @@ import java.io.Serializable;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.TensorOP;
+import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 
@@ -16,7 +17,7 @@ import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 import jcuda.runtime.cudaMemcpyKind;
 
-public class OPKernel implements Serializable{
+public class OPKernel extends BaseKernel implements Serializable{
 	
 	/**
 	 * 
@@ -2528,6 +2529,12 @@ public class OPKernel implements Serializable{
 			// TODO: handle exception
 			e.printStackTrace();
 		}
+		
+	}
+	
+	public void copy_gpu(Tensor a,Tensor b) {
+		
+		this.copy_gpu(a, b, a.getDataLength(), 1, 1);
 		
 	}
 	
