@@ -261,4 +261,8 @@ public abstract class Layer {
 		}
 	}
 	
+	public void freeze() {
+		this.freeze = true;
+	}
+	
 }

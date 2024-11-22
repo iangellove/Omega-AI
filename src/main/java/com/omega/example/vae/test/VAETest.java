@@ -2,8 +2,6 @@ package com.omega.example.vae.test;
 
 import java.util.Map;
 
-import com.omega.common.data.Tensor;
-import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
@@ -13,7 +11,6 @@ import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.example.clip.utils.ClipModelUtils;
 import com.omega.example.diffusion.utils.DiffusionImageDataLoader;
-import com.omega.example.transformer.utils.LagJsonReader;
 
 public class VAETest {
 	
@@ -113,6 +110,7 @@ public class VAETest {
 			
 			int batchSize = 8;
 			int imageSize = 256;
+			int z_dims = 64;
 			int latendDim = 4;
 			
 			float[] mean = new float[] {0.5f, 0.5f,0.5f};
@@ -122,7 +120,7 @@ public class VAETest {
 
 			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, false, mean, std);
 			
-			TinyVAE network = new TinyVAE(LossType.MSE_SUM, UpdaterType.adamw, latendDim, imageSize);
+			TinyVAE network = new TinyVAE(LossType.MSE_SUM, UpdaterType.adamw, z_dims, latendDim, imageSize);
 			
 			network.CUDNN = true;
 			network.learnRate = 0.001f;

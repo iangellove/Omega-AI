@@ -632,6 +632,26 @@ public class TensorOP {
 		
 	}
 	
+	public static void mean2Dim(Tensor a,Tensor b) {
+		
+		if(a.isHasGPU()) {
+			OPKernel.getInstance().mean_2dim_gpu(a, b);
+		}else {
+//			c.data = MatrixOperation.add(a.data, b.data);
+		}
+		
+	}
+	
+	public static void mean2DimBack(Tensor dy,Tensor dx) {
+		
+		if(dx.isHasGPU()) {
+			OPKernel.getInstance().mean_2dim_back_gpu(dy, dx);
+		}else {
+//			c.data = MatrixOperation.add(a.data, b.data);
+		}
+		
+	}
+	
 	public static void copyGPU(Tensor a,Tensor b) {
 		
 		OPKernel.getInstance().copy_gpu(a, b);

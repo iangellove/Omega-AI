@@ -30,6 +30,8 @@ public class TinyVAE extends Network {
 	
 	public float kl_weight = 0.1f;
 	
+	public int z_dims;
+	
 	public int latendDim = 4;
 	
 	public int imageSize;
@@ -60,8 +62,9 @@ public class TinyVAE extends Network {
 	
 	public Tensor klLoss;
 	
-	public TinyVAE(LossType lossType,UpdaterType updater,int latendDim,int imageSize) {
+	public TinyVAE(LossType lossType,UpdaterType updater,int z_dims,int latendDim,int imageSize) {
 		this.lossFunction = LossFactory.create(lossType);
+		this.z_dims = z_dims;
 		this.latendDim = latendDim;
 		this.imageSize = imageSize;
 		this.updater = updater;
@@ -70,11 +73,11 @@ public class TinyVAE extends Network {
 	
 	public void initLayers() {
 		this.inputLayer = new InputLayer(3, imageSize, imageSize);
-		this.encoder = new TinyVAEEncoder(3, imageSize, imageSize, this);
-		conv_mu = new ConvolutionLayer(256, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
+		this.encoder = new TinyVAEEncoder(3, imageSize, imageSize, z_dims, this);
+		conv_mu = new ConvolutionLayer(z_dims, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
 		conv_mu.setUpdater(UpdaterFactory.create(this.updater, this.updaterParams));
 		conv_mu.paramsInit = ParamsInit.leaky_relu;
-		conv_var = new ConvolutionLayer(256, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
+		conv_var = new ConvolutionLayer(z_dims, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
 		conv_var.setUpdater(UpdaterFactory.create(this.updater, this.updaterParams));
 		conv_var.paramsInit = ParamsInit.leaky_relu;
 		this.decoder = new TinyVAEDecoder(latendDim, 3, encoder.oHeight, encoder.oWidth, this);

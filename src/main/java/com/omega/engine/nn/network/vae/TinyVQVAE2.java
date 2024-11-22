@@ -45,6 +45,8 @@ public class TinyVQVAE2 extends Network {
 	
 	public int num_vq_embeddings;
 	
+	public int z_dims;
+	
 	public int latendDim = 4;
 	
 	public int imageSize;
@@ -101,8 +103,9 @@ public class TinyVQVAE2 extends Network {
 	
 	private Tensor ema_count_n;
 	
-	public TinyVQVAE2(LossType lossType,UpdaterType updater,int latendDim,int num_vq_embeddings,int imageSize,int[] channels,boolean[] attn_resolutions,int num_res_blocks) {
+	public TinyVQVAE2(LossType lossType,UpdaterType updater,int z_dims,int latendDim,int num_vq_embeddings,int imageSize,int[] channels,boolean[] attn_resolutions,int num_res_blocks) {
 		this.lossFunction = LossFactory.create(lossType);
+		this.z_dims = z_dims;
 		this.latendDim = latendDim;
 		this.num_vq_embeddings = num_vq_embeddings;
 		this.imageSize = imageSize;
@@ -115,9 +118,9 @@ public class TinyVQVAE2 extends Network {
 	
 	public void initLayers() {
 		this.inputLayer = new InputLayer(3, imageSize, imageSize);
-		this.encoder = new TinyVQVAEEncoder(3, latendDim, imageSize, imageSize, num_res_blocks, groups, headNum, channels, attn_resolutions, this);
+		this.encoder = new TinyVQVAEEncoder(3, z_dims, imageSize, imageSize, num_res_blocks, groups, headNum, channels, attn_resolutions, this);
 		
-		pre_quant_conv = new ConvolutionLayer(latendDim, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
+		pre_quant_conv = new ConvolutionLayer(z_dims, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
 		pre_quant_conv.setUpdater(UpdaterFactory.create(this.updater, this.updaterParams));
 		pre_quant_conv.paramsInit = ParamsInit.silu;
 		
@@ -125,11 +128,11 @@ public class TinyVQVAE2 extends Network {
 		float initrange = 1.0f / num_vq_embeddings;
 		embedding.weight = new Tensor(1, 1, num_vq_embeddings, latendDim, RandomUtils.uniform(num_vq_embeddings * latendDim, -initrange, initrange), true);
 		
-		post_quant_conv = new ConvolutionLayer(latendDim, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
+		post_quant_conv = new ConvolutionLayer(latendDim, z_dims, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
 		post_quant_conv.setUpdater(UpdaterFactory.create(this.updater, this.updaterParams));
 		post_quant_conv.paramsInit = ParamsInit.silu;
 		
-		this.decoder = new TinyVQVAEDecoder(latendDim, 3, encoder.oHeight, encoder.oWidth, num_res_blocks, groups, headNum, channels, attn_resolutions, this);
+		this.decoder = new TinyVQVAEDecoder(z_dims, 3, encoder.oHeight, encoder.oWidth, num_res_blocks, groups, headNum, channels, attn_resolutions, this);
 		this.addLayer(inputLayer);
 		this.addLayer(encoder);
 		this.addLayer(pre_quant_conv);

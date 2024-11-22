@@ -1,37 +1,32 @@
-package com.omega.engine.nn.layer.vae.tiny;
+package com.omega.engine.nn.layer.lpips;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.nn.layer.ConvolutionTransposeLayer;
+import com.omega.engine.nn.layer.ConvolutionLayer;
+import com.omega.engine.nn.layer.DropoutLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.ParamsInit;
-import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
-import com.omega.engine.nn.layer.active.LeakyReluLayer;
-import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
- * resnet block layer
+ * NetLinLayer
  * @author Administrator
  *
  */
-public class TinyVAEConvTransposeBlock extends Layer {
-
-//	private int group = 32;
-
-	public ConvolutionTransposeLayer conv;
+public class NetLinLayer extends Layer {
 	
-//	private GNLayer norm;
-	public BNLayer norm;
+	private boolean dropout = false;
 	
-	private ActiveFunctionLayer act;
+	private DropoutLayer drop;
+	public ConvolutionLayer conv;
 	
-	public TinyVAEConvTransposeBlock(int channel,int oChannel,int height,int width, Network network) {
+	public NetLinLayer(int channel,int oChannel,int height,int width,boolean dropout, Network network) {
 		this.network = network;
+		this.dropout = dropout;
 		this.channel = channel;
 		this.oChannel = oChannel;
 		this.height = height;
@@ -39,28 +34,23 @@ public class TinyVAEConvTransposeBlock extends Layer {
 		
 		initLayers();
 		
-		this.oHeight = conv.oHeight;
-		this.oWidth = conv.oWidth;
 	}
 	
 	public void initLayers() {
-		
-		conv = new ConvolutionTransposeLayer(channel, oChannel, width, height, 3, 3, 1, 2, 1, 1, true, network);
+
+		if(dropout) {
+			drop = new DropoutLayer(0.5f, network);
+		}
+
+		conv = new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, 1, false, true, this.network); 
 		conv.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
-		conv.paramsInit = ParamsInit.leaky_relu;
-		
-		norm = new BNLayer(conv);
-		
-		act = new LeakyReluLayer(norm);
+		conv.paramsInit = ParamsInit.relu;
 		
 	}
 
 	@Override
 	public void init() {
 		this.number = this.network.number;
-//		if(this.output == null || this.output.number != this.network.number) {
-//			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
-//		}
 	}
 	
 	@Override
@@ -78,11 +68,16 @@ public class TinyVAEConvTransposeBlock extends Layer {
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		conv.forward(this.input);
-		norm.forward(conv.getOutput());
-		act.forward(norm.getOutput());
+		Tensor x = this.input;
+
+		if(dropout) {
+			drop.forward(x);
+			x = drop.getOutput();
+		}
 		
-		this.output = act.getOutput();
+		conv.forward(x);
+		
+		this.output = conv.getOutput();
 	}
 
 	@Override
@@ -94,11 +89,19 @@ public class TinyVAEConvTransposeBlock extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		act.back(this.delta);
-		norm.back(act.diff);
-		conv.back(norm.diff);
+//		System.out.println(index);
+		Tensor diffOut = delta;
 		
-		this.diff = conv.diff;
+		conv.back(diffOut);
+		
+		diffOut = conv.diff;
+		
+		if(dropout) {
+			drop.back(diffOut);
+			diffOut = drop.diff;
+		}
+		
+		this.diff = diffOut;
 	}
 
 	@Override
@@ -141,8 +144,9 @@ public class TinyVAEConvTransposeBlock extends Layer {
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
+		
 		conv.update();
-		norm.update();
+		
 	}
 
 	@Override
@@ -218,12 +222,9 @@ public class TinyVAEConvTransposeBlock extends Layer {
 		
 	}
 	
-
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
 		
 		conv.saveModel(outputStream);
-		
-		norm.saveModel(outputStream);
 		
 	}
 	
@@ -231,9 +232,6 @@ public class TinyVAEConvTransposeBlock extends Layer {
 		
 		conv.loadModel(inputStream);
 		
-		norm.loadModel(inputStream);
-		
 	}
-	
-	
+
 }

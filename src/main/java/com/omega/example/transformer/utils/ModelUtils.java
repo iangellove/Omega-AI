@@ -10,6 +10,7 @@ import com.omega.engine.nn.network.Llama2;
 import com.omega.engine.nn.network.Llama3;
 import com.omega.engine.nn.network.Llava;
 import com.omega.engine.nn.network.NanoGPT;
+import com.omega.engine.nn.network.vae.TinyVQVAE;
 
 public class ModelUtils {
 	
@@ -27,6 +28,40 @@ public class ModelUtils {
 			System.out.println("start save model...");
 			model.saveModel(rFile);
 			System.out.println("model save success...");
+		}catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void saveModel(TinyVQVAE model,String outpath) {
+		File file = new File(outpath);
+		if(!file.exists()) {
+			try {
+				file.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		try(RandomAccessFile rFile = new RandomAccessFile(file, "rw")){
+			System.out.println("start save model...");
+			model.saveModel(rFile);
+			System.out.println("model save success...");
+		}catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void loadModel(TinyVQVAE model,String inputPath) {
+		
+		try(RandomAccessFile File = new RandomAccessFile(inputPath, "r")){
+			System.out.println("start load model...");
+			model.loadModel(File);
+			System.out.println("model load success...");
 		}catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

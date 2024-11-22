@@ -166,6 +166,10 @@ public class OPKernel extends BaseKernel implements Serializable{
 	
 	private CUfunction onehot_function;
 	
+	private CUfunction mean_function;
+	
+	private CUfunction mean_back_function;
+	
 	public OPKernel() {
 		
 		fill_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "fill_kernel");
@@ -303,6 +307,10 @@ public class OPKernel extends BaseKernel implements Serializable{
 		permute_add_gpu_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "permute_add_kernel");
 		
 		onehot_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "one_hot_kernel");
+		
+		mean_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "mean_kernel");
+		
+		mean_back_function = CUDAModules.getLocalFunctionByModule("OPKernel.cu", "mean_back_kernel");
 		
 	}
 	
@@ -2455,6 +2463,62 @@ public class OPKernel extends BaseKernel implements Serializable{
 		
 	}
 	
+	public void mean_2dim_gpu(Tensor x,Tensor y) {
+		
+		try {
+
+			/**
+			 * int N, float *x, float *y, int C
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{x.number * x.channel}),
+	                Pointer.to(x.getGpuData()),
+	        		Pointer.to(y.getGpuData()),
+	        		Pointer.to(new int[]{x.height * x.width})
+	            );
+			
+			checkCUDA(cuLaunchKernel(mean_function,
+	        		CAFFE_GET_BLOCKS(x.number * x.channel),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void mean_2dim_back_gpu(Tensor dy,Tensor dx) {
+		
+		try {
+
+			/**
+			 * int N, float *dy, float *dx, int C
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(new int[]{dx.number * dx.channel}),
+	                Pointer.to(dy.getGpuData()),
+	        		Pointer.to(dx.getGpuData()),
+	        		Pointer.to(new int[]{dx.height * dx.width})
+	            );
+			
+			checkCUDA(cuLaunchKernel(mean_back_function,
+	        		CAFFE_GET_BLOCKS(dx.number * dx.channel),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public void mean_gpu(Tensor a,int dim,Tensor y) {
 		
 		try {
@@ -2475,7 +2539,6 @@ public class OPKernel extends BaseKernel implements Serializable{
 		}
 		
 	}
-	
 
 	public void expand_gpu(Tensor a, Tensor b, int num) {
 		// TODO Auto-generated method stub

@@ -38,7 +38,7 @@ public class SumOP extends FunctionOP {
 	}
 	
 	/**
-	 * exp'(x) = exp(x)
+	 * 
 	 */
 	@Override
 	public void backward(Tensor delta, Tape tape) {

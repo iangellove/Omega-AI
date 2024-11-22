@@ -50,7 +50,8 @@ public enum LayerType {
 	rope("rope"),
 	dropout("dropout"),
 	clip_vision_embedding("clip_vision_embedding"),
-	time_embedding("time_embedding");
+	time_embedding("time_embedding"),
+	lpips("lpips");
 	
 	private String key;
 	

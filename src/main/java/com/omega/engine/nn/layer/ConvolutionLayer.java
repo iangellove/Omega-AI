@@ -41,7 +41,7 @@ public class ConvolutionLayer extends Layer {
 	private ConvBaseKernel kernel;
 	
 	private BiasKernel biasKernel;
-	
+
 	/**
 	 * ConvolutionLayer
 	 * @param channel
@@ -119,6 +119,37 @@ public class ConvolutionLayer extends Layer {
 		this.stride = stride;
 		this.hasBias = hasBias;
 		this.network = network;
+		network.paramLayers.add(this);
+		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		this.hasParams = true;
+		this.initParam();
+	}
+	
+	/**
+	 * ConvolutionLayer
+	 * @param channel
+	 * @param kernelNum
+	 * @param width
+	 * @param height
+	 * @param kWidth
+	 * @param kHeight
+	 * @param padding
+	 * @param stride
+	 * @param activeFunction
+	 * @param updater
+	 */
+	public ConvolutionLayer(int channel,int kernelNum,int width,int height,int kWidth,int kHeight,int padding,int stride,boolean hasBias,boolean freeze,Network network) {
+		this.kernelNum = kernelNum;
+		this.channel = channel;
+		this.width = width;
+		this.height = height;
+		this.kWidth = kWidth;
+		this.kHeight = kHeight;
+		this.padding = padding;
+		this.stride = stride;
+		this.hasBias = hasBias;
+		this.network = network;
+		this.freeze = freeze;
 		network.paramLayers.add(this);
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 		this.hasParams = true;
@@ -211,10 +242,10 @@ public class ConvolutionLayer extends Layer {
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.order(kernelNum * channel * kHeight * kWidth, 0.1f, 0.01f), true);
 //		this.bias = new Tensor(1, 1, 1, kernelNum, RandomUtils.kaimingUniformBias(kernelNum, this.channel * kHeight * kWidth), true);
 		this.bias = new Tensor(1, 1, 1, kernelNum, true);
-		if(network != null) {
+		if(network != null && !freeze) {
 			this.diffB = this.network.createParamterGrad(1, 1, 1, kernelNum, true);
 			this.diffW = this.network.createParamterGrad(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);
-		}else {
+		}else if(!freeze){
 			this.diffB = new Tensor(1, 1, 1, kernelNum, true);
 			this.diffW = new Tensor(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);
 		}
@@ -224,6 +255,25 @@ public class ConvolutionLayer extends Layer {
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.network.number;
+		if(this.output == null || this.number != this.output.number){
+//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+		}
+		if(kernel == null){
+			if(this.network.CUDNN) {
+				kernel = new ConvCudnnKernel(this.network, channel, height, width, kernelNum, kHeight, kWidth, stride, padding);
+			}else {
+				kernel = new ConvKernel(channel, height, width, kernelNum, kHeight, kWidth, stride, padding);
+			}
+			if(this.hasBias) {
+				biasKernel = new BiasKernel();
+			} 
+		}
+	}
+	
+	public void init(Tensor input) {
+		// TODO Auto-generated method stub
+		this.number = input.number;
 		if(this.output == null || this.number != this.output.number){
 //			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
@@ -251,20 +301,13 @@ public class ConvolutionLayer extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-//		long start = System.nanoTime();
-//		weight.showDM(weight.dataLength-1);
-//		System.err.println("input:"+input.checkNan());
-//		input.showShape();
-//		System.err.println("weight:"+weight.checkNan());
-//		weight.showShape();
-//		output.showShape();
+
 		kernel.conv(input, weight, output);
+
 		if(this.hasBias) {
-			biasKernel.addConvBias(output, bias);
+			biasKernel.addConvBiasFast(output, bias);
 		}
-//		System.out.println(JsonUtils.toJson(output.getByNumberAndChannel(0, 0)));
-		
-//		System.out.println(this.index+":"+(System.nanoTime() - start) / 1e6+"ms.");
+
 	}
 
 	/**
@@ -282,23 +325,28 @@ public class ConvolutionLayer extends Layer {
 //			System.out.println(JsonUtils.toJson(delta.syncHost()));
 //			
 //		}
-
-		/**
-		 * 计算deltaW
-		 * 20220816: dw = diff * im2col(input)T 
-		 * diff[knumber * oh * ow]
-		 * im2col(input)T[oh * ow * C * kh * kw]
-		 */
-		kernel.dw(input, delta, diffW);
 		
-//		System.out.println("===========");
-		/**
-		 * 计算deltaB
-		 */
-		if(this.hasBias) {
-			biasKernel.backwardConvBias(diffB, delta);
+		if(!freeze) {
+
+			/**
+			 * 计算deltaW
+			 * 20220816: dw = diff * im2col(input)T 
+			 * diff[knumber * oh * ow]
+			 * im2col(input)T[oh * ow * C * kh * kw]
+			 */
+			kernel.dw(input, delta, diffW);
+			
+			/**
+			 * 计算deltaB
+			 */
+			if(this.hasBias) {
+				biasKernel.backwardConvBias(diffB, delta);
+			}
+			
 		}
 		
+//		System.out.println("===========");
+
 		/**
 		 * 计算diff
 		 */
@@ -326,14 +374,15 @@ public class ConvolutionLayer extends Layer {
 //			System.out.println(JsonUtils.toJson(delta.syncHost()));
 //			
 //		}
-
-		/**
-		 * 计算deltaW
-		 * 20220816: dw = diff * im2col(input)T 
-		 * diff[knumber * oh * ow]
-		 * im2col(input)T[oh * ow * C * kh * kw]
-		 */
-		kernel.dw(input, delta, diffW);
+		if(!freeze) {
+			/**
+			 * 计算deltaW
+			 * 20220816: dw = diff * im2col(input)T 
+			 * diff[knumber * oh * ow]
+			 * im2col(input)T[oh * ow * C * kh * kw]
+			 */
+			kernel.dw(input, delta, diffW);
+		}
 //		diffW.showDM();
 //		System.out.println("===========");
 		/**
@@ -481,7 +530,7 @@ public class ConvolutionLayer extends Layer {
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		
 		/**
 		 * 设置输入

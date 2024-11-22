@@ -707,3 +707,26 @@ __global__ void permute_add_kernel(int N, float *data_in, float *data_out, int *
         data_out[offset_out] += data_in[offset_in];
     }
 }
+
+extern "C"
+__global__ void mean_kernel(int N, float *x, float *y, int C) {
+    int tid = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (tid < N) {
+    	float sum = 0.0f;
+        for (int i = 0; i < C; i++) {
+            sum += x[tid * C + i];
+        }
+        y[tid] += sum / C;
+    }
+}
+
+
+extern "C"
+__global__ void mean_back_kernel(int N, float *dy, float *dx, int C) {
+    int tid = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (tid < N) {
+        for (int i = 0; i < C; i++) {
+            dx[tid * C + i] = dy[tid] / C;
+        }
+    }
+}

@@ -39,6 +39,8 @@ public class TinyVQVAE extends Network {
 	
 	public int num_vq_embeddings;
 	
+	public int z_dims;
+	
 	public int latendDim = 4;
 	
 	public int imageSize;
@@ -52,6 +54,8 @@ public class TinyVQVAE extends Network {
 	public ConvolutionLayer pre_quant_conv;
 	
 	public EmbeddingIDLayer embedding;
+	
+	public ConvolutionLayer post_quant_conv;
 	
 	private Tensor zq;
 	
@@ -89,8 +93,9 @@ public class TinyVQVAE extends Network {
 	
 	private Tensor ema_count_n;
 	
-	public TinyVQVAE(LossType lossType,UpdaterType updater,int latendDim,int num_vq_embeddings,int imageSize) {
+	public TinyVQVAE(LossType lossType,UpdaterType updater,int z_dims,int latendDim,int num_vq_embeddings,int imageSize) {
 		this.lossFunction = LossFactory.create(lossType);
+		this.z_dims = z_dims;
 		this.latendDim = latendDim;
 		this.num_vq_embeddings = num_vq_embeddings;
 		this.imageSize = imageSize;
@@ -100,9 +105,9 @@ public class TinyVQVAE extends Network {
 	
 	public void initLayers() {
 		this.inputLayer = new InputLayer(3, imageSize, imageSize);
-		this.encoder = new TinyVAEEncoder(3, imageSize, imageSize, this);
+		this.encoder = new TinyVAEEncoder(3, imageSize, imageSize, z_dims, this);
 		
-		pre_quant_conv = new ConvolutionLayer(256, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
+		pre_quant_conv = new ConvolutionLayer(z_dims, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
 		pre_quant_conv.setUpdater(UpdaterFactory.create(this.updater, this.updaterParams));
 		pre_quant_conv.paramsInit = ParamsInit.leaky_relu;
 		
@@ -110,11 +115,16 @@ public class TinyVQVAE extends Network {
 		float initrange = 1.0f / num_vq_embeddings;
 		embedding.weight = new Tensor(1, 1, num_vq_embeddings, latendDim, RandomUtils.uniform(num_vq_embeddings * latendDim, -initrange, initrange), true);
 		
-		this.decoder = new TinyVAEDecoder(latendDim, 3, encoder.oHeight, encoder.oWidth, this);
+		post_quant_conv = new ConvolutionLayer(latendDim, z_dims, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
+		post_quant_conv.setUpdater(UpdaterFactory.create(this.updater, this.updaterParams));
+		post_quant_conv.paramsInit = ParamsInit.leaky_relu;
+		
+		this.decoder = new TinyVAEDecoder(z_dims, 3, encoder.oHeight, encoder.oWidth, this);
 		this.addLayer(inputLayer);
 		this.addLayer(encoder);
 		this.addLayer(pre_quant_conv);
 		this.addLayer(embedding);
+		this.addLayer(post_quant_conv);
 		this.addLayer(decoder);
 		
 		vaeKernel = new VAEKernel();
@@ -177,7 +187,9 @@ public class TinyVQVAE extends Network {
 		
 		quantizer();
 		
-		decoder.forward(this.zq);
+		post_quant_conv.forward(this.zq);
+		
+		decoder.forward(post_quant_conv.getOutput());
 		
 //		System.err.println("in==========>out:");
 //		this.decoder.getOutput().showDMByOffset(0, 256);
@@ -204,7 +216,9 @@ public class TinyVQVAE extends Network {
 	
 	public Tensor decode(Tensor latent) {
 		
-		decoder.forward(latent);
+		post_quant_conv.forward(latent);
+		
+		decoder.forward(post_quant_conv.getOutput());
 		
 		return decoder.getOutput();
 	}
@@ -423,7 +437,9 @@ public class TinyVQVAE extends Network {
 		
 //		decoder.diff.showDMByOffset(0, 32);
 		
-		Tensor encoderDelta = quantizer_back(decoder.diff);
+		post_quant_conv.back(decoder.diff);
+		
+		Tensor encoderDelta = quantizer_back(post_quant_conv.diff);
 		
 		pre_quant_conv.back(encoderDelta);
 //		System.err.println("pre_quant_conv-diff:");
@@ -494,10 +510,30 @@ public class TinyVQVAE extends Network {
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
 		
+		encoder.saveModel(outputStream);
+		
+		pre_quant_conv.saveModel(outputStream);
+		
+		embedding.saveModel(outputStream);
+		
+		post_quant_conv.saveModel(outputStream);
+		
+		decoder.saveModel(outputStream);
+		
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-
+		
+		encoder.loadModel(inputStream);
+		
+		pre_quant_conv.loadModel(inputStream);
+		
+		embedding.loadModel(inputStream);
+		
+		post_quant_conv.loadModel(inputStream);
+		
+		decoder.loadModel(inputStream);
+		
 	}
 	
 }

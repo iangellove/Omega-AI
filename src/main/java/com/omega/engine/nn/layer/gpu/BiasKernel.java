@@ -3,7 +3,6 @@ package com.omega.engine.nn.layer.gpu;
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.lib.LibPaths;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAModules;
 
@@ -18,6 +17,8 @@ import jcuda.driver.CUfunction;
 public class BiasKernel extends BaseKernel{
 
 	private CUfunction function;
+	
+	private CUfunction fast_function;
 	
 	private CUfunction back_function;
 	
@@ -48,6 +49,12 @@ public class BiasKernel extends BaseKernel{
 			if(function == null) {
 
 				function = CUDAModules.getLocalFunctionByModule("BiasKernel.cu", "add_bias");
+				
+			}
+			
+			if(fast_function == null) {
+
+				fast_function = CUDAModules.getLocalFunctionByModule("BiasKernel.cu", "add_bias_kernel");
 				
 			}
 			
@@ -130,6 +137,43 @@ public class BiasKernel extends BaseKernel{
 			
 			cuLaunchKernel(function,
 		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            biasConvKernelParameters, null // Kernel- and extra parameters
+		        );
+
+//	        JCudaDriver.cuCtxSynchronize();
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void addConvBiasFast(Tensor output,Tensor bias) {
+		
+		try {
+			
+			if(biasConvKernelParameters == null || output.number != this.N){
+
+		        /**
+		         * 设置入参
+		         * float *output, float *biases, int n, int size
+		         */ 
+				biasConvKernelParameters = Pointer.to(
+		        		Pointer.to(output.getGpuData()),
+		                Pointer.to(bias.getGpuData()),
+		                Pointer.to(new int[]{output.channel}),
+		                Pointer.to(new int[]{output.height * output.width})
+		            );
+		        
+		        this.N = output.number;
+		        
+			}
+			
+			cuLaunchKernel(fast_function,
+		            this.CAFFE_GET_BLOCKS(output.height * output.width),  output.channel, output.getNumber(),      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            biasConvKernelParameters, null // Kernel- and extra parameters

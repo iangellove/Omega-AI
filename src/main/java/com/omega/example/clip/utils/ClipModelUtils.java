@@ -118,7 +118,7 @@ public class ClipModelUtils {
 
 			}
 			x.hostToDevice();
-//			System.out.println(key+"_finish.");
+			System.out.println(key+"_finish.");
 		}
 	}
 	

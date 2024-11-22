@@ -5,7 +5,6 @@ import java.util.Map;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
-import com.omega.engine.nn.network.vae.TinyVAE;
 import com.omega.engine.nn.network.vae.TinyVQVAE;
 import com.omega.engine.nn.network.vae.TinyVQVAE2;
 import com.omega.engine.nn.network.vae.VQVAE;
@@ -15,6 +14,7 @@ import com.omega.engine.updater.UpdaterType;
 import com.omega.example.clip.utils.ClipModelUtils;
 import com.omega.example.diffusion.utils.DiffusionImageDataLoader;
 import com.omega.example.transformer.utils.LagJsonReader;
+import com.omega.example.transformer.utils.ModelUtils;
 
 public class VQVAETest {
 	
@@ -107,6 +107,15 @@ public class VQVAETest {
 		network.decoder.block3.norm.runingVar = ClipModelUtils.loadData(network.decoder.block3.norm.runingVar, weightMap, 1, "decoder.2.1.running_var");
 	}
 	
+	public static void loadLPIPSWeight(Map<String, Object> weightMap, boolean showLayers) {
+		if(showLayers) {
+			for(String key:weightMap.keySet()) {
+				System.out.println(key);
+			}
+		}
+		
+	}
+	
 	public static void vq_vae() {
 
 		try {
@@ -153,11 +162,12 @@ public class VQVAETest {
 
 		try {
 			
-			int batchSize = 32;
+			int batchSize = 24;
 			int imageSize = 256;
+			int z_dims = 64;
 			int latendDim = 4;
 			
-			int num_vq_embeddings = 512;
+			int num_vq_embeddings = 8192;
 			
 			float[] mean = new float[] {0.5f, 0.5f,0.5f};
 			float[] std = new float[] {0.5f, 0.5f,0.5f};
@@ -166,7 +176,7 @@ public class VQVAETest {
 
 			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, true, mean, std);
 			
-			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, latendDim, num_vq_embeddings, imageSize);
+			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize);
 			
 			network.CUDNN = true;
 			network.learnRate = 0.001f;
@@ -177,6 +187,9 @@ public class VQVAETest {
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
 			optimizer.trainTinyVQVAE(dataLoader);
+			
+			String save_model_path = "H:\\model\\vqvae500.model";
+			ModelUtils.saveModel(network, save_model_path);
 
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -191,6 +204,7 @@ public class VQVAETest {
 			
 			int batchSize = 32;
 			int imageSize = 256;
+			int z_dims = 64;
 			int latendDim = 4;
 			
 			int num_vq_embeddings = 512;
@@ -202,7 +216,7 @@ public class VQVAETest {
 
 			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
 			
-			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, latendDim, num_vq_embeddings, imageSize);
+			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize);
 			
 			network.CUDNN = true;
 			network.learnRate = 0.001f;
@@ -227,9 +241,10 @@ public class VQVAETest {
 			
 			int batchSize = 32;
 			int imageSize = 256;
-			int latendDim = 4;
+			int z_dims = 64;
+			int latendDim = 8;
 			
-			int num_vq_embeddings = 512;
+			int num_vq_embeddings = 8192;
 			
 			float[] mean = new float[] {0.5f, 0.5f,0.5f};
 			float[] std = new float[] {0.5f, 0.5f,0.5f};
@@ -238,7 +253,7 @@ public class VQVAETest {
 
 			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, false, false, mean, std);
 			
-			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, latendDim, num_vq_embeddings, imageSize);
+			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize);
 			
 			network.CUDNN = true;
 			network.learnRate = 0.001f;
@@ -261,11 +276,12 @@ public class VQVAETest {
 
 		try {
 			
-			int batchSize = 6;
+			int batchSize = 4;
 			int imageSize = 128;
-			int latendDim = 4;
+			int z_dims = 64;
+			int latendDim = 8;
 			
-			int num_vq_embeddings = 512;
+			int num_vq_embeddings = 4096;
 			
 			int num_res_blocks = 1;
 			
@@ -281,7 +297,7 @@ public class VQVAETest {
 			
 			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, false, false, mean, std);
 			
-			TinyVQVAE2 network = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+			TinyVQVAE2 network = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
 			
 			network.CUDNN = true;
 			network.learnRate = 0.001f;
@@ -300,6 +316,20 @@ public class VQVAETest {
 	
 	}
 	
+	public static void lpips() {
+		
+		try {
+			
+			String lpipsWeight = "H:\\model\\lpips.json";
+			loadLPIPSWeight(LagJsonReader.readJsonFileSmallWeight(lpipsWeight), true);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public static void main(String[] args) {
 		
 		try {
@@ -314,7 +344,9 @@ public class VQVAETest {
 			
 //			tiny_vqvae();
 			
-			tiny_vqvae2();
+//			tiny_vqvae2();
+			
+			lpips();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

@@ -1,9 +1,15 @@
 package com.omega.engine.nn.layer.vae.tiny;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
+import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
+import com.omega.engine.nn.layer.ParamsInit;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * resnet block layer
@@ -11,13 +17,18 @@ import com.omega.engine.nn.network.Network;
  *
  */
 public class TinyVAEEncoder extends Layer {
-
+	
+	private int z_dims;
+	
 	public TinyVAEConvBlock block1;
 	public TinyVAEConvBlock block2;
 	public TinyVAEConvBlock block3;
 	
-	public TinyVAEEncoder(int channel,int height,int width, Network network) {
+	public ConvolutionLayer convOut;
+	
+	public TinyVAEEncoder(int channel,int height,int width, int z_dims, Network network) {
 		this.network = network;
+		this.z_dims = z_dims;
 		this.channel = channel;
 		this.oChannel = 256;
 		this.height = height;
@@ -33,6 +44,11 @@ public class TinyVAEEncoder extends Layer {
 		block1 = new TinyVAEConvBlock(channel, 64, height, width, network);
 		block2 = new TinyVAEConvBlock(64, 128, block1.oHeight, block1.oWidth, network);
 		block3 = new TinyVAEConvBlock(128, 256, block2.oHeight, block2.oWidth, network);
+		
+		convOut = new ConvolutionLayer(256, z_dims, block3.oWidth, block3.oHeight, 1, 1, 0, 1, true, this.network);
+		convOut.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		convOut.paramsInit = ParamsInit.leaky_relu;
+		
 	}
 
 	@Override
@@ -58,7 +74,9 @@ public class TinyVAEEncoder extends Layer {
 		block2.forward(block1.getOutput());
 		block3.forward(block2.getOutput());
 		
-		this.output = block3.getOutput();
+		convOut.forward(block3.getOutput());
+		
+		this.output = convOut.getOutput();
 	}
 
 	@Override
@@ -70,7 +88,9 @@ public class TinyVAEEncoder extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		block3.back(this.delta);
+		convOut.back(this.delta);
+		
+		block3.back(convOut.diff);
 		block2.back(block3.diff);
 		block1.back(block2.diff);
 
@@ -120,6 +140,8 @@ public class TinyVAEEncoder extends Layer {
 		block1.update();
 		block2.update();
 		block3.update();
+		
+		convOut.update();
 	}
 
 	@Override
@@ -192,6 +214,26 @@ public class TinyVAEEncoder extends Layer {
 	@Override
 	public void accGrad(float scale) {
 		// TODO Auto-generated method stub
+		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		block1.saveModel(outputStream);
+		block2.saveModel(outputStream);
+		block3.saveModel(outputStream);
+		
+		convOut.saveModel(outputStream);
+		
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		block1.loadModel(inputStream);
+		block2.loadModel(inputStream);
+		block3.loadModel(inputStream);
+		
+		convOut.loadModel(inputStream);
 		
 	}
 

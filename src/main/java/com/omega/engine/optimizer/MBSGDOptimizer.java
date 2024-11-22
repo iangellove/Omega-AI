@@ -12,6 +12,7 @@ import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.check.BaseCheck;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
@@ -26,6 +27,7 @@ import com.omega.engine.nn.network.vae.TinyVAE;
 import com.omega.engine.nn.network.vae.TinyVQVAE;
 import com.omega.engine.nn.network.vae.TinyVQVAE2;
 import com.omega.engine.nn.network.vae.VQVAE;
+import com.omega.engine.nn.network.vqgan.LPIPS;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.example.diffusion.utils.DiffusionImageDataLoader;
 import com.omega.example.rnn.data.OneHotDataLoader;
@@ -2780,25 +2782,25 @@ public class MBSGDOptimizer extends Optimizer {
 					this.updateLR(this.lr_step);
 					updateLRDynamic(i * trainingData.count_it + it, this.trainTime * trainingData.count_it, 1e-6f);
 
-					if(it % 100 == 0) {
-
-						/**
-						 * showImage
-						 */
-						this.network.RUN_MODEL = RunModel.TEST;
-						
-						output = network.forward(input);
-						output.syncHost();
-//						output.data = MatrixOperation.clampSelf(output.data, -1, 1);
-						
-						/**
-						 * print image
-						 */
-						showImgs("H:\\vae_dataset\\pokemon-blip\\test256\\", output, i + "", trainingData.mean, trainingData.std);
-						
-						this.network.RUN_MODEL = RunModel.TRAIN;
-						
-					}
+//					if(it % 100 == 0) {
+//
+//						/**
+//						 * showImage
+//						 */
+//						this.network.RUN_MODEL = RunModel.TEST;
+//						
+//						output = network.forward(input);
+//						output.syncHost();
+////						output.data = MatrixOperation.clampSelf(output.data, -1, 1);
+//						
+//						/**
+//						 * print image
+//						 */
+//						showImgs("H:\\vae_dataset\\pokemon-blip\\test256\\", output, i + "", trainingData.mean, trainingData.std);
+//						
+//						this.network.RUN_MODEL = RunModel.TRAIN;
+//						
+//					}
 					
 				}
 				
@@ -2809,23 +2811,23 @@ public class MBSGDOptimizer extends Optimizer {
 				 */
 //				this.updateLR(this.lr_step);
 				
-//				if(i % 10 == 0) {
-//
-//					/**
-//					 * showImage
-//					 */
-//					this.network.RUN_MODEL = RunModel.TEST;
-//					
-//					Tensor output = network.forward(input);
-//					output.syncHost();
-////					output.data = MatrixOperation.clampSelf(output.data, -1, 1);
-//					
-//					/**
-//					 * print image
-//					 */
-//					showImgs("H:\\vae_dataset\\pokemon-blip\\test256\\", output, i + "", trainingData.mean, trainingData.std);
-//					
-//				}
+				if(i % 10 == 0) {
+
+					/**
+					 * showImage
+					 */
+					this.network.RUN_MODEL = RunModel.TEST;
+					
+					Tensor output = network.forward(input);
+					output.syncHost();
+//					output.data = MatrixOperation.clampSelf(output.data, -1, 1);
+					
+					/**
+					 * print image
+					 */
+					showImgs("H:\\vae_dataset\\pokemon-blip\\test256\\", output, i + "", trainingData.mean, trainingData.std);
+					
+				}
 				
 			}
 			
@@ -2979,6 +2981,111 @@ public class MBSGDOptimizer extends Optimizer {
 					showImgs("H:\\vae_dataset\\pokemon-blip\\test256\\", output, i + "", trainingData.mean, trainingData.std);
 					
 				}
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void trainLPIPIS(DiffusionImageDataLoader trainingData) {
+		// TODO Auto-generated method stub
+
+		try {
+			
+			CUDAModules.initCUDAFunctions();
+
+			LPIPS network = (LPIPS) this.network;
+			
+			this.dataSize = trainingData.number;
+
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
+			
+			Tensor label = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
+			
+			Tensor loss = new Tensor(1, 1, 1, 1, true);
+			
+			Tensor lossDiff = new Tensor(batchSize, 1, 1, 1, MatrixUtils.val(batchSize, 1.0f/batchSize), true);
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+
+				this.trainIndex = i + 1;
+				
+//				int[][] indexs = trainingData.shuffle();
+				int[][] indexs = trainingData.order();
+
+				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				float train_loss = 0.0f;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+
+					long start = System.nanoTime();
+
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					trainingData.loadData(indexs[it], label);
+					
+					JCudaDriver.cuCtxSynchronize();
+					
+					TensorOP.mul(label, 0.9f, input);
+					
+					/**
+					 * forward
+					 */
+					Tensor output = network.forward(input, label);
+					System.err.println("output:");
+					output.showDM();
+					/**
+					 * current time error
+					 */
+					TensorOP.mean(output, 0, loss);
+					this.currentError = loss.syncHost()[0];
+					System.err.println(this.currentError);
+					/**
+					 * back
+					 */
+					network.back(lossDiff);
+
+					JCudaDriver.cuCtxSynchronize();
+					
+					/**
+					 * current time error
+					 */
+					TensorOP.mean(output, 0, loss);
+					this.currentError = loss.syncHost()[0];
+
+					train_loss += this.currentError;
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+					
+					this.batchIndex++;
+
+				}
+				
+				System.out.println("training["+this.trainIndex+"] train loss:{"+train_loss/indexs.length+"} ");
 				
 			}
 			

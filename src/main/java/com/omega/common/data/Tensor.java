@@ -103,6 +103,10 @@ public class Tensor implements Serializable{
 		}
 	}
 	
+	public void copyGPU(Tensor tmp) {
+		JCuda.cudaMemcpy(tmp.getGpuData(), gpuData, this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToDevice);
+	}
+	
 	public Tensor(int number,int channel,int height,int width) {
 		this.number = number;
 		this.channel = channel;
@@ -237,6 +241,10 @@ public class Tensor implements Serializable{
 		if(hasGPU) {
 			hostToDevice();
 		}
+	}
+	
+	public Tensor createLike() {
+		return new Tensor(number, channel, height, width, hasGPU);
 	}
 	
 	public static Tensor createTensor(Tensor t,int number,int channel,int height,int width,float[] data,boolean hasGPU) {

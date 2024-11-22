@@ -1,32 +1,30 @@
 package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.nn.layer.gpu.AVGPoolingKernel;
+import com.omega.engine.nn.layer.gpu.AdaptiveAvgPool2DKernel;
 import com.omega.engine.nn.network.Network;
 
-public class AVGPoolingLayer extends Layer {
+public class AdaptiveAvgPool2DLayer extends Layer {
 	
-	private AVGPoolingKernel kernel;
+	private AdaptiveAvgPool2DKernel kernel;
 	
-	public AVGPoolingLayer(int channel,int height,int width) {
-		
+	public AdaptiveAvgPool2DLayer(int channel,int height,int width,int oHeight,int oWidth) {
 		this.channel = channel;
 		this.height = height;
 		this.width = width;
 		this.oChannel = channel;
-		this.oHeight = 1;
-		this.oWidth = 1;
-		
+		this.oHeight = oHeight;
+		this.oWidth = oWidth;
 	}
 	
-	public AVGPoolingLayer(int channel,int height,int width,Network network) {
+	public AdaptiveAvgPool2DLayer(int channel,int height,int width,int oHeight,int oWidth,Network network) {
 		this.network = network;
 		this.channel = channel;
 		this.height = height;
 		this.width = width;
 		this.oChannel = channel;
-		this.oHeight = 1;
-		this.oWidth = 1;
+		this.oHeight = oHeight;
+		this.oWidth = oWidth;
 		
 	}
 	
@@ -40,7 +38,7 @@ public class AVGPoolingLayer extends Layer {
 		}
 
 		if(kernel == null) {
-			kernel = new AVGPoolingKernel(channel, height, width);
+			kernel = new AdaptiveAvgPool2DKernel();
 		}
 		
 	}
@@ -117,7 +115,7 @@ public class AVGPoolingLayer extends Layer {
 	}
 
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 参数初始化
@@ -126,7 +124,7 @@ public class AVGPoolingLayer extends Layer {
 		/**
 		 * 设置输入
 		 */
-		this.setInput(inpnut);
+		this.setInput(input);
 		/**
 		 * 计算输出
 		 */

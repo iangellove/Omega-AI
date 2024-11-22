@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer.vae.tiny;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.ConvolutionTransposeLayer;
 import com.omega.engine.nn.layer.Layer;
@@ -214,6 +217,26 @@ public class TinyVAEDecoder extends Layer {
 	@Override
 	public void accGrad(float scale) {
 		// TODO Auto-generated method stub
+		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		decoderInput.saveModel(outputStream);
+		
+		block1.saveModel(outputStream);
+		block2.saveModel(outputStream);
+		block3.saveModel(outputStream);
+
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		decoderInput.loadModel(inputStream);
+		
+		block1.loadModel(inputStream);
+		block2.loadModel(inputStream);
+		block3.loadModel(inputStream);
 		
 	}
 

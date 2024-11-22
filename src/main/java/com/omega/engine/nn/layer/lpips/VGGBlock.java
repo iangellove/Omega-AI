@@ -1,15 +1,14 @@
-package com.omega.engine.nn.layer.vae.tiny;
+package com.omega.engine.nn.layer.lpips;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.nn.layer.ConvolutionTransposeLayer;
+import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.ParamsInit;
-import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
-import com.omega.engine.nn.layer.active.LeakyReluLayer;
+import com.omega.engine.nn.layer.active.ReluLayer;
 import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
@@ -19,19 +18,18 @@ import com.omega.engine.updater.UpdaterFactory;
  * @author Administrator
  *
  */
-public class TinyVAEConvTransposeBlock extends Layer {
-
-//	private int group = 32;
-
-	public ConvolutionTransposeLayer conv;
+public class VGGBlock extends Layer {
 	
-//	private GNLayer norm;
-	public BNLayer norm;
+	private boolean bn = false;
+	private boolean freeze = false;
+	public ConvolutionLayer conv;
+	private BNLayer norm;
+	private ReluLayer act;
 	
-	private ActiveFunctionLayer act;
-	
-	public TinyVAEConvTransposeBlock(int channel,int oChannel,int height,int width, Network network) {
+	public VGGBlock(int channel,int oChannel,int height,int width,boolean bn,boolean freeze, Network network) {
 		this.network = network;
+		this.bn = bn;
+		this.freeze = freeze;
 		this.channel = channel;
 		this.oChannel = oChannel;
 		this.height = height;
@@ -39,28 +37,28 @@ public class TinyVAEConvTransposeBlock extends Layer {
 		
 		initLayers();
 		
-		this.oHeight = conv.oHeight;
-		this.oWidth = conv.oWidth;
 	}
 	
 	public void initLayers() {
-		
-		conv = new ConvolutionTransposeLayer(channel, oChannel, width, height, 3, 3, 1, 2, 1, 1, true, network);
+
+		conv = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, 1, true, freeze, this.network); 
 		conv.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
-		conv.paramsInit = ParamsInit.leaky_relu;
+		conv.paramsInit = ParamsInit.relu;
 		
-		norm = new BNLayer(conv);
+		if(bn) {
+			norm = new BNLayer(conv);
+			act = new ReluLayer(norm);
+		}else {
+			act = new ReluLayer(conv);
+		}
 		
-		act = new LeakyReluLayer(norm);
-		
+		this.oHeight = conv.oHeight;
+		this.oWidth = conv.oWidth;
 	}
 
 	@Override
 	public void init() {
 		this.number = this.network.number;
-//		if(this.output == null || this.output.number != this.network.number) {
-//			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
-//		}
 	}
 	
 	@Override
@@ -78,10 +76,19 @@ public class TinyVAEConvTransposeBlock extends Layer {
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		conv.forward(this.input);
-		norm.forward(conv.getOutput());
-		act.forward(norm.getOutput());
+		Tensor x = this.input;
 		
+		conv.forward(x);
+		
+		x = conv.getOutput();
+
+		if(bn) {
+			norm.forward(x);
+			x = norm.getOutput();
+		}
+		
+		act.forward(x);
+
 		this.output = act.getOutput();
 	}
 
@@ -94,9 +101,17 @@ public class TinyVAEConvTransposeBlock extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		act.back(this.delta);
-		norm.back(act.diff);
-		conv.back(norm.diff);
+//		System.out.println(index);
+		Tensor diffOut = delta;
+		
+		act.back(diffOut);
+		
+		if(bn) {
+			norm.back(diffOut);
+			diffOut = norm.diff;
+		}
+		
+		conv.back(diffOut);
 		
 		this.diff = conv.diff;
 	}
@@ -141,8 +156,13 @@ public class TinyVAEConvTransposeBlock extends Layer {
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
+		
 		conv.update();
-		norm.update();
+		
+		if(bn) {
+			norm.update();
+		}
+		
 	}
 
 	@Override
@@ -218,12 +238,13 @@ public class TinyVAEConvTransposeBlock extends Layer {
 		
 	}
 	
-
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
 		
 		conv.saveModel(outputStream);
 		
-		norm.saveModel(outputStream);
+		if(bn) {
+			norm.saveModel(outputStream);
+		}
 		
 	}
 	
@@ -231,9 +252,10 @@ public class TinyVAEConvTransposeBlock extends Layer {
 		
 		conv.loadModel(inputStream);
 		
-		norm.loadModel(inputStream);
+		if(bn) {
+			norm.loadModel(inputStream);
+		}
 		
 	}
-	
-	
+
 }
