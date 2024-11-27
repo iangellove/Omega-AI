@@ -8,6 +8,8 @@ import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.network.vae.TinyVQVAE;
 import com.omega.engine.nn.network.vae.TinyVQVAE2;
 import com.omega.engine.nn.network.vae.VQVAE;
+import com.omega.engine.nn.network.vqgan.LPIPS;
+import com.omega.engine.nn.network.vqgan.PatchGANDiscriminator;
 import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.updater.UpdaterType;
@@ -251,7 +253,7 @@ public class VQVAETest {
 			
 			String imgDirPath = "I:\\BaiduNetdiskDownload\\dataset\\pretrain_images\\";
 
-			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, false, false, mean, std);
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
 			
 			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize);
 			
@@ -316,18 +318,209 @@ public class VQVAETest {
 	
 	}
 	
-	public static void lpips() {
-		
+	public static void tiny_vqvae_lpips() {
+
 		try {
 			
-			String lpipsWeight = "H:\\model\\lpips.json";
-			loadLPIPSWeight(LagJsonReader.readJsonFileSmallWeight(lpipsWeight), true);
+			int batchSize = 6;
+			int imageSize = 256;
+			int z_dims = 64;
+			int latendDim = 4;
 			
+			int num_vq_embeddings = 512;
+			
+			float[] mean = new float[] {0.5f, 0.5f,0.5f};
+			float[] std = new float[] {0.5f, 0.5f,0.5f};
+			
+			String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
+			
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
+			
+			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize);
+			network.CUDNN = true;
+			network.learnRate = 0.001f;
+			
+			LPIPS lpips = new LPIPS(LossType.MSE, UpdaterType.adamw, imageSize);
+			
+			String lpipsWeight = "H:\\model\\lpips.json";
+			LPIPSTest.loadLPIPSWeight(LagJsonReader.readJsonFileSmallWeight(lpipsWeight), lpips, false);
+			lpips.CUDNN = true;
+
+//			String clipWeight = "H:\\model\\tiny_vqvae.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
+			optimizer.trainTinyVQVAE_lpips(dataLoader, lpips);
+
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
-		
+	
+	}
+	
+	public static void tiny_vqvae2_lpips() {
+
+		try {
+			
+			int batchSize = 4;
+			int imageSize = 128;
+			int z_dims = 64;
+			int latendDim = 4;
+			
+			int num_vq_embeddings = 512;
+			
+			int num_res_blocks = 1;
+			
+			int[] channels = new int[] {64, 128, 256};
+			boolean[] attn_resolutions = new boolean[] {false, false, false};
+			
+			float[] mean = new float[] {0.5f, 0.5f,0.5f};
+			float[] std = new float[] {0.5f, 0.5f,0.5f};
+			
+//			String imgDirPath = "I:\\dataset\\LHQ256\\lhq_256\\";
+
+			String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset128\\";
+			
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
+			
+			TinyVQVAE2 network = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+			
+			network.CUDNN = true;
+			network.learnRate = 0.001f;
+			
+			LPIPS lpips = new LPIPS(LossType.MSE, UpdaterType.adamw, imageSize);
+			
+			String lpipsWeight = "H:\\model\\lpips.json";
+			LPIPSTest.loadLPIPSWeight(LagJsonReader.readJsonFileSmallWeight(lpipsWeight), lpips, false);
+			
+			lpips.CUDNN = true;
+			lpips.learnRate = 0.001f;
+
+//			String clipWeight = "H:\\model\\tiny_vqvae.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
+			optimizer.trainTinyVQVAE2_lpips(dataLoader, lpips);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	
+	}
+	
+	public static void tiny_vqvae2_lpips_gandisc() {
+
+		try {
+			
+			int batchSize = 4;
+			int imageSize = 128;
+			int z_dims = 64;
+			int latendDim = 4;
+			
+			int num_vq_embeddings = 512;
+			
+			int num_res_blocks = 1;
+			
+			int[] channels = new int[] {64, 128, 256};
+			boolean[] attn_resolutions = new boolean[] {false, false, false};
+			
+			float[] mean = new float[] {0.5f, 0.5f,0.5f};
+			float[] std = new float[] {0.5f, 0.5f,0.5f};
+			
+//			String imgDirPath = "I:\\dataset\\LHQ256\\lhq_256\\";
+
+			String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset128\\";
+			
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
+			
+			TinyVQVAE2 network = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+			network.CUDNN = true;
+			network.learnRate = 0.001f;
+			
+			LPIPS lpips = new LPIPS(LossType.MSE, UpdaterType.adamw, imageSize);
+			
+			String lpipsWeight = "H:\\model\\lpips.json";
+			LPIPSTest.loadLPIPSWeight(LagJsonReader.readJsonFileSmallWeight(lpipsWeight), lpips, false);
+			lpips.CUDNN = true;
+			
+			int[] convChannels = new int[] {3, 64, 128, 256, 1};
+			int[] kernels = new int[] {4, 4, 4, 4};
+			int[] strides = new int[] {2, 2, 2, 1};
+			int[] paddings = new int[] {1, 1, 1, 1};
+			
+			PatchGANDiscriminator discriminator = new PatchGANDiscriminator(LossType.MSE, UpdaterType.adamw, imageSize, convChannels, kernels, strides, paddings);
+			discriminator.CUDNN = true;
+			discriminator.learnRate = 0.001f;
+
+//			String clipWeight = "H:\\model\\tiny_vqvae.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
+			optimizer.trainTinyVQVAE2_lpips_patchGANDisc(dataLoader, lpips, discriminator, 1500);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	
+	}
+	
+	public static void tiny_vqvae_lpips_gandisc() {
+
+		try {
+			
+			int batchSize = 16;
+			int imageSize = 128;
+			int z_dims = 64;
+			int latendDim = 4;
+			
+			int num_vq_embeddings = 512;
+			
+			float[] mean = new float[] {0.5f, 0.5f,0.5f};
+			float[] std = new float[] {0.5f, 0.5f,0.5f};
+			
+//			String imgDirPath = "I:\\dataset\\LHQ256\\lhq_256\\";
+
+			String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset128\\";
+			
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
+			
+			TinyVQVAE network = new TinyVQVAE(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize);
+			network.CUDNN = true;
+			network.learnRate = 0.001f;
+			
+			LPIPS lpips = new LPIPS(LossType.MSE, UpdaterType.adamw, imageSize);
+			
+			String lpipsWeight = "H:\\model\\lpips.json";
+			LPIPSTest.loadLPIPSWeight(LagJsonReader.readJsonFileSmallWeight(lpipsWeight), lpips, false);
+			lpips.CUDNN = true;
+			
+			int[] convChannels = new int[] {3, 64, 128, 256, 1};
+			int[] kernels = new int[] {4, 4, 4, 4};
+			int[] strides = new int[] {2, 2, 2, 1};
+			int[] paddings = new int[] {1, 1, 1, 1};
+			
+			PatchGANDiscriminator discriminator = new PatchGANDiscriminator(LossType.MSE, UpdaterType.adamw, imageSize, convChannels, kernels, strides, paddings);
+			discriminator.CUDNN = true;
+			discriminator.learnRate = 0.001f;
+
+//			String clipWeight = "H:\\model\\tiny_vqvae.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
+			optimizer.trainTinyVQVAE_lpips_patchGANDisc(dataLoader, lpips, discriminator, 1500);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	
 	}
 	
 	public static void main(String[] args) {
@@ -346,7 +539,13 @@ public class VQVAETest {
 			
 //			tiny_vqvae2();
 			
-			lpips();
+//			tiny_vqvae2_lpips();
+			
+			tiny_vqvae_lpips();
+			
+//			tiny_vqvae_lpips_gandisc();
+			
+//			tiny_vqvae2_lpips_gandisc();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

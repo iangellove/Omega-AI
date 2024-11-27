@@ -1,59 +1,89 @@
-package com.omega.engine.nn.layer.vae.tiny;
+package com.omega.engine.nn.layer.patchgan;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.nn.layer.ConvolutionTransposeLayer;
+import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.ParamsInit;
-import com.omega.engine.nn.layer.active.TanhLayer;
+import com.omega.engine.nn.layer.active.LeakyReluLayer;
+import com.omega.engine.nn.layer.normalization.BNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
-/**
- * resnet block layer
- * @author Administrator
- *
- */
-public class TinyVAEDecoder extends Layer {
+public class PatchGANDiscriminatorBlock extends Layer {
 	
-	public ConvolutionTransposeLayer decoderInput;
+	public List<Layer> layers;
 	
-	public TinyVAEConvTransposeBlock block1;
-	public TinyVAEConvTransposeBlock block2;
-	public TinyVAEConvTransposeBlock block3;
+	private int[] convChannels;
 	
-	private TanhLayer act;
+	private int[] kernels;
 	
-	public TinyVAEDecoder(int channel,int oChannel,int height,int width, Network network) {
+	private int[] strides;
+	
+	private int[] paddings;
+
+	public PatchGANDiscriminatorBlock(int channel,int height,int width,int[] convChannels,int[] kernels, int[] strides, int[] paddings, Network network) {
 		this.network = network;
 		this.channel = channel;
-		this.oChannel = oChannel;
 		this.height = height;
 		this.width = width;
-		
+		this.oChannel = 1;
+		this.oHeight = 1;
+		this.oWidth = 1;
+		this.convChannels = convChannels;
+		this.kernels = kernels;
+		this.paddings = paddings;
+		this.strides = strides;
 		initLayers();
 		
-		this.oHeight = block3.oHeight;
-		this.oWidth = block3.oWidth;
 	}
 	
 	public void initLayers() {
-		decoderInput = new ConvolutionTransposeLayer(channel, 256, width, height, 1, 1, 0, 1, 1, 0, true, network);
-		decoderInput.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
-		decoderInput.paramsInit = ParamsInit.leaky_relu;
-		block1 = new TinyVAEConvTransposeBlock(256, 128, decoderInput.oHeight, decoderInput.oWidth, network);
-		block2 = new TinyVAEConvTransposeBlock(128, 64, block1.oHeight, block1.oWidth, network);
-		block3 = new TinyVAEConvTransposeBlock(64, oChannel, block2.oHeight, block2.oWidth, network);
 		
-		act = new TanhLayer(block3);
+		layers = new ArrayList<Layer>();
+
+		int ih = height;
+		int iw = width;
+		for(int i = 0;i<convChannels.length - 1;i++) {
+			boolean hasBias = false;
+			if(i == 0) {
+				hasBias = true;
+			}
+			ConvolutionLayer conv = new ConvolutionLayer(convChannels[i], convChannels[i + 1], iw, ih, kernels[i], kernels[i], paddings[i], strides[i], hasBias, network);
+			conv.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+			conv.paramsInit = ParamsInit.leaky_relu;
+
+			layers.add(conv);
+			
+			Layer next = conv;
+			
+			if(i != convChannels.length - 2 && i != 0) {
+				BNLayer bn = new BNLayer(next);
+				layers.add(bn);
+				next = bn;
+			}
+			
+			if(i != convChannels.length - 2) {
+				LeakyReluLayer act = new LeakyReluLayer(next);
+				layers.add(act);
+			}
+
+			ih = conv.oHeight;
+			iw = conv.oWidth;
+			
+		}
+		
 	}
 
 	@Override
 	public void init() {
 		this.number = this.network.number;
+		
 	}
 	
 	@Override
@@ -70,19 +100,15 @@ public class TinyVAEDecoder extends Layer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		
-		decoderInput.forward(this.input);
-		
-		block1.forward(decoderInput.getOutput());
-		block2.forward(block1.getOutput());
-		block3.forward(block2.getOutput());
-		
-//		this.output = block3.getOutput();
-		
-		act.forward(block3.getOutput());
-		this.output = act.getOutput();
+		Tensor x = this.input;
+		for(int i = 0;i<layers.size();i++) {
+			Layer layer = layers.get(i);
+			layer.forward(x);
+			x = layer.getOutput();
+		}
+		this.output = x;
 	}
-
+	
 	@Override
 	public Tensor getOutput() {
 		// TODO Auto-generated method stub
@@ -92,16 +118,16 @@ public class TinyVAEDecoder extends Layer {
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		act.back(this.delta);
 		
-		block3.back(act.diff);
-//		block3.back(this.delta);
-		block2.back(block3.diff);
-		block1.back(block2.diff);
+		Tensor d = this.delta;
 		
-		decoderInput.back(block1.diff);
+		for(int i = layers.size() - 1;i>=0;i--) {
+			Layer layer = layers.get(i);
+			layer.back(d);
+			d = layer.diff;
+		}
 		
-		this.diff = decoderInput.diff;
+		this.diff = d;
 	}
 
 	@Override
@@ -144,10 +170,11 @@ public class TinyVAEDecoder extends Layer {
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		decoderInput.update();
-		block1.update();
-		block2.update();
-		block3.update();
+		
+		for(int i = 0;i<layers.size();i++) {
+			layers.get(i).update();
+		}
+		
 	}
 
 	@Override
@@ -159,7 +186,7 @@ public class TinyVAEDecoder extends Layer {
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.block;
+		return LayerType.lpips;
 	}
 
 	@Override
@@ -194,7 +221,7 @@ public class TinyVAEDecoder extends Layer {
 		this.output();
 		
 	}
-
+	
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
@@ -225,22 +252,10 @@ public class TinyVAEDecoder extends Layer {
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
 		
-		decoderInput.saveModel(outputStream);
-		
-		block1.saveModel(outputStream);
-		block2.saveModel(outputStream);
-		block3.saveModel(outputStream);
-
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
 		
-		decoderInput.loadModel(inputStream);
-		
-		block1.loadModel(inputStream);
-		block2.loadModel(inputStream);
-		block3.loadModel(inputStream);
-		
 	}
-
+	
 }

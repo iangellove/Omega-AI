@@ -23,12 +23,11 @@ public class LPIPSTest {
 			for(String key:weightMap.keySet()) {
 				System.out.println(key);
 			}
+			for(int i = 0;i<network.lpips.vgg.features.size();i++) {
+				System.out.println(network.lpips.vgg.features.get(i) + "===>" + i);
+			}
 		}
-		
-		for(int i = 0;i<network.lpips.vgg.features.size();i++) {
-			System.out.println(network.lpips.vgg.features.get(i) + "===>" + i);
-		}
-		
+
 		/**
 		 * vgg slice
 		 */

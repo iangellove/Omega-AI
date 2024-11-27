@@ -247,6 +247,10 @@ public class Tensor implements Serializable{
 		return new Tensor(number, channel, height, width, hasGPU);
 	}
 	
+	public Tensor createLike(float value) {
+		return new Tensor(number, channel, height, width, MatrixUtils.val(this.dataLength, value), hasGPU);
+	}
+	
 	public static Tensor createTensor(Tensor t,int number,int channel,int height,int width,float[] data,boolean hasGPU) {
 		if(t == null) {
 			t = new Tensor(number, channel, height, width, data, hasGPU);

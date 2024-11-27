@@ -461,7 +461,7 @@ public class TinyVQVAE extends Network {
 		}
 		
 		Tensor decoerLoss = this.lossFunction.loss(output, label);
-		System.out.println(MatrixOperation.sum(decoerLoss.syncHost()) / output.number);
+		System.out.println("recon_loss:"+MatrixOperation.sum(decoerLoss.syncHost()) / output.number);
 		embedding.getOutput().viewOrg();
 
 		vaeKernel.MSE_C(embedding.getOutput(), z_flattened, vqLoss, beta);

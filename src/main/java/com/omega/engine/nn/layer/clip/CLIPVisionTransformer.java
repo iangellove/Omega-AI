@@ -26,6 +26,8 @@ public class CLIPVisionTransformer extends Layer{
 	
 	private int patchSize = 32;
 	
+	private int intermediateSize = 3072;
+	
 	private int time;
 	
 	private int embedDim = 0;
@@ -93,7 +95,7 @@ public class CLIPVisionTransformer extends Layer{
 		encoders = new ArrayList<CLIPEncoderLayer>();
 		
 		for(int i = 0;i<n_layers;i++) {
-			CLIPEncoderLayer encoder = new CLIPEncoderLayer(headNum, time, embedDim, bias, false, network);
+			CLIPEncoderLayer encoder = new CLIPEncoderLayer(headNum, time, embedDim, intermediateSize, bias, false, network);
 			getEncoders().add(encoder);
 		}
 		

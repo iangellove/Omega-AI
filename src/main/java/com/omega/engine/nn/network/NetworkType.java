@@ -22,6 +22,7 @@ public enum NetworkType {
 	CLIP_VISION("CLIP_VISION"),
 	UNET("UNET"),
 	DUFFSION_UNET("DUFFSION_UNET"),
+	PATCH_GAN_DISC("PATCH_GAN_DISC"),
 	YOLO("YOLO");
 	
 	NetworkType(String key){

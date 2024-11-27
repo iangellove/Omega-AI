@@ -153,8 +153,8 @@ public class LPIPSBlock extends Layer {
 	public void output(Tensor input,Tensor label) {
 		// TODO Auto-generated method stub
 		
-		lpipsKernel.scaling(input, shift, scale, input);
-		lpipsKernel.scaling(label, shift, scale, label);
+//		lpipsKernel.scaling(input, shift, scale, input);
+//		lpipsKernel.scaling(label, shift, scale, label);
 		
 		vgg.featuresCopy(label, featuresIndex, feats1);
 
@@ -198,7 +198,7 @@ public class LPIPSBlock extends Layer {
 		
 		Tensor diff = vgg.featuresBackward(feats0, featuresIndex);
 
-		lpipsKernel.scaling_backwad(diff, scale, diff);
+//		lpipsKernel.scaling_backwad(diff, scale, diff);
 
 		this.diff = diff;
 	}
