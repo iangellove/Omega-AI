@@ -463,6 +463,9 @@ public class VQVAETest {
 //			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
 			optimizer.trainTinyVQVAE2_lpips_patchGANDisc(dataLoader, lpips, discriminator, 1500);
 
+			String save_model_path = "H:\\model\\vqvae2_500.model";
+			ModelUtils.saveModel(network, save_model_path);
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

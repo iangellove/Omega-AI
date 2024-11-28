@@ -1,7 +1,9 @@
 package com.omega.engine.nn.layer.vqvae.tiny;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
@@ -41,10 +43,6 @@ public class VQVAEResidual extends Layer {
 	
 	private boolean shortcut = false;
 	
-	private BaseKernel baseKernel;
-	
-	private Tensor cache_delta;
-	
 	public VQVAEResidual(int channel,int oChannel,int height,int width,int group, Network network) {
 		this.network = network;
 		this.channel = channel;
@@ -59,8 +57,6 @@ public class VQVAEResidual extends Layer {
 		
 		kernel = new BasicBlockKernel();
 		
-		baseKernel = new BaseKernel();
-
 		initLayers();
 		
 		this.oHeight = conv2.oHeight;
@@ -288,6 +284,32 @@ public class VQVAEResidual extends Layer {
 	@Override
 	public void accGrad(float scale) {
 		// TODO Auto-generated method stub
+		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		norm1.saveModel(outputStream);
+		conv1.saveModel(outputStream);
+		norm2.saveModel(outputStream);
+		conv2.saveModel(outputStream);
+		
+		if(shortcut) {
+			conv_shortcut.saveModel(outputStream);
+		}
+
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		norm1.loadModel(inputStream);
+		conv1.loadModel(inputStream);
+		norm2.loadModel(inputStream);
+		conv2.loadModel(inputStream);
+		
+		if(shortcut) {
+			conv_shortcut.loadModel(inputStream);
+		}
 		
 	}
 

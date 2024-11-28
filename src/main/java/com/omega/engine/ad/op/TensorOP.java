@@ -2,6 +2,7 @@ package com.omega.engine.ad.op;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.ad.op.gpu.OPKernel;
 import com.omega.engine.gpu.GPUOP;
 
@@ -526,6 +527,25 @@ public class TensorOP {
 			c.data = MatrixOperation.mean(a.data, a.number, a.channel, a.height, a.width, dim);
 		}
 	}
+	
+	public static void main(String[] args) {
+		int B = 2;
+		int C = 4;
+		int H = 3;
+		int W = 3;
+		Tensor x = new Tensor(B, C, H, W, MatrixUtils.order(B*C*H*W, 1.0f, 1.0f), true);
+		Tensor r = new Tensor(1, 1, 1, 1, true);
+		
+		TensorOP.mean(x, 0, r);
+		
+		x.showDM();
+		
+		r.showDM();
+		
+		System.out.println(r.syncHost()[0] / C / H / W);
+		
+	}
+	
 	
 	/**
 	 * [M,N] dot [N,K]

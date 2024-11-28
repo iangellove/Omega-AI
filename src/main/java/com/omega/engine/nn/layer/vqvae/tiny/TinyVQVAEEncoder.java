@@ -1,5 +1,7 @@
 package com.omega.engine.nn.layer.vqvae.tiny;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -308,6 +310,56 @@ public class TinyVQVAEEncoder extends Layer {
 	@Override
 	public void accGrad(float scale) {
 		// TODO Auto-generated method stub
+		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		convIn.saveModel(outputStream);
+		
+		for(int i = 0;i<down.size();i++){
+			Layer l = down.get(i);
+			if(l instanceof VQVAEResidual) {
+				VQVAEResidual r = (VQVAEResidual) l;
+				r.saveModel(outputStream);
+			}
+			if(l instanceof VQVAEAttentionLayer) {
+				VQVAEAttentionLayer a = (VQVAEAttentionLayer) l;
+				a.saveModel(outputStream);
+			}
+			if(l instanceof ConvolutionLayer) {
+				ConvolutionLayer c = (ConvolutionLayer) l;
+				c.saveModel(outputStream);
+			}
+		}
+		
+		convNormOut.saveModel(outputStream);
+		convOut.saveModel(outputStream);
+		
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		convIn.loadModel(inputStream);
+		
+		for(int i = 0;i<down.size();i++){
+			Layer l = down.get(i);
+			if(l instanceof VQVAEResidual) {
+				VQVAEResidual r = (VQVAEResidual) l;
+				r.loadModel(inputStream);
+			}
+			if(l instanceof VQVAEAttentionLayer) {
+				VQVAEAttentionLayer a = (VQVAEAttentionLayer) l;
+				a.loadModel(inputStream);
+			}
+			if(l instanceof ConvolutionLayer) {
+				ConvolutionLayer c = (ConvolutionLayer) l;
+				c.loadModel(inputStream);
+			}
+		}
+		
+		convNormOut.loadModel(inputStream);
+		convOut.loadModel(inputStream);
 		
 	}
 

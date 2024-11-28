@@ -3345,13 +3345,8 @@ public class MBSGDOptimizer extends Optimizer {
 			
 			Tensor lpipsLossDiff = new Tensor(batchSize, 1, 1, 1, MatrixUtils.val(batchSize, 1.0f/batchSize), true);
 			
-			Tensor fakeGLoss = new Tensor(1, 1, 1, 1, true);
-			Tensor fakeGDiff = null;
-			
-			Tensor fakeDLoss = null;
-			Tensor realDLoss = null;
-			
-			Tensor realDiff = null;
+			Tensor ones = null;
+			Tensor zeros = null;
 			
 			int stepCount = 0;
 			
@@ -3416,17 +3411,18 @@ public class MBSGDOptimizer extends Optimizer {
 					if(stepCount > discStepStart) {
 						
 						discFakePred = disc.forward(output);
-						if(fakeGDiff == null) {
-							fakeGDiff = discFakePred.createLike(-discFakePred.dataLength * disc_weight);
-							realDiff = discFakePred.createLike();
+						if(ones == null) {
+							ones = discFakePred.createLike(1);
+							zeros = discFakePred.createLike(0);
 						}
-						disc.hingeGLoss(output, fakeGLoss);
+						Tensor fakeGLoss = disc.loss(discFakePred, ones);
+						Tensor fakeGDiff = disc.lossDiff(discFakePred, ones);
+
+						TensorOP.mul(fakeGDiff, disc_weight, fakeGDiff);
 						
 						disc.back(fakeGDiff);
 						
-						float fakeGloss = fakeGLoss.syncHost()[0];
-						
-						System.out.println("fakeGloss:"+fakeGloss);
+						float fakeGloss = MatrixOperation.sum(fakeGLoss.syncHost()) / batchSize;
 						
 						loss += fakeGloss * disc_weight;
 						
@@ -3447,24 +3443,21 @@ public class MBSGDOptimizer extends Optimizer {
 					 * train discriminator
 					 */
 					if(stepCount > discStepStart) {
-						if(fakeDLoss == null) {
-							fakeDLoss = discFakePred.createLike();
-							realDLoss = discFakePred.createLike();
-						}
-						
-						disc.hingeDFakeLoss(discFakePred, fakeDLoss);
-						disc.hingeDFakeLossBack(discFakePred, fakeGDiff, disc_weight);
-
-						disc.back(fakeGDiff);
+						Tensor fakeDLoss = disc.loss(discFakePred, zeros);
+						Tensor fakeDDiff = disc.lossDiff(discFakePred, zeros);
+						TensorOP.mul(fakeDDiff, disc_weight, fakeDDiff);
+						disc.back(fakeDDiff);
 						/**
 						 * 梯度叠加
 						 */
 						disc.accGrad(2);
 						
 						Tensor discRealPred = disc.forward(input);
-						disc.hingeDRealLoss(discRealPred, realDLoss);
-						disc.hingeDRealLossBack(discRealPred, realDiff, disc_weight);
-						disc.back(realDiff);
+						
+						Tensor realDLoss = disc.loss(discRealPred, ones);
+						Tensor realDDiff = disc.lossDiff(discRealPred, ones);
+						TensorOP.mul(realDDiff, disc_weight, realDDiff);
+						disc.back(realDDiff);
 						/**
 						 * 梯度叠加
 						 */
@@ -3525,7 +3518,7 @@ public class MBSGDOptimizer extends Optimizer {
 					/**
 					 * print image
 					 */
-					showImgs("H:\\vae_dataset\\pokemon-blip\\test128\\", output, i + "", trainingData.mean, trainingData.std);
+					showImgs("E:\\dataset\\pokemon-blip\\test128\\", output, i + "", trainingData.mean, trainingData.std);
 					
 				}
 				

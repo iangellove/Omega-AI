@@ -523,10 +523,30 @@ public class TinyVQVAE2 extends Network {
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
 		
+		encoder.saveModel(outputStream);
+		
+		pre_quant_conv.saveModel(outputStream);
+		
+		embedding.saveModel(outputStream);
+		
+		post_quant_conv.saveModel(outputStream);
+		
+		decoder.saveModel(outputStream);
+		
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-
+		
+		encoder.loadModel(inputStream);
+		
+		pre_quant_conv.loadModel(inputStream);
+		
+		embedding.loadModel(inputStream);
+		
+		post_quant_conv.loadModel(inputStream);
+		
+		decoder.loadModel(inputStream);
+		
 	}
 	
 }
