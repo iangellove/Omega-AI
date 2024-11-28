@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
+import com.omega.engine.loss.gpu.HingeLossKernel;
 import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.patchgan.PatchGANDiscriminatorBlock;
@@ -35,6 +37,8 @@ public class PatchGANDiscriminator extends Network {
 	
 	public PatchGANDiscriminatorBlock disc;
 	
+	private HingeLossKernel hingeLossKernel;
+	
 	
 	public PatchGANDiscriminator(LossType lossType,UpdaterType updater,int imageSize,int[] convChannels,int[] kernels,int[] strides,int[] paddings) {
 		this.lossFunction = LossFactory.create(lossType);
@@ -48,6 +52,9 @@ public class PatchGANDiscriminator extends Network {
 	}
 	
 	public void initLayers() {
+		
+		hingeLossKernel = new HingeLossKernel();
+		
 		this.inputLayer = new InputLayer(3, imageSize, imageSize);
 		
 		this.disc = new PatchGANDiscriminatorBlock(3, imageSize, imageSize, convChannels, kernels, strides, paddings, this);
@@ -140,7 +147,33 @@ public class PatchGANDiscriminator extends Network {
 		return this.lossFunction.loss(output, label);
 	}
 	
+	public void hingeGLoss(Tensor output,Tensor loss) {
+		TensorOP.mean(output, 0, loss);
+	}
 	
+	public void hingeDLoss(Tensor real,Tensor fake,Tensor loss) {
+		hingeLossKernel.hingeLoss(real, fake, loss);
+	}
+	
+	public void hingeDLossBack(Tensor real,Tensor fake,Tensor dReal,Tensor dFake) {
+		hingeLossKernel.hingeLossBackward(real, fake, dReal, dFake);
+	}
+	
+	public void hingeDRealLoss(Tensor real,Tensor loss) {
+		hingeLossKernel.hingeRealLoss(real, loss);
+	}
+	
+	public void hingeDFakeLoss(Tensor fake,Tensor loss) {
+		hingeLossKernel.hingeFakeLoss(fake, loss);
+	}
+	
+	public void hingeDRealLossBack(Tensor real,Tensor dReal,float weight) {
+		hingeLossKernel.hingeLossRealBackward(real, dReal, weight);
+	}
+	
+	public void hingeDFakeLossBack(Tensor fake,Tensor dFake,float weight) {
+		hingeLossKernel.hingeLossFakeBackward(fake, dFake, weight);
+	}
 
 	@Override
 	public Tensor lossDiff(Tensor output, Tensor label) {

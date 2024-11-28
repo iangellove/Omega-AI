@@ -215,7 +215,7 @@ public class BNLayer extends NormalizationLayer {
 	
 	public void initBack(Tensor diff) {
 		this.diff = diff;
-		if(this.diffGamma == null) {
+		if(this.diffGamma == null && !this.freeze) {
 			this.diffGamma = new Tensor(1, 1, 1, gamma.width, true);
 			this.diffBeta = new Tensor(1, 1, 1, beta.width, true);
 		}

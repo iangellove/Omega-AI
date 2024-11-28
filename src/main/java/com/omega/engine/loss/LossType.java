@@ -19,6 +19,7 @@ public enum LossType {
 	MSE,
 	MSE_SUM,
 	BCE,
-	BCEWithLogits
+	BCEWithLogits,
+	Hinge
 	
 }

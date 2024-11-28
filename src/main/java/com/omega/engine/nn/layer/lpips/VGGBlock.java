@@ -47,6 +47,7 @@ public class VGGBlock extends Layer {
 		
 		if(bn) {
 			norm = new BNLayer(conv);
+			norm.freeze();
 			act = new ReluLayer(norm);
 		}else {
 			act = new ReluLayer(conv);

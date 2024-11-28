@@ -26,6 +26,16 @@ __global__ void add_bias(float* output, float* biases, int batch, int n, int siz
 }
 
 extern "C"
+__global__ void add_bias_kernel(float *output, float *biases, int n, int size)
+{
+    int offset = blockIdx.x * blockDim.x + threadIdx.x;
+    int filter = blockIdx.y;
+    int batch = blockIdx.z;
+
+    if(offset < size) output[(batch*n+filter)*size + offset] += biases[filter];
+}
+
+extern "C"
 __global__ void backward_bias_conn_kernel(float *bias_updates, float *delta, int batch, int n)
 {
     int index = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;

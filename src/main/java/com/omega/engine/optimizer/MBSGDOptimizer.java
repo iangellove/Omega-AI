@@ -3344,9 +3344,14 @@ public class MBSGDOptimizer extends Optimizer {
 			Tensor lpipLoss = new Tensor(1, 1, 1, 1, true);
 			
 			Tensor lpipsLossDiff = new Tensor(batchSize, 1, 1, 1, MatrixUtils.val(batchSize, 1.0f/batchSize), true);
-
-			Tensor ones = null;
-			Tensor zeros = null;
+			
+			Tensor fakeGLoss = new Tensor(1, 1, 1, 1, true);
+			Tensor fakeGDiff = null;
+			
+			Tensor fakeDLoss = null;
+			Tensor realDLoss = null;
+			
+			Tensor realDiff = null;
 			
 			int stepCount = 0;
 			
@@ -3409,25 +3414,21 @@ public class MBSGDOptimizer extends Optimizer {
 					Tensor discFakePred = null;
 					
 					if(stepCount > discStepStart) {
-						/**
-						 * 梯度叠加
-						 */
-						disc.accGrad(3);
 						
 						discFakePred = disc.forward(output);
-						if(ones == null) {
-							ones = discFakePred.createLike(1.0f);
-							zeros = discFakePred.createLike(0.0f);
+						if(fakeGDiff == null) {
+							fakeGDiff = discFakePred.createLike(-discFakePred.dataLength * disc_weight);
+							realDiff = discFakePred.createLike();
 						}
-						Tensor discFakeLoss = disc.loss(discFakePred, ones);
+						disc.hingeGLoss(output, fakeGLoss);
 						
-						Tensor discFakeDiff = disc.lossDiff(discFakePred, ones);
-
-						TensorOP.mul(discFakeDiff, disc_weight, discFakeDiff);
+						disc.back(fakeGDiff);
 						
-						disc.back(discFakeDiff);
+						float fakeGloss = fakeGLoss.syncHost()[0];
 						
-						loss += MatrixOperation.sum(discFakeLoss.syncHost()) / this.batchSize * disc_weight;
+						System.out.println("fakeGloss:"+fakeGloss);
+						
+						loss += fakeGloss * disc_weight;
 						
 						TensorOP.add(this.lossDiff, disc.disc.diff, this.lossDiff);
 					}
@@ -3446,20 +3447,34 @@ public class MBSGDOptimizer extends Optimizer {
 					 * train discriminator
 					 */
 					if(stepCount > discStepStart) {
-						Tensor discFakeLoss = disc.loss(discFakePred, zeros);
-						Tensor discFakeDiff = disc.lossDiff(discFakePred, zeros);
-						disc.back(discFakeDiff);
+						if(fakeDLoss == null) {
+							fakeDLoss = discFakePred.createLike();
+							realDLoss = discFakePred.createLike();
+						}
+						
+						disc.hingeDFakeLoss(discFakePred, fakeDLoss);
+						disc.hingeDFakeLossBack(discFakePred, fakeGDiff, disc_weight);
+
+						disc.back(fakeGDiff);
+						/**
+						 * 梯度叠加
+						 */
+						disc.accGrad(2);
 						
 						Tensor discRealPred = disc.forward(input);
-						Tensor discRealLoss = disc.loss(discRealPred, ones);
-						Tensor discRealDiff = disc.lossDiff(discRealPred, ones);
-						disc.back(discRealDiff);
+						disc.hingeDRealLoss(discRealPred, realDLoss);
+						disc.hingeDRealLossBack(discRealPred, realDiff, disc_weight);
+						disc.back(realDiff);
+						/**
+						 * 梯度叠加
+						 */
+						disc.accGrad(2);
 						
 						disc.update();
 						
-						float discLoss =  (MatrixOperation.sum(discFakeLoss.syncHost()) + MatrixOperation.sum(discRealLoss.syncHost())) / this.batchSize * disc_weight / 2;
+						float discLoss =  (MatrixOperation.sum(fakeDLoss.syncHost()) + MatrixOperation.sum(realDLoss.syncHost())) / this.batchSize * disc_weight;
 						
-						System.out.println(discLoss);
+						System.out.println("discLoss:"+discLoss);
 						
 					}
 

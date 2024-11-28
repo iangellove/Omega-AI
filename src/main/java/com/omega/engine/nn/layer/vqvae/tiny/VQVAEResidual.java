@@ -101,9 +101,9 @@ public class VQVAEResidual extends Layer {
 	
 	@Override
 	public void initBack() {
-		if(this.cache_delta == null || this.output.number != cache_delta.number){
-			this.cache_delta = Tensor.createGPUTensor(this.cache_delta, number, oChannel, oHeight, oWidth, true);
-		}
+//		if(this.cache_delta == null || this.output.number != cache_delta.number){
+//			this.cache_delta = Tensor.createGPUTensor(this.cache_delta, number, oChannel, oHeight, oWidth, true);
+//		}
 	}
 
 	@Override
@@ -145,7 +145,7 @@ public class VQVAEResidual extends Layer {
 		/**
 		 * deltax = deltao * (f'(x) + 1)
 		 */
-		baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
+//		baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
 
 		conv2.back(delta);
 		a2.back(conv2.diff);
@@ -156,10 +156,10 @@ public class VQVAEResidual extends Layer {
 		norm1.back(a1.diff);
 
 		if(shortcut) {
-			conv_shortcut.back(this.cache_delta);
+			conv_shortcut.back(this.delta);
 			kernel.add(norm1.diff, conv_shortcut.diff, conv1.diff);
 		}else {
-			kernel.add(norm1.diff, this.cache_delta, conv1.diff);
+			kernel.add(norm1.diff, this.delta, conv1.diff);
 		}
 		
 		this.diff = conv1.diff;

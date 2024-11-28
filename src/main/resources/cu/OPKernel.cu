@@ -27,6 +27,16 @@ __global__ void axpy_kernel(int N,  float *X, int OFFX, float *Y, int OFFY)
 }
 
 extern "C"
+__global__ void one_hot_kernel(int N,  float *X, float *Y, int K)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N){
+    	int idx = (int)X[i];
+    	Y[i * K + idx] = 1.0f;
+    }
+}
+
+extern "C"
 __global__ void copy_number_kernel(int N,  float *X, float *Y, int n,int c,int h,int w,int start,int cp)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
@@ -83,6 +93,16 @@ __global__ void broadcast_number_kernel(int N, float *X, float *Y,int C,int H,in
 }
 
 extern "C"
+__global__ void broadcast_row_kernel(int N, float *X, float *Y,int C,int H,int W)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+    	int n = i % (C * H * W);
+    	Y[i] = X[n];
+    }
+}
+
+extern "C"
 __global__ void broadcast_plus_kernel(int N, float *X, float *Y)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
@@ -95,6 +115,16 @@ __global__ void broadcast_number_plus_kernel(int N, float *X, float *Y,int C,int
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(i < N) {
     	int n = i / C / H / W;
+    	Y[i] += X[n];
+    }
+}
+
+extern "C"
+__global__ void broadcast_row_plus_kernel(int N, float *X, float *Y,int C,int H,int W)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+    	int n = i % (C * H * W);
     	Y[i] += X[n];
     }
 }
@@ -144,6 +174,7 @@ __global__ void sum_kernel(int N, float *X, float *Y)
 	    for(int index = 0;index<N;index++){
 	    	Y[0] += X[index];
 	    }
+	    
     }
 }
 
@@ -166,6 +197,40 @@ __global__ void sum_height_kernel(int N, float *X, float *Y,int C,int H,int W)
     	Y[i] = 0;
     	for(int index = 0;index<H * W;index++){
     		Y[i] += X[i * H * W + index];
+    	}
+    }
+}
+
+extern "C"
+__global__ void sum_pow_kernel(int N, double p, float *X, float *Y)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < 1) {
+	    for(int index = 0;index<N;index++){
+	    	Y[0] += powf(X[index], p);
+	    }
+    }
+}
+
+extern "C"
+__global__ void sum_pow_channel_kernel(int N, double p, float *X, float *Y,int C,int H,int W)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+    	for(int index = 0;index<C * H * W;index++){
+    		Y[i] += powf(X[i * C * H * W + index], p);
+    	}
+    }
+}
+
+extern "C"
+__global__ void sum_pow_height_kernel(int N, double p, float *X, float *Y,int C,int H,int W)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < N) {
+    	Y[i] = 0;
+    	for(int index = 0;index<H * W;index++){
+    		Y[i] += powf(X[i * H * W + index], p);
     	}
     }
 }
@@ -624,5 +689,44 @@ __global__ void permute_kernel(int N, float *data_in, float *data_out, int *perm
             offset_tmp %= strides_out[i];
         }
         data_out[offset_out] = data_in[offset_in];
+    }
+}
+
+extern "C"
+__global__ void permute_add_kernel(int N, float *data_in, float *data_out, int *perms, int *strides_in, int *strides_out, int NUM_AXES) {
+    //int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int tid = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (tid < N) {
+        int offset_out = tid;
+        int offset_tmp = offset_out;
+        int offset_in = 0;
+        for (int i = 0; i < NUM_AXES; i++) {
+            offset_in += (offset_tmp / strides_out[i]) * strides_in[perms[i]];
+            offset_tmp %= strides_out[i];
+        }
+        data_out[offset_out] += data_in[offset_in];
+    }
+}
+
+extern "C"
+__global__ void mean_kernel(int N, float *x, float *y, int C) {
+    int tid = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (tid < N) {
+    	float sum = 0.0f;
+        for (int i = 0; i < C; i++) {
+            sum += x[tid * C + i];
+        }
+        y[tid] += sum / C;
+    }
+}
+
+
+extern "C"
+__global__ void mean_back_kernel(int N, float *dy, float *dx, int C) {
+    int tid = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if (tid < N) {
+        for (int i = 0; i < C; i++) {
+            dx[tid * C + i] = dy[tid] / C;
+        }
     }
 }

@@ -1020,3 +1020,38 @@ __global__ void softmax_autoregressive_backward_inplace_kernel(float* datt, cons
         }
     }
 }
+
+extern "C"
+__global__ void softmax_autoregressive_unmask_backward_inplace_kernel(float* datt, const float* att, int B, int T, int C, float scale) {
+
+    int T_per_block = 4;
+
+    // go through blocks in reverse order, so the slowest block starts first
+    int t0 = T - 1 - T_per_block*blockIdx.x;
+    int idx = blockIdx.y;
+
+    att += idx * T * T;
+    datt += idx * T * T;
+
+    for(int to = 0; to < T_per_block; ++to) {
+        int t = t0 - to;
+        if(t < 0) return;
+        const float* att_bth = att + t * T;
+        const float* datt_bth = datt + t * T;
+        float* dpreatt_bth = datt + t * T;
+
+        float local_sum = 0;
+        for (int t2 = threadIdx.x; t2 < t; t2 += BlockSize) {
+            local_sum += (float)att_bth[t2] * (float)datt_bth[t2];
+        }
+
+        local_sum = blockReduceSum(local_sum, false, 0.0f);
+
+        for (int t3 = threadIdx.x; t3 < T; t3 += BlockSize) {
+            // don't touch the cache. Some parts will still be here from the previous loop, and
+            // we want to exploit those.
+            float acc = (float) __ldcs(att_bth + t3) * ((float) __ldcs(datt_bth + t3) - local_sum);
+            __stcs(dpreatt_bth + t3, (float) (scale * acc));
+        }
+    }
+}

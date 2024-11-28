@@ -179,13 +179,18 @@ public class VQVAEAttentionLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
+//		if(this.dattn == null){
+//		this.dqt = Tensor.createGPUTensor(this.dqt, batchSize, headNum, time, dk, true);
+//		this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, time, dk, true);
+//		this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, time, dk, true);
+//		this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
+//	}
 		if(this.dattn == null){
-			this.dqt = Tensor.createGPUTensor(this.dqt, batchSize, headNum, time, dk, true);
-			this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, time, dk, true);
-			this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, time, dk, true);
 			this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
-
 		}
+		this.dqt = this.getqLinerLayer().getOutput().view(batchSize, headNum, time, dk);
+		this.dkt = this.getqLinerLayer().getOutput().view(batchSize, headNum, time, dk);
+		this.dvt = this.getqLinerLayer().getOutput().view(batchSize, headNum, time, dk);
 	}
 
 	@Override
@@ -309,9 +314,9 @@ public class VQVAEAttentionLayer extends Layer{
 
 		scaledDotProductAttentionBackward();
 		
-		qt.view(this.getqLinerLayer().getOutput().shape());
-		kt.view(this.getqLinerLayer().getOutput().shape());
-		vt.view(this.getqLinerLayer().getOutput().shape());
+		qt.view(batchSize, time, headNum, dk);
+		kt.view(batchSize, time, headNum, dk);
+		vt.view(batchSize, time, headNum, dk);
 		
 		TensorOP.permute(dqt, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(dkt, kt, new int[] {0, 2, 1, 3});
@@ -321,15 +326,19 @@ public class VQVAEAttentionLayer extends Layer{
 		Tensor keyDelta = kt.view(batchSize * time, 1, 1, headNum * dk);
 		Tensor valueDelta = vt.view(batchSize * time, 1, 1, headNum * dk);
 		
-		this.getqLinerLayer().back(queryDelta);
-		this.getkLinerLayer().back(keyDelta);
-		this.getvLinerLayer().back(valueDelta);
+		Tensor qDiff = this.getqLinerLayer().getOutput().viewOrg();
+		Tensor kDiff = this.getkLinerLayer().getOutput().viewOrg();
+		Tensor vDiff = this.getvLinerLayer().getOutput().viewOrg();
 		
-		TensorOP.add(this.getqLinerLayer().diff, this.getkLinerLayer().diff, this.getqLinerLayer().diff);
-		TensorOP.add(this.getqLinerLayer().diff, this.getvLinerLayer().diff, this.getqLinerLayer().diff);
+		this.getqLinerLayer().back(queryDelta, qDiff);
+		this.getkLinerLayer().back(keyDelta, kDiff);
+		this.getvLinerLayer().back(valueDelta, vDiff);
+		
+		TensorOP.add(qDiff, kDiff, qDiff);
+		TensorOP.add(qDiff, vDiff, qDiff);
 		
 		// dxt
-		Tensor dxt = this.getqLinerLayer().diff;
+		Tensor dxt = qDiff;
 		
 		dxt.view(batchSize, time, 1, channel);
 

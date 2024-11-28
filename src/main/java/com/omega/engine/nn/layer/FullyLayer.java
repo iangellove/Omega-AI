@@ -724,7 +724,7 @@ public class FullyLayer extends Layer{
 	public void back(Tensor delta,Tensor diff) {
 		// TODO Auto-generated method stub
 
-		this.initBack();
+//		this.initBack();
 		/**
 		 * 设置梯度
 		 */

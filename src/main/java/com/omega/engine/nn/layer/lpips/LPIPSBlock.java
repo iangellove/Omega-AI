@@ -13,8 +13,6 @@ import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.lpips.gpu.LPIPSKernel;
 import com.omega.engine.nn.network.Network;
 
-import jcuda.runtime.JCuda;
-
 public class LPIPSBlock extends Layer {
 	
 	private boolean dropout = false;

@@ -50,9 +50,7 @@ public class VQVAEUpsample extends Layer {
 	
 	@Override
 	public void initBack() {
-		if(this.cache_delta == null || this.output.number != cache_delta.number){
-			this.cache_delta = Tensor.createGPUTensor(this.cache_delta, number, oChannel, oHeight, oWidth, true);
-		}
+		
 	}
 
 	@Override
