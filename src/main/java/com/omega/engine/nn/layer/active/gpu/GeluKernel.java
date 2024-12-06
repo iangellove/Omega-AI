@@ -16,6 +16,10 @@ public class GeluKernel extends BaseKernel{
 	
 	private CUfunction function;
 	
+	private CUfunction oldFunction;
+	
+	private CUfunction oldHalfFunction;
+	
 	private CUfunction function_back;
 	
 	private CUfunction fast_function;
@@ -47,6 +51,14 @@ public class GeluKernel extends BaseKernel{
 
 				function = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "gelu_forward");
 				
+			}
+			
+			if(oldFunction == null) {
+				oldFunction = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "gelu_old_forward");
+			}
+			
+			if(oldHalfFunction == null) {
+				oldHalfFunction = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "gelu_old_half_forward");
 			}
 			
 			if(function_back == null) {
@@ -105,6 +117,66 @@ public class GeluKernel extends BaseKernel{
 		        );
 
 //			JCudaDriver.cuCtxSynchronize();
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void oldForward(Tensor input,Tensor output) {
+		
+		try {
+
+			/**
+	         * 设置入参
+	         * float *x, float *out, int N
+	         */ 
+			forwardKernelParameters = Pointer.to(
+	        		Pointer.to(input.getGpuData()),
+	                Pointer.to(output.getGpuData()),
+	                Pointer.to(new int[]{output.dataLength})
+	            );
+			
+			this.N = output.number;
+
+			cuLaunchKernel(oldFunction,
+		            this.CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            forwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void oldHalfForward(Tensor input,Tensor output) {
+		
+		try {
+
+			/**
+	         * 设置入参
+	         * float *x, float *out, int N
+	         */ 
+			forwardKernelParameters = Pointer.to(
+	        		Pointer.to(input.getGpuData()),
+	                Pointer.to(output.getGpuData()),
+	                Pointer.to(new int[]{input.dataLength})
+	            );
+			
+			this.N = output.number;
+
+			cuLaunchKernel(oldHalfFunction,
+		            this.CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            forwardKernelParameters, null // Kernel- and extra parameters
+		        );
 
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -329,33 +401,27 @@ public class GeluKernel extends BaseKernel{
 	}
 	
 	public static void main(String args[]){	
-	    	int N = 5;
+	    	int N = 2;
 	    	int C = 1;
 	    	int H = 1;
-	    	int W = 8;
+	    	int W = 2;
 	    	
-	    	float[] x1 = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
+//	    	float[] x1 = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
 	    	
-	    	float[] d1 = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
+	    	float[] x1 = new float[] {-3.45117188f, 1f, -2.45117188f, 1f};
 	    	
 	    	Tensor input = new Tensor(N, C, H, W, x1, true);
 	    	
 	    	Tensor output = new Tensor(N, C, H, W, true);
 	    	
-	    	Tensor delta = new Tensor(N, C, H, W, d1, true);
-	    	
-	    	Tensor diff = new Tensor(N, C, H, W, true);
-	    
 	    	GeluKernel k = new GeluKernel();
-
-	    	k.forward(input, output);
 	    	
-	    	k.backward(input, delta, diff);
+	    	input.showDM();
+	    	
+	    	k.oldHalfForward(input, output);
 	    	
 	    	output.showDM();
 	    	
-	    	diff.showDM();
-
 			CUDAMemoryManager.free();
 			
 	    }

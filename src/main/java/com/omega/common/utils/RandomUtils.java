@@ -735,6 +735,16 @@ public class RandomUtils {
 		return temp;
 	}
 	
+	public static float[] orderAndUnsqueeze(int x,int N,float a,float b){
+		float[] temp = new float[N * x];
+		for(int n = 0;n<N;n++) {
+			for(int i = 0;i<x;i++) {
+				temp[n * x + i] = i * a + b;
+			}
+		}
+		return temp;
+	}
+	
 	/**
 	 * 范围随机
 	 * @param org

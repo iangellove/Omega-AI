@@ -67,6 +67,15 @@ public class GeluLayer extends ActiveFunctionLayer {
 			kernel.forward(input, output);
 		}
 	}
+	
+	public void outputOld() {
+		// TODO Auto-generated method stub
+		if(fast) {
+			kernel.oldHalfForward(input, output);
+		}else {
+			kernel.oldForward(input, output);
+		}
+	}
 
 	@Override
 	public Tensor getOutput() {
@@ -101,6 +110,22 @@ public class GeluLayer extends ActiveFunctionLayer {
 		this.output();
 	}
 
+	public void forwardOld() {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+		/**
+		 * 设置输入
+		 */
+		this.setInput();
+		/**
+		 * 计算输出
+		 */
+		this.outputOld();
+	}
+	
 	@Override
 	public void back() {
 		// TODO Auto-generated method stub
@@ -189,6 +214,22 @@ public class GeluLayer extends ActiveFunctionLayer {
 		 * 计算输出
 		 */
 		this.output();
+	}
+	
+	public void forwardOld(Tensor input) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init(input);
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		/**
+		 * 计算输出
+		 */
+		this.outputOld();
 	}
 
 	@Override

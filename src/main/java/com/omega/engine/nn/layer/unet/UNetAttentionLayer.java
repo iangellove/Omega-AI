@@ -10,6 +10,7 @@ import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.GPUOP;
+import com.omega.engine.gpu.cudnn.SoftmaxCudnnKernel;
 import com.omega.engine.nn.layer.DropoutLayer;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
@@ -18,7 +19,6 @@ import com.omega.engine.nn.layer.gpu.AttentionKernel;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.nn.network.Network;
-import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
@@ -32,9 +32,15 @@ public class UNetAttentionLayer extends Layer{
 	
 	private int time;
 	
+	private int kvTime;
+	
 	private int headNum = 1;
 	
 	private int embedDim = 0;
+	
+	private int kDim = 0;
+	
+	private int vDim = 0;
 	
 	private int dk = 0;
 	
@@ -64,6 +70,8 @@ public class UNetAttentionLayer extends Layer{
 	
 	private AttentionKernel attentionKernel;
 	
+	private SoftmaxCudnnKernel softmaxKernel;
+	
 	private Tensor xt;
 	
 	private Tensor qt;
@@ -86,11 +94,14 @@ public class UNetAttentionLayer extends Layer{
 	
 	private boolean dropout = false;
 	
-	public UNetAttentionLayer(int embedDim,int headNum,int time,int channel,int height,int width,boolean bias,boolean dropout,boolean residualConnect) {
+	public UNetAttentionLayer(int embedDim,int kDim,int vDim,int headNum,int kvTime,int channel,int height,int width,boolean bias,boolean dropout,boolean residualConnect) {
 		this.bias = bias;
 		this.residualConnect = residualConnect;
-		this.time = time;
+		this.time = height * width;
+		this.kvTime = kvTime;
 		this.embedDim = embedDim;
+		this.kDim = kDim;
+		this.vDim = vDim;
 		this.headNum = headNum;
 		if(embedDim % headNum != 0){
 			throw new RuntimeException("embedDim % headNum must be zero.");
@@ -100,6 +111,9 @@ public class UNetAttentionLayer extends Layer{
 		this.channel = channel;
 		this.height = height;
 		this.width = width;
+		if(this.time != this.width * this.height) {
+			throw new RuntimeException("time must equals the width * height.");
+		}
 		this.oChannel = channel;
 		this.oHeight = height;
 		this.oWidth = width;
@@ -107,15 +121,18 @@ public class UNetAttentionLayer extends Layer{
 		this.initLayers();
 	}
 	
-	public UNetAttentionLayer(int embedDim,int headNum,int time,int channel,int height,int width,boolean bias,boolean dropout,boolean residualConnect,Network network) {
+	public UNetAttentionLayer(int embedDim,int kDim,int vDim,int headNum,int kvTime,int channel,int height,int width,boolean bias,boolean dropout,boolean residualConnect,Network network) {
 		this.bias = bias;
 		this.residualConnect = residualConnect;
 		this.network = network;
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
 		}
-		this.time = time;
+		this.time = height * width;
+		this.kvTime = kvTime;
 		this.embedDim = embedDim;
+		this.kDim = kDim;
+		this.vDim = vDim;
 		this.headNum = headNum;
 		if(embedDim % headNum != 0){
 			throw new RuntimeException("embedDim % headNum must be zero.");
@@ -125,6 +142,9 @@ public class UNetAttentionLayer extends Layer{
 		this.channel = channel;
 		this.height = height;
 		this.width = width;
+		if(this.time != this.width * this.height) {
+			throw new RuntimeException("time must equals the width * height.");
+		}
 		this.oChannel = channel;
 		this.oHeight = height;
 		this.oWidth = width;
@@ -132,7 +152,7 @@ public class UNetAttentionLayer extends Layer{
 		this.initLayers();
 	}
 	
-	public UNetAttentionLayer(int embedDim,int headNum,int time,int channel,int height,int width,int groups,boolean bias,boolean dropout,boolean residualConnect,Network network) {
+	public UNetAttentionLayer(int embedDim,int headNum,int channel,int height,int width,int groups,boolean bias,boolean dropout,boolean residualConnect,Network network) {
 		this.bias = bias;
 		this.groups = groups;
 		this.residualConnect = residualConnect;
@@ -140,8 +160,11 @@ public class UNetAttentionLayer extends Layer{
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
 		}
-		this.time = time;
+		this.time = height * width;
+		this.kvTime = time;
 		this.embedDim = embedDim;
+		this.kDim = embedDim;
+		this.vDim = embedDim;
 		this.headNum = headNum;
 		if(embedDim % headNum != 0){
 			throw new RuntimeException("embedDim % headNum must be zero.");
@@ -151,6 +174,41 @@ public class UNetAttentionLayer extends Layer{
 		this.channel = channel;
 		this.height = height;
 		this.width = width;
+		if(this.time != this.width * this.height) {
+			throw new RuntimeException("time must equals the width * height.");
+		}
+		this.oChannel = channel;
+		this.oHeight = height;
+		this.oWidth = width;
+		this.dropout = dropout;
+		this.initLayers();
+	}
+	
+	public UNetAttentionLayer(int embedDim,int kDim,int vDim,int headNum,int kvTime,int channel,int height,int width,int groups,boolean bias,boolean dropout,boolean residualConnect,Network network) {
+		this.bias = bias;
+		this.groups = groups;
+		this.residualConnect = residualConnect;
+		this.network = network;
+		if(this.updater == null) {
+			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		}
+		this.time = height * width;
+		this.kvTime = kvTime;
+		this.embedDim = embedDim;
+		this.kDim = kDim;
+		this.vDim = vDim;
+		this.headNum = headNum;
+		if(embedDim % headNum != 0){
+			throw new RuntimeException("embedDim % headNum must be zero.");
+		}
+		this.dk = embedDim / headNum;
+		this.bias = bias;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		if(this.time != this.width * this.height) {
+			throw new RuntimeException("time must equals the width * height.");
+		}
 		this.oChannel = channel;
 		this.oHeight = height;
 		this.oWidth = width;
@@ -166,9 +224,9 @@ public class UNetAttentionLayer extends Layer{
 		
 		this.setqLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
 
-		this.setkLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
+		this.setkLinerLayer(new FullyLayer(kDim, embedDim, bias, this.network));
 
-		this.setvLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
+		this.setvLinerLayer(new FullyLayer(vDim, embedDim, bias, this.network));
 
 		this.setoLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
 
@@ -183,6 +241,10 @@ public class UNetAttentionLayer extends Layer{
 		
 		if(attentionKernel == null) {
 			attentionKernel = new AttentionKernel();
+		}
+		
+		if(softmaxKernel == null) {
+			softmaxKernel = new SoftmaxCudnnKernel(kvTime, 1, 1);
 		}
 
 	}
@@ -202,16 +264,16 @@ public class UNetAttentionLayer extends Layer{
 			// [batch_size，time，head_num，d_k]
 			this.xt = Tensor.createGPUTensor(this.xt, batchSize, time, 1, channel, true);
 			this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
-			this.kt = Tensor.createGPUTensor(this.kt, batchSize, headNum, time, dk, true);
-			this.vt = Tensor.createGPUTensor(this.vt, batchSize, headNum, time, dk, true);
+			this.kt = Tensor.createGPUTensor(this.kt, batchSize, headNum, kvTime, dk, true);
+			this.vt = Tensor.createGPUTensor(this.vt, batchSize, headNum, kvTime, dk, true);
 			// [batch_size，n_heads，len_q，len_k]
-			if(time < dk) {
+			if(kvTime < dk) {
 				this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, dk, true);
 			}else {
-				this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, time, true);
+				this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, kvTime, true);
 			}
 			// [batch_size，n_heads，len_q，len_k]
-			this.attn = Tensor.createGPUTensor(this.attn, batchSize, headNum, time, time, true);
+			this.attn = Tensor.createGPUTensor(this.attn, batchSize, headNum, time, kvTime, true);
 			// [batch_size, len_q, n_heads * dim_v]
 			this.oi = Tensor.createGPUTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
 			this.output = Tensor.createGPUTensor(this.output, batchSize, channel, height, width, true);
@@ -233,9 +295,9 @@ public class UNetAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 		if(this.dattn == null){
 			this.dqt = Tensor.createGPUTensor(this.dqt, batchSize, headNum, time, dk, true);
-			this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, time, dk, true);
-			this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, time, dk, true);
-			this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
+			this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, kvTime, dk, true);
+			this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, kvTime, dk, true);
+			this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, kvTime, true);
 
 		}
 	}
@@ -267,8 +329,61 @@ public class UNetAttentionLayer extends Layer{
 		this.getvLinerLayer().forward(xt);
 		
 		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
-		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, time, headNum, dk);
-		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, time, headNum, dk);
+		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, kvTime, headNum, dk);
+		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, kvTime, headNum, dk);
+		
+		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
+		
+		scaledDotProductAttention(qt, kt, vt);
+
+		Tensor vaccum = temp;
+		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
+		
+		this.getoLinerLayer().forward(oi);
+		
+		Tensor out = this.getoLinerLayer().getOutput();
+		
+		if(dropout) {
+			dropoutLayer2.forward(this.getoLinerLayer().getOutput());
+			out = dropoutLayer2.getOutput();
+		}
+		
+		this.output.view(batchSize, channel, 1, time);
+		if(residualConnect) {
+			TensorOP.permuteAdd(out, this.output, new int[] {0, 3, 2, 1}); //B,HW,C ==> B,C,HW
+		}else {
+			TensorOP.permute(out, this.output, new int[] {0, 3, 2, 1}); //B,HW,C ==> B,C,HW
+		}
+		
+		x.viewOrg();
+		
+		this.output.viewOrg();
+	}
+	
+	public void output(Tensor k,Tensor v) {
+		// TODO Auto-generated method stub
+		
+		Tensor x = this.input;
+
+		if(gn != null) {
+			gn.forward(x);
+			x = gn.getOutput();
+		}
+		
+		x = x.view(batchSize, channel, 1, height * width);
+		// B,C,HW ==> B,HW,C
+		TensorOP.permute(x, xt, new int[] {0, 3, 2, 1});
+		xt = xt.view(batchSize * time, 1, 1, channel);
+		
+		this.getqLinerLayer().forward(xt);
+		this.getkLinerLayer().forward(k);
+		this.getvLinerLayer().forward(v);
+		
+		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
+		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, kvTime, headNum, dk);
+		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, kvTime, headNum, dk);
 		
 		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
@@ -306,15 +421,12 @@ public class UNetAttentionLayer extends Layer{
 
 		Tensor preatt = temp;
 
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, key.getGpuData(), dk, time * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), time, time * time, batchSize * headNum);
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, kvTime, time, dk, 1.0f, key.getGpuData(), dk, kvTime * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), kvTime, time * kvTime, batchSize * headNum);
 
-		if(network.RUN_MODEL == RunModel.TEST) {
-			attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
-			attentionKernel.softmax_test_forward(preatt, attn, batchSize, headNum, time);
-		}else {
-			attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time, d_k);
-		}
-
+		attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
+		
+		softmaxKernel.softmax(preatt, attn, batchSize * headNum * time);
+		
 		Tensor tmp = attn;
 		
 		if(dropout) {
@@ -324,7 +436,7 @@ public class UNetAttentionLayer extends Layer{
 
 //		value.showDM();
 		Tensor vaccum = temp;
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, value.getGpuData(), dk, time * dk, tmp.getGpuData(), time, time * time, 0.0f, vaccum.getGpuData(), dk, time * dk, batchSize * headNum);
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, kvTime, 1.0f, value.getGpuData(), dk, kvTime * dk, tmp.getGpuData(), kvTime, time * kvTime, 0.0f, vaccum.getGpuData(), dk, time * dk, batchSize * headNum);
 
 	}
 
@@ -336,11 +448,19 @@ public class UNetAttentionLayer extends Layer{
 			tmp = dropoutLayer.getOutput();
 		}
 		Tensor dvaccum = temp;
-	    // backward into datt
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, vt.getGpuData(), dk, time * dk, dvaccum.getGpuData(), dk, time * dk, 0.0f, dattn.getGpuData(), time, time * time, batchSize * headNum);
-		
-		// backward into dv
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_T, dk, time, time, 1.0f, dvaccum.getGpuData(), dk, time * dk, tmp.getGpuData(), time, time * time, 0.0f, dvt.getGpuData(), dk, time * dk, batchSize * headNum);
+		/**
+		 * backward into dattn[b, nh, t, t2] 
+		 * vt[b, nh, t2, dk] -> [b, nh, dk, t2]
+		 * dvaccum[b, nh, t, dk]
+		 */
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, kvTime, time, dk, 1.0f, vt.getGpuData(), dk, kvTime * dk, dvaccum.getGpuData(), dk, time * dk, 0.0f, dattn.getGpuData(), kvTime, time * kvTime, batchSize * headNum);
+
+		/**
+		 * backward into dvt[b, nh, t2, dk]
+		 * dvaccum[b, nh, t, dk]
+		 * attn[b, nh, t, t2] -> [b, nh, t2, t]
+		 */
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_T, dk, kvTime, time, 1.0f, dvaccum.getGpuData(), dk, time * dk, tmp.getGpuData(), kvTime, time * kvTime, 0.0f, dvt.getGpuData(), dk, kvTime * dk, batchSize * headNum);
 
 		if(dropout) {
 			dropoutLayer.back(dattn);
@@ -348,15 +468,21 @@ public class UNetAttentionLayer extends Layer{
 		}
 		
 		// backward into preatt
+		softmaxKernel.softmax_backward(attn, dattn, dattn);
 		float d_k = (float) (1.0f / Math.sqrt(dk));
-//		attentionKernel.softmax_backward(dpreatt, dattn, attn, batchSize, time, embedDim, headNum, d_k);
-		attentionKernel.softmax2_backward(dattn, attn, batchSize, time, embedDim, headNum, d_k);
-		Tensor dpreatt = dattn;
+		TensorOP.mul(dattn, d_k, dattn);
 
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, kt.getGpuData(), dk, time * dk, dpreatt.getGpuData(), time, time * time, 0.0f, dqt.getGpuData(), dk, time * dk, batchSize * headNum);
+		Tensor dpreatt = dattn;
 		
-		// backward into k
-		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_T, dk, time, time, 1.0f, qt.getGpuData(), dk, time * dk, dpreatt.getGpuData(), time, time * time, 0.0f, dkt.getGpuData(), dk, time * dk, batchSize * headNum);
+		/**
+		 * backward into dqt
+		 */
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, kvTime, 1.0f, kt.getGpuData(), dk, kvTime * dk, dpreatt.getGpuData(), kvTime, time * kvTime, 0.0f, dqt.getGpuData(), dk, time * dk, batchSize * headNum);
+		
+		/**
+		 * backward into dkt
+		 */
+		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_T, dk, kvTime, time, 1.0f, qt.getGpuData(), dk, time * dk, dpreatt.getGpuData(), kvTime, time * kvTime, 0.0f, dkt.getGpuData(), dk, kvTime * dk, batchSize * headNum);
 	}
 
 	@Override
@@ -423,6 +549,118 @@ public class UNetAttentionLayer extends Layer{
 		}
 
 	}
+	
+	public void diff(Tensor diffK,Tensor diffV) {
+		// TODO Auto-generated method stub
+		
+		// B,C,H,W ==> B,HW,C
+		this.output.view(batchSize, height, width, channel);
+		TensorOP.permute(delta, this.output, new int[] {0, 2, 3, 1});
+		this.output.view(batchSize, time, 1, channel);
+
+		if(dropout) {
+			dropoutLayer2.back(this.output);
+			this.getoLinerLayer().back(dropoutLayer2.diff, oi);
+		}else {
+			this.getoLinerLayer().back(this.output, oi);
+		}
+
+		attentionKernel.unpermute_backward(temp, oi, batchSize, time, headNum, dk);
+
+		scaledDotProductAttentionBackward();
+		
+		qt.view(this.getqLinerLayer().getOutput().shape());
+		kt.view(this.getqLinerLayer().getOutput().shape());
+		vt.view(this.getqLinerLayer().getOutput().shape());
+		
+		TensorOP.permute(dqt, qt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(dkt, kt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(dvt, vt, new int[] {0, 2, 1, 3});
+
+		Tensor queryDelta = qt.view(batchSize * time, 1, 1, headNum * dk);
+		Tensor keyDelta = kt.view(batchSize * time, 1, 1, headNum * dk);
+		Tensor valueDelta = vt.view(batchSize * time, 1, 1, headNum * dk);
+		
+		this.getqLinerLayer().back(queryDelta);
+		this.getkLinerLayer().back(keyDelta, diffK);
+		this.getvLinerLayer().back(valueDelta, diffV);
+		
+		// dxt
+		Tensor dxt = this.getqLinerLayer().diff;
+
+		// B,HW,C ==> B,C,H,W
+		xt = xt.view(batchSize , channel, 1, time);
+		TensorOP.permute(dxt, xt, new int[] {0, 3, 2, 1});
+		xt = xt.view(batchSize , channel, height, width);
+		if(gn != null) {
+			gn.back(xt);
+			this.diff = gn.diff;
+		}else {
+			this.diff = xt;
+		}
+		
+		if(residualConnect) {
+			TensorOP.add(this.diff, this.delta, this.diff);
+		}
+
+	}
+	
+	public void diff(Tensor kvDiff) {
+		// TODO Auto-generated method stub
+		
+		// B,C,H,W ==> B,HW,C
+		this.output.view(batchSize, height, width, channel);
+		TensorOP.permute(delta, this.output, new int[] {0, 2, 3, 1});
+		this.output.view(batchSize, time, 1, channel);
+
+		if(dropout) {
+			dropoutLayer2.back(this.output);
+			this.getoLinerLayer().back(dropoutLayer2.diff, oi);
+		}else {
+			this.getoLinerLayer().back(this.output, oi);
+		}
+
+		attentionKernel.unpermute_backward(temp, oi, batchSize, time, headNum, dk);
+
+		scaledDotProductAttentionBackward();
+		
+		qt.view(this.getqLinerLayer().getOutput().shape());
+		kt.view(this.getqLinerLayer().getOutput().shape());
+		vt.view(this.getqLinerLayer().getOutput().shape());
+		
+		TensorOP.permute(dqt, qt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(dkt, kt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(dvt, vt, new int[] {0, 2, 1, 3});
+
+		Tensor queryDelta = qt.view(batchSize * time, 1, 1, headNum * dk);
+		Tensor keyDelta = kt.view(batchSize * time, 1, 1, headNum * dk);
+		Tensor valueDelta = vt.view(batchSize * time, 1, 1, headNum * dk);
+		
+		this.getqLinerLayer().back(queryDelta);
+		this.getkLinerLayer().back(keyDelta);
+		this.getvLinerLayer().back(valueDelta);
+		
+		TensorOP.add(this.getkLinerLayer().diff, this.getvLinerLayer().diff, kvDiff);
+		
+		// dxt
+		Tensor dxt = this.getqLinerLayer().diff;
+
+		// B,HW,C ==> B,C,H,W
+		xt = xt.view(batchSize , channel, 1, time);
+		TensorOP.permute(dxt, xt, new int[] {0, 3, 2, 1});
+		xt = xt.view(batchSize , channel, height, width);
+		if(gn != null) {
+			gn.back(xt);
+			this.diff = gn.diff;
+		}else {
+			this.diff = xt;
+		}
+		
+		if(residualConnect) {
+			TensorOP.add(this.diff, this.delta, this.diff);
+		}
+
+	}
 
 	@Override
 	public void forward() {
@@ -454,6 +692,23 @@ public class UNetAttentionLayer extends Layer{
 		
 	}
 	
+	public void forward(Tensor input,Tensor key,Tensor value) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init(input);
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		/**
+		 * 计算输出
+		 */
+		this.output(key, value);
+		
+	}
+	
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
@@ -467,6 +722,44 @@ public class UNetAttentionLayer extends Layer{
 		 * 计算梯度
 		 */
 		this.diff();
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+
+	}
+	
+	public void back(Tensor delta,Tensor diffK,Tensor diffV) {
+		// TODO Auto-generated method stub
+
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff(diffK, diffV);
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+
+	}
+	
+	public void back(Tensor delta,Tensor kvDiff) {
+		// TODO Auto-generated method stub
+
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff(kvDiff);
 		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();

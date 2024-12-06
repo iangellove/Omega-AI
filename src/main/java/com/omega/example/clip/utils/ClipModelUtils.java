@@ -5,6 +5,8 @@ import java.util.Map;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.engine.nn.layer.clip.bert.BertLayer;
+import com.omega.engine.nn.network.ClipText;
 import com.omega.engine.nn.network.ClipVision;
 
 public class ClipModelUtils {
@@ -72,6 +74,65 @@ public class ClipModelUtils {
 		 */
 		network.getEncoder().getPostLayernorm().gamma = loadData(network.getEncoder().getPostLayernorm().gamma, weightMap, 1, "post_layernorm.weight");
 		network.getEncoder().getPostLayernorm().beta = loadData(network.getEncoder().getPostLayernorm().beta, weightMap, 1, "post_layernorm.bias");
+		
+	}
+	
+	public static void loadWeight(Map<String, Object> weightMap, ClipText network, boolean showLayers) {
+		if(showLayers) {
+			for(String key:weightMap.keySet()) {
+				System.out.println(key);
+			}
+		}
+		
+		/**
+		 * text_projection
+		 */
+		loadData(network.textProjection, weightMap, "text_projection");
+		
+		/**
+		 * bert.embeddings
+		 */
+		loadData(network.bert.embeddings.wordEmbeddings.weight, weightMap, "bert.embeddings.word_embeddings.weight");
+		loadData(network.bert.embeddings.positionEmbeddings.weight, weightMap, "bert.embeddings.position_embeddings.weight");
+		loadData(network.bert.embeddings.tokenTypeEmbeddings.weight, weightMap, "bert.embeddings.token_type_embeddings.weight");
+		network.bert.embeddings.norm.gamma = loadData(network.bert.embeddings.norm.gamma, weightMap, 1, "bert.embeddings.LayerNorm.weight");
+		network.bert.embeddings.norm.beta = loadData(network.bert.embeddings.norm.beta, weightMap, 1, "bert.embeddings.LayerNorm.bias");
+		
+		/**
+		 * bert.encoder
+		 */
+		for(int i = 0;i<12;i++) {
+			BertLayer bl = network.bert.encoder.layers.get(i);
+			/**
+			 * attention
+			 */
+			loadData(bl.attn.attn.getqLinerLayer().weight, weightMap, "bert.encoder.layer."+i+".attention.self.query.weight");
+			loadData(bl.attn.attn.getqLinerLayer().bias, weightMap, "bert.encoder.layer."+i+".attention.self.query.bias");
+			loadData(bl.attn.attn.getkLinerLayer().weight, weightMap, "bert.encoder.layer."+i+".attention.self.key.weight");
+			loadData(bl.attn.attn.getkLinerLayer().bias, weightMap, "bert.encoder.layer."+i+".attention.self.key.bias");
+			loadData(bl.attn.attn.getvLinerLayer().weight, weightMap, "bert.encoder.layer."+i+".attention.self.value.weight");
+			loadData(bl.attn.attn.getvLinerLayer().bias, weightMap, "bert.encoder.layer."+i+".attention.self.value.bias");
+			/**
+			 * attention output
+			 */
+			loadData(bl.attn.out.linear.weight, weightMap, "bert.encoder.layer."+i+".attention.output.dense.weight");
+			loadData(bl.attn.out.linear.bias, weightMap, "bert.encoder.layer."+i+".attention.output.dense.bias");
+			bl.attn.out.norm.gamma = loadData(bl.attn.out.norm.gamma, weightMap, 1, "bert.encoder.layer."+i+".attention.output.LayerNorm.weight");
+			bl.attn.out.norm.beta = loadData(bl.attn.out.norm.beta, weightMap, 1, "bert.encoder.layer."+i+".attention.output.LayerNorm.bias");
+			/**
+			 * intermediate
+			 */
+			loadData(bl.inter.linear.weight, weightMap, "bert.encoder.layer."+i+".intermediate.dense.weight");
+			loadData(bl.inter.linear.bias, weightMap, "bert.encoder.layer."+i+".intermediate.dense.bias");
+			/**
+			 * output
+			 */
+			loadData(bl.out.linear.weight, weightMap, "bert.encoder.layer."+i+".output.dense.weight");
+			loadData(bl.out.linear.bias, weightMap, "bert.encoder.layer."+i+".output.dense.bias");
+			bl.out.norm.gamma = loadData(bl.out.norm.gamma, weightMap, 1, "bert.encoder.layer."+i+".output.LayerNorm.weight");
+			bl.out.norm.beta = loadData(bl.out.norm.beta, weightMap, 1, "bert.encoder.layer."+i+".output.LayerNorm.bias");
+		}
+		
 		
 	}
 	

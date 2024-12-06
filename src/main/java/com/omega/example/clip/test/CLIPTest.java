@@ -1,16 +1,23 @@
 package com.omega.example.clip.test;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
+import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
+import com.omega.engine.nn.network.ClipText;
 import com.omega.engine.nn.network.ClipVision;
+import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.example.clip.utils.ClipModelUtils;
+import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 import com.omega.example.transformer.utils.LagJsonReader;
 import com.omega.example.yolo.data.ImageLoader;
+
+import jcuda.runtime.JCuda;
 
 public class CLIPTest {
 	
@@ -126,7 +133,76 @@ public class CLIPTest {
         return input;
         
 	}
+	
+	
+	public static void clip_text_test() {
+		
+		int time = 512;
+		int maxPositionEmbeddingsSize = 512;
+		int vocabSize = 21128;
+		int hiddenSize = 768;
+		int typeVocabSize = 2;
+		int headNum = 12;
+		int numHiddenLayers = 12;
+		int intermediateSize = 3072;
+		int embedDim = 512;
+		
+		ClipText network = new ClipText(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, hiddenSize, embedDim, maxPositionEmbeddingsSize, typeVocabSize, intermediateSize, numHiddenLayers);
+		network.time = time;
+		network.RUN_MODEL=RunModel.TEST;
+		
+		String clipWeight = "H:\\model\\clip_cn_vit-b-16.json";
+		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
+		
+		String vocab_file = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
+		boolean do_lower_case = true;
+		boolean tokenize_chinese_chars = true;
+		
+		BertTokenizer tokenizer = new BertTokenizer(vocab_file, do_lower_case, tokenize_chinese_chars);
+		
+		String text = "一个女孩站在山顶上，手上拿着一个苹果跳舞。";
+		
+		int[] ids = tokenizer.encode(text);
+		
+		System.out.println(JsonUtils.toJson(ids));
+		
+		int B = 1;
+		int C = time;
+		int H = 1;
+		int W = 1;
+		
+		Tensor input = new Tensor(B * C, 1, H, W, format(ids), true);
+		network.number = B * C;
+		
+		Tensor mask = new Tensor(B, 1, 1, C, MatrixUtils.val(B * C, -10000.0f), true);
+		
+		makeMask(mask, ids.length + 2);
+		
+		input.showDM();
+		mask.showDM();
+		
+		Tensor output = network.forward(input, mask);
+		output.showShape();
+		output.showDM();
 
+	}
+	
+	public static void makeMask(Tensor mask,int idsLen) {
+		for(int i = 0;i<idsLen;i++) {
+			 mask.data[i] = 0;
+		}
+		mask.hostToDevice();
+	}
+	
+	public static float[] format(int[] ids) {
+		float[] val = new float[512];
+		val[0] = 101;
+		val[ids.length+1] = 102;
+		for(int i = 0;i<ids.length;i++) {
+			val[i + 1] = ids[i];
+		}
+		return val;
+	}
 	
 	public static void main(String[] args) {
 		
@@ -134,11 +210,13 @@ public class CLIPTest {
 
 			CUDAModules.initContext();
 			
-			clip_test();
+//			clip_test();
 			
 //			replace_test();
 			
 //			imageProcessor();
+			
+			clip_text_test();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

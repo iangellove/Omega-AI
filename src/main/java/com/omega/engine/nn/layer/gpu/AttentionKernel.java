@@ -1,15 +1,24 @@
 package com.omega.engine.nn.layer.gpu;
 
 import static jcuda.driver.JCudaDriver.cuLaunchKernel;
+import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
+import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAModules;
+import com.omega.engine.gpu.GPUOP;
+import com.omega.engine.gpu.cudnn.PoolingCudnnKernel;
+import com.omega.engine.gpu.cudnn.SoftmaxCudnnKernel;
+import com.omega.engine.nn.network.Transformer;
+import com.omega.engine.pooling.PoolingType;
 
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
+import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 
 public class AttentionKernel extends BaseKernel{
@@ -40,6 +49,8 @@ public class AttentionKernel extends BaseKernel{
 
 	private CUfunction scale_function;
 	
+	private CUfunction add_mask_function;
+	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
 	
 	private int BLOCK = 512;
@@ -57,6 +68,8 @@ public class AttentionKernel extends BaseKernel{
 	private Pointer softmaxBackwardParameters;
 	
 	private Pointer scaleParameters;
+	
+	private Pointer addMaskParameters;
 	
 	private CUfunction softmax_forward_2_function;
 	
@@ -154,6 +167,10 @@ public class AttentionKernel extends BaseKernel{
 				scale_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "scale_kernel");
 			}
 			
+			if(add_mask_function == null) {
+				add_mask_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "add_mask");
+			}
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -185,6 +202,38 @@ public class AttentionKernel extends BaseKernel{
 		            BLOCK, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            scaleParameters, null // Kernel- and extra parameters
+		        ));
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void addMask(Tensor input,Tensor mask,Tensor output) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * int N, int C,int H,int W, float *input, float *mask,float *output
+	         */ 
+			addMaskParameters = Pointer.to(
+					Pointer.to(new int[]{input.dataLength}),
+		            Pointer.to(new int[]{input.channel}),
+		            Pointer.to(new int[]{input.height}),
+		            Pointer.to(new int[]{input.width}),
+	        		Pointer.to(input.getGpuData()),
+	        		Pointer.to(mask.getGpuData()),
+	        		Pointer.to(output.getGpuData())
+	            );
+
+		    checkCUDA(cuLaunchKernel(add_mask_function,
+		    		this.CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,     
+		            0, null,               // Shared memory size and stream
+		            addMaskParameters, null // Kernel- and extra parameters
 		        ));
 
 		} catch (Exception e) {
@@ -478,6 +527,51 @@ public class AttentionKernel extends BaseKernel{
 	        	    Pointer.to(input.getGpuData()),
 	                Pointer.to(new int[]{B * NH * T}),
 	                Pointer.to(new int[]{T})
+	            );
+	        
+//			int softmax_block_size = 256;
+//		    int grid_size = get_number_of_blocks(B * NH * T * 32, softmax_block_size);
+			int softmax_block_size = 256;
+		    int grid_size = B * NH * T;
+//		    int grid_size = (int) Math.ceil(B * NH * T * 32 / softmax_block_size);
+		    int shared_mem_size = 2 * softmax_block_size / 32 * Sizeof.FLOAT;
+			
+		    checkCUDA(cuLaunchKernel(softmax_test_forward_function,
+		    		grid_size,  1, 1,      // Grid dimension
+		    		softmax_block_size, 1, 1,      // Block dimension
+		    		shared_mem_size, null,               // Shared memory size and stream
+		            softmaxForwardParameters, null // Kernel- and extra parameters
+		        ));
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	/**
+	 * N = B * NH
+	 * @param input
+	 * @param output
+	 * @param scale
+	 * @param B
+	 * @param T
+	 */
+	public void softmax_test_forward(Tensor input,Tensor output,int B,int NH,int T,int T2) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float* out,float scale, const float* inp, int N, int C
+	         */ 
+			softmaxForwardParameters = Pointer.to(
+	        		Pointer.to(output.getGpuData()),
+//	        	    Pointer.to(new float[]{scale}),
+	        	    Pointer.to(input.getGpuData()),
+	                Pointer.to(new int[]{B * NH * T}),
+	                Pointer.to(new int[]{T2})
 	            );
 	        
 //			int softmax_block_size = 256;
@@ -848,10 +942,6 @@ public class AttentionKernel extends BaseKernel{
 		
 	}
 	
-	public int CAFFE_GET_BLOCKS(int N) {
-	    return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
-	}
-	
 	public int get_number_of_blocks(int array_size, int block_size)
 	{
 		return array_size / block_size + ((array_size % block_size > 0) ? 1 : 0);
@@ -865,35 +955,168 @@ public class AttentionKernel extends BaseKernel{
 		}
 	}
 	
+	public int CAFFE_GET_BLOCKS(int N) {
+	    return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
+	}
+
 	public static void main(String args[]) {
 		
-		int N = 1;
-		int NH = 12;
-		int T = 32;
-
-		float[] x_data = MatrixUtils.order(N * NH * T * T, 0.1f, 0.1f);
+//		CUDAModules.initContext();
 		
-		Tensor x = new Tensor(N, NH, T, T, x_data, true);
+		int N = 4;
+		int NH = 8;
+		int T = 64;
+		int T2 = 77;
 		
-		Tensor output = new Tensor(N, NH, T, T, true);
+		Transformer tf = new Transformer();
+		tf.CUDNN = true;
 		
-		Tensor output2 = new Tensor(N, NH, T, T, true);
+//		float[] x_data = RandomUtils.gaussianRandom(N * NH * T * T2, 0.1f);
 		
-		Tensor output3 = new Tensor(N, NH, T, T, true);
+		float[] x_data = MatrixUtils.order(N * NH * T * T2, 0.1f, 0.1f);
 		
-		Tensor datt = new Tensor(N, NH, T, T, x_data, true);
+		Tensor x = new Tensor(N, NH, T, T2, x_data, true);
 		
-		Tensor dpreatt = new Tensor(N, NH, T, T, true);
+		Tensor x2 = new Tensor(N, NH, T, T2, x_data, true);
+		
+		Tensor output = new Tensor(N, NH, T, T2, true);
+		
+		Tensor output2 = new Tensor(N, NH, T, T2, true);
+		
+		Tensor diff = new Tensor(N, NH, T, T2, true);
+		
+//		Tensor output3 = new Tensor(N, NH, T, T, true);
+//		
+//		Tensor datt = new Tensor(N, NH, T, T, x_data, true);
+//		
+//		Tensor dpreatt = new Tensor(N, NH, T, T, true);
 		
 		AttentionKernel kernel = new AttentionKernel();
 		
+		SoftmaxCudnnKernel cudnnKernel = new SoftmaxCudnnKernel(T2, 1, 1);
+		
 //		kernel.softmax_forward(x, output2, N, NH, T, 1);
 		
-		kernel.softmax_unmask_forward(x, output, N, NH, T, 0.1f);
+		long start1 = System.nanoTime();
+		
+		kernel.softmax_test_forward(x, output, N, NH, T, T2);
+		
+		JCuda.cudaDeviceSynchronize();
+		
+		System.out.println((System.nanoTime() - start1)/1e6+"ms.");
+		
+		x2.view(N * NH * T, 1, 1, T2);
+		
+		long start2 = System.nanoTime();
+		
+		cudnnKernel.softmax(x2, output2);
+		
+		JCuda.cudaDeviceSynchronize();
+		
+		System.out.println((System.nanoTime() - start2)/1e6+"ms.");
+		
+//		kernel.softmax_unmask_forward(x, output2, N, NH, T, 1f);
 //		
 //		kernel.softmax_unmask_backward(dpreatt, datt, output, N, T, NH, 1);
 		
-//		output.showDM();
+		long start3 = System.nanoTime();
+		
+		kernel.softmax_test_forward(x, output, N, NH, T, T2);
+		
+		JCuda.cudaDeviceSynchronize();
+		
+		System.out.println((System.nanoTime() - start3)/1e6+"ms.");
+		
+		long start4 = System.nanoTime();
+		
+		cudnnKernel.softmax(x2, output2);
+		
+		JCuda.cudaDeviceSynchronize();
+		
+		System.out.println((System.nanoTime() - start4)/1e6+"ms.");
+
+		output.showDMByOffset(0, 100);
+		output.showShape();
+		output2.showDMByOffset(0, 100);
+		output2.showShape();
+		
+		long start5 = System.nanoTime();
+		
+		cudnnKernel.softmax_backward(output2, x, diff);
+		
+		JCuda.cudaDeviceSynchronize();
+		
+		System.out.println((System.nanoTime() - start5)/1e6+"ms.");
+
+		long start6 = System.nanoTime();
+		
+		cudnnKernel.softmax_backward(output2, x, x);
+
+		JCuda.cudaDeviceSynchronize();
+		
+		System.out.println((System.nanoTime() - start6)/1e6+"ms.");
+		
+		x.showDMByOffset(0, 100);
+		
+//		int batchSize = 2;
+//		int headNum = 3;
+//		int dk = 4;
+//		int time = 6;
+//		int kvTime = 7;
+//		
+//		float[] qd = MatrixUtils.order(batchSize * headNum * time * dk, 0.1f, 0.1f);
+//		
+//		float[] kd = MatrixUtils.order(batchSize * headNum * kvTime * dk, 0.1f, 0.1f);
+//		
+//		Tensor query =  new Tensor(batchSize, headNum, time, dk, qd, true);
+//		
+//		Tensor key =  new Tensor(batchSize, headNum, kvTime, dk, kd, true);
+//		
+//		Tensor value =  new Tensor(batchSize, headNum, kvTime, dk, kd, true);
+//		
+//		Tensor preatt = new Tensor(batchSize, headNum, time, kvTime, true);
+//		
+//		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, kvTime, time, dk, 1.0f, key.getGpuData(), dk, kvTime * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), kvTime, time * kvTime, batchSize * headNum);
+//		preatt.showShape();
+//		preatt.showDM();
+//		
+//		Tensor vaccum = new Tensor(batchSize, headNum, time, dk, true);
+//		
+//		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, kvTime, 1.0f, value.getGpuData(), dk, kvTime * dk, preatt.getGpuData(), kvTime, time * kvTime, 0.0f, vaccum.getGpuData(), dk, time * dk, batchSize * headNum);
+//		
+//		vaccum.showDM();
+//		
+//		Tensor vt =  new Tensor(batchSize, headNum, kvTime, dk, kd, true);
+//		
+//		Tensor dvaccum =  new Tensor(batchSize, headNum, time, dk, qd, true);
+//		
+//		Tensor dattn =  new Tensor(batchSize, headNum, time, kvTime, true);
+//		
+//		/**
+//		 * backward into dattn[b, nh, t, t2] 
+//		 * vt[b, nh, t2, dk] -> [b, nh, dk, t2]
+//		 * dvaccum[b, nh, t, dk]
+//		 */
+//		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, kvTime, time, dk, 1.0f, vt.getGpuData(), dk, kvTime * dk, dvaccum.getGpuData(), dk, time * dk, 0.0f, dattn.getGpuData(), kvTime, time * kvTime, batchSize * headNum);
+//		
+//		dattn.showDM();
+//		
+//		float[] attnd = MatrixUtils.order(batchSize * headNum * kvTime * time, 0.1f, 0.1f);
+//		
+//		Tensor attn = new Tensor(batchSize, headNum, time, kvTime, attnd, true);
+//		
+//		Tensor dvt =  new Tensor(batchSize, headNum, kvTime, dk, true);
+//		
+//		/**
+//		 * backward into dvt[b, nh, t2, dk]
+//		 * dvaccum[b, nh, t, dk]
+//		 * attn[b, nh, t, t2] -> [b, nh, t2, t]
+//		 */
+//		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_T, dk, kvTime, time, 1.0f, dvaccum.getGpuData(), dk, time * dk, attn.getGpuData(), kvTime, time * kvTime, 0.0f, dvt.getGpuData(), dk, kvTime * dk, batchSize * headNum);
+//		
+//		dvt.showDM();
+		
+//		output2.showDM();
 		
 //		PrintUtils.printImage(output2);
 //		System.err.println("======================================");
@@ -901,9 +1124,9 @@ public class AttentionKernel extends BaseKernel{
 //		System.err.println("======================================");
 //		PrintUtils.printImage(dpreatt);
 //		
-		kernel.softmax_unmask_test_forward(x, output3, N, NH, T, 0.1f);
-		output.showDM();
-		output3.showDM();
+//		kernel.softmax_unmask_test_forward(x, output3, N, NH, T, 0.1f);
+//		output.showDM();
+//		output3.showDM();
 		
 	}
 	

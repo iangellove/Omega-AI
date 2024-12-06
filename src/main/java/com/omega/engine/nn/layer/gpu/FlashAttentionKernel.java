@@ -11,11 +11,14 @@ import com.omega.engine.gpu.CUDAModules;
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
+import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 
 public class FlashAttentionKernel extends BaseKernel{
 
 	private CUfunction forward_function;
+	
+	private CUfunction forward_function2;
 	
 	private CUfunction backward_function;
 	
@@ -66,17 +69,21 @@ public class FlashAttentionKernel extends BaseKernel{
 		
 		try {
 
-			if(forward_function == null) {
-
-				forward_function = CUDAModules.getLocalFunctionByModule("FlashAttentionKernel.cu", "forward_attention_kernel");
-				
+//			if(forward_function == null) {
+//
+//				forward_function = CUDAModules.getLocalFunctionByModule("FlashAttentionKernel.cu", "forward_attention_kernel");
+//				
+//			}
+			
+			if(forward_function2 == null) {
+				forward_function2 = CUDAModules.getLocalFunctionByModule("FlashAttentionKernel.cu", "forward_kernel"); 
 			}
 			
-			if(backward_function == null) {
-
-				backward_function = CUDAModules.getLocalFunctionByModule("FlashAttentionKernel.cu", "backward_kernel");
-				
-			}
+//			if(backward_function == null) {
+//
+//				backward_function = CUDAModules.getLocalFunctionByModule("FlashAttentionKernel.cu", "backward_kernel");
+//				
+//			}
 			
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -141,6 +148,70 @@ public class FlashAttentionKernel extends BaseKernel{
 		    		grid_dim[0],  grid_dim[1], grid_dim[2],      // Grid dimension
 		    		block_dim[0], block_dim[1], block_dim[2],      // Block dimension
 		    		shared_memory_size, null,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        ));
+
+//		    d_m.showDM();
+//		    d_l.showDM();
+		    
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void forward2(Tensor Q,Tensor K,Tensor V,Tensor output) {
+		
+		try {
+			
+			initKernel(Q, headNum, time);
+			
+			int Bc = 32; 
+			int Br = 32;
+			
+			int B = Q.number;
+			int nh = Q.channel;
+		    int N = Q.height;
+		    int d = Q.width;
+			
+		    int Tc = (int) Math.ceil((float) N / Bc);
+		    int Tr = (int) Math.ceil((float) N / Br);
+		    float softmax_scale = (float) (1.0f / Math.sqrt(d));
+		    
+	        /**
+	         * 设置入参
+	         * const float* Q, const float* K, const float* V, const int N, const int d,
+               const int Tc, const int Tr, const int Bc, const int Br, const float softmax_scale,
+               float* l, float *m, float* O
+	         */ 
+			kernelParameters = Pointer.to(
+	        		Pointer.to(Q.getGpuData()),
+	        		Pointer.to(K.getGpuData()),
+	        		Pointer.to(V.getGpuData()),
+	        		Pointer.to(new int[]{N}),
+	        		Pointer.to(new int[]{d}),
+	        		Pointer.to(new int[]{Tc}),
+	        		Pointer.to(new int[]{Tr}),
+	        		Pointer.to(new int[]{Bc}),
+	        		Pointer.to(new int[]{Br}),
+	        		Pointer.to(new float[]{softmax_scale}),
+	        		Pointer.to(d_l.getGpuData()),
+	        		Pointer.to(d_m.getGpuData()),
+	        		Pointer.to(output.getGpuData())
+	            );
+	        
+			int[] grid_dim = new int[] {B, nh, 1};
+			int[] block_dim = new int[] {Bc, 1, 1};
+			
+			int sram_size = (3 * Bc * d * Sizeof.FLOAT) + (Bc * Br * Sizeof.FLOAT);
+			
+			System.out.println("max share memory size:"+CUDAModules.props.sharedMemPerBlock + ".current size:"+sram_size);
+			
+		    checkCUDA(cuLaunchKernel(forward_function2,
+		    		grid_dim[0],  grid_dim[1], grid_dim[2],      // Grid dimension
+		    		block_dim[0], block_dim[1], block_dim[2],      // Block dimension
+		    		sram_size, null,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
 		        ));
 
@@ -257,8 +328,9 @@ public class FlashAttentionKernel extends BaseKernel{
 		for(int i = 0;i<10;i++) {
 			long startTime = System.nanoTime();
 		    
-			kernel.forward(Q, K, V, output);
-
+			kernel.forward2(Q, K, V, output);
+			
+			JCuda.cudaDeviceSynchronize();
 			System.out.println((System.nanoTime() - startTime)/1e6+"ms.");
 //			output.showDM(0);
 

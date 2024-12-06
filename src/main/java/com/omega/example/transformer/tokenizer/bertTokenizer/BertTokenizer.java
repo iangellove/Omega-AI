@@ -419,11 +419,11 @@ public class BertTokenizer implements Tokenizer {
 		
 		try {
 			
-			String vocab_file = "H:\\transformer_dataset\\vocab.txt";
-			boolean do_lower_case = true;
-			boolean tokenize_chinese_chars = true;
-			
-			BertTokenizer tokenizer = new BertTokenizer(vocab_file, do_lower_case, tokenize_chinese_chars);
+//			String vocab_file = "H:\\transformer_dataset\\vocab.txt";
+//			boolean do_lower_case = true;
+//			boolean tokenize_chinese_chars = true;
+//			
+//			BertTokenizer tokenizer = new BertTokenizer(vocab_file, do_lower_case, tokenize_chinese_chars);
 			
 //			String datasetPath = "H:\\transformer_dataset\\wikipedia-cn-20230720-filtered.json";
 //			String outputPath = "H:\\transformer_dataset\\wiki_idx_smallvocab.txt";
@@ -444,15 +444,25 @@ public class BertTokenizer implements Tokenizer {
 //			
 //			String outpath = "H:\\transformer_dataset\\wbm_idx_smallvocab.txt";
 			
-			String[] paths = new String[] {
-					"H:\\transformer_dataset\\wiki_idx_chatglm_voc.txt",
-					"H:\\transformer_dataset\\medical_idx_chatglm_vocab.txt",
-					"H:\\transformer_dataset\\baike_idx_chatglm_vocab.txt"
-			};
+//			String[] paths = new String[] {
+//					"H:\\transformer_dataset\\wiki_idx_chatglm_voc.txt",
+//					"H:\\transformer_dataset\\medical_idx_chatglm_vocab.txt",
+//					"H:\\transformer_dataset\\baike_idx_chatglm_vocab.txt"
+//			};
+//			
+//			String outpath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.txt";
+//			
+//			tokenizer.mergeData(paths, outpath);
 			
-			String outpath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.txt";
+			String vocab_file = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
+			boolean do_lower_case = true;
+			boolean tokenize_chinese_chars = true;
 			
-			tokenizer.mergeData(paths, outpath);
+			BertTokenizer tokenizer = new BertTokenizer(vocab_file, do_lower_case, tokenize_chinese_chars);
+			
+			String text = "一个女孩站在山顶上，手上拿着一个苹果。";
+			
+			System.out.println(JsonUtils.toJson(tokenizer.encode(text)));
 			
 		} catch (Exception e) {
 			// TODO: handle exception

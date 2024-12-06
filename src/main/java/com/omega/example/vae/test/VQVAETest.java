@@ -544,11 +544,11 @@ public class VQVAETest {
 			
 //			tiny_vqvae2_lpips();
 			
-			tiny_vqvae_lpips();
+//			tiny_vqvae_lpips();
 			
 //			tiny_vqvae_lpips_gandisc();
 			
-//			tiny_vqvae2_lpips_gandisc();
+			tiny_vqvae2_lpips_gandisc();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

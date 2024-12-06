@@ -578,6 +578,11 @@ public class Tensor implements Serializable{
 	    System.out.println(JsonUtils.toJson(this.getByOffset(start, len)));
 	}
 	
+	public void showDMByOffset(int start,int len,String label) {
+		syncHost();
+	    System.out.println(label + JsonUtils.toJson(this.getByOffset(start, len)));
+	}
+	
 	public void showDM(int index) {
 		syncHost();
 	    System.out.println(data[index]);
