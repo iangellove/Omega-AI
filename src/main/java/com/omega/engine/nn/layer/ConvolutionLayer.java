@@ -242,13 +242,6 @@ public class ConvolutionLayer extends Layer {
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.order(kernelNum * channel * kHeight * kWidth, 0.1f, 0.01f), true);
 //		this.bias = new Tensor(1, 1, 1, kernelNum, RandomUtils.kaimingUniformBias(kernelNum, this.channel * kHeight * kWidth), true);
 		this.bias = new Tensor(1, 1, 1, kernelNum, true);
-		if(network != null && !freeze) {
-			this.diffB = this.network.createParamterGrad(1, 1, 1, kernelNum, true);
-			this.diffW = this.network.createParamterGrad(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);
-		}else if(!freeze){
-			this.diffB = new Tensor(1, 1, 1, kernelNum, true);
-			this.diffW = new Tensor(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);
-		}
 	}
 
 	@Override
@@ -295,6 +288,15 @@ public class ConvolutionLayer extends Layer {
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number){
 			this.diff = new Tensor(number, channel, height, width, true);
+			if(this.diffW == null) {
+				if(network != null && !freeze) {
+					this.diffB = this.network.createParamterGrad(1, 1, 1, kernelNum, true);
+					this.diffW = this.network.createParamterGrad(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);
+				}else if(!freeze){
+					this.diffB = new Tensor(1, 1, 1, kernelNum, true);
+					this.diffW = new Tensor(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);
+				}
+			}
 		}
 	}
 

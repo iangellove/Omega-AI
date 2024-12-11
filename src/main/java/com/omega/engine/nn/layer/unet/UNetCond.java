@@ -1,16 +1,17 @@
 package com.omega.engine.nn.layer.unet;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.ConvolutionLayer;
-import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.ParamsInit;
 import com.omega.engine.nn.layer.active.SiLULayer;
+import com.omega.engine.nn.layer.diffusion.TimeEmbeddingLayer;
 import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
@@ -25,6 +26,8 @@ public class UNetCond extends Layer{
 	private int[] downChannels;
 	
 	private int[] midChannels;
+	
+	private int timeSteps;
 	
 	private int tEmbDim;
 	
@@ -53,12 +56,14 @@ public class UNetCond extends Layer{
 	 */
 	public ConvolutionLayer conv_in;
 	
-	/**
-	 * t_proj
-	 */
-	private FullyLayer t_linear1;
-	private SiLULayer t_act;
-	private FullyLayer t_linear2;
+	
+	public TimeEmbeddingLayer t_embd;
+//	/**
+//	 * t_proj
+//	 */
+//	private FullyLayer t_linear1;
+//	private SiLULayer t_act;
+//	private FullyLayer t_linear2;
 	
 	/**
 	 * downs
@@ -87,7 +92,7 @@ public class UNetCond extends Layer{
 	private Tensor tDiff;
 	
 	public UNetCond(int channel,int oChannel,int height,int width,
-			int[] downChannels,int[] midChannels,boolean[] downSamples,boolean[] attns,
+			int[] downChannels,int[] midChannels,boolean[] downSamples,boolean[] attns,int timeSteps,
 			int tEmbDim,int numDowns,int numMids,int numUps,int groups,int headNum,int convOutChannels,int textEmbedDim,int maxContextLen,Network network) {
 		this.network = network;
 		this.channel = channel;
@@ -98,6 +103,7 @@ public class UNetCond extends Layer{
 		this.midChannels = midChannels;
 		this.downSamples = downSamples;
 		this.attns = attns;
+		this.timeSteps = timeSteps;
 		this.tEmbDim = tEmbDim;
 		this.numDowns = numDowns;
 		this.numMids = numMids;
@@ -116,9 +122,10 @@ public class UNetCond extends Layer{
 		conv_in.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 		conv_in.paramsInit = ParamsInit.silu;
 		
-		t_linear1 = new FullyLayer(tEmbDim, tEmbDim, true, network);
-		t_act = new SiLULayer(t_linear1);
-		t_linear2 = new FullyLayer(tEmbDim, tEmbDim, true, network);
+		t_embd = new TimeEmbeddingLayer(timeSteps, tEmbDim, tEmbDim, true, network);
+//		t_linear1 = new FullyLayer(tEmbDim, tEmbDim, true, network);
+//		t_act = new SiLULayer(t_linear1);
+//		t_linear2 = new FullyLayer(tEmbDim, tEmbDim, true, network);
 		
 		int iw = conv_in.oWidth;
 		int ih = conv_in.oHeight;
@@ -126,6 +133,10 @@ public class UNetCond extends Layer{
 		Stack<Layer> downLayers = new Stack<Layer>();
 		
 		downLayers.push(conv_in);
+		
+		downs = new ArrayList<UNetDownBlockLayer>();
+		mids = new ArrayList<UNetMidBlockLayer>();
+		ups = new ArrayList<UNetUpBlockLayer>();
 		
 		for(int i = 0;i<downChannels.length - 1;i++) {
 			UNetDownBlockLayer down = new UNetDownBlockLayer(downChannels[i], downChannels[i+1], ih, iw, tEmbDim, downSamples[i], headNum, numDowns, groups, textEmbedDim, maxContextLen, attns[i], true, network);
@@ -212,13 +223,14 @@ public class UNetCond extends Layer{
 		/**
 		 * t_embd
 		 */
-		t_linear1.forward(t);
-		t_act.forward(t_linear1.getOutput());
-		t_linear2.forward(t_act.getOutput());
+		t_embd.forward(t);
+//		t_linear1.forward(t);
+//		t_act.forward(t_linear1.getOutput());
+//		t_linear2.forward(t_act.getOutput());
 		
 		Tensor x = conv_in.getOutput();
 		
-		Tensor tembd = t_linear2.getOutput();
+		Tensor tembd = t_embd.getOutput();
 		
 		/**
 		 * down
@@ -297,9 +309,11 @@ public class UNetCond extends Layer{
 			d = downs.get(i).diff;
 		}
 		
-		t_linear2.back(tDiff);
-		t_act.back(t_linear2.diff);
-		t_linear1.back(t_act.diff);
+		t_embd.back(tDiff);
+		
+//		t_linear2.back(tDiff);
+//		t_act.back(t_linear2.diff);
+//		t_linear1.back(t_act.diff);
 		
 		conv_in.back(d);
 
@@ -412,8 +426,9 @@ public class UNetCond extends Layer{
 		/**
 		 * t_embd
 		 */
-		t_linear1.update();
-		t_linear2.update();
+		t_embd.update();
+//		t_linear1.update();
+//		t_linear2.update();
 		
 		/**
 		 * down
@@ -479,8 +494,9 @@ public class UNetCond extends Layer{
 		/**
 		 * t_embd
 		 */
-		t_linear1.accGrad(scale);
-		t_linear2.accGrad(scale);
+		t_embd.accGrad(scale);
+//		t_linear1.accGrad(scale);
+//		t_linear2.accGrad(scale);
 		
 		/**
 		 * down

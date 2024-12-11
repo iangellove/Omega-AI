@@ -23,11 +23,13 @@ import jcuda.runtime.JCuda;
  */
 public class DiffusionUNetCond extends Network {
 
-	private int inChannel;
+	public int inChannel;
 	
 	private int[] downChannels;
 	
 	private int[] midChannels;
+	
+	private int timeSteps;
 	
 	private int tEmbDim;
 	
@@ -49,7 +51,7 @@ public class DiffusionUNetCond extends Network {
 	
 	private int textEmbedDim;
 	
-	private int maxContextLen;
+	public int maxContextLen;
 
 	private InputLayer inputLayer;
 	
@@ -59,7 +61,7 @@ public class DiffusionUNetCond extends Network {
 	
 	public int height;
 	
-	public DiffusionUNetCond(LossType lossType,UpdaterType updater,int inChannel,int width,int height,int convOutChannels,int headNum,int[] downChannels,int[] midChannels,int numDowns,int numMids,int numUps,int tEmbDim,int textEmbedDim,int maxContextLen,boolean[] attns) {
+	public DiffusionUNetCond(LossType lossType,UpdaterType updater,int inChannel,int width,int height,int convOutChannels,int headNum,int[] downChannels,int[] midChannels,boolean[] downSamples,int numDowns,int numMids,int numUps,int timeSteps,int tEmbDim,int textEmbedDim,int maxContextLen,boolean[] attns) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.updater = updater;
 		this.inChannel = inChannel;
@@ -72,6 +74,8 @@ public class DiffusionUNetCond extends Network {
 		this.numDowns = numDowns;
 		this.numMids = numMids;
 		this.numUps = numUps;
+		this.downSamples = downSamples;
+		this.timeSteps = timeSteps;
 		this.tEmbDim = tEmbDim;
 		this.textEmbedDim = textEmbedDim;
 		this.maxContextLen = maxContextLen;
@@ -83,7 +87,7 @@ public class DiffusionUNetCond extends Network {
 		
 		this.inputLayer = new InputLayer(inChannel, height, width);
 		
-		unet = new UNetCond(inChannel, inChannel, height, width, downChannels, midChannels, downSamples, attns, tEmbDim, numDowns, numMids, numUps,
+		unet = new UNetCond(inChannel, inChannel, height, width, downChannels, midChannels, downSamples, attns, timeSteps, tEmbDim, numDowns, numMids, numUps,
 				groups, headNum, convOutChannels, textEmbedDim, maxContextLen, this);
 		
 		this.addLayer(inputLayer);

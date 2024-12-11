@@ -99,6 +99,21 @@ public class FullyLayer extends Layer{
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number){
 			this.diff = new Tensor(number, channel, height, width, true, true);
+			if(this.diffW == null) {
+				this.diffW = new Tensor(1, 1, oWidth, width, true, true);
+				if(hasBias) {
+					this.diffB = new Tensor(1, 1, 1, oWidth, true);
+				}
+			}
+		}
+	}
+	
+	public void initPatamDiff() {
+		if(this.diffW == null) {
+			this.diffW = new Tensor(1, 1, oWidth, width, true, true);
+			if(hasBias) {
+				this.diffB = new Tensor(1, 1, 1, oWidth, true);
+			}
 		}
 	}
 
@@ -140,7 +155,7 @@ public class FullyLayer extends Layer{
 //		}else {
 //			this.diffW = new Tensor(1, 1, width, oWidth, true, true);
 //		}
-		this.diffW = new Tensor(1, 1, oWidth, width, true, true);
+		
 //		this.diffW = new Tensor(1, 1, oWidth, width, true, true);
 		if(hasBias){
 			this.bias = new Tensor(1, 1, 1, oWidth, MatrixUtils.one(oWidth), true);
@@ -149,7 +164,7 @@ public class FullyLayer extends Layer{
 //			}else {
 //				this.diffB = new Tensor(1, 1, 1, oWidth, true);
 //			}
-			this.diffB = new Tensor(1, 1, 1, oWidth, true);
+			
 		}
 	}
 	
@@ -724,7 +739,7 @@ public class FullyLayer extends Layer{
 	public void back(Tensor delta,Tensor diff) {
 		// TODO Auto-generated method stub
 
-//		this.initBack();
+		initPatamDiff();
 		/**
 		 * 设置梯度
 		 */

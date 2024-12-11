@@ -11,6 +11,7 @@ import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.GPUOP;
+import com.omega.engine.gpu.cudnn.SoftmaxCudnnKernel;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
@@ -60,6 +61,8 @@ public class VQVAEAttentionLayer extends Layer{
 	private BaseKernel baseKernel;
 	
 	private AttentionKernel attentionKernel;
+	
+	private SoftmaxCudnnKernel softmaxKernel;
 	
 	private Tensor xt;
 	
@@ -131,7 +134,7 @@ public class VQVAEAttentionLayer extends Layer{
 		if(attentionKernel == null) {
 			attentionKernel = new AttentionKernel();
 		}
-
+		
 	}
 	
 	@Override
@@ -144,6 +147,10 @@ public class VQVAEAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = input.number;
 		this.batchSize = this.number;
+		
+		if(network.CUDNN && softmaxKernel == null) {
+			softmaxKernel = new SoftmaxCudnnKernel(time, 1, 1);
+		}
 		
 		if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
 			// [batch_size，time，head_num，d_k]
@@ -246,7 +253,6 @@ public class VQVAEAttentionLayer extends Layer{
 			TensorOP.add(this.input, this.output, this.output);
 		}
 		
-		
 	}
 	
 	public void scaledDotProductAttention(Tensor query,Tensor key,Tensor value) {
@@ -256,14 +262,26 @@ public class VQVAEAttentionLayer extends Layer{
 		Tensor preatt = temp;
 
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, key.getGpuData(), dk, time * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), time, time * time, batchSize * headNum);
-
-		if(network.RUN_MODEL == RunModel.TEST) {
+		
+		if(network.CUDNN) {
 			attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
-			attentionKernel.softmax_unmask_test_forward(preatt, attn, batchSize, headNum, time, d_k);
+			softmaxKernel.softmax(preatt, attn, batchSize * headNum * time);
 		}else {
-			attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, headNum, time, d_k);
+			if(network.RUN_MODEL == RunModel.TEST) {
+//				attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
+				attentionKernel.softmax_unmask_test_forward(preatt, attn, batchSize, headNum, time, d_k);
+			}else {
+				attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, headNum, time, d_k);
+			}
 		}
-
+		
+//		if(network.RUN_MODEL == RunModel.TEST) {
+////			attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
+//			attentionKernel.softmax_unmask_test_forward(preatt, attn, batchSize, headNum, time, d_k);
+//		}else {
+//			attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, headNum, time, d_k);
+//		}
+		
 		Tensor tmp = attn;
 		
 		Tensor vaccum = temp;
@@ -281,11 +299,19 @@ public class VQVAEAttentionLayer extends Layer{
 
 		// backward into dv
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_T, dk, time, time, 1.0f, dvaccum.getGpuData(), dk, time * dk, tmp.getGpuData(), time, time * time, 0.0f, dvt.getGpuData(), dk, time * dk, batchSize * headNum);
-
-		// backward into preatt
+		
 		Tensor dpreatt = temp;
+		
 		float d_k = (float) (1.0f / Math.sqrt(dk));
-		attentionKernel.softmax_unmask_backward(dpreatt, dattn, attn, batchSize, time, headNum, d_k);
+		
+		// backward into preatt
+		if(network.CUDNN) {
+			softmaxKernel.softmax_backward(attn, dattn, dattn);
+			TensorOP.mul(dattn, d_k, dattn);
+			dpreatt = dattn;
+		}else {
+			attentionKernel.softmax_unmask_backward(dpreatt, dattn, attn, batchSize, time, headNum, d_k);
+		}
 		
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_N, CUBLAS_OP_N, dk, time, time, 1.0f, kt.getGpuData(), dk, time * dk, dpreatt.getGpuData(), time, time * time, 0.0f, dqt.getGpuData(), dk, time * dk, batchSize * headNum);
 		
@@ -376,6 +402,7 @@ public class VQVAEAttentionLayer extends Layer{
 	@Override
 	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
+		input.showDMByOffset(0, 100, "123");
 		/**
 		 * 参数初始化
 		 */
@@ -506,6 +533,9 @@ public class VQVAEAttentionLayer extends Layer{
 	}
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		if(groups > 0){
+			gn.saveModel(outputStream);
+		}
 		getqLinerLayer().saveModel(outputStream);
 		getkLinerLayer().saveModel(outputStream);
 		getvLinerLayer().saveModel(outputStream);
@@ -513,6 +543,9 @@ public class VQVAEAttentionLayer extends Layer{
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		if(groups > 0){
+			gn.loadModel(inputStream);
+		}
 		getqLinerLayer().loadModel(inputStream);
 		getkLinerLayer().loadModel(inputStream);
 		getvLinerLayer().loadModel(inputStream);
@@ -554,6 +587,9 @@ public class VQVAEAttentionLayer extends Layer{
 	@Override
 	public void accGrad(float scale) {
 		// TODO Auto-generated method stub
+		if(groups > 0) {
+			gn.accGrad(scale);
+		}
 		qLinerLayer.accGrad(scale);
 		kLinerLayer.accGrad(scale);
 		vLinerLayer.accGrad(scale);

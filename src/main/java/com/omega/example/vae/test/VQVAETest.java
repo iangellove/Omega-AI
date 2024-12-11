@@ -459,12 +459,17 @@ public class VQVAETest {
 //			String clipWeight = "H:\\model\\tiny_vqvae.json";
 //			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+			String save_model_path = "H:\\model\\vqvae2_128_500.model";
+			ModelUtils.loadModel(network, save_model_path);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 2, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
 			optimizer.trainTinyVQVAE2_lpips_patchGANDisc(dataLoader, lpips, discriminator, 1500);
 
-			String save_model_path = "H:\\model\\vqvae2_500.model";
-			ModelUtils.saveModel(network, save_model_path);
+//			String save_model_path = "H:\\model\\vqvae2_128_500.model";
+//			ModelUtils.saveModel(network, save_model_path);
+//			
+//			ModelUtils.loadModel(network, save_model_path);
 			
 		} catch (Exception e) {
 			// TODO: handle exception

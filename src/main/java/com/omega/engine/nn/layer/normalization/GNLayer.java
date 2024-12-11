@@ -62,6 +62,21 @@ public class GNLayer extends NormalizationLayer {
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
+	public GNLayer(int groupNum,int channel,int height,int width,BNType bnType,Layer preLayer) {
+		this.preLayer = preLayer;
+		this.network = preLayer.network;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.oChannel = this.channel;
+		this.oHeight = this.height;
+		this.oWidth = this.width;
+		this.bnType = bnType;
+		this.groupNum = groupNum;
+		this.hasParams = false;
+		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+	}
+	
 	public GNLayer(int groupNum,Layer preLayer,boolean hasBias) {
 		this.setPreLayer(preLayer);
 		this.groupNum = groupNum;
@@ -101,7 +116,7 @@ public class GNLayer extends NormalizationLayer {
 		if(preLayer == null) {
 			preLayer = this.network.getPreLayer(this.index);
 		}
-
+//		System.err.println(bnType);
 		if(this.bnType == null) {
 			if(preLayer != null) {
 				this.channel = preLayer.oChannel;
@@ -410,6 +425,7 @@ public class GNLayer extends NormalizationLayer {
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
 		init();
+//		gamma.showShape();
 		ModelUtils.loadParams(inputStream, gamma);
 		if(hasBias) {
 			ModelUtils.loadParams(inputStream, beta);

@@ -558,6 +558,11 @@ public class Tensor implements Serializable{
 	    System.out.println(JsonUtils.toJson(data));
 	}
 	
+	public void showDM(String label) {
+		syncHost();
+	    System.out.println(label+JsonUtils.toJson(data));
+	}
+	
 	public void showDMByNumber(int number) {
 		syncHost();
 	    System.out.println(JsonUtils.toJson(this.getByNumber(number)));

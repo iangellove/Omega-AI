@@ -346,7 +346,6 @@ public class TinyVQVAEDecoder extends Layer {
 		
 		convNormOut.saveModel(outputStream);
 		convOut.saveModel(outputStream);
-		
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {

@@ -76,6 +76,7 @@ public class EmbeddingIDLayer extends Layer{
 		// TODO Auto-generated method stub
 		if(this.diff == null || this.number != this.diff.number){
 			this.diff = new Tensor(number, channel, height, width, true, true);
+			this.diffW = new Tensor(1, 1, width, oWidth, true, true);
 		}
 	}
 
@@ -104,7 +105,6 @@ public class EmbeddingIDLayer extends Layer{
 		}
 		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_uniform(this.width * this.oWidth, this.width, this.paramsInit), true);
 //		this.weight = new Tensor(1, 1, width, oWidth, MatrixUtils.order(this.width * this.oWidth, 0.001f, 0.001f), true);
-		this.diffW = new Tensor(1, 1, width, oWidth, true, true);
 	}
 	
 	@Override

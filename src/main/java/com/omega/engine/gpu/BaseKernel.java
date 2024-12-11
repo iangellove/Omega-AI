@@ -38,6 +38,8 @@ public class BaseKernel {
 	
 	private CUfunction replace_channel_backward_function;
 	
+	private CUfunction addMul_function;
+	
 	public BaseKernel() {
 		
 		copy_gpu_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "copy_kernel");
@@ -57,6 +59,8 @@ public class BaseKernel {
 		replace_channel_forward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "replace_channel_forward_kernel");
 		
 		replace_channel_backward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "replace_channel_backward_kernel");
+		
+		addMul_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "add_mul_kernel");
 		
 	}
 	
@@ -535,6 +539,40 @@ public class BaseKernel {
 			
 	        cuLaunchKernel(copy_gpu_function,
 	        		CAFFE_GET_BLOCKS(N),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void add_mul(Tensor a,Tensor b,Tensor input,Tensor noise) {
+		
+		try {
+			
+			if(addMul_function == null) {
+				addMul_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "add_mul_kernel");
+			}
+			
+			/**
+			 * float* input,float* noise,float* a,float* b,int N, int W
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(input.getGpuData()),
+	        		Pointer.to(noise.getGpuData()),
+	        		Pointer.to(a.getGpuData()),
+	                Pointer.to(b.getGpuData()),
+	                Pointer.to(new int[]{input.dataLength}),
+	                Pointer.to(new int[]{input.getOnceSize()})
+	            );
+			
+	        cuLaunchKernel(addMul_function,
+	        		CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            kernelParameter, null // Kernel- and extra parameters

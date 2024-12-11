@@ -341,7 +341,7 @@ public class TinyVQVAEEncoder extends Layer {
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
 		
 		convIn.loadModel(inputStream);
-		
+
 		for(int i = 0;i<down.size();i++){
 			Layer l = down.get(i);
 			if(l instanceof VQVAEResidual) {

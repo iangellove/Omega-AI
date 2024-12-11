@@ -46,7 +46,7 @@ public class VQVAEResidual extends Layer {
 	public VQVAEResidual(int channel,int oChannel,int height,int width,int group, Network network) {
 		this.network = network;
 		this.channel = channel;
-		this.oChannel = oChannel;
+		this.oChannel = channel;
 		this.height = height;
 		this.width = width;
 		this.group = group;
@@ -57,22 +57,23 @@ public class VQVAEResidual extends Layer {
 		
 		kernel = new BasicBlockKernel();
 		
-		initLayers();
+		initLayers(oChannel);
 		
 		this.oHeight = conv2.oHeight;
 		this.oWidth = conv2.oWidth;
+		this.oChannel = conv2.oChannel;
 	}
 	
-	public void initLayers() {
+	public void initLayers(int oChannel) {
 		
-		norm1 = new GNLayer(group, this, BNType.conv_bn);
+		norm1 = new GNLayer(group, channel, height, width, BNType.conv_bn, this);
 		a1 = new SiLULayer(norm1);
 		
 		conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, 1, true, this.network);
 		conv1.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 		conv1.paramsInit = ParamsInit.silu;
 		
-		norm2 = new GNLayer(group, conv1);
+		norm2 = new GNLayer(group, conv1, BNType.conv_bn);
 		a2 = new SiLULayer(norm2);
 		
 		conv2 = new ConvolutionLayer(conv1.oChannel, oChannel, conv1.oWidth, conv1.oHeight, 3, 3, 1, 1, false, this.network);
@@ -290,6 +291,7 @@ public class VQVAEResidual extends Layer {
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
 		
 		norm1.saveModel(outputStream);
+//		norm1.gamma.showDM("down-res-norm1");
 		conv1.saveModel(outputStream);
 		norm2.saveModel(outputStream);
 		conv2.saveModel(outputStream);
@@ -303,8 +305,10 @@ public class VQVAEResidual extends Layer {
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
 		
 		norm1.loadModel(inputStream);
+//		norm1.gamma.showDM("down-res-norm1");
 		conv1.loadModel(inputStream);
 		norm2.loadModel(inputStream);
+//		norm2.gamma.showDM("down-res-norm2");
 		conv2.loadModel(inputStream);
 		
 		if(shortcut) {

@@ -155,7 +155,7 @@ public class TimeEmbeddingLayer extends Layer{
 	}
 
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 参数初始化
@@ -165,7 +165,7 @@ public class TimeEmbeddingLayer extends Layer{
 		/**
 		 * 设置输入
 		 */
-		this.setInput(inpnut);
+		this.setInput(input);
 
 		/**
 		 * 计算输出

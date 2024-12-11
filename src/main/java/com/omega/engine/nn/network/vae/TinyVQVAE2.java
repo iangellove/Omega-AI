@@ -262,7 +262,7 @@ public class TinyVQVAE2 extends Network {
 		if(embedding.getOutput() != null) {
 			embedding.getOutput().viewOrg();
 		}
-		
+//		embedding.weight.showDM();
 		embedding.forward(idx);
 
 		Tensor emo = embedding.getOutput().view(new int[] {ze.number, ze.height, ze.width, ze.channel});
