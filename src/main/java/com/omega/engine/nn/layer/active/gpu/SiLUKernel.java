@@ -141,7 +141,7 @@ public class SiLUKernel extends BaseKernel{
 				forwardKernelParameters = Pointer.to(
 		        		Pointer.to(input.getGpuData()),
 		                Pointer.to(output.getGpuData()),
-		                Pointer.to(new int[]{output.dataLength})
+		                Pointer.to(new int[]{input.dataLength})
 		            );
 				
 				this.N = output.number;
@@ -149,7 +149,7 @@ public class SiLUKernel extends BaseKernel{
 //			}
 			
 			cuLaunchKernel(function,
-		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
+		            this.CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            forwardKernelParameters, null // Kernel- and extra parameters

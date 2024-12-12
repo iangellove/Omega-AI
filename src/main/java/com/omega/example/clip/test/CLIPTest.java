@@ -2,7 +2,6 @@ package com.omega.example.clip.test;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
-import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAMemoryManager;
@@ -16,8 +15,6 @@ import com.omega.example.clip.utils.ClipModelUtils;
 import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 import com.omega.example.transformer.utils.LagJsonReader;
 import com.omega.example.yolo.data.ImageLoader;
-
-import jcuda.runtime.JCuda;
 
 public class CLIPTest {
 	

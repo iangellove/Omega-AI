@@ -10,6 +10,7 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.gpu.cudnn.SoftmaxCudnnKernel;
 import com.omega.engine.nn.layer.FullyLayer;
@@ -152,25 +153,46 @@ public class VQVAEAttentionLayer extends Layer{
 			softmaxKernel = new SoftmaxCudnnKernel(time, 1, 1);
 		}
 		
-		if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
+		if(network.RUN_MODEL == RunModel.EVAL) {
 			// [batch_size，time，head_num，d_k]
-			this.xt = Tensor.createGPUTensor(this.xt, batchSize, time, 1, channel, true);
-			this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
-			this.kt = Tensor.createGPUTensor(this.kt, batchSize, headNum, time, dk, true);
-			this.vt = Tensor.createGPUTensor(this.vt, batchSize, headNum, time, dk, true);
+			this.xt = CUDAMemoryManager.getCache("attn-xt", batchSize, time, 1, channel);
+			this.qt = CUDAMemoryManager.getCache("attn-qt", batchSize, headNum, time, dk);
+			this.kt = CUDAMemoryManager.getCache("attn-kt", batchSize, headNum, time, dk);
+			this.vt = CUDAMemoryManager.getCache("attn-vt", batchSize, headNum, time, dk);
 			// [batch_size，n_heads，len_q，len_k]
 			if(time < dk) {
-				this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, dk, true);
+				this.temp = CUDAMemoryManager.getCache("attn-temp1", batchSize, headNum, time, dk);
 			}else {
-				this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, time, true);
+				this.temp = CUDAMemoryManager.getCache("attn-temp2", batchSize, headNum, time, time);
 			}
 			// [batch_size，n_heads，len_q，len_k]
-			this.attn = Tensor.createGPUTensor(this.attn, batchSize, headNum, time, time, true);
+			this.attn = CUDAMemoryManager.getCache("attn-attn", batchSize, headNum, time, time);
 			// [batch_size, len_q, n_heads * dim_v]
-			this.oi = Tensor.createGPUTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
-			this.output = Tensor.createGPUTensor(this.output, batchSize, channel, height, width, true);
+			this.oi = CUDAMemoryManager.getCache("attn-oi", batchSize * time, 1, 1, embedDim);
+		}else {
+			if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
+				// [batch_size，time，head_num，d_k]
+				this.xt = Tensor.createGPUTensor(this.xt, batchSize, time, 1, channel, true);
+				this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
+				this.kt = Tensor.createGPUTensor(this.kt, batchSize, headNum, time, dk, true);
+				this.vt = Tensor.createGPUTensor(this.vt, batchSize, headNum, time, dk, true);
+				// [batch_size，n_heads，len_q，len_k]
+				if(time < dk) {
+					this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, dk, true);
+				}else {
+					this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, time, true);
+				}
+				// [batch_size，n_heads，len_q，len_k]
+				this.attn = Tensor.createGPUTensor(this.attn, batchSize, headNum, time, time, true);
+				// [batch_size, len_q, n_heads * dim_v]
+				this.oi = Tensor.createGPUTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
+				this.output = Tensor.createGPUTensor(this.output, batchSize, channel, height, width, true);
+			}
 		}
-		this.output.viewOrg();
+
+		if(this.output != null){
+			this.output.viewOrg();
+		}
 		this.qt.viewOrg();
 		this.kt.viewOrg();
 		this.vt.viewOrg();
@@ -209,7 +231,15 @@ public class VQVAEAttentionLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		
+		if(network.RUN_MODEL == RunModel.EVAL) {
+			output_eval();
+		}else{
+			train();
+		}
+	}
+	
+	public void train() {
+
 		Tensor x = this.input;
 
 		if(gn != null) {
@@ -252,7 +282,61 @@ public class VQVAEAttentionLayer extends Layer{
 		if(residualConnect) {
 			TensorOP.add(this.input, this.output, this.output);
 		}
+		this.output.viewOrg();
+	}
+	
+	public void output_eval() {
+		// TODO Auto-generated method stub
 		
+		Tensor x = this.input;
+		
+		if(gn != null) {
+			gn.forward(x);
+			x = gn.getOutput();
+		}
+		
+		x = x.view(batchSize, channel, 1, height * width);
+		// B,C,HW ==> B,HW,C
+		TensorOP.permute(x, xt, new int[] {0, 3, 2, 1});
+		xt = xt.view(batchSize * time, 1, 1, channel);
+		
+		Tensor qfo = CUDAMemoryManager.getCache("VQVAEAttn_qfo_cache", batchSize * time, 1, 1, embedDim);
+		Tensor kfo = CUDAMemoryManager.getCache("VQVAEAttn_kfo_cache", batchSize * time, 1, 1, embedDim);
+		Tensor vfo = CUDAMemoryManager.getCache("VQVAEAttn_vfo_cache", batchSize * time, 1, 1, embedDim);
+		
+		this.getqLinerLayer().forward(xt, qfo);
+		this.getkLinerLayer().forward(xt, kfo);
+		this.getvLinerLayer().forward(xt, vfo);
+		
+		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
+		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, time, headNum, dk);
+		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, time, headNum, dk);
+		
+		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
+		
+		scaledDotProductAttention(qt, kt, vt);
+
+		Tensor vaccum = temp;
+		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
+		
+		this.getoLinerLayer().forward(oi, xt);
+		
+		Tensor out = this.getoLinerLayer().getOutput();
+		
+		out.view(batchSize, time, 1, channel);
+		
+		this.output = x;
+		
+		this.output.view(batchSize, channel, 1, time);
+
+		TensorOP.permute(out, this.output, new int[] {0, 3, 2, 1}); //B,HW,C ==> B,C,HW
+
+		if(residualConnect) {
+			TensorOP.add(this.input, this.output, this.output);
+		}
+		this.output.viewOrg();
 	}
 	
 	public void scaledDotProductAttention(Tensor query,Tensor key,Tensor value) {
@@ -274,14 +358,7 @@ public class VQVAEAttentionLayer extends Layer{
 				attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, headNum, time, d_k);
 			}
 		}
-		
-//		if(network.RUN_MODEL == RunModel.TEST) {
-////			attentionKernel.scale(preatt, d_k, batchSize, headNum, time);
-//			attentionKernel.softmax_unmask_test_forward(preatt, attn, batchSize, headNum, time, d_k);
-//		}else {
-//			attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, headNum, time, d_k);
-//		}
-		
+
 		Tensor tmp = attn;
 		
 		Tensor vaccum = temp;
@@ -402,7 +479,7 @@ public class VQVAEAttentionLayer extends Layer{
 	@Override
 	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
-		input.showDMByOffset(0, 100, "123");
+//		input.showDMByOffset(0, 100, "123");
 		/**
 		 * 参数初始化
 		 */

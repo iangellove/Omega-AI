@@ -7,6 +7,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
+
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
@@ -24,6 +28,38 @@ public class CUDAMemoryManager {
 	public static List<Pointer> cu_porints = new ArrayList<Pointer>();
 	
 	public static GPUWorkspace workspace = new GPUWorkspace();
+	
+	public static Tensor globalCache;
+	
+	public static Map<String,Tensor> caches = new HashMap<String, Tensor>();
+	
+	public static Tensor getCache(String key,int N, int C, int H, int W) {
+		Tensor c = null;
+		if(caches.containsKey(key)) {
+			c = caches.get(key);
+			if(c.gpuLength < N * C * H * W) {
+				c = Tensor.createGPUTensor(c, N, C, H, W, true);
+			}else {
+				c = c.viewOrg(N, C, H, W);
+			}
+		}else {
+			c = Tensor.createGPUTensor(c, N, C, H, W, true);
+			caches.put(key, c);
+		}
+		return c;
+	}
+	
+	public static Tensor getGlobalCache(int N, int C, int H, int W) {
+//		if(globalCache != null) {
+//			System.out.println(globalCache.dataLength+":"+N * C * H * W);
+//		}
+		if(globalCache == null || globalCache.dataLength < N * C * H * W) {
+			globalCache = Tensor.createGPUTensor(globalCache, N, C, H, W, true);
+		}else {
+			globalCache = globalCache.viewOrg(N, C, H, W);
+		}
+		return globalCache;
+	}
 	
 	public static CUdeviceptr getDevice(int size) {
 

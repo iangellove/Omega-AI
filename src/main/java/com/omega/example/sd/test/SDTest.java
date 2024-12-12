@@ -19,6 +19,7 @@ import com.omega.example.transformer.utils.LagJsonReader;
 import com.omega.example.transformer.utils.ModelUtils;
 
 import jcuda.driver.JCudaDriver;
+import jcuda.runtime.JCuda;
 
 /**
  * stable diffusion
@@ -29,7 +30,7 @@ public class SDTest {
 	
 	public static void test_vqvae() {
 
-		int batchSize = 1;
+		int batchSize = 3;
 		int imageSize = 256;
 		int z_dims = 64;
 		int latendDim = 4;
@@ -51,12 +52,12 @@ public class SDTest {
 		TinyVQVAE2 network = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
 		network.CUDNN = true;
 		network.learnRate = 0.001f;
-		network.RUN_MODEL = RunModel.TEST;
+		network.RUN_MODEL = RunModel.EVAL;
 		
 		String vqvae_model_path = "H:\\model\\vqvae2_256_500.model";
 		ModelUtils.loadModel(network, vqvae_model_path);
 		
-		int[] indexs = new int[] {0};
+		int[] indexs = new int[] {0, 1, 2, 3};
 		
 		Tensor input = new Tensor(batchSize, 3, imageSize, imageSize, true);
 		
@@ -84,6 +85,33 @@ public class SDTest {
 		 * print image
 		 */
 		MBSGDOptimizer.showImgs("H:\\vae_dataset\\pokemon-blip\\vqvae2\\test256\\", out, "test", mean, std);
+		
+		indexs = new int[] {4, 5, 6, 7};
+		
+		dataLoader.loadData(indexs, input);
+		
+		JCudaDriver.cuCtxSynchronize();
+		
+//		Tensor out = network.forward(input);
+		for(int i = 0;i<10;i++) {
+			long start = System.nanoTime();
+			latent = network.encode(input);
+			out = network.decode(latent);
+			JCuda.cudaDeviceSynchronize();
+			System.err.println((System.nanoTime() - start)/1e6+"ms.");
+		}
+		
+		
+		out.showShape();
+//		out.showDM();
+		
+		out.syncHost();
+		out.data = MatrixOperation.clampSelf(out.data, -1, 1);
+		
+		/**
+		 * print image
+		 */
+		MBSGDOptimizer.showImgs("H:\\vae_dataset\\pokemon-blip\\vqvae2\\test256\\", out, "test1", mean, std);
 		
 	}
 	
@@ -120,7 +148,7 @@ public class SDTest {
 		TinyVQVAE2 vae = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
 		vae.CUDNN = true;
 		vae.learnRate = 0.001f;
-		vae.RUN_MODEL = RunModel.TEST;
+		vae.RUN_MODEL = RunModel.EVAL;
 		
 		String vae_path = "H:\\model\\vqvae2_256_500.model";
 		ModelUtils.loadModel(vae, vae_path);
@@ -173,9 +201,9 @@ public class SDTest {
 
 			CUDAModules.initContext();
 			
-//			sd_train_pokem();
+			sd_train_pokem();
 			
-			test_vqvae();
+//			test_vqvae();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

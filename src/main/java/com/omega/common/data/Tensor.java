@@ -39,6 +39,8 @@ public class Tensor implements Serializable{
 	
 	public int dataLength = 0;
 	
+	public int gpuLength = 0;
+	
 	public float[] data;
 	
 	private Pointer gpuData;
@@ -139,6 +141,7 @@ public class Tensor implements Serializable{
 		this.height = height;
 		this.width = width;
 		this.dataLength = number * channel * height * width;
+		this.gpuLength = dataLength;
 		if(!onlyGPU) {
 			this.data = new float[this.dataLength];
 		}
@@ -343,6 +346,19 @@ public class Tensor implements Serializable{
 		this.channel = channel;
 		this.height = height;
 		this.width = width;
+		return this;
+	}
+	
+	public Tensor viewOrg(int number,int channel,int height,int width) {
+		this.number = number;
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.dataLength = number * channel * height * width;
+		this.orgShape[0] = number;
+		this.orgShape[1] = channel;
+		this.orgShape[2] = height;
+		this.orgShape[3] = width;
 		return this;
 	}
 	

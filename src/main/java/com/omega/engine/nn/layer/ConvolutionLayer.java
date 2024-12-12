@@ -268,7 +268,6 @@ public class ConvolutionLayer extends Layer {
 		// TODO Auto-generated method stub
 		this.number = input.number;
 		if(this.output == null || this.number != this.output.number){
-//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
 			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
 		}
 		if(kernel == null){
@@ -529,6 +528,26 @@ public class ConvolutionLayer extends Layer {
 	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 
+		/**
+		 * 参数初始化
+		 */
+		this.init(input);
+		
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		
+		/**
+		 * 计算输出
+		 */
+		this.output();
+
+	}
+	
+	public void forward(Tensor input,Tensor output) {
+		// TODO Auto-generated method stub
+		this.output = output;
 		/**
 		 * 参数初始化
 		 */

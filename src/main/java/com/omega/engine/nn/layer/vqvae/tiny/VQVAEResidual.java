@@ -4,16 +4,17 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.ParamsInit;
-import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
 import com.omega.engine.nn.layer.active.SiLULayer;
 import com.omega.engine.nn.layer.gpu.BasicBlockKernel;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
@@ -29,19 +30,21 @@ public class VQVAEResidual extends Layer {
 	
 	private GNLayer norm1;
 	
-	private ActiveFunctionLayer a1;
+	private SiLULayer a1;
 	
 	private ConvolutionLayer conv1;
 	
 	private GNLayer norm2;
 	
-	private ActiveFunctionLayer a2;
+	private SiLULayer a2;
 	
 	private ConvolutionLayer conv2;
 
 	private ConvolutionLayer conv_shortcut;
 	
 	private boolean shortcut = false;
+	
+	private Tensor cache;
 	
 	public VQVAEResidual(int channel,int oChannel,int height,int width,int group, Network network) {
 		this.network = network;
@@ -91,16 +94,14 @@ public class VQVAEResidual extends Layer {
 	@Override
 	public void init() {
 		this.number = this.network.number;
-		if(this.output == null || this.output.number != this.network.number) {
-			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
+		if(network.RUN_MODEL == RunModel.EVAL) {	
+			this.cache = CUDAMemoryManager.getCache("VQVAEResidual_cache", number, oChannel, oHeight, oWidth);
 		}
 	}
 	
 	@Override
 	public void initBack() {
-//		if(this.cache_delta == null || this.output.number != cache_delta.number){
-//			this.cache_delta = Tensor.createGPUTensor(this.cache_delta, number, oChannel, oHeight, oWidth, true);
-//		}
+
 	}
 
 	@Override
@@ -113,19 +114,51 @@ public class VQVAEResidual extends Layer {
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		norm1.forward(this.input);
-		a1.forward(norm1.getOutput());
-		conv1.forward(a1.getOutput());
-		norm2.forward(conv1.getOutput());
-		a2.forward(norm2.getOutput());
+		if(network.RUN_MODEL == RunModel.EVAL) {
+			output_eval();
+		}else{
+			
+			norm1.forward(this.input);
+			a1.forward(norm1.getOutput());
+			conv1.forward(a1.getOutput());
+			
+			norm2.forward(conv1.getOutput());
+			a2.forward(norm2.getOutput());
+			conv2.forward(a2.getOutput());
+			
+			if(shortcut) {
+				conv_shortcut.forward(this.input);
+				kernel.add(conv_shortcut.getOutput(), conv2.getOutput(), conv2.getOutput());
+			}else {
+				kernel.add(input, conv2.getOutput(), conv2.getOutput());
+			}
+			
+			this.output = conv2.getOutput();
+			
+		}
+		
+	}
+	
+	public void output_eval() {
+		// TODO Auto-generated method stub
+		
+		Tensor norm1_out = CUDAMemoryManager.getCache("VQVAEResidual_norm1_cache", input.number, input.channel, input.height, input.width);
+		norm1.forward(this.input, norm1_out);
+		a1.forward(norm1.getOutput(), norm1.getOutput());
+		conv1.forward(a1.getOutput(), cache);
+		
+		norm2.forward(conv1.getOutput(), cache);
+		a2.forward(norm2.getOutput(), cache);
 		conv2.forward(a2.getOutput());
 		
 		if(shortcut) {
-			conv_shortcut.forward(this.input);
-			kernel.add(conv_shortcut.getOutput(), conv2.getOutput(), output);
+			conv_shortcut.forward(this.input, cache);
+			kernel.add(conv_shortcut.getOutput(), conv2.getOutput(), conv2.getOutput());
 		}else {
-			kernel.add(input, conv2.getOutput(), output);
+			kernel.add(input, conv2.getOutput(), conv2.getOutput());
 		}
+		
+		this.output = conv2.getOutput();
 		
 	}
 
@@ -139,11 +172,6 @@ public class VQVAEResidual extends Layer {
 	public void diff() {
 		// TODO Auto-generated method stub
 //		System.out.println(index);
-		/**
-		 * deltax = deltao * (f'(x) + 1)
-		 */
-//		baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
-
 		conv2.back(delta);
 		a2.back(conv2.diff);
 		norm2.back(a2.diff);
