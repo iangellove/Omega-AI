@@ -4008,7 +4008,7 @@ public class MBSGDOptimizer extends Optimizer {
 
 			Tensor input = new Tensor(batchSize, 3, trainingData.img_h, trainingData.img_w, true);
 			
-			Tensor label = new Tensor(batchSize, 1, 1, network.maxContextLen, true);
+			Tensor label = new Tensor(batchSize * network.maxContextLen, 1, 1, 1, true);
 			
 			Tensor mask = new Tensor(batchSize, 1, 1, network.maxContextLen, true);
 			

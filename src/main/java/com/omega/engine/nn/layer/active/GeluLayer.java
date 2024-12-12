@@ -248,6 +248,23 @@ public class GeluLayer extends ActiveFunctionLayer {
 		 */
 		this.outputOld();
 	}
+	
+	public void forwardOld(Tensor input,Tensor output) {
+		// TODO Auto-generated method stub
+		this.output = output;
+		/**
+		 * 参数初始化
+		 */
+		this.init(input);
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		/**
+		 * 计算输出
+		 */
+		this.outputOld();
+	}
 
 	@Override
 	public void back(Tensor delta) {

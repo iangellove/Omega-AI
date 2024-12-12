@@ -139,7 +139,11 @@ public class CUDAMemoryManager {
 		for(String key:pointerMap.keySet()) {
 			 GPUOP.getInstance().free(pointerMap.get(key));
 		}
-
+		
+		for(String key:caches.keySet()) {
+			 GPUOP.getInstance().free(caches.get(key).getGpuData());
+		}
+		
 	}
 	
 	public static void free(Pointer pointer) {

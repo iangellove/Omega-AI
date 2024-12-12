@@ -374,6 +374,25 @@ public class LNLayer extends NormalizationLayer {
 		 */
 		this.output();
 	}
+	
+	public void forward(Tensor input,Tensor output) {
+		// TODO Auto-generated method stub
+		this.output = output;
+		/**
+		 * 参数初始化
+		 */
+		this.init(input);
+
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+
+		/**
+		 * 计算输出
+		 */
+		this.output();
+	}
 
 	@Override
 	public void back(Tensor delta) {

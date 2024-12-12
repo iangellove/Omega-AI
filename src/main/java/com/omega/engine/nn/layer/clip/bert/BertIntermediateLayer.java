@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.active.GeluLayer;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
@@ -75,9 +77,14 @@ public class BertIntermediateLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		linear.forward(input);
-		
-		active.forwardOld(linear.getOutput());
+		if(network.RUN_MODEL == RunModel.EVAL) {
+			Tensor cache = CUDAMemoryManager.getCache("CLIIP_inter_cache", input.number, 1, 1, oWidth);
+			linear.forward(input, cache);
+			active.forwardOld(linear.getOutput(), cache);
+		}else {
+			linear.forward(input);
+			active.forwardOld(linear.getOutput());
+		}
 		
 		this.output = active.getOutput();
 

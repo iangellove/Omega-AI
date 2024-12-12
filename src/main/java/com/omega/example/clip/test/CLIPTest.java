@@ -134,7 +134,7 @@ public class CLIPTest {
 	
 	public static void clip_text_test() {
 		
-		int time = 512;
+		int time = 64;
 		int maxPositionEmbeddingsSize = 512;
 		int vocabSize = 21128;
 		int hiddenSize = 768;
@@ -163,7 +163,7 @@ public class CLIPTest {
 		
 		System.out.println(JsonUtils.toJson(ids));
 		
-		int B = 1;
+		int B = 2;
 		int C = time;
 		int H = 1;
 		int W = 1;

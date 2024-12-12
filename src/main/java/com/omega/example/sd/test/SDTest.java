@@ -115,6 +115,64 @@ public class SDTest {
 		
 	}
 	
+	public static void test_clip() {
+		
+		String tokenizerPath = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
+		
+		String labelPath = "H:\\vae_dataset\\pokemon-blip\\data.json";
+		String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
+		
+		boolean horizontalFilp = true;
+		
+		int imgSize = 256;
+		
+		int maxContextLen = 64;
+		
+		int batchSize = 4;
+
+		float[] mean = new float[] {0.5f, 0.5f,0.5f};
+		float[] std = new float[] {0.5f, 0.5f,0.5f};
+		
+		SDImageDataLoader dataLoader = new SDImageDataLoader(tokenizerPath, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
+		
+		int time = maxContextLen;
+		int maxPositionEmbeddingsSize = 512;
+		int vocabSize = 21128;
+		int hiddenSize = 768;
+		int typeVocabSize = 2;
+		int headNum = 12;
+		int numHiddenLayers = 12;
+		int intermediateSize = 3072;
+		int textEmbedDim = 512;
+		
+		ClipText clip = new ClipText(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, hiddenSize, textEmbedDim, maxPositionEmbeddingsSize, typeVocabSize, intermediateSize, numHiddenLayers);
+		clip.CUDNN = true;
+		clip.time = time;
+		clip.RUN_MODEL=RunModel.EVAL;
+		
+		String clipWeight = "H:\\model\\clip_cn_vit-b-16.json";
+		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
+		
+		int[] indexs = new int[] {0, 1, 2, 3};
+		
+		Tensor label = new Tensor(batchSize * maxContextLen, 1, 1, 1, true);
+		
+		Tensor mask = new Tensor(batchSize , 1, 1, maxContextLen, true);
+		
+		dataLoader.loadLabel(indexs, label, mask);
+		Tensor output = null;
+		for(int i = 0;i < 100;i++) {
+			long start = System.nanoTime();
+			output = clip.forward(label, mask);
+			JCuda.cudaDeviceSynchronize();
+			System.err.println((System.nanoTime() - start)/1e6+"ms.");
+			output.showShape();
+//			output.showDM();
+		}
+		output.showDM();
+		
+	}
+	
 	public static void sd_train_pokem() throws Exception {
 		
 		String tokenizerPath = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
@@ -201,9 +259,11 @@ public class SDTest {
 
 			CUDAModules.initContext();
 			
-			sd_train_pokem();
+//			sd_train_pokem();
 			
 //			test_vqvae();
+			
+			test_clip();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

@@ -11,12 +11,13 @@ import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.GPUOP;
+import com.omega.engine.gpu.cudnn.SoftmaxCudnnKernel;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
-import com.omega.engine.nn.layer.gpu.RoPEKernel;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Transformer;
@@ -46,6 +47,8 @@ public class BertSelfAttentionLayer extends Layer{
 	private BaseKernel baseKernel;
 	
 	private AttentionKernel attentionKernel;
+	
+	private SoftmaxCudnnKernel softmaxKernel;
 	
 	private Tensor qt;
 	private Tensor kt;
@@ -128,26 +131,54 @@ public class BertSelfAttentionLayer extends Layer{
 	public void init(Tensor input) {
 		// TODO Auto-generated method stub
 		
+		if(network.CUDNN && softmaxKernel == null) {
+			softmaxKernel = new SoftmaxCudnnKernel(time, 1, 1);
+		}
+		
 		this.number = input.number;
 		this.time = this.network.time;
 
 		this.batchSize = this.number / this.time;
+		
+		if(network.RUN_MODEL == RunModel.EVAL) {
 
-		if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
-			// [batch_size，time，head_num，d_k]
-			this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
-			this.kt = Tensor.createGPUTensor(this.kt, batchSize, headNum, time, dk, true);
-			this.vt = Tensor.createGPUTensor(this.vt, batchSize, headNum, time, dk, true);
-			// [batch_size，n_heads，len_q，len_k]
-			if(time < dk) {
-				this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, dk, true);
-			}else {
-				this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, time, true);
+			if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
+				// [batch_size，time，head_num，d_k]
+				this.qt = CUDAMemoryManager.getCache("clip-attn-qt", batchSize, headNum, time, dk);
+				this.kt = CUDAMemoryManager.getCache("clip-attn-kt", batchSize, headNum, time, dk);
+				this.vt = CUDAMemoryManager.getCache("clip-attn-vt", batchSize, headNum, time, dk);
+				
+				// [batch_size，n_heads，len_q，len_k]
+				if(time < dk) {
+					this.temp = CUDAMemoryManager.getCache("clip-attn-temp1", batchSize, headNum, time, dk);
+				}else {
+					this.temp = CUDAMemoryManager.getCache("clip-attn-temp2", batchSize, headNum, time, time);
+				}
+				// [batch_size，n_heads，len_q，len_k]
+				this.attn = CUDAMemoryManager.getCache("clip-attn-attn", batchSize, headNum, time, time);
+				// [batch_size, len_q, n_heads * dim_v]
+				this.oi = CUDAMemoryManager.getCache("clip-attn-oi", batchSize * time, 1, 1, embedDim);
 			}
-			// [batch_size，n_heads，len_q，len_k]
-			this.attn = Tensor.createGPUTensor(this.attn, batchSize, headNum, time, time, true);
-			// [batch_size, len_q, n_heads * dim_v]
-			this.oi = Tensor.createGPUTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
+			
+		}else {
+
+			if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
+				// [batch_size，time，head_num，d_k]
+				this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
+				this.kt = Tensor.createGPUTensor(this.kt, batchSize, headNum, time, dk, true);
+				this.vt = Tensor.createGPUTensor(this.vt, batchSize, headNum, time, dk, true);
+				// [batch_size，n_heads，len_q，len_k]
+				if(time < dk) {
+					this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, dk, true);
+				}else {
+					this.temp = Tensor.createGPUTensor(this.temp, batchSize, headNum, time, time, true);
+				}
+				// [batch_size，n_heads，len_q，len_k]
+				this.attn = Tensor.createGPUTensor(this.attn, batchSize, headNum, time, time, true);
+				// [batch_size, len_q, n_heads * dim_v]
+				this.oi = Tensor.createGPUTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
+			}
+			
 		}
 		
 		this.qt.viewOrg();
@@ -175,7 +206,7 @@ public class BertSelfAttentionLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-
+		
 		this.getqLinerLayer().forward(this.input);
 		this.getkLinerLayer().forward(this.input);
 		this.getvLinerLayer().forward(this.input);
@@ -200,10 +231,46 @@ public class BertSelfAttentionLayer extends Layer{
 	
 	public void output(Tensor mask) {
 		// TODO Auto-generated method stub
+		if(network.RUN_MODEL == RunModel.EVAL) {
+			eval(mask);
+		}else {
+			train(mask);
+		}
+	}
+	
+	public void train(Tensor mask) {
 
 		this.getqLinerLayer().forward(this.input);
 		this.getkLinerLayer().forward(this.input);
 		this.getvLinerLayer().forward(this.input);
+		
+		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
+		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, time, headNum, dk);
+		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, time, headNum, dk);
+
+		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
+		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
+
+		scaledDotProductAttention(qt, kt, vt, mask);
+		
+		Tensor vaccum = temp;
+		
+		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
+
+		this.output = oi;
+
+	}
+	
+	public void eval(Tensor mask) {
+		
+		Tensor qfo = CUDAMemoryManager.getCache("VQVAEAttn_qfo_cache", batchSize * time, 1, 1, embedDim);
+		Tensor kfo = CUDAMemoryManager.getCache("VQVAEAttn_kfo_cache", batchSize * time, 1, 1, embedDim);
+		Tensor vfo = CUDAMemoryManager.getCache("VQVAEAttn_vfo_cache", batchSize * time, 1, 1, embedDim);
+
+		this.getqLinerLayer().forward(this.input, qfo);
+		this.getkLinerLayer().forward(this.input, kfo);
+		this.getvLinerLayer().forward(this.input, vfo);
 		
 		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
 		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, time, headNum, dk);
@@ -235,12 +302,18 @@ public class BertSelfAttentionLayer extends Layer{
 		
 		attentionKernel.addMask(preatt, mask, preatt);
 		
-		if(network.RUN_MODEL == RunModel.TEST) {
-			attentionKernel.softmax_unmask_test_forward(preatt, attn, batchSize, headNum, time, 1);
-//			attentionKernel.softmax_test_forward(preatt, attn, batchSize, headNum, time, d_k);
+		if(network.CUDNN) {
+			
+			softmaxKernel.softmax(preatt, attn, batchSize * headNum * time);
+			
 		}else {
-			attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, headNum, time, 1);
-//			attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time, d_k);
+
+			if(network.RUN_MODEL == RunModel.TEST) {
+				attentionKernel.softmax_unmask_test_forward(preatt, attn, batchSize, headNum, time, 1);
+			}else {
+				attentionKernel.softmax_unmask_forward(preatt, attn, batchSize, headNum, time, 1);
+			}
+			
 		}
 		
 		Tensor tmp = attn;

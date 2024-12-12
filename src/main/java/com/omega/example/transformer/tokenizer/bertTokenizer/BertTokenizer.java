@@ -154,8 +154,8 @@ public class BertTokenizer implements Tokenizer {
 	private void init(String vocab_file) {
 		try {
 			this.token_id_map = load_vocab_from_path(vocab_file);
-			this.eos = this.token_id_map.get(cls_token);
-			this.sos = this.token_id_map.get(sep_token);
+			this.eos = this.token_id_map.get(sep_token);
+			this.sos = this.token_id_map.get(cls_token);
 			this.pad = this.token_id_map.get(pad_token);
 			this.unk = this.token_id_map.get(unk_token);
 		} catch (IOException e) {

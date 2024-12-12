@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
@@ -213,6 +214,21 @@ public class SDImageDataLoader extends BaseDataLoader{
 
 	}
 	
+	public void loadLabel(int[] indexs, Tensor label,Tensor mask) {
+		// TODO Auto-generated method stub
+
+		loadLabels(indexs, label, mask);
+		
+		/**
+		 * copy data to gpu.
+		 */
+
+		label.hostToDevice();
+		
+		mask.hostToDevice();
+
+	}
+	
 	public void addNoise(Tensor a,Tensor b,Tensor input, Tensor noise) {
 
 		if(kernel == null) {
@@ -242,10 +258,15 @@ public class SDImageDataLoader extends BaseDataLoader{
 		for(int i = 0;i<indexs.length;i++) {
 			int idx = indexs[i];
 			String text = datas.get(idx).get("zh").toString();
+//			System.out.println(text);
 			int[] ids = tokenizer.encode(text);
+			int[] ids_n = new int[ids.length + 2];
+			System.arraycopy(ids, 0, ids_n, 1, ids.length);
+			ids_n[0] = tokenizer.sos;
+			ids_n[ids_n.length - 1] = tokenizer.eos;
 			for(int j = 0;j<maxContextLen;j++) {
-				if(j<ids.length) {
-					label.data[i * maxContextLen + j] = ids[j];
+				if(j<ids_n.length) {
+					label.data[i * maxContextLen + j] = ids_n[j];
 					mask.data[i * maxContextLen + j] = 0;
 				}else {
 					label.data[i * maxContextLen + j] = 0;
@@ -253,6 +274,7 @@ public class SDImageDataLoader extends BaseDataLoader{
 				}
 			}
 		}
+//		System.out.println(JsonUtils.toJson(label.data));
 	}
 	
 	public void loadData(int[] indexs,float[] a,float[] b, Tensor input, Tensor noise) {
