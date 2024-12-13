@@ -39,21 +39,21 @@ public class UNetDownBlockLayer extends Layer{
 	
 	private int groups = 32;
 	
-	private List<UNetResnetBlockLayer> resnetFirst;
+	public List<UNetResnetBlockLayer> resnetFirst;
 	
-	private List<UNetTEmbLayer> tEmbLayers;
+	public List<UNetTEmbLayer> tEmbLayers;
 	
-	private List<UNetResnetBlockLayer> resnetSecond;
+	public List<UNetResnetBlockLayer> resnetSecond;
 	
-	private List<UNetAttentionLayer> attns;
+	public List<UNetAttentionLayer> attns;
 	
-	private List<UNetAttentionLayer> crossAttns;
+	public List<UNetAttentionLayer> crossAttns;
 	
-	private List<FullyLayer> contextProjs;
+	public List<FullyLayer> contextProjs;
 	
-	private List<ConvolutionLayer> residualInputs;
+	public List<ConvolutionLayer> residualInputs;
 	
-	private ConvolutionLayer downSampleConv;
+	public ConvolutionLayer downSampleConv;
 	
 	private BaseKernel baseKernel;
 	

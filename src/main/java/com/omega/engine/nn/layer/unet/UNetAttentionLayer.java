@@ -56,13 +56,13 @@ public class UNetAttentionLayer extends Layer{
 	
 	private boolean residualConnect = false;
 	
-	private GNLayer gn;
+	public GNLayer gn;
 	
-	private FullyLayer qLinerLayer;
-	private FullyLayer kLinerLayer;
-	private FullyLayer vLinerLayer;
+	public FullyLayer qLinerLayer;
+	public FullyLayer kLinerLayer;
+	public FullyLayer vLinerLayer;
 
-	private FullyLayer oLinerLayer;
+	public FullyLayer oLinerLayer;
 	
 	private DropoutLayer dropoutLayer;
 	
@@ -225,16 +225,16 @@ public class UNetAttentionLayer extends Layer{
 		}
 		
 		this.setqLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
-		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, MatrixUtils.order(embedDim * embedDim, 0.1f, 0.01f), true);
+//		this.qLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, MatrixUtils.order(embedDim * embedDim, 0.1f, 0.01f), true);
 
 		this.setkLinerLayer(new FullyLayer(kDim, embedDim, bias, this.network));
-		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, kDim, MatrixUtils.order(embedDim * kDim, 0.1f, 0.01f), true);
+//		this.kLinerLayer.weight = new Tensor(1, 1, embedDim, kDim, MatrixUtils.order(embedDim * kDim, 0.1f, 0.01f), true);
 
 		this.setvLinerLayer(new FullyLayer(vDim, embedDim, bias, this.network));
-		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, vDim, MatrixUtils.order(embedDim * vDim, 0.1f, 0.01f), true);
+//		this.vLinerLayer.weight = new Tensor(1, 1, embedDim, vDim, MatrixUtils.order(embedDim * vDim, 0.1f, 0.01f), true);
 
 		this.setoLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
-		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, MatrixUtils.order(embedDim * embedDim, 0.1f, 0.01f), true);
+//		this.oLinerLayer.weight = new Tensor(1, 1, embedDim, embedDim, MatrixUtils.order(embedDim * embedDim, 0.1f, 0.01f), true);
 
 		if(this.dropout) {
 			this.dropoutLayer = new DropoutLayer(0.1f, this.network);

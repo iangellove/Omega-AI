@@ -16,7 +16,7 @@ public class UNetTEmbLayer extends Layer{
 	
 	private SiLULayer act;
 	
-	private FullyLayer linear;
+	public FullyLayer linear;
 	
 	public UNetTEmbLayer(int t_emb_dim,int out_channels, Network network) {
 		this.network = network;

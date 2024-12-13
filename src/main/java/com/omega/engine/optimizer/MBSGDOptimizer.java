@@ -4036,8 +4036,8 @@ public class MBSGDOptimizer extends Optimizer {
 
 				this.trainIndex = i + 1;
 				
-				int[][] indexs = trainingData.shuffle();
-//				int[][] indexs = trainingData.order();
+//				int[][] indexs = trainingData.shuffle();
+				int[][] indexs = trainingData.order();
 
 				this.network.RUN_MODEL = RunModel.TRAIN;
 				
@@ -4079,18 +4079,20 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					Tensor condInput = clip.forward(label, mask);
 					
+					latend.showDMByOffset(0, 100, "before latend");
+					
 					/**
 					 * latend add noise
 					 */
 					trainingData.addNoise(a, b, latend, noise);
 					
-					latend.showDMByOffset(0, 100);
+					latend.showDMByOffset(0, 100, "after latend");
 					
 					/**
 					 * forward
 					 */
 					Tensor output = network.forward(latend, t, condInput);
-					
+					output.showDM();
 					/**
 					 * loss
 					 */

@@ -20,11 +20,11 @@ public class UNetResnetBlockLayer extends Layer{
 	
 	private int groups = 32;
 	
-	private GNLayer norm;
+	public GNLayer norm;
 	
 	private SiLULayer act;
 	
-	private ConvolutionLayer conv;
+	public ConvolutionLayer conv;
 	
 	private BaseKernel baseKernel;
 	
@@ -81,8 +81,11 @@ public class UNetResnetBlockLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		norm.forward(input);
+//		norm.getOutput().showDMByOffset(0, 100, "norm");
 		act.forward(norm.getOutput());
+//		act.getOutput().showDM("act");
 		conv.forward(act.getOutput());
+//		conv.getOutput().showDMByOffset(0, 100, "conv");
 		this.output = conv.getOutput();
 	}
 

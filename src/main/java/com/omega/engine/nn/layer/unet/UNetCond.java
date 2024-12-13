@@ -2,10 +2,13 @@ package com.omega.engine.nn.layer.unet;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
@@ -13,8 +16,13 @@ import com.omega.engine.nn.layer.ParamsInit;
 import com.omega.engine.nn.layer.active.SiLULayer;
 import com.omega.engine.nn.layer.diffusion.TimeEmbeddingLayer;
 import com.omega.engine.nn.layer.normalization.GNLayer;
+import com.omega.engine.nn.network.ClipVision;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.RunModel;
+import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
+import com.omega.example.clip.utils.ClipModelUtils;
+import com.omega.example.transformer.utils.LagJsonReader;
 
 /**
  * UNet_Cond
@@ -156,7 +164,7 @@ public class UNetCond extends Layer{
 		}
 		
 		int uoc = 0;
-		for(int i = midChannels.length - 1;i>=0;i--) {
+		for(int i = downChannels.length - 2;i>=0;i--) {
 			if(i != 0) {
 				uoc = downChannels[i - 1];
 			}else {
@@ -239,7 +247,7 @@ public class UNetCond extends Layer{
 			downs.get(i).forward(x, tembd, cond_input);
 			x = downs.get(i).getOutput();
 		}
-		
+//		x.showDMByOffset(0, 100, "down");
 		/**
 		 * mid
 		 */
@@ -247,15 +255,16 @@ public class UNetCond extends Layer{
 			mids.get(i).forward(x, tembd, cond_input);
 			x = mids.get(i).getOutput();
 		}
-		
+//		x.showDMByOffset(0, 100, "mid");
 		/**
 		 * ups
 		 */
 		for(int i = 0;i<ups.size();i++) {
 			ups.get(i).forward(x, tembd, cond_input);
 			x = ups.get(i).getOutput();
+//			x.showDMByOffset(0, 100, "up"+i);
 		}
-		
+//		x.showDMByOffset(0, 100, "up");
 		/**
 		 * out
 		 */
@@ -279,12 +288,15 @@ public class UNetCond extends Layer{
 		/**
 		 * out backward
 		 */
+		delta.showShape();
 		conv_out.back(delta);
+		conv_out.diff.showShape();
 		act.back(conv_out.diff);
+		act.diff.showDM();
 		norm.back(act.diff);
 		
 		Tensor d = norm.diff;
-		
+		d.showDM("norm.diff");
 		/**
 		 * ups backward
 		 */
@@ -525,5 +537,170 @@ public class UNetCond extends Layer{
 		norm.update();
 		conv_out.accGrad(scale);
 	}
-
+	
+	public static void main(String[] args) {
+		
+		CUDAModules.initContext();
+		
+		Transformer tf = new Transformer();
+		tf.CUDNN = true;
+		tf.RUN_MODEL = RunModel.TRAIN;
+		
+		int N = 2;
+		int z_channels = 4;
+		int H = 8;
+		int W = 8;
+		
+		int timeSteps = 1000;
+		int tEmbDim = 512;
+		
+		int[] downChannels = new int[] {64, 96, 128, 192};
+		int[] midChannels = new int[] {192, 128};
+		boolean[] downSamples = new boolean[] {true, true, true};
+		boolean[] attns = new boolean[] {true, true, true};
+		int numLayers = 1;
+		
+		int textEmbedDim = 512;
+		int maxContextLen = 64;
+		
+		UNetCond unet = new UNetCond(z_channels, z_channels, H, W, downChannels, midChannels, downSamples, attns,
+				timeSteps, tEmbDim, numLayers, numLayers, numLayers, 32, 16, 128, textEmbedDim, maxContextLen, tf);
+		
+		int dataLen = N * z_channels * H * W;
+		
+		Tensor im = new Tensor(N, z_channels, H, W, MatrixUtils.order(dataLen, 0.01f, 0.1f), true);
+		
+		Tensor t = new Tensor(N, 1, 1, 1, new float[] {10, 214}, true);
+		
+		int textLen = N * maxContextLen * textEmbedDim;
+		
+		Tensor context = new Tensor(N * maxContextLen, 1, 1, textEmbedDim, MatrixUtils.order(textLen, 0.01f, 0.1f), true);
+		
+		String weight = "H:\\model\\unet_cond.json";
+		loadWeight(LagJsonReader.readJsonFileSmallWeight(weight), unet, true);
+		
+//		tf.number = N;
+//		
+//		unet.forward(im, t, context);
+//		
+//		unet.getOutput().showDM();
+		
+	}
+	
+	public static void loadWeight(Map<String, Object> weightMap, UNetCond unet, boolean showLayers) {
+		if(showLayers) {
+			for(String key:weightMap.keySet()) {
+				System.out.println(key);
+			}
+		}
+		
+		/**
+		 * conv_in
+		 */
+		ClipModelUtils.loadData(unet.conv_in.weight, weightMap, "conv_in.weight");
+		ClipModelUtils.loadData(unet.conv_in.bias, weightMap, "conv_in.bias");
+		
+		/**
+		 * t_proj
+		 */
+		ClipModelUtils.loadData(unet.t_embd.linear1.weight, weightMap, "t_proj.0.weight");
+		ClipModelUtils.loadData(unet.t_embd.linear1.bias, weightMap, "t_proj.0.bias");
+		ClipModelUtils.loadData(unet.t_embd.linear2.weight, weightMap, "t_proj.2.weight");
+		ClipModelUtils.loadData(unet.t_embd.linear2.bias, weightMap, "t_proj.2.bias");
+		
+		/**
+		 * downs
+		 */
+		for(int i = 0;i<3;i++) {
+			unet.downs.get(i).resnetFirst.get(0).norm.gamma = ClipModelUtils.loadData(unet.downs.get(i).resnetFirst.get(0).norm.gamma, weightMap, 1, "downs."+i+".resnet_conv_first.0.0.weight");
+			unet.downs.get(i).resnetFirst.get(0).norm.beta = ClipModelUtils.loadData(unet.downs.get(i).resnetFirst.get(0).norm.beta, weightMap, 1, "downs."+i+".resnet_conv_first.0.0.bias");
+			ClipModelUtils.loadData(unet.downs.get(i).resnetFirst.get(0).conv.weight, weightMap, "downs."+i+".resnet_conv_first.0.2.weight");
+			ClipModelUtils.loadData(unet.downs.get(i).resnetFirst.get(0).conv.bias, weightMap, "downs."+i+".resnet_conv_first.0.2.bias");
+			
+			ClipModelUtils.loadData(unet.downs.get(i).tEmbLayers.get(0).linear.weight, weightMap, "downs."+i+".t_emb_layers.0.1.weight");
+			ClipModelUtils.loadData(unet.downs.get(i).tEmbLayers.get(0).linear.bias, weightMap, "downs."+i+".t_emb_layers.0.1.bias");
+			
+			unet.downs.get(i).resnetSecond.get(0).norm.gamma = ClipModelUtils.loadData(unet.downs.get(i).resnetSecond.get(0).norm.gamma, weightMap, 1, "downs."+i+".resnet_conv_second.0.0.weight");
+			unet.downs.get(i).resnetSecond.get(0).norm.beta = ClipModelUtils.loadData(unet.downs.get(i).resnetSecond.get(0).norm.beta, weightMap, 1, "downs."+i+".resnet_conv_second.0.0.bias");
+			ClipModelUtils.loadData(unet.downs.get(i).resnetSecond.get(0).conv.weight, weightMap, "downs."+i+".resnet_conv_second.0.2.weight");
+			ClipModelUtils.loadData(unet.downs.get(i).resnetSecond.get(0).conv.bias, weightMap, "downs."+i+".resnet_conv_second.0.2.bias");
+			
+			unet.downs.get(i).attns.get(0).gn.gamma = ClipModelUtils.loadData(unet.downs.get(i).attns.get(0).gn.gamma, weightMap, 1, "downs."+i+".attention_norms.0.weight");
+			unet.downs.get(i).attns.get(0).gn.beta = ClipModelUtils.loadData(unet.downs.get(i).attns.get(0).gn.beta, weightMap, 1, "downs."+i+".attention_norms.0.bias");
+			
+			unet.downs.get(i).crossAttns.get(0).gn.gamma = ClipModelUtils.loadData(unet.downs.get(i).crossAttns.get(0).gn.gamma, weightMap, 1, "downs."+i+".cross_attention_norms.0.weight");
+			unet.downs.get(i).crossAttns.get(0).gn.beta = ClipModelUtils.loadData(unet.downs.get(i).crossAttns.get(0).gn.beta, weightMap, 1, "downs."+i+".cross_attention_norms.0.bias");
+		
+			ClipModelUtils.loadData(unet.downs.get(i).contextProjs.get(0).weight, weightMap, "downs."+i+".context_proj.0.weight");
+			ClipModelUtils.loadData(unet.downs.get(i).contextProjs.get(0).bias, weightMap, "downs."+i+".context_proj.0.bias");
+			
+			ClipModelUtils.loadData(unet.downs.get(i).residualInputs.get(0).weight, weightMap, "downs."+i+".residual_input_conv.0.weight");
+			ClipModelUtils.loadData(unet.downs.get(i).residualInputs.get(0).bias, weightMap, "downs."+i+".residual_input_conv.0.bias");
+			
+			ClipModelUtils.loadData(unet.downs.get(i).downSampleConv.weight, weightMap, "downs."+i+".down_sample_conv.0.weight");
+			ClipModelUtils.loadData(unet.downs.get(i).downSampleConv.bias, weightMap, "downs."+i+".down_sample_conv.0.bias");
+		}
+		
+		
+		
+//
+//		/**
+//		 * embeddings
+//		 */
+//		loadData(network.getEncoder().getEmbeddings().getClassEmbedding(), weightMap, "embeddings.class_embedding");
+//		loadData(network.getEncoder().getEmbeddings().getPatchEmbedding().weight, weightMap, "embeddings.patch_embedding.weight");
+//		loadData(network.getEncoder().getEmbeddings().getPositionEmbedding().weight, weightMap, "embeddings.position_embedding.weight");
+//		
+//		/**
+//		 * pre_layernorm
+//		 */
+//		network.getEncoder().getPreLayrnorm().gamma = loadData(network.getEncoder().getPreLayrnorm().gamma, weightMap, 1, "pre_layrnorm.weight");
+//		network.getEncoder().getPreLayrnorm().beta = loadData(network.getEncoder().getPreLayrnorm().beta, weightMap, 1, "pre_layrnorm.bias");
+//		
+//		/**
+//		 * encoders
+//		 */
+//		for(int i = 0;i<12;i++) {
+//			/**
+//			 * attn
+//			 */
+//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getqLinerLayer().weight, weightMap, "encoder.layers."+i+".self_attn.q_proj.weight");
+//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getqLinerLayer().bias, weightMap, "encoder.layers."+i+".self_attn.q_proj.bias");
+//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getkLinerLayer().weight, weightMap, "encoder.layers."+i+".self_attn.k_proj.weight");
+//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getkLinerLayer().bias, weightMap, "encoder.layers."+i+".self_attn.k_proj.bias");
+//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getvLinerLayer().weight, weightMap, "encoder.layers."+i+".self_attn.v_proj.weight");
+//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getvLinerLayer().bias, weightMap, "encoder.layers."+i+".self_attn.v_proj.bias");
+//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getoLinerLayer().weight, weightMap, "encoder.layers."+i+".self_attn.out_proj.weight");
+//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getoLinerLayer().bias, weightMap, "encoder.layers."+i+".self_attn.out_proj.bias");
+//			
+//			/**
+//			 * ln1
+//			 */
+//			network.getEncoder().getEncoders().get(i).getNorm1().gamma = loadData(network.getEncoder().getEncoders().get(i).getNorm1().gamma, weightMap, 1, "encoder.layers."+i+".layer_norm1.weight");
+//			network.getEncoder().getEncoders().get(i).getNorm1().beta = loadData(network.getEncoder().getEncoders().get(i).getNorm1().beta, weightMap, 1, "encoder.layers."+i+".layer_norm1.bias");
+//			
+//			/**
+//			 * mlp
+//			 */
+//			loadData(network.getEncoder().getEncoders().get(i).getMlp().getLinear1().weight, weightMap, "encoder.layers."+i+".mlp.fc1.weight");
+//			loadData(network.getEncoder().getEncoders().get(i).getMlp().getLinear1().bias, weightMap, "encoder.layers."+i+".mlp.fc1.bias");
+//			loadData(network.getEncoder().getEncoders().get(i).getMlp().getLinear2().weight, weightMap, "encoder.layers."+i+".mlp.fc2.weight");
+//			loadData(network.getEncoder().getEncoders().get(i).getMlp().getLinear2().bias, weightMap, "encoder.layers."+i+".mlp.fc2.bias");
+//			
+//			/**
+//			 * ln2
+//			 */
+//			network.getEncoder().getEncoders().get(i).getNorm2().gamma = loadData(network.getEncoder().getEncoders().get(i).getNorm2().gamma, weightMap, 1, "encoder.layers."+i+".layer_norm2.weight");
+//			network.getEncoder().getEncoders().get(i).getNorm2().beta = loadData(network.getEncoder().getEncoders().get(i).getNorm2().beta, weightMap, 1, "encoder.layers."+i+".layer_norm2.bias");
+////			network.getEncoder().getEncoders().get(i).getNorm2().gamma.showShape();
+//		}
+//		
+//		/**
+//		 * post_layernorm
+//		 */
+//		network.getEncoder().getPostLayernorm().gamma = loadData(network.getEncoder().getPostLayernorm().gamma, weightMap, 1, "post_layernorm.weight");
+//		network.getEncoder().getPostLayernorm().beta = loadData(network.getEncoder().getPostLayernorm().beta, weightMap, 1, "post_layernorm.bias");
+		
+	}
+	
 }

@@ -319,8 +319,8 @@ public class SDTest {
 		int convOutChannels = 128;
 		int unetHeadNum = 16;
 		
-		int[] downChannels = new int[] {128, 192, 256, 384};
-		int[] midChannels = new int[] {384, 256};
+		int[] downChannels = new int[] {64, 96, 128, 192};
+		int[] midChannels = new int[] {192, 128};
 		int numDowns = 1;
 		int numMids = 1;
 		int numUps = 1;
