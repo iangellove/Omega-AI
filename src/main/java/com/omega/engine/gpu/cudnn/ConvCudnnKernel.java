@@ -91,7 +91,7 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 			int[] tensorOuputDimA = {N, C, H, W};
 			
 //			System.out.println(JsonUtils.toJson(tensorOuputDimA));
-			
+
 			JCudnn.cudnnSetTensor4dDescriptor(xDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
 			JCudnn.cudnnSetFilterNdDescriptor(kernelDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, 4, weight);
 

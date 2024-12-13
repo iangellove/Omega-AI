@@ -18,7 +18,6 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.grad.GradClipping;
 import com.omega.engine.nn.layer.Layer;
-import com.omega.engine.nn.layer.unet.UNetCond;
 import com.omega.engine.nn.network.ClipText;
 import com.omega.engine.nn.network.DiffusionUNet;
 import com.omega.engine.nn.network.DiffusionUNetCond;
@@ -3419,7 +3418,7 @@ public class MBSGDOptimizer extends Optimizer {
 					Tensor output = network.forward(input);
 					
 					Tensor lpipsOutput = lpips.forward(output, input);
-					
+
 					/**
 					 * current time error
 					 */

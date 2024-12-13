@@ -30,7 +30,7 @@ public class SDTest {
 	
 	public static void test_vqvae() {
 
-		int batchSize = 3;
+		int batchSize = 2;
 		int imageSize = 256;
 		int z_dims = 64;
 		int latendDim = 4;
@@ -55,6 +55,93 @@ public class SDTest {
 		network.RUN_MODEL = RunModel.EVAL;
 		
 		String vqvae_model_path = "H:\\model\\vqvae2_256_500.model";
+		ModelUtils.loadModel(network, vqvae_model_path);
+		
+		int[] indexs = new int[] {0, 1, 2, 3};
+		
+		Tensor input = new Tensor(batchSize, 3, imageSize, imageSize, true);
+		
+		dataLoader.loadData(indexs, input);
+		
+		JCudaDriver.cuCtxSynchronize();
+		
+//		Tensor out = network.forward(input);
+		
+		Tensor latent = network.encode(input);
+		
+//		latent.showShape();
+		
+//		latent.showDM();
+		
+		Tensor out = network.decode(latent);
+		
+		out.showShape();
+//		out.showDM();
+		
+		out.syncHost();
+		out.data = MatrixOperation.clampSelf(out.data, -1, 1);
+		
+		/**
+		 * print image
+		 */
+		MBSGDOptimizer.showImgs("H:\\vae_dataset\\pokemon-blip\\vqvae2\\test256\\", out, "test", mean, std);
+		
+		indexs = new int[] {4, 5, 6, 7};
+		
+		dataLoader.loadData(indexs, input);
+		
+		JCudaDriver.cuCtxSynchronize();
+		
+//		Tensor out = network.forward(input);
+		for(int i = 0;i<10;i++) {
+			long start = System.nanoTime();
+			latent = network.encode(input);
+			out = network.decode(latent);
+			JCuda.cudaDeviceSynchronize();
+			System.err.println((System.nanoTime() - start)/1e6+"ms.");
+		}
+		
+		
+		out.showShape();
+//		out.showDM();
+		
+		out.syncHost();
+		out.data = MatrixOperation.clampSelf(out.data, -1, 1);
+		
+		/**
+		 * print image
+		 */
+		MBSGDOptimizer.showImgs("H:\\vae_dataset\\pokemon-blip\\vqvae2\\test256\\", out, "test1", mean, std);
+		
+	}
+	
+	public static void test_vqvae32() {
+
+		int batchSize = 2;
+		int imageSize = 256;
+		int z_dims = 32;
+		int latendDim = 4;
+		
+		int num_vq_embeddings = 512;
+		
+		int num_res_blocks = 2;
+		
+		int[] channels = new int[] {64, 128, 256};
+		boolean[] attn_resolutions = new boolean[] {false, false, false};
+		
+		float[] mean = new float[] {0.5f, 0.5f,0.5f};
+		float[] std = new float[] {0.5f, 0.5f,0.5f};
+		
+		String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
+		
+		DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
+		
+		TinyVQVAE2 network = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+		network.CUDNN = true;
+		network.learnRate = 0.001f;
+		network.RUN_MODEL = RunModel.EVAL;
+		
+		String vqvae_model_path = "H:\\model\\vqvae2_32_256_500.model";
 		ModelUtils.loadModel(network, vqvae_model_path);
 		
 		int[] indexs = new int[] {0, 1, 2, 3};
@@ -148,7 +235,7 @@ public class SDTest {
 		ClipText clip = new ClipText(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, hiddenSize, textEmbedDim, maxPositionEmbeddingsSize, typeVocabSize, intermediateSize, numHiddenLayers);
 		clip.CUDNN = true;
 		clip.time = time;
-		clip.RUN_MODEL=RunModel.EVAL;
+		clip.RUN_MODEL = RunModel.EVAL;
 		
 		String clipWeight = "H:\\model\\clip_cn_vit-b-16.json";
 		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
@@ -194,7 +281,7 @@ public class SDTest {
 		SDImageDataLoader dataLoader = new SDImageDataLoader(tokenizerPath, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
 		
 		int imageSize = 256;
-		int z_dims = 64;
+		int z_dims = 32;
 		int latendDim = 4;
 		
 		int num_vq_embeddings = 512;
@@ -208,7 +295,7 @@ public class SDTest {
 		vae.learnRate = 0.001f;
 		vae.RUN_MODEL = RunModel.EVAL;
 		
-		String vae_path = "H:\\model\\vqvae2_256_500.model";
+		String vae_path = "H:\\model\\vqvae2_32_256_500.model";
 		ModelUtils.loadModel(vae, vae_path);
 		
 		int time = maxContextLen;
@@ -222,8 +309,9 @@ public class SDTest {
 		int textEmbedDim = 512;
 		
 		ClipText clip = new ClipText(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, hiddenSize, textEmbedDim, maxPositionEmbeddingsSize, typeVocabSize, intermediateSize, numHiddenLayers);
+		clip.CUDNN = true;
 		clip.time = time;
-		clip.RUN_MODEL=RunModel.TEST;
+		clip.RUN_MODEL=RunModel.EVAL;
 		
 		String clipWeight = "H:\\model\\clip_cn_vit-b-16.json";
 		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
@@ -231,11 +319,11 @@ public class SDTest {
 		int convOutChannels = 128;
 		int unetHeadNum = 16;
 		
-		int[] downChannels = new int[] {256, 384, 512, 768};
-		int[] midChannels = new int[] {768, 512};
-		int numDowns = 2;
-		int numMids = 2;
-		int numUps = 2;
+		int[] downChannels = new int[] {128, 192, 256, 384};
+		int[] midChannels = new int[] {384, 256};
+		int numDowns = 1;
+		int numMids = 1;
+		int numUps = 1;
 		
 		boolean[] attns = new boolean[] {true, true, true};
 		boolean[] downSamples = new boolean[] {true, true, true};
@@ -259,11 +347,13 @@ public class SDTest {
 
 			CUDAModules.initContext();
 			
-//			sd_train_pokem();
+			sd_train_pokem();
 			
 //			test_vqvae();
 			
-			test_clip();
+//			test_vqvae32();
+			
+//			test_clip();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

@@ -418,7 +418,7 @@ public class VQVAETest {
 			
 			int batchSize = 4;
 			int imageSize = 128;
-			int z_dims = 64;
+			int z_dims = 32;
 			int latendDim = 4;
 			
 			int num_vq_embeddings = 512;

@@ -219,10 +219,14 @@ public class DiffusionUNetCond extends Network {
 		 */
 		JCuda.cudaMemset(CUDAMemoryManager.workspace.getPointer(), 0, CUDAMemoryManager.workspace.getSize() * Sizeof.FLOAT);
 		
-		unet.conv_in.cache_delta.clearGPU();
+		if(unet.conv_in.cache_delta != null) {
+			unet.conv_in.cache_delta.clearGPU();
+		}
 		
 		for(int i = 0;i<unet.downs.size();i++) {
-			unet.downs.get(i).cache_delta.clearGPU();
+			if(unet.downs.get(i).cache_delta != null) {
+				unet.downs.get(i).cache_delta.clearGPU();
+			}
 		}
 		
 		JCuda.cudaDeviceSynchronize();

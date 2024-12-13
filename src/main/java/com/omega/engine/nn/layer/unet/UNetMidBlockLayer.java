@@ -142,7 +142,30 @@ public class UNetMidBlockLayer extends Layer{
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
-		this.number = this.input.number;
+		this.number = this.network.number;
+		if(res_out == null || res_out[0].number != this.number) {
+			if(res_out == null) {
+				res_out = new Tensor[numLayers + 1];
+			}
+			for(int i = 0;i<numLayers + 1;i++) {
+				res_out[i] = Tensor.createGPUTensor(res_out[i], this.number, oChannel, height, width, true);
+			}
+		}
+		
+		if(tEmbDim > 0 && (t_out == null || t_out[0].number != this.number)) {
+			if(t_out == null) {
+				t_out = new Tensor[numLayers + 1];
+			}
+			for(int i = 0;i<numLayers + 1;i++) {
+				t_out[i] = Tensor.createGPUTensor(t_out[i], this.number, oChannel, height, width, true);
+			}
+		}
+		
+	}
+	
+	public void init(Tensor input) {
+		// TODO Auto-generated method stub
+		this.number = input.number;
 		if(res_out == null || res_out[0].number != this.number) {
 			if(res_out == null) {
 				res_out = new Tensor[numLayers + 1];
@@ -391,7 +414,7 @@ public class UNetMidBlockLayer extends Layer{
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		
 		/**
 		 * 设置输入

@@ -575,6 +575,7 @@ public class VQVAEAttentionLayer extends Layer{
 			int dataSize = N * channel * height * width;
 			
 			Transformer network = new Transformer();
+			network.CUDNN = true;
 			
 			VQVAEAttentionLayer attn = new VQVAEAttentionLayer(channel, headNum, height, width, groups, false, true, network);
 
