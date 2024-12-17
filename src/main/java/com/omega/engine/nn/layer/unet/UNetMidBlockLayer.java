@@ -546,16 +546,15 @@ public class UNetMidBlockLayer extends Layer{
 		
 		for(int i = 0;i<numLayers;i++) {
 			
-			resnetFirst.get(i).accGrad(scale);
+			resnetFirst.get(i+1).accGrad(scale);
 			
 			if(tEmbDim > 0) {
-				tEmbLayers.get(i).accGrad(scale);
+				tEmbLayers.get(i+1).accGrad(scale);
 			}
 			
+			resnetSecond.get(i+1).accGrad(scale);
 			
-			resnetSecond.get(i).accGrad(scale);
-			
-			residualInputs.get(i).accGrad(scale);
+			residualInputs.get(i+1).accGrad(scale);
 			
 			attns.get(i).accGrad(scale);
 			

@@ -790,64 +790,6 @@ public class UNetCond extends Layer{
 		ClipModelUtils.loadData(unet.conv_out.weight, weightMap, "conv_out.weight");
 		ClipModelUtils.loadData(unet.conv_out.bias, weightMap, "conv_out.bias");
 		
-//
-//		/**
-//		 * embeddings
-//		 */
-//		loadData(network.getEncoder().getEmbeddings().getClassEmbedding(), weightMap, "embeddings.class_embedding");
-//		loadData(network.getEncoder().getEmbeddings().getPatchEmbedding().weight, weightMap, "embeddings.patch_embedding.weight");
-//		loadData(network.getEncoder().getEmbeddings().getPositionEmbedding().weight, weightMap, "embeddings.position_embedding.weight");
-//		
-//		/**
-//		 * pre_layernorm
-//		 */
-//		network.getEncoder().getPreLayrnorm().gamma = loadData(network.getEncoder().getPreLayrnorm().gamma, weightMap, 1, "pre_layrnorm.weight");
-//		network.getEncoder().getPreLayrnorm().beta = loadData(network.getEncoder().getPreLayrnorm().beta, weightMap, 1, "pre_layrnorm.bias");
-//		
-//		/**
-//		 * encoders
-//		 */
-//		for(int i = 0;i<12;i++) {
-//			/**
-//			 * attn
-//			 */
-//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getqLinerLayer().weight, weightMap, "encoder.layers."+i+".self_attn.q_proj.weight");
-//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getqLinerLayer().bias, weightMap, "encoder.layers."+i+".self_attn.q_proj.bias");
-//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getkLinerLayer().weight, weightMap, "encoder.layers."+i+".self_attn.k_proj.weight");
-//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getkLinerLayer().bias, weightMap, "encoder.layers."+i+".self_attn.k_proj.bias");
-//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getvLinerLayer().weight, weightMap, "encoder.layers."+i+".self_attn.v_proj.weight");
-//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getvLinerLayer().bias, weightMap, "encoder.layers."+i+".self_attn.v_proj.bias");
-//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getoLinerLayer().weight, weightMap, "encoder.layers."+i+".self_attn.out_proj.weight");
-//			loadData(network.getEncoder().getEncoders().get(i).getAttn().getoLinerLayer().bias, weightMap, "encoder.layers."+i+".self_attn.out_proj.bias");
-//			
-//			/**
-//			 * ln1
-//			 */
-//			network.getEncoder().getEncoders().get(i).getNorm1().gamma = loadData(network.getEncoder().getEncoders().get(i).getNorm1().gamma, weightMap, 1, "encoder.layers."+i+".layer_norm1.weight");
-//			network.getEncoder().getEncoders().get(i).getNorm1().beta = loadData(network.getEncoder().getEncoders().get(i).getNorm1().beta, weightMap, 1, "encoder.layers."+i+".layer_norm1.bias");
-//			
-//			/**
-//			 * mlp
-//			 */
-//			loadData(network.getEncoder().getEncoders().get(i).getMlp().getLinear1().weight, weightMap, "encoder.layers."+i+".mlp.fc1.weight");
-//			loadData(network.getEncoder().getEncoders().get(i).getMlp().getLinear1().bias, weightMap, "encoder.layers."+i+".mlp.fc1.bias");
-//			loadData(network.getEncoder().getEncoders().get(i).getMlp().getLinear2().weight, weightMap, "encoder.layers."+i+".mlp.fc2.weight");
-//			loadData(network.getEncoder().getEncoders().get(i).getMlp().getLinear2().bias, weightMap, "encoder.layers."+i+".mlp.fc2.bias");
-//			
-//			/**
-//			 * ln2
-//			 */
-//			network.getEncoder().getEncoders().get(i).getNorm2().gamma = loadData(network.getEncoder().getEncoders().get(i).getNorm2().gamma, weightMap, 1, "encoder.layers."+i+".layer_norm2.weight");
-//			network.getEncoder().getEncoders().get(i).getNorm2().beta = loadData(network.getEncoder().getEncoders().get(i).getNorm2().beta, weightMap, 1, "encoder.layers."+i+".layer_norm2.bias");
-////			network.getEncoder().getEncoders().get(i).getNorm2().gamma.showShape();
-//		}
-//		
-//		/**
-//		 * post_layernorm
-//		 */
-//		network.getEncoder().getPostLayernorm().gamma = loadData(network.getEncoder().getPostLayernorm().gamma, weightMap, 1, "post_layernorm.weight");
-//		network.getEncoder().getPostLayernorm().beta = loadData(network.getEncoder().getPostLayernorm().beta, weightMap, 1, "post_layernorm.bias");
-		
 	}
 	
 }
