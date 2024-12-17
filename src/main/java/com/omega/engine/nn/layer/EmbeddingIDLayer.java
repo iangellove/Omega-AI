@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.PrintUtils;
@@ -23,6 +24,8 @@ import com.omega.engine.updater.UpdaterFactory;
 public class EmbeddingIDLayer extends Layer{
 	
 	private EmbeddingKernel kernel;
+	
+	private Tensor factor;
 	
 	public EmbeddingIDLayer(int num_embeddings,int embedding_dim) {
 		this.channel = 1;
@@ -250,6 +253,19 @@ public class EmbeddingIDLayer extends Layer{
 		this.output();
 	}
 	
+	public void getTimeEmbedding(Tensor input) {
+		/**
+		 * 参数初始化
+		 */
+		this.init(input);
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		
+		kernel.get_time_embedding(input, factor, output, oWidth / 2);
+	}
+	
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
@@ -314,14 +330,50 @@ public class EmbeddingIDLayer extends Layer{
 		return o;
 	}
 	
+	public static float[] cat(float[] a,float[] b) {
+		float[] o = new float[a.length + b.length];
+		for(int i = 0;i<a.length;i++) {
+			o[i] = a[i];
+			o[a.length + i] = b[i];
+		}
+		return o;
+	}
+	
 	public Tensor createTimeEMB(int T,int d_model) {
 		float[] emb = MatrixUtils.order(d_model / 2, 0, (float)(- 2.0f / d_model * Math.log(10000)));
 		emb = MatrixOperation.exp(emb);
 		float[] pos = MatrixUtils.order(T, 0, 1);
+		
 		float[] o = outer(pos, emb);
 		float[] cos = MatrixOperation.cos(o);
     	float[] sin = MatrixOperation.sin(o);
 		float[] wd = stack(sin, cos);
+		Tensor weight = new Tensor(1, 1, T, d_model, wd, true);
+		return weight;
+	}
+	
+	public void initFactor(int T,int d_model) {
+		float[] emb = MatrixUtils.order(d_model / 2, 0, 1.0f / (d_model / 2));
+//		System.err.println(JsonUtils.toJson(emb));
+		for(int i = 0;i<emb.length;i++) {
+			emb[i] = (float) Math.pow(10000, emb[i]);
+		}
+		factor = new Tensor(emb.length, 1, 1, 1, emb, true);
+	}
+	
+	public Tensor getTimeEMB(int T,int d_model) {
+		float[] emb = MatrixUtils.order(d_model / 2, 0, 1.0f / (d_model / 2));
+//		System.err.println(JsonUtils.toJson(emb));
+		for(int i = 0;i<emb.length;i++) {
+			emb[i] = (float) Math.pow(10000, emb[i]);
+		}
+//		System.err.println(JsonUtils.toJson(emb));
+		float[] pos = MatrixUtils.order(T, 0, 1);
+		
+		float[] o = outer(pos, emb);
+		float[] cos = MatrixOperation.cos(o);
+    	float[] sin = MatrixOperation.sin(o);
+		float[] wd = cat(sin, cos);
 		Tensor weight = new Tensor(1, 1, T, d_model, wd, true);
 		return weight;
 	}

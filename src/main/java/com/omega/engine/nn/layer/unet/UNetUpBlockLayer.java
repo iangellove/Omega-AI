@@ -43,21 +43,21 @@ public class UNetUpBlockLayer extends Layer{
 	
 	private RouteLayer cat;
 	
-	private List<UNetResnetBlockLayer> resnetFirst;
+	public List<UNetResnetBlockLayer> resnetFirst;
 	
-	private List<UNetTEmbLayer> tEmbLayers;
+	public List<UNetTEmbLayer> tEmbLayers;
 	
-	private List<UNetResnetBlockLayer> resnetSecond;
+	public List<UNetResnetBlockLayer> resnetSecond;
 	
-	private List<UNetAttentionLayer> attns;
+	public List<UNetAttentionLayer> attns;
 	
-	private List<UNetAttentionLayer> crossAttns;
+	public List<UNetAttentionLayer> crossAttns;
 	
-	private List<FullyLayer> contextProjs;
+	public List<FullyLayer> contextProjs;
 	
-	private List<ConvolutionLayer> residualInputs;
+	public List<ConvolutionLayer> residualInputs;
 	
-	private ConvolutionTransposeLayer upSampleConv;
+	public ConvolutionTransposeLayer upSampleConv;
 	
 	private BaseKernel baseKernel;
 	
@@ -66,6 +66,8 @@ public class UNetUpBlockLayer extends Layer{
 	private Tensor[] res_out;
 	
 	private Tensor kvDiff;
+	
+	private Tensor dt;
 	
 	public UNetUpBlockLayer(int channel,int oChannel,int height,int width,int tEmbDim,boolean upSample,int numHeads,int numLayers,int groups,int contextDim,int maxContextLen,boolean attn,boolean crossAttn,Layer catLayer,Network network) {
 		this.network = network;
@@ -91,11 +93,17 @@ public class UNetUpBlockLayer extends Layer{
 		
 		Layer[] catLayers = null;
 		
+		int ih = height;
+		int iw = width;
+		
 		if(upSample) {
 			upSampleConv = new ConvolutionTransposeLayer(channel/2, channel/2, width, height, 4, 4, 1, 2, 1, 0, true, network);
 			upSampleConv.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 			upSampleConv.paramsInit = ParamsInit.silu;
 
+			ih = upSampleConv.oHeight;
+			iw = upSampleConv.oWidth;
+			
 			this.oHeight = upSampleConv.oHeight;
 			this.oWidth = upSampleConv.oWidth;
 			
@@ -114,7 +122,7 @@ public class UNetUpBlockLayer extends Layer{
 			if(i == 0) {
 				ic = channel;
 			}
-			UNetResnetBlockLayer b = new UNetResnetBlockLayer(ic, oChannel, height, width, groups, network);
+			UNetResnetBlockLayer b = new UNetResnetBlockLayer(ic, oChannel, ih, iw, groups, network);
 			resnetFirst.add(b);
 		}
 		
@@ -127,14 +135,14 @@ public class UNetUpBlockLayer extends Layer{
 		}
 		
 		for(int i = 0;i<numLayers;i++) {
-			UNetResnetBlockLayer b = new UNetResnetBlockLayer(oChannel, oChannel, height, width, groups, network);
+			UNetResnetBlockLayer b = new UNetResnetBlockLayer(oChannel, oChannel, ih, iw, groups, network);
 			resnetSecond.add(b);
 		}
 		
 		if(attn) {
 			attns = new ArrayList<UNetAttentionLayer>();
 			for(int i = 0;i<numLayers;i++) {
-				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, numHeads, oChannel, height, width, groups, true, false, true, network);
+				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, numHeads, oChannel, ih, iw, groups, true, false, true, network);
 				attns.add(a);
 			}
 		}
@@ -147,7 +155,7 @@ public class UNetUpBlockLayer extends Layer{
 			}
 			crossAttns = new ArrayList<UNetAttentionLayer>();
 			for(int i = 0;i<numLayers;i++) {
-				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, oChannel, oChannel, numHeads, maxContextLen, oChannel, height, width, groups, true, false, true, network);
+				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, oChannel, oChannel, numHeads, maxContextLen, oChannel, ih, iw, groups, true, false, true, network);
 				crossAttns.add(a);
 			}
 		}
@@ -158,7 +166,7 @@ public class UNetUpBlockLayer extends Layer{
 			if(i == 0) {
 				ic = channel;
 			}
-			ConvolutionLayer c = new ConvolutionLayer(ic, oChannel, width, height, 1, 1, 0, 1, true, network);
+			ConvolutionLayer c = new ConvolutionLayer(ic, oChannel, iw, ih, 1, 1, 0, 1, true, network);
 			c.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 			c.paramsInit = ParamsInit.silu;
 			residualInputs.add(c);
@@ -179,7 +187,7 @@ public class UNetUpBlockLayer extends Layer{
 				res_out = new Tensor[numLayers];
 			}
 			for(int i = 0;i<numLayers;i++) {
-				res_out[i] = Tensor.createGPUTensor(res_out[i], this.number, oChannel, height, width, true);
+				res_out[i] = Tensor.createGPUTensor(res_out[i], this.number, oChannel, oHeight, oWidth, true);
 			}
 		}
 		
@@ -188,7 +196,7 @@ public class UNetUpBlockLayer extends Layer{
 				t_out = new Tensor[numLayers];
 			}
 			for(int i = 0;i<numLayers;i++) {
-				t_out[i] = Tensor.createGPUTensor(t_out[i], this.number, oChannel, height, width, true);
+				t_out[i] = Tensor.createGPUTensor(t_out[i], this.number, oChannel, oHeight, oWidth, true);
 			}
 		}
 		
@@ -202,7 +210,7 @@ public class UNetUpBlockLayer extends Layer{
 				res_out = new Tensor[numLayers];
 			}
 			for(int i = 0;i<numLayers;i++) {
-				res_out[i] = Tensor.createGPUTensor(res_out[i], this.number, oChannel, height, width, true);
+				res_out[i] = Tensor.createGPUTensor(res_out[i], this.number, oChannel, oHeight, oWidth, true);
 			}
 		}
 		
@@ -211,7 +219,7 @@ public class UNetUpBlockLayer extends Layer{
 				t_out = new Tensor[numLayers];
 			}
 			for(int i = 0;i<numLayers;i++) {
-				t_out[i] = Tensor.createGPUTensor(t_out[i], this.number, oChannel, height, width, true);
+				t_out[i] = Tensor.createGPUTensor(t_out[i], this.number, oChannel, oHeight, oWidth, true);
 			}
 		}
 		
@@ -222,6 +230,9 @@ public class UNetUpBlockLayer extends Layer{
 		// TODO Auto-generated method stub
 		if(crossAttn && (kvDiff == null || kvDiff.number * maxContextLen != this.number * maxContextLen)) {
 			kvDiff = Tensor.createGPUTensor(kvDiff, this.number * maxContextLen, 1, 1, oChannel, true);
+		}
+		if(dt == null || dt.number != this.number) {
+			dt = Tensor.createGPUTensor(dt, this.number, 1, 1, oChannel, true);
 		}
 	}
 
@@ -278,59 +289,42 @@ public class UNetUpBlockLayer extends Layer{
 		
 		x = cat.getOutput();
 		
+//		x.showDM("up-cat:");
+		
 //		x.showDMByOffset(0, 100, "cat:x");
 		
 		for(int i = 0;i<numLayers;i++) {
 			
 			Tensor res_i = x;
-			
+
 			resnetFirst.get(i).forward(x);
-			
+
 			tEmbLayers.get(i).forward(tembd);
 			
 			Tensor r1 = resnetFirst.get(i).getOutput();
-			
-//			r1.showDMByOffset(0, 100, "r1");
-//			
-//			tEmbLayers.get(i).getOutput().showDMByOffset(0, 100, "tEmbLayers");
-			
-//			tEmbLayers.get(i).getOutput().showShape();
-			
+
 			TensorOP.add(r1, tEmbLayers.get(i).getOutput(), t_out[i], r1.height * r1.width);
-			
-//			t_out[i].showDM("t_out[i]");
-			
+
 			resnetSecond.get(i).forward(t_out[i]);
-			
-//			resnetSecond.get(i).getOutput().showDMByOffset(0, 100, "resnetSecond");
-			
+
 			residualInputs.get(i).forward(res_i);
-			
-//			residualInputs.get(i).getOutput().showDMByOffset(0, 100, "residualInputs");
 			
 			TensorOP.add(resnetSecond.get(i).getOutput(), residualInputs.get(i).getOutput(), res_out[i]);
 			
 			x = res_out[i];
 			
-//			x.showDMByOffset(0, 100, "res_out");
-			
 			if(attn) {
 				attns.get(i).forward(x);
 				x = attns.get(i).getOutput();
 			}
-			
-//			x.showDMByOffset(0, 100, "attns");
-			
+	
 			if(crossAttn) {
 				contextProjs.get(i).forward(context);
 				Tensor cp = contextProjs.get(i).getOutput();
-//				cp.showDMByOffset(0, 100, "cp");
 				crossAttns.get(i).forward(x, cp, cp);
 				x = crossAttns.get(i).getOutput();
 			}
-			
-//			x.showDMByOffset(0, 100, "crossAttn");
-			
+
 		}
 		
 		this.output = x;
@@ -356,16 +350,20 @@ public class UNetUpBlockLayer extends Layer{
 		for(int i = numLayers - 1;i>=0;i--) {
 			
 			if(crossAttn) {
-				d.showDM();
+//				d.showDM();
 				crossAttns.get(i).back(d, kvDiff);
 				contextProjs.get(i).back(kvDiff);
 				d = crossAttns.get(i).diff;
 			}
 			
+//			d.showDM("crossAttns");
+			
 			if(attn) {
 				attns.get(i).back(d);
 				d = attns.get(i).diff;
 			}
+			
+//			d.showDM("attnsDiff");
 			
 			residualInputs.get(i).back(d);
 			
@@ -374,7 +372,8 @@ public class UNetUpBlockLayer extends Layer{
 			d = resnetSecond.get(i).diff;
 			
 			if(tEmbDim > 0) {
-				tEmbLayers.get(i).back(d);
+				TensorOP.sum(d, dt, 2);
+				tEmbLayers.get(i).back(dt);
 				TensorOP.add(tDiff, tEmbLayers.get(i).diff, tDiff);
 			}
 			

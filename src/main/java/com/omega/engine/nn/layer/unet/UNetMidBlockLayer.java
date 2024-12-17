@@ -35,19 +35,19 @@ public class UNetMidBlockLayer extends Layer{
 	
 	private int groups = 32;
 	
-	private List<UNetResnetBlockLayer> resnetFirst;
+	public List<UNetResnetBlockLayer> resnetFirst;
 	
-	private List<UNetTEmbLayer> tEmbLayers;
+	public List<UNetTEmbLayer> tEmbLayers;
 	
-	private List<UNetResnetBlockLayer> resnetSecond;
+	public List<UNetResnetBlockLayer> resnetSecond;
 	
-	private List<UNetAttentionLayer> attns;
+	public List<UNetAttentionLayer> attns;
 	
-	private List<UNetAttentionLayer> crossAttns;
+	public List<UNetAttentionLayer> crossAttns;
 	
-	private List<FullyLayer> contextProjs;
+	public List<FullyLayer> contextProjs;
 	
-	private List<ConvolutionLayer> residualInputs;
+	public List<ConvolutionLayer> residualInputs;
 
 	private BaseKernel baseKernel;
 	
@@ -56,6 +56,8 @@ public class UNetMidBlockLayer extends Layer{
 	private Tensor[] res_out;
 	
 	private Tensor kvDiff;
+	
+	private Tensor dt;
 	
 	public UNetMidBlockLayer(int channel,int oChannel,int height,int width,int tEmbDim,int numHeads,int numLayers,int groups,int contextDim,int maxContextLen,boolean crossAttn,Network network) {
 		this.network = network;
@@ -192,6 +194,9 @@ public class UNetMidBlockLayer extends Layer{
 		if(crossAttn && (kvDiff == null || kvDiff.number * maxContextLen != this.number * maxContextLen)) {
 			kvDiff = Tensor.createGPUTensor(kvDiff, this.number * maxContextLen, 1, 1, oChannel, true);
 		}
+		if(dt == null || dt.number != this.number) {
+			dt = Tensor.createGPUTensor(dt, this.number, 1, 1, oChannel, true);
+		}
 	}
 
 	@Override
@@ -241,8 +246,9 @@ public class UNetMidBlockLayer extends Layer{
 		tEmbLayers.get(0).forward(tembd);
 		
 		Tensor r1 = resnetFirst.get(0).getOutput();
-		TensorOP.add(r1, tEmbLayers.get(0).getOutput(), t_out[0], r1.height * r1.width);
 		
+		TensorOP.add(r1, tEmbLayers.get(0).getOutput(), t_out[0], r1.height * r1.width);
+
 		resnetSecond.get(0).forward(t_out[0]);
 		
 		residualInputs.get(0).forward(x);
@@ -307,7 +313,8 @@ public class UNetMidBlockLayer extends Layer{
 			d = resnetSecond.get(i+1).diff;
 			
 			if(tEmbDim > 0) {
-				tEmbLayers.get(i+1).back(d);
+				TensorOP.sum(d, dt, 2);
+				tEmbLayers.get(i+1).back(dt);
 				TensorOP.add(tDiff, tEmbLayers.get(i+1).diff, tDiff);
 			}
 			
@@ -334,7 +341,8 @@ public class UNetMidBlockLayer extends Layer{
 		d = resnetSecond.get(0).diff;
 		
 		if(tEmbDim > 0) {
-			tEmbLayers.get(0).back(d);
+			TensorOP.sum(d, dt, 2);
+			tEmbLayers.get(0).back(dt);
 			TensorOP.add(tDiff, tEmbLayers.get(0).diff, tDiff);
 		}
 		

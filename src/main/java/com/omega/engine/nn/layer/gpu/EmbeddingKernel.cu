@@ -112,3 +112,20 @@ __global__ void embedding_backward_kernel(float* input, float* indices, float* g
 	    } while (idx < numel && input[idx] == input[idx - 1]);
 	  }
 }
+
+
+extern "C"
+__global__ void get_time_embedding(float* input, float* factor, float* output, int N,int dim)
+{
+	int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+	if(id < N){
+		int B = id / dim;
+		int idx_dim = id % dim;
+		float idx = input[B];
+		float temb = idx / factor[idx_dim];
+		float sin = sinf(temb);
+		float cos = cosf(temb);
+		output[B * 2 * dim + idx_dim] = sin;
+		output[B * 2 * dim + dim + idx_dim] = cos;
+	}
+}

@@ -4079,20 +4079,27 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					Tensor condInput = clip.forward(label, mask);
 					
-					latend.showDMByOffset(0, 100, "before latend");
+//					latend.showDMByOffset(0, 100, "before latend");
 					
 					/**
 					 * latend add noise
 					 */
 					trainingData.addNoise(a, b, latend, noise);
 					
-					latend.showDMByOffset(0, 100, "after latend");
+					System.out.println("latend:"+MatrixOperation.isNaN(latend.syncHost()));
+					System.out.println("condInput:"+MatrixOperation.isNaN(condInput.syncHost()));
+//					latend.showDM("after latend");
+//					condInput.showDM("condInput");
+					t.showDM("t");
 					
 					/**
 					 * forward
 					 */
 					Tensor output = network.forward(latend, t, condInput);
-					output.showDM();
+					
+					output.showDMByOffset(0, 100, "output");
+					
+//					output.showDM();
 					/**
 					 * loss
 					 */

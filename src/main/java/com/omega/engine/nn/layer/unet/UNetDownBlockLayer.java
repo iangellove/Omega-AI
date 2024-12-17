@@ -63,6 +63,8 @@ public class UNetDownBlockLayer extends Layer{
 	
 	private Tensor kvDiff;
 	
+	private Tensor dt;
+	
 	public UNetDownBlockLayer(int channel,int oChannel,int height,int width,int tEmbDim,boolean downSample,int numHeads,int numLayers,int groups,int contextDim,int maxContextLen,boolean attn,boolean crossAttn,Network network) {
 		this.network = network;
 		this.channel = channel;
@@ -210,6 +212,9 @@ public class UNetDownBlockLayer extends Layer{
 		if(crossAttn && (kvDiff == null || kvDiff.number * maxContextLen != this.number * maxContextLen)) {
 			kvDiff = Tensor.createGPUTensor(kvDiff, this.number * maxContextLen, 1, 1, oChannel, true);
 		}
+		if(dt == null || dt.number != this.number) {
+			dt = Tensor.createGPUTensor(dt, this.number, 1, 1, oChannel, true);
+		}
 	}
 
 	@Override
@@ -300,11 +305,11 @@ public class UNetDownBlockLayer extends Layer{
 	
 	public void diff(Tensor tDiff) {
 		// TODO Auto-generated method stub
-
+//		delta.showDM("c+d");
 		downSampleConv.back(delta);
 		
 		Tensor d = downSampleConv.diff;
-		
+//		d.showDM("downSampleConv.diff");
 		for(int i = numLayers - 1;i>=0;i--) {
 			
 			if(crossAttn) {
@@ -317,15 +322,18 @@ public class UNetDownBlockLayer extends Layer{
 				attns.get(i).back(d);
 				d = attns.get(i).diff;
 			}
-			
+//			d.showDM("attn-down");
 			residualInputs.get(i).back(d);
 			
 			resnetSecond.get(i).back(d);
 			
 			d = resnetSecond.get(i).diff;
 			
+//			d.showDM("tout");
+			
 			if(tEmbDim > 0) {
-				tEmbLayers.get(i).back(d);
+				TensorOP.sum(d, dt, 2);
+				tEmbLayers.get(i).back(dt);
 				TensorOP.add(tDiff, tEmbLayers.get(i).diff, tDiff);
 			}
 			
@@ -333,8 +341,10 @@ public class UNetDownBlockLayer extends Layer{
 			
 			d = resnetFirst.get(i).diff;
 			
+//			d.showDM("resnetFirst");
+//			residualInputs.get(i).diff.showDM("residualInputs");
 			TensorOP.add(d, residualInputs.get(i).diff, d);
-			
+//			d.showDM("d");
 		}
 		
 		this.diff = d;

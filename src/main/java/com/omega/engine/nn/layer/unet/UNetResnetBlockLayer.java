@@ -45,7 +45,6 @@ public class UNetResnetBlockLayer extends Layer{
 		norm = new GNLayer(groups, this);
 		
 		act = new SiLULayer(norm);
-		
 		conv = new ConvolutionLayer(channel, oc, width, height, 3, 3, 1, 1, true, this.network);
 		conv.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 		conv.paramsInit = ParamsInit.silu;
@@ -81,11 +80,11 @@ public class UNetResnetBlockLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		norm.forward(input);
-//		norm.getOutput().showDMByOffset(0, 100, "norm");
+
 		act.forward(norm.getOutput());
-//		act.getOutput().showDM("act");
+		
 		conv.forward(act.getOutput());
-//		conv.getOutput().showDMByOffset(0, 100, "conv");
+
 		this.output = conv.getOutput();
 	}
 
@@ -98,9 +97,16 @@ public class UNetResnetBlockLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+//		delta.showShape();
+//		delta.showDM("delta");
 		conv.back(delta);
+//		System.err.println(this.channel+":"+this.oChannel);
+//		System.err.println(conv.channel+":"+conv.oChannel);
+//		conv.diff.showDM("cd");
+//		conv.diff.showShape();
 		act.back(conv.diff);
 		norm.back(act.diff);
+//		norm.diff.showShape();
 		this.diff = norm.diff;
 	}
 

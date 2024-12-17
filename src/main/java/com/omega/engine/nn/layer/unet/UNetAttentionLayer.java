@@ -323,7 +323,7 @@ public class UNetAttentionLayer extends Layer{
 			gn.forward(x);
 			x = gn.getOutput();
 		}
-		
+
 		x = x.view(batchSize, channel, 1, height * width);
 		// B,C,HW ==> B,HW,C
 		TensorOP.permute(x, xt, new int[] {0, 3, 2, 1});
@@ -347,7 +347,7 @@ public class UNetAttentionLayer extends Layer{
 		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
 		
 		this.getoLinerLayer().forward(oi);
-		
+
 		Tensor out = this.getoLinerLayer().getOutput();
 		
 		if(dropout) {
@@ -359,10 +359,10 @@ public class UNetAttentionLayer extends Layer{
 		
 		this.output.view(batchSize, channel, 1, time);
 		
+		TensorOP.permute(out, this.output, new int[] {0, 3, 2, 1}); //B,HW,C ==> B,C,HW
+		
 		if(residualConnect) {
-			TensorOP.permuteAdd(out, this.output, new int[] {0, 3, 2, 1}); //B,HW,C ==> B,C,HW
-		}else {
-			TensorOP.permute(out, this.output, new int[] {0, 3, 2, 1}); //B,HW,C ==> B,C,HW
+			TensorOP.add(this.input, this.output, this.output);
 		}
 		
 		x.viewOrg();
@@ -388,7 +388,7 @@ public class UNetAttentionLayer extends Layer{
 		this.getqLinerLayer().forward(xt);
 		this.getkLinerLayer().forward(k);
 		this.getvLinerLayer().forward(v);
-		
+
 		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
 		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, kvTime, headNum, dk);
 		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, kvTime, headNum, dk);
@@ -551,21 +551,24 @@ public class UNetAttentionLayer extends Layer{
 		// dxt
 		Tensor dxt = this.getqLinerLayer().diff;
 
+		dxt.view(batchSize, time, 1, channel);
 		// B,HW,C ==> B,C,H,W
 		xt = xt.view(batchSize , channel, 1, time);
 		TensorOP.permute(dxt, xt, new int[] {0, 3, 2, 1});
+		dxt.viewOrg();
 		xt = xt.view(batchSize , channel, height, width);
+		
 		if(gn != null) {
 			gn.back(xt);
 			this.diff = gn.diff;
 		}else {
 			this.diff = xt;
 		}
-		
+//		this.diff.showDM("gn");
 		if(residualConnect) {
 			TensorOP.add(this.diff, this.delta, this.diff);
 		}
-
+		
 	}
 	
 	public void diff(Tensor diffK,Tensor diffV) {
@@ -661,10 +664,12 @@ public class UNetAttentionLayer extends Layer{
 		
 		// dxt
 		Tensor dxt = this.getqLinerLayer().diff;
-
+		dxt.view(batchSize, time, 1, channel);
+		
 		// B,HW,C ==> B,C,H,W
 		xt = xt.view(batchSize , channel, 1, time);
 		TensorOP.permute(dxt, xt, new int[] {0, 3, 2, 1});
+		dxt.viewOrg();
 		xt = xt.view(batchSize , channel, height, width);
 		if(gn != null) {
 			gn.back(xt);

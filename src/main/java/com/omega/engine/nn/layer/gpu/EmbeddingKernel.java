@@ -18,7 +18,11 @@ public class EmbeddingKernel extends BaseKernel{
 	
 	private CUfunction back_function;
 	
+	private CUfunction get_time_embedding_function;
+	
 	private int CAFFE_CUDA_NUM_THREADS = 1024;
+	
+	private int BLOCK = 512;
 	
 	private Pointer kernelParameters;
 	
@@ -43,6 +47,12 @@ public class EmbeddingKernel extends BaseKernel{
 			if(function == null) {
 
 				function = CUDAModules.getLocalFunctionByModule("EmbeddingKernel.cu", "EmbeddingFW");
+				
+			}
+			
+			if(get_time_embedding_function == null) {
+
+				get_time_embedding_function = CUDAModules.getLocalFunctionByModule("EmbeddingKernel.cu", "get_time_embedding");
 				
 			}
 			
@@ -160,6 +170,41 @@ public class EmbeddingKernel extends BaseKernel{
 //			delta.showDMByNumber(0);
 //	        JCudaDriver.cuCtxSynchronize();
 
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void get_time_embedding(Tensor input,Tensor factor,Tensor output,int dim) {
+		
+		try {
+
+	        /**
+	         * 设置入参
+	         *  float* input, float* factor, float* output, int N,int dim
+	         */ 
+	        kernelParameters = Pointer.to(
+	        		Pointer.to(input.getGpuData()),
+	        		Pointer.to(factor.getGpuData()),
+	        		Pointer.to(output.getGpuData()),
+	        		Pointer.to(new int[]{input.number * dim}),
+	        		Pointer.to(new int[]{dim})
+	            );
+	        
+	        this.N = input.number;
+
+		    checkCUDA(cuLaunchKernel(get_time_embedding_function,
+		    		this.get_number_of_blocks(input.getDataLength(), BLOCK),  1, 1,      // Grid dimension
+		            BLOCK, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        ));
+
+//	        JCudaDriver.cuCtxSynchronize();
+//	        output.syncHost();
+//	        output.showDMByNumber(0);
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

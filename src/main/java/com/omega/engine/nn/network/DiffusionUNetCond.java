@@ -168,7 +168,7 @@ public class DiffusionUNetCond extends Network {
 		 * 将误差值输入到最后一层
 		 */
 		this.setLossDiff(lossDiff);
-		lossDiff.showDM("lossDiff");
+//		lossDiff.showDM("lossDiff");
 		this.unet.back(lossDiff);
 
 	}

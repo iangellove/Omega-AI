@@ -73,7 +73,9 @@ public class UNetTEmbLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
+//		delta.showDM("delta");
 		linear.back(delta);
+//		linear.diff.showDM("tl");
 		act.back(linear.diff);
 		this.diff = act.diff;
 	}
