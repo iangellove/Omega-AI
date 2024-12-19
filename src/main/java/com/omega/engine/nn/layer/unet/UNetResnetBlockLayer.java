@@ -7,6 +7,7 @@ import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.ParamsInit;
 import com.omega.engine.nn.layer.active.SiLULayer;
+import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
@@ -42,9 +43,11 @@ public class UNetResnetBlockLayer extends Layer{
 	
 	public void initLayers(int oc) {
 		
-		norm = new GNLayer(groups, this);
+		//int groupNum,int channel,int height,int width,BNType bnType,Layer preLayer
+		norm = new GNLayer(groups, channel, height, width, BNType.conv_bn, this);
 		
 		act = new SiLULayer(norm);
+		
 		conv = new ConvolutionLayer(channel, oc, width, height, 3, 3, 1, 1, true, this.network);
 		conv.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 		conv.paramsInit = ParamsInit.silu;
@@ -65,6 +68,12 @@ public class UNetResnetBlockLayer extends Layer{
 		this.number = this.network.number;
 	}
 	
+	public void init(Tensor input) {
+		// TODO Auto-generated method stub
+		this.number = input.number;
+	}
+	
+	
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
@@ -79,6 +88,7 @@ public class UNetResnetBlockLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
+		
 		norm.forward(input);
 
 		act.forward(norm.getOutput());
@@ -97,16 +107,11 @@ public class UNetResnetBlockLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-//		delta.showShape();
-//		delta.showDM("delta");
+
 		conv.back(delta);
-//		System.err.println(this.channel+":"+this.oChannel);
-//		System.err.println(conv.channel+":"+conv.oChannel);
-//		conv.diff.showDM("cd");
-//		conv.diff.showShape();
 		act.back(conv.diff);
 		norm.back(act.diff);
-//		norm.diff.showShape();
+		
 		this.diff = norm.diff;
 	}
 
@@ -158,7 +163,7 @@ public class UNetResnetBlockLayer extends Layer{
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		
 		/**
 		 * 设置输入

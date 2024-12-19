@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 
 import jcuda.Pointer;
 import jcuda.Sizeof;
@@ -37,6 +36,7 @@ public class CUDAMemoryManager {
 		Tensor c = null;
 		if(caches.containsKey(key)) {
 			c = caches.get(key);
+//			System.err.println(c.gpuLength+":["+N+":"+C+":"+H+":"+W+"]");
 			if(c.gpuLength < N * C * H * W) {
 				c = Tensor.createGPUTensor(c, N, C, H, W, true);
 			}else {

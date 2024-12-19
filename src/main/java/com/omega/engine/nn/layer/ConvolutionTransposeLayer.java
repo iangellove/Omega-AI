@@ -124,7 +124,7 @@ public class ConvolutionTransposeLayer extends Layer {
 		this.hasBias = hasBias;
 		this.network = network;
 		this.hasParams = true;
-		network.paramLayers.add(this);
+//		network.paramLayers.add(this);
 		this.initParam();
 	}
 	
@@ -144,7 +144,10 @@ public class ConvolutionTransposeLayer extends Layer {
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.val(kernelNum * channel * kHeight * kWidth, 0.1f), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.order(kernelNum * channel * kHeight * kWidth, 0.1f, 0.01f), true);
 //		this.bias = new Tensor(1, 1, 1, kernelNum, true);
-		this.bias = new Tensor(1, 1, 1, kernelNum, RandomUtils.kaimingUniformBias(kernelNum, this.channel * kHeight * kWidth), true);
+		if(this.hasBias) {
+			this.bias = new Tensor(1, 1, 1, kernelNum, RandomUtils.kaimingUniformBias(kernelNum, this.channel * kHeight * kWidth), true);
+		}
+		
 		if(network != null) {
 			this.diffB = this.network.createParamterGrad(1, 1, 1, kernelNum, true);
 			this.diffW = this.network.createParamterGrad(this.channel,this.kernelNum,this.kHeight,this.kWidth, true);

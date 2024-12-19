@@ -305,6 +305,7 @@ public class Tensor implements Serializable{
 		this.height = height;
 		this.width = width;
 		this.dataLength = number * channel * height * width;
+		this.gpuLength = this.dataLength;
 		if(!onlyGPU) {
 			this.data = new float[this.dataLength];
 		}
@@ -602,6 +603,11 @@ public class Tensor implements Serializable{
 	public void showDMByOffset(int start,int len,String label) {
 		syncHost();
 	    System.out.println(label + JsonUtils.toJson(this.getByOffset(start, len)));
+	}
+	
+	public void showDMByOffsetRed(int start,int len,String label) {
+		syncHost();
+	    System.err.println(label + JsonUtils.toJson(this.getByOffset(start, len)));
 	}
 	
 	public void showDM(int index) {

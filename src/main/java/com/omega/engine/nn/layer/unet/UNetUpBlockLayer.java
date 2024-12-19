@@ -97,7 +97,7 @@ public class UNetUpBlockLayer extends Layer{
 		int iw = width;
 		
 		if(upSample) {
-			upSampleConv = new ConvolutionTransposeLayer(channel/2, channel/2, width, height, 4, 4, 1, 2, 1, 0, true, network);
+			upSampleConv = new ConvolutionTransposeLayer(channel/2, channel/2, width, height, 4, 4, 1, 2, 1, 0, false, network);
 			upSampleConv.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 			upSampleConv.paramsInit = ParamsInit.silu;
 
@@ -233,6 +233,8 @@ public class UNetUpBlockLayer extends Layer{
 		}
 		if(dt == null || dt.number != this.number) {
 			dt = Tensor.createGPUTensor(dt, this.number, 1, 1, oChannel, true);
+		}else {
+			dt.clearGPU();
 		}
 	}
 
@@ -299,12 +301,14 @@ public class UNetUpBlockLayer extends Layer{
 
 			resnetFirst.get(i).forward(x);
 
+			Tensor r1 = resnetFirst.get(i).getOutput();
+			
 			tEmbLayers.get(i).forward(tembd);
 			
-			Tensor r1 = resnetFirst.get(i).getOutput();
-
 			TensorOP.add(r1, tEmbLayers.get(i).getOutput(), t_out[i], r1.height * r1.width);
 
+//			t_out[i].showDM("t_out[i]");
+			
 			resnetSecond.get(i).forward(t_out[i]);
 
 			residualInputs.get(i).forward(res_i);
@@ -313,17 +317,24 @@ public class UNetUpBlockLayer extends Layer{
 			
 			x = res_out[i];
 			
+//			x.showDMByOffset(0, 100, "res_out");
+			
 			if(attn) {
 				attns.get(i).forward(x);
 				x = attns.get(i).getOutput();
 			}
+			
+//			x.showDMByOffset(0, 100, "attn");
 	
 			if(crossAttn) {
 				contextProjs.get(i).forward(context);
 				Tensor cp = contextProjs.get(i).getOutput();
+//				cp.showDMByOffset(0, 100, "cp");
 				crossAttns.get(i).forward(x, cp, cp);
 				x = crossAttns.get(i).getOutput();
 			}
+			
+//			x.showDMByOffsetRed(0, 100, "crossAttn");
 
 		}
 		
@@ -346,11 +357,11 @@ public class UNetUpBlockLayer extends Layer{
 //		System.out.println("index:["+index+"]("+oChannel+")"+this.delta);
 		
 		Tensor d = delta;
-		
+//		delta.showDM("up-delta");
 		for(int i = numLayers - 1;i>=0;i--) {
 			
 			if(crossAttn) {
-//				d.showDM();
+//				d.showDM("d");
 				crossAttns.get(i).back(d, kvDiff);
 				contextProjs.get(i).back(kvDiff);
 				d = crossAttns.get(i).diff;
@@ -362,13 +373,11 @@ public class UNetUpBlockLayer extends Layer{
 				attns.get(i).back(d);
 				d = attns.get(i).diff;
 			}
-			
-//			d.showDM("attnsDiff");
-			
-			residualInputs.get(i).back(d);
-			
+
 			resnetSecond.get(i).back(d);
-			
+
+			residualInputs.get(i).back(d);
+//			
 			d = resnetSecond.get(i).diff;
 			
 			if(tEmbDim > 0) {
@@ -376,21 +385,21 @@ public class UNetUpBlockLayer extends Layer{
 				tEmbLayers.get(i).back(dt);
 				TensorOP.add(tDiff, tEmbLayers.get(i).diff, tDiff);
 			}
-			
+
 			resnetFirst.get(i).back(d);
-			
+
 			d = resnetFirst.get(i).diff;
 			
 			TensorOP.add(d, residualInputs.get(i).diff, d);
-			
+
 		}
 		
-		cat.back(d);
-		
-		d = cat.diff;
+		cat.back(d, upSampleConv);
 		
 		if(upSample) {
+
 			upSampleConv.back(d);
+
 			d = upSampleConv.diff;
 		}
 		
@@ -522,7 +531,6 @@ public class UNetUpBlockLayer extends Layer{
 				tEmbLayers.get(i).update();
 			}
 			
-			
 			resnetSecond.get(i).update();
 			
 			residualInputs.get(i).update();
@@ -577,7 +585,6 @@ public class UNetUpBlockLayer extends Layer{
 			if(tEmbDim > 0) {
 				tEmbLayers.get(i).accGrad(scale);
 			}
-			
 			
 			resnetSecond.get(i).accGrad(scale);
 			

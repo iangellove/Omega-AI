@@ -147,26 +147,26 @@ public class GNKernel extends BaseKernel{
 
 				initKernel();
 				
-				/**
-				 *  const float* x, const float* weight, const float* bias,
-    				float* out, float* mean, float* rstd,
-    				int B, int C, int img_size, int group_size, int n_groups
-				 */
-				forwardParameters = Pointer.to(
-						Pointer.to(input.getGpuData()),
-		                Pointer.to(gamma.getGpuData()),
-		                Pointer.to(beta.getGpuData()),
-		                Pointer.to(output.getGpuData()),
-						Pointer.to(d_mean),
-						Pointer.to(d_var),
-						Pointer.to(new int[] {input.number}),
-						Pointer.to(new int[] {input.channel}),
-						Pointer.to(new int[] {img_size}),
-						Pointer.to(new int[] {group_size}),
-						Pointer.to(new int[] {G})
-		            );
-
 			}
+
+			/**
+			 *  const float* x, const float* weight, const float* bias,
+				float* out, float* mean, float* rstd,
+				int B, int C, int img_size, int group_size, int n_groups
+			 */
+			forwardParameters = Pointer.to(
+					Pointer.to(input.getGpuData()),
+	                Pointer.to(gamma.getGpuData()),
+	                Pointer.to(beta.getGpuData()),
+	                Pointer.to(output.getGpuData()),
+					Pointer.to(d_mean),
+					Pointer.to(d_var),
+					Pointer.to(new int[] {input.number}),
+					Pointer.to(new int[] {input.channel}),
+					Pointer.to(new int[] {img_size}),
+					Pointer.to(new int[] {group_size}),
+					Pointer.to(new int[] {G})
+	            );
 
 			cuLaunchKernel(forward_function,
 					n_blocks, 1, 1,      // Grid dimension
@@ -174,7 +174,8 @@ public class GNKernel extends BaseKernel{
 	        		0, null,               // Shared memory size and stream
 		            forwardParameters, null // Kernel- and extra parameters
 				);
-			
+
+//			System.err.println("d_mean");
 //			showGPU(d_mean, B * G);
 //			
 //			showGPU(d_var, B * G);
@@ -267,7 +268,7 @@ public class GNKernel extends BaseKernel{
 					Pointer.to(new int[] {group_size}),
 					Pointer.to(new int[] {G})
 	            );
-
+			
 			cuLaunchKernel(backward_function,
 					n_blocks, 1, 1,      // Grid dimension
 					block_size, 1, 1,      // Block dimension

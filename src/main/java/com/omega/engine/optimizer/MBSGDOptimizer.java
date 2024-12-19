@@ -4068,10 +4068,11 @@ public class MBSGDOptimizer extends Optimizer {
 					trainingData.loadData(indexs[it], input, label, mask, noise);
 					
 					JCudaDriver.cuCtxSynchronize();
-					
+					System.out.println("in");
 					/**
 					 * get latend
 					 */
+					input.showShape();
 					Tensor latend = vae.encode(input);
 					
 					/**
@@ -4079,18 +4080,18 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 					Tensor condInput = clip.forward(label, mask);
 					
-//					latend.showDMByOffset(0, 100, "before latend");
+					latend.showDMByOffset(0, 100, "before latend");
 					
 					/**
 					 * latend add noise
 					 */
 					trainingData.addNoise(a, b, latend, noise);
 					
-					System.out.println("latend:"+MatrixOperation.isNaN(latend.syncHost()));
-					System.out.println("condInput:"+MatrixOperation.isNaN(condInput.syncHost()));
+//					System.out.println("latend:"+MatrixOperation.isNaN(latend.syncHost()));
+//					System.out.println("condInput:"+MatrixOperation.isNaN(condInput.syncHost()));
 //					latend.showDM("after latend");
 //					condInput.showDM("condInput");
-					t.showDM("t");
+//					t.showDM("t");
 					
 					/**
 					 * forward

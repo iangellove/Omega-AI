@@ -24,6 +24,8 @@ import com.omega.engine.updater.UpdaterFactory;
 import com.omega.example.clip.utils.ClipModelUtils;
 import com.omega.example.transformer.utils.LagJsonReader;
 
+import jcuda.runtime.JCuda;
+
 /**
  * UNet_Cond
  * @author Administrator
@@ -237,9 +239,9 @@ public class UNetCond extends Layer{
 //		t_linear2.forward(t_act.getOutput());
 		
 		Tensor x = conv_in.getOutput();
-//		x.showDM("conv_in");
+
 		Tensor tembd = t_embd.getOutput();
-//		tembd.showDM("tembd");
+
 		/**
 		 * down
 		 */
@@ -271,6 +273,7 @@ public class UNetCond extends Layer{
 		 * out
 		 */
 		norm.forward(x);
+//		norm.getOutput().showDM("norm");
 		act.forward(norm.getOutput());
 		conv_out.forward(act.getOutput());
 		
@@ -290,6 +293,7 @@ public class UNetCond extends Layer{
 		/**
 		 * out backward
 		 */
+//		System.err.println("in----------back");
 //		delta.showShape();
 		conv_out.back(delta);
 //		conv_out.diff.showShape();
@@ -298,7 +302,7 @@ public class UNetCond extends Layer{
 		norm.back(act.diff);
 		
 		Tensor d = norm.diff;
-//		d.showDM("norm.diff");
+
 		/**
 		 * ups backward
 		 */
@@ -306,7 +310,7 @@ public class UNetCond extends Layer{
 			ups.get(i).back(d, tDiff);
 			d = ups.get(i).diff;
 		}
-//		d.showDM("ups.diff");
+
 		/**
 		 * mids backward
 		 */
@@ -314,8 +318,7 @@ public class UNetCond extends Layer{
 			mids.get(i).back(d, tDiff);
 			d = mids.get(i).diff;
 		}
-//		d.showDM("mids.diff");
-//		d.showShape();
+
 		/**
 		 * downs backward
 		 */
@@ -323,16 +326,17 @@ public class UNetCond extends Layer{
 			downs.get(i).back(d, tDiff);
 			d = downs.get(i).diff;
 		}
-//		d.showDM("downs.diff");
-//		tDiff.showDM("tDiff");
-		
-		t_embd.back(tDiff);
 
+		t_embd.back(tDiff);
+		
+		tDiff.clearGPU();
+		
 		conv_in.back(d);
 		
 //		conv_in.delta.showDM("c+d");
-
+		
 		this.diff = conv_in.diff;
+//		System.err.println("out----------back");
 	}
 
 	@Override
@@ -592,7 +596,14 @@ public class UNetCond extends Layer{
 		
 		Tensor delta = new Tensor(N, z_channels, H, W, MatrixUtils.order(dataLen, 0.01f, 0.1f), true);
 		
-		unet.back(delta);
+		for(int r = 0;r<100;r++) {
+//			delta.showDMByOffsetRed(0, 100, "delta");
+			unet.forward(im, t, context);
+			unet.getOutput().showDMByOffsetRed(0, 10, "out");
+			unet.back(delta);
+		}
+		
+		
 		
 		
 		
@@ -782,7 +793,7 @@ public class UNetCond extends Layer{
 			ClipModelUtils.loadData(unet.ups.get(i).residualInputs.get(0).bias, weightMap, "ups."+i+".residual_input_conv.0.bias");
 			
 			ClipModelUtils.loadData(unet.ups.get(i).upSampleConv.weight, weightMap, "ups."+i+".up_sample_conv.weight");
-			ClipModelUtils.loadData(unet.ups.get(i).upSampleConv.bias, weightMap, "ups."+i+".up_sample_conv.bias");
+//			ClipModelUtils.loadData(unet.ups.get(i).upSampleConv.bias, weightMap, "ups."+i+".up_sample_conv.bias");
 		}
 		
 		unet.norm.gamma = ClipModelUtils.loadData(unet.norm.gamma, weightMap, 1, "norm_out.weight");

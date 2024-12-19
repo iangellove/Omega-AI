@@ -192,7 +192,7 @@ public class GNLayer extends NormalizationLayer {
 		}
 
 		if(kernel == null) {
-			kernel = new GNKernel(groupNum ,bnType);
+			kernel = new GNKernel(groupNum, bnType);
 		}
 		
 		if(this.gamma == null) {

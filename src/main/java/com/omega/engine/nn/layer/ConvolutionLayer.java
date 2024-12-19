@@ -119,7 +119,7 @@ public class ConvolutionLayer extends Layer {
 		this.stride = stride;
 		this.hasBias = hasBias;
 		this.network = network;
-		network.paramLayers.add(this);
+//		network.paramLayers.add(this);
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 		this.hasParams = true;
 		this.initParam();
@@ -150,7 +150,7 @@ public class ConvolutionLayer extends Layer {
 		this.hasBias = hasBias;
 		this.network = network;
 		this.freeze = freeze;
-		network.paramLayers.add(this);
+//		network.paramLayers.add(this);
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 		this.hasParams = true;
 		this.initParam();
@@ -182,7 +182,7 @@ public class ConvolutionLayer extends Layer {
 		this.stride = stride;
 		this.hasBias = hasBias;
 		this.network = network;
-		network.paramLayers.add(this);
+//		network.paramLayers.add(this);
 		this.hasParams = true;
 		this.paramsInit = paramsInit;
 		this.initParam();
@@ -199,7 +199,7 @@ public class ConvolutionLayer extends Layer {
 		this.stride = stride;
 		this.hasBias = hasBias;
 		this.network = network;
-		network.paramLayers.add(this);
+//		network.paramLayers.add(this);
 		this.hasParams = true;
 		switch (activeType) {
 		case sigmoid:
@@ -241,7 +241,10 @@ public class ConvolutionLayer extends Layer {
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.val(kernelNum * channel * kHeight * kWidth, 0.1f), true);
 //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.order(kernelNum * channel * kHeight * kWidth, 0.1f, 0.01f), true);
 //		this.bias = new Tensor(1, 1, 1, kernelNum, RandomUtils.kaimingUniformBias(kernelNum, this.channel * kHeight * kWidth), true);
-		this.bias = new Tensor(1, 1, 1, kernelNum, true);
+		if(hasBias) {
+			this.bias = new Tensor(1, 1, 1, kernelNum, true);
+		}
+		
 	}
 
 	@Override
@@ -460,7 +463,7 @@ public class ConvolutionLayer extends Layer {
 	public void update() {
 		// TODO Auto-generated method stub
 //		long start = System.nanoTime();
-//		System.out.println(this.index+":"+this.freeze);
+
 		if(!this.freeze) {
 			if(accDW != null) {
 				this.accDW.copy(diffW);
@@ -472,7 +475,7 @@ public class ConvolutionLayer extends Layer {
 			if(this.updater != null){
 				this.updater.update(this);
 			}else{
-
+				
 				for(int i = 0;i<this.weight.getDataLength();i++) {
 					this.weight.data[i] -= this.learnRate * this.diffW.data[i];
 				}

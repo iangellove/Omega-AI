@@ -144,7 +144,43 @@ public class SDTest {
 		String vqvae_model_path = "H:\\model\\vqvae2_32_256_500.model";
 		ModelUtils.loadModel(network, vqvae_model_path);
 		
-		int[] indexs = new int[] {0, 1, 2, 3};
+		String tokenizerPath = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
+		
+		String labelPath = "H:\\vae_dataset\\pokemon-blip\\data.json";
+
+		boolean horizontalFilp = true;
+		
+		int imgSize = 256;
+		
+		int maxContextLen = 64;
+		
+		SDImageDataLoader dataLoader2 = new SDImageDataLoader(tokenizerPath, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
+		
+		int time = maxContextLen;
+		int maxPositionEmbeddingsSize = 512;
+		int vocabSize = 21128;
+		int hiddenSize = 768;
+		int typeVocabSize = 2;
+		int headNum = 12;
+		int numHiddenLayers = 12;
+		int intermediateSize = 3072;
+		int textEmbedDim = 512;
+		
+		ClipText clip = new ClipText(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, hiddenSize, textEmbedDim, maxPositionEmbeddingsSize, typeVocabSize, intermediateSize, numHiddenLayers);
+		clip.CUDNN = true;
+		clip.time = time;
+		clip.RUN_MODEL = RunModel.EVAL;
+		
+		String clipWeight = "H:\\model\\clip_cn_vit-b-16.json";
+		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
+		
+		int[] indexs = new int[] {0, 1};
+		
+		Tensor label = new Tensor(batchSize * maxContextLen, 1, 1, 1, true);
+		
+		Tensor mask = new Tensor(batchSize , 1, 1, maxContextLen, true);
+		
+		dataLoader2.loadLabel(indexs, label, mask);
 		
 		Tensor input = new Tensor(batchSize, 3, imageSize, imageSize, true);
 		
@@ -180,9 +216,11 @@ public class SDTest {
 		JCudaDriver.cuCtxSynchronize();
 		
 //		Tensor out = network.forward(input);
+		Tensor clipOutput = null;
 		for(int i = 0;i<10;i++) {
 			long start = System.nanoTime();
 			latent = network.encode(input);
+			clipOutput = clip.forward(label, mask);
 			out = network.decode(latent);
 			JCuda.cudaDeviceSynchronize();
 			System.err.println((System.nanoTime() - start)/1e6+"ms.");
@@ -190,6 +228,7 @@ public class SDTest {
 		
 		
 		out.showShape();
+		clipOutput.showDM();
 //		out.showDM();
 		
 		out.syncHost();
@@ -273,7 +312,7 @@ public class SDTest {
 		
 		int maxContextLen = 64;
 		
-		int batchSize = 2;
+		int batchSize = 1;
 
 		float[] mean = new float[] {0.5f, 0.5f,0.5f};
 		float[] std = new float[] {0.5f, 0.5f,0.5f};
@@ -311,7 +350,7 @@ public class SDTest {
 		ClipText clip = new ClipText(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, hiddenSize, textEmbedDim, maxPositionEmbeddingsSize, typeVocabSize, intermediateSize, numHiddenLayers);
 		clip.CUDNN = true;
 		clip.time = time;
-		clip.RUN_MODEL=RunModel.EVAL;
+		clip.RUN_MODEL = RunModel.EVAL;
 		
 		String clipWeight = "H:\\model\\clip_cn_vit-b-16.json";
 		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
@@ -319,8 +358,8 @@ public class SDTest {
 		int convOutChannels = 128;
 		int unetHeadNum = 16;
 		
-		int[] downChannels = new int[] {64, 96, 128, 192};
-		int[] midChannels = new int[] {192, 128};
+		int[] downChannels = new int[] {32, 48, 64, 96};
+		int[] midChannels = new int[] {96, 64};
 		int numDowns = 1;
 		int numMids = 1;
 		int numUps = 1;

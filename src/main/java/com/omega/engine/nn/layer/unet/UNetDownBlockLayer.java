@@ -214,6 +214,8 @@ public class UNetDownBlockLayer extends Layer{
 		}
 		if(dt == null || dt.number != this.number) {
 			dt = Tensor.createGPUTensor(dt, this.number, 1, 1, oChannel, true);
+		}else {
+			dt.clearGPU();
 		}
 	}
 

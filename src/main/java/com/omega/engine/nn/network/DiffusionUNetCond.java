@@ -153,7 +153,7 @@ public class DiffusionUNetCond extends Network {
 	}
 	
 	public void initBack() {
-		
+						
 	}
 	
 	@Override
@@ -167,10 +167,14 @@ public class DiffusionUNetCond extends Network {
 		 * 设置误差
 		 * 将误差值输入到最后一层
 		 */
+//		lossDiff.showDMByOffset(0, 100, "lossDiff");
+		
 		this.setLossDiff(lossDiff);
 //		lossDiff.showDM("lossDiff");
 		this.unet.back(lossDiff);
-
+		
+//		this.unet.diff.showDMByOffset(0, 100, "unet.diff");
+		
 	}
 
 	@Override

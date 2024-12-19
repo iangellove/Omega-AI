@@ -117,7 +117,7 @@ public class BiasKernel extends BaseKernel{
 		
 		try {
 			
-			if(biasConvKernelParameters == null || output.number != this.N){
+//			if(biasConvKernelParameters == null || output.number != this.N){
 
 		        /**
 		         * 设置入参
@@ -133,7 +133,7 @@ public class BiasKernel extends BaseKernel{
 		        
 		        this.N = output.number;
 		        
-			}
+//			}
 			
 			cuLaunchKernel(function,
 		            this.CAFFE_GET_BLOCKS(output.dataLength),  1, 1,      // Grid dimension
@@ -233,7 +233,7 @@ public class BiasKernel extends BaseKernel{
 			
 			diffB.clearGPU();
 
-			if(backConvKernelParameters == null || delta.number != this.N) {
+//			if(backConvKernelParameters == null || delta.number != this.N) {
 
 		        /**
 		         * 设置入参
@@ -249,7 +249,7 @@ public class BiasKernel extends BaseKernel{
 				
 				this.N = delta.number;
 		        
-			}
+//			}
 			
 			cuLaunchKernel(back_conv_function,
 					delta.getChannel(),  1, 1,      // Grid dimension

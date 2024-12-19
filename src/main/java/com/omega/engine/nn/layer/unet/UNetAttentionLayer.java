@@ -289,10 +289,13 @@ public class UNetAttentionLayer extends Layer{
 		this.kt.viewOrg();
 		this.vt.viewOrg();
 		this.xt.viewOrg();
+		this.oi.viewOrg();
+//		temp.clearGPU();
 		if(this.getqLinerLayer().getOutput() != null) {
 			this.getqLinerLayer().getOutput().viewOrg();
 			this.getkLinerLayer().getOutput().viewOrg();
 			this.getvLinerLayer().getOutput().viewOrg();
+			this.getoLinerLayer().getOutput().viewOrg();
 		}
 	}
 	
@@ -374,16 +377,22 @@ public class UNetAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		Tensor x = this.input;
-
+//		x.showDM("x");
 		if(gn != null) {
+//			x.showShape();
+//			gn.gamma.showShape();
+//			gn.beta.showShape();
 			gn.forward(x);
 			x = gn.getOutput();
+//			x.showShape();
 		}
+//		x.showDMByOffsetRed(0, 100, "gn");
 		
 		x = x.view(batchSize, channel, 1, height * width);
 		// B,C,HW ==> B,HW,C
 		TensorOP.permute(x, xt, new int[] {0, 3, 2, 1});
 		xt = xt.view(batchSize * time, 1, 1, channel);
+
 //		xt.showDM();
 		this.getqLinerLayer().forward(xt);
 		this.getkLinerLayer().forward(k);
@@ -397,15 +406,16 @@ public class UNetAttentionLayer extends Layer{
 		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
 
-//		qt.showDM("qt");
+//		qt.showDMByOffsetRed(0, 100, "qt");
 //		kt.showDM("kt");
 //		vt.showDM("vt");
 		
 		scaledDotProductAttention(qt, kt, vt);
 
 		Tensor vaccum = temp;
+//		vaccum.showDMByOffset(0, 100, "vaccum");
 		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
-		
+//		oi.showDMByOffset(0, 100, "oi");
 		this.getoLinerLayer().forward(oi);
 		
 		Tensor out = this.getoLinerLayer().getOutput();
@@ -514,9 +524,9 @@ public class UNetAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		// B,C,H,W ==> B,HW,C
-		this.output.view(batchSize, height, width, channel);
+//		this.output.view(batchSize, height, width, channel);
 		TensorOP.permute(delta, this.output, new int[] {0, 2, 3, 1});
-		this.output.view(batchSize, time, 1, channel);
+		this.output.view(batchSize * time, 1, 1, channel);
 
 		if(dropout) {
 			dropoutLayer2.back(this.output);
@@ -629,9 +639,8 @@ public class UNetAttentionLayer extends Layer{
 	public void diff(Tensor kvDiff) {
 		// TODO Auto-generated method stub
 		// B,C,H,W ==> B,HW,C
-		this.output.view(batchSize, height, width, channel);
 		TensorOP.permute(delta, this.output, new int[] {0, 2, 3, 1});
-		this.output.view(batchSize, time, 1, channel);
+		this.output.view(batchSize * time, 1, 1, channel);
 
 		if(dropout) {
 			dropoutLayer2.back(this.output);
@@ -671,9 +680,11 @@ public class UNetAttentionLayer extends Layer{
 		TensorOP.permute(dxt, xt, new int[] {0, 3, 2, 1});
 		dxt.viewOrg();
 		xt = xt.view(batchSize , channel, height, width);
+
 		if(gn != null) {
 			gn.back(xt);
 			this.diff = gn.diff;
+//			this.diff = xt;
 		}else {
 			this.diff = xt;
 		}

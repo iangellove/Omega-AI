@@ -120,6 +120,23 @@ public class RouteLayer extends Layer{
 		}
 	}
 	
+	public void diff(Layer skip) {
+		// TODO Auto-generated method stub
+		int offset = 0;
+		for(int l = 0;l<layers.length;l++) {
+			if(skip != layers[l]) {
+				Tensor delta = layers[l].cache_delta;
+//				System.out.println(layers[l].index+":"+delta);
+				int part_input_size = delta.getOnceSize() / groups;
+				for(int n = 0;n<this.number;n++) {
+					kernel.axpy_gpu(this.delta, delta, part_input_size, 1, offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize() + part_input_size * groupId, 1);
+//					kernel.copy_gpu(this.delta, delta, delta.getOnceSize(), offset + n * this.delta.getOnceSize(), 1, n * delta.getOnceSize(), 1);
+				}
+				offset += part_input_size;
+			}
+		}
+	}
+	
 	public static void main(String[] args) {
 		
 		int N = 2;
@@ -260,6 +277,25 @@ public class RouteLayer extends Layer{
 		 * 计算梯度
 		 */
 		this.diff();
+		
+		if(this.network.GRADIENT_CHECK) {
+			this.gradientCheck();
+		}
+
+	}
+	
+	public void back(Tensor delta,Layer skip) {
+		// TODO Auto-generated method stub
+
+		this.initBack();
+		/**
+		 * 设置梯度
+		 */
+		this.setDelta(delta);
+		/**
+		 * 计算梯度
+		 */
+		this.diff(skip);
 		
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
