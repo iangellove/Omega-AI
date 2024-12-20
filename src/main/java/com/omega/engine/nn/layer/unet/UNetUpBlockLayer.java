@@ -142,7 +142,7 @@ public class UNetUpBlockLayer extends Layer{
 		if(attn) {
 			attns = new ArrayList<UNetAttentionLayer>();
 			for(int i = 0;i<numLayers;i++) {
-				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, numHeads, oChannel, ih, iw, groups, true, false, true, network);
+				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, numHeads, oChannel, ih, iw, groups, false, false, true, network);
 				attns.add(a);
 			}
 		}
@@ -155,7 +155,7 @@ public class UNetUpBlockLayer extends Layer{
 			}
 			crossAttns = new ArrayList<UNetAttentionLayer>();
 			for(int i = 0;i<numLayers;i++) {
-				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, oChannel, oChannel, numHeads, maxContextLen, oChannel, ih, iw, groups, true, false, true, network);
+				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, oChannel, oChannel, numHeads, maxContextLen, oChannel, ih, iw, groups, false, false, true, network);
 				crossAttns.add(a);
 			}
 		}
@@ -166,7 +166,7 @@ public class UNetUpBlockLayer extends Layer{
 			if(i == 0) {
 				ic = channel;
 			}
-			ConvolutionLayer c = new ConvolutionLayer(ic, oChannel, iw, ih, 1, 1, 0, 1, true, network);
+			ConvolutionLayer c = new ConvolutionLayer(ic, oChannel, iw, ih, 1, 1, 0, 1, false, network);
 			c.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 			c.paramsInit = ParamsInit.silu;
 			residualInputs.add(c);
@@ -361,7 +361,6 @@ public class UNetUpBlockLayer extends Layer{
 		for(int i = numLayers - 1;i>=0;i--) {
 			
 			if(crossAttn) {
-//				d.showDM("d");
 				crossAttns.get(i).back(d, kvDiff);
 				contextProjs.get(i).back(kvDiff);
 				d = crossAttns.get(i).diff;
@@ -373,6 +372,8 @@ public class UNetUpBlockLayer extends Layer{
 				attns.get(i).back(d);
 				d = attns.get(i).diff;
 			}
+//			d.showShape();
+//			d.showDM("attn-diff");
 
 			resnetSecond.get(i).back(d);
 
@@ -391,18 +392,20 @@ public class UNetUpBlockLayer extends Layer{
 			d = resnetFirst.get(i).diff;
 			
 			TensorOP.add(d, residualInputs.get(i).diff, d);
-
+			
+//			d.showDM("n-diff");
 		}
-		
-		cat.back(d, upSampleConv);
+
+		cat.back(d);
 		
 		if(upSample) {
 
-			upSampleConv.back(d);
+			upSampleConv.back();
 
 			d = upSampleConv.diff;
 		}
 		
+//		d.showDM("up-one");
 		this.diff = d;
 
 	}

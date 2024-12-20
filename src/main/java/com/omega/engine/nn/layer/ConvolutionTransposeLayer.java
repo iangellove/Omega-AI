@@ -4,13 +4,17 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.gpu.cudnn.ConvTransposeCudnnKernel;
 import com.omega.engine.nn.layer.gpu.BiasKernel;
 import com.omega.engine.nn.layer.gpu.ConvBaseKernel;
 import com.omega.engine.nn.model.ConvLayerInit;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.RunModel;
+import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.nn.network.utils.ModelUtils;
 
 /**
@@ -236,7 +240,7 @@ public class ConvolutionTransposeLayer extends Layer {
 		 * 计算diff
 		 */
 		if(PROPAGATE_DOWN || this.network.PROPAGATE_DOWN) {
-			
+//			weight.showDM("weight");
 			/**
 			 * dx = col2im(a)
 			 * a = (weight)T * diff
@@ -377,7 +381,7 @@ public class ConvolutionTransposeLayer extends Layer {
 	}
 	
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 
 		/**
@@ -388,7 +392,7 @@ public class ConvolutionTransposeLayer extends Layer {
 		/**
 		 * 设置输入
 		 */
-		this.setInput(inpnut);
+		this.setInput(input);
 		
 		/**
 		 * 计算输出
@@ -438,6 +442,58 @@ public class ConvolutionTransposeLayer extends Layer {
 		
 		if(hasBias) {
 			ModelUtils.loadParams(inputStream, bias);
+		}
+		
+	}
+	
+	public static void main(String[] args) {
+		
+		try {
+			
+			CUDAModules.initContext();
+			
+			Transformer tf = new Transformer();
+			tf.CUDNN = true;
+			tf.RUN_MODEL = RunModel.TRAIN;
+			
+			int B = 2;
+			int C = 3;
+			int H = 4;
+			int W = 4;
+			
+			int OC = 4;
+			
+			int kWidth = 4;
+			int kHeight = 4;
+			int stride = 2;
+			int padding = 1;
+			
+			ConvolutionTransposeLayer ct = new ConvolutionTransposeLayer(C, OC, W, H, kWidth, kHeight, padding, stride, 1, 0, false, tf);
+			
+			int dataLen = B * C * H * W;
+			
+			Tensor im = new Tensor(B, C, H, W, MatrixUtils.order(dataLen, 0.0000001f, 0.0000001f), true);
+			
+			ct.weight = new Tensor(C, OC, kHeight, kWidth, MatrixUtils.order(C * OC * kHeight * kWidth, 0.0000001f, 0.0000001f), true);
+			
+			ct.weight.showDM();
+			
+			tf.number = B;
+			
+			ct.forward(im);
+			
+			ct.getOutput().showDM();
+			
+			Tensor delta = new Tensor(B, OC, 8, 8, MatrixUtils.order(B * OC * 8 * 8, 0.0001f, 0.000001f), true);
+			
+			ct.back(delta);
+			
+			ct.diff.showDM();
+			ct.diffW.showDM();
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
 		}
 		
 	}

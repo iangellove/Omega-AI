@@ -4011,6 +4011,8 @@ public class MBSGDOptimizer extends Optimizer {
 			
 			Tensor mask = new Tensor(batchSize, 1, 1, network.maxContextLen, true);
 			
+			Tensor context = null;
+			
 			float beta_1 = 1e-4f;
 			float beta_T = 0.02f;
 			int T = 1000;
@@ -4068,7 +4070,7 @@ public class MBSGDOptimizer extends Optimizer {
 					trainingData.loadData(indexs[it], input, label, mask, noise);
 					
 					JCudaDriver.cuCtxSynchronize();
-					System.out.println("in");
+//					System.out.println("in");
 					/**
 					 * get latend
 					 */
@@ -4079,7 +4081,7 @@ public class MBSGDOptimizer extends Optimizer {
 					 * get context embd
 					 */
 					Tensor condInput = clip.forward(label, mask);
-					
+
 					latend.showDMByOffset(0, 100, "before latend");
 					
 					/**
@@ -4093,10 +4095,21 @@ public class MBSGDOptimizer extends Optimizer {
 //					condInput.showDM("condInput");
 //					t.showDM("t");
 					
+					if(context == null) {
+						context = condInput.createLike();
+					}
+					
+					TensorOP.mul(condInput, condInput.norm(), context);
+					
+					TensorOP.div(condInput, context, context);
+					
+					context.showDMByOffset(0, 100, "condInput");
+					latend.showDMByOffset(0, 100, "after latend");
+
 					/**
 					 * forward
 					 */
-					Tensor output = network.forward(latend, t, condInput);
+					Tensor output = network.forward(latend, t, context);
 					
 					output.showDMByOffset(0, 100, "output");
 					

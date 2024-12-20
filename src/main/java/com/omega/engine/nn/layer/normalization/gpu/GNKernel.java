@@ -12,8 +12,10 @@ import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.layer.normalization.BNType;
 
 import jcuda.Pointer;
+import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
 import jcuda.driver.CUfunction;
+import jcuda.runtime.JCuda;
 
 /**
  * mean = batch均值    : 1/n∑xi
@@ -45,6 +47,8 @@ public class GNKernel extends BaseKernel{
 	
 	private CUfunction forward2_function;
 	
+	private CUfunction forward3_function;
+	
 	/**
 	 * 反向传播方法
 	 */
@@ -65,6 +69,9 @@ public class GNKernel extends BaseKernel{
 	private Tensor mean;
 	
 	private Tensor var;
+	
+	private float eps = 1e-6f;
+	
 	
 	public GNKernel(int G,BNType bnType) {
 		this.bnType = bnType;
@@ -98,6 +105,10 @@ public class GNKernel extends BaseKernel{
 			
 			if(forward2_function == null) {
 				forward2_function = CUDAModules.getLocalFunctionByModule("GNKernel2.cu", "groupnorm_forward_kernel2");
+			}
+			
+			if(forward3_function == null) {
+				forward3_function = CUDAModules.getLocalFunctionByModule("GNKernel3.cu", "GroupNormKernel");
 			}
 
 			if(backward_function == null) {
@@ -142,18 +153,17 @@ public class GNKernel extends BaseKernel{
 			int group_size = input.channel / G;
 			int n_blocks  = input.number * G;
 			int block_size = Math.max(Math.min(512, img_size * group_size), 32);
-
+			System.err.println(check);
 			if(!check) {
-
 				initKernel();
-				
 			}
-
+			
 			/**
 			 *  const float* x, const float* weight, const float* bias,
 				float* out, float* mean, float* rstd,
 				int B, int C, int img_size, int group_size, int n_groups
 			 */
+			input.showDM();
 			forwardParameters = Pointer.to(
 					Pointer.to(input.getGpuData()),
 	                Pointer.to(gamma.getGpuData()),
@@ -167,14 +177,14 @@ public class GNKernel extends BaseKernel{
 					Pointer.to(new int[] {group_size}),
 					Pointer.to(new int[] {G})
 	            );
-
+			
 			cuLaunchKernel(forward_function,
 					n_blocks, 1, 1,      // Grid dimension
 					block_size, 1, 1,      // Block dimension
 	        		0, null,               // Shared memory size and stream
 		            forwardParameters, null // Kernel- and extra parameters
 				);
-
+			output.showDM();
 //			System.err.println("d_mean");
 //			showGPU(d_mean, B * G);
 //			
@@ -239,10 +249,65 @@ public class GNKernel extends BaseKernel{
 		
 	}
 	
-	public void backward(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
+	public void forward3(Tensor gamma, Tensor beta, Tensor input, Tensor output) {
 		
 		try {
 			
+			boolean check = checkBatch(input);
+			
+			if(!check) {
+				initKernel();
+			}
+			
+			/**
+			 *  const int row_dim, const int col_dim, const int num_channel, const int HxW,
+                const float epsilon, const float *x, const float *gamma, const float *beta, float *y,
+                float *mean_addr, float *rstd_addr
+			 */
+			input.showDM();
+			int HXW = input.height * input.width;
+			int N = input.number;
+			int C = input.channel;
+			int row_dim = N * G;
+			int col_dim = C * HXW / G;
+			int WARP_SIZE = 32;
+			forwardParameters = Pointer.to(
+					Pointer.to(new int[] {row_dim}),
+					Pointer.to(new int[] {col_dim}),
+					Pointer.to(new int[] {C}),
+					Pointer.to(new int[] {HXW}),
+					Pointer.to(new float[] {eps}),
+					Pointer.to(input.getGpuData()),
+	                Pointer.to(gamma.getGpuData()),
+	                Pointer.to(beta.getGpuData()),
+	                Pointer.to(output.getGpuData()),
+					Pointer.to(mean.getGpuData()),
+					Pointer.to(var.getGpuData())
+	            );
+			int share_mem_size = CAFFE_CUDA_NUM_THREADS / WARP_SIZE * 3 * Sizeof.FLOAT;
+			cuLaunchKernel(forward3_function,
+					row_dim, 1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					share_mem_size, null,               // Shared memory size and stream
+		            forwardParameters, null // Kernel- and extra parameters
+				);
+			output.showDM("output");
+//			System.err.println("d_mean");
+//			showGPU(d_mean, B * G);
+//			
+//			showGPU(d_var, B * G);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backward(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma,Tensor dbeta) {
+		
+		try {
+
 			int img_size = input.height * input.width;
 			int group_size = input.channel / G;
 			int n_blocks  = input.number * G;
@@ -422,7 +487,7 @@ public class GNKernel extends BaseKernel{
 //	    	forwardCPU(G, input, gamma, beta, output);
 			
 			int N = 2;
-	    	int C = 64;
+	    	int C = 96;
 	    	int H = 4;
 	    	int W = 4;
 	    	int G = 32;
@@ -462,10 +527,13 @@ public class GNKernel extends BaseKernel{
 	    	
 			GNKernel kernel = new GNKernel(G, BNType.conv_bn);
 	    	
-			kernel.forward(gamma, beta, input, output3);
-			output3.showDM();
-			
-			kernel.forward2(gamma, beta, input, output);			
+//			kernel.forward(gamma, beta, input, output3);
+//			output3.showDM();
+//			
+//			kernel.forward2(gamma, beta, input, output);			
+//			output.showDM();
+//			
+			kernel.forward3(gamma, beta, input, output);			
 			output.showDM();
 			
 			kernel.backward(input, delta, diff, gamma, dgamma, dbeta);

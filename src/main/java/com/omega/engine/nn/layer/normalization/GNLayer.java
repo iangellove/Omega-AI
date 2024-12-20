@@ -28,7 +28,7 @@ public class GNLayer extends NormalizationLayer {
 	
 	public BNType bnType = null;
 
-	private int groupNum = 1;
+	public int groupNum = 1;
 	
 	private int numChannel = 0;
 	
@@ -170,7 +170,7 @@ public class GNLayer extends NormalizationLayer {
 	public void init(Tensor input) {
 
 		this.number = input.number;
-		
+		System.err.println(bnType);
 		if(this.bnType == null) {
 			this.channel = input.channel;
 			this.height = input.height;
@@ -224,9 +224,12 @@ public class GNLayer extends NormalizationLayer {
 	}
 	
 	public void initBack(Tensor diff) {
+		this.diff = diff;
 //		diff.showDMByOffset(0, 100);
-		if(this.diff == null) {
-			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true, true);
+//		if(this.diff == null) {
+//			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true, true);
+//		}
+		if(this.diffGamma == null) {
 			this.diffGamma = new Tensor(1, 1, 1, numChannel, true);
 			this.diffBeta = new Tensor(1, 1, 1, numChannel, true);
 		}

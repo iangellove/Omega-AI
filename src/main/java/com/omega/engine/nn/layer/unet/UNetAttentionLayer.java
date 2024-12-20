@@ -168,6 +168,7 @@ public class UNetAttentionLayer extends Layer{
 		this.kDim = embedDim;
 		this.vDim = embedDim;
 		this.headNum = headNum;
+		System.err.println(embedDim);
 		if(embedDim % headNum != 0){
 			throw new RuntimeException("embedDim % headNum must be zero.");
 		}
@@ -290,7 +291,7 @@ public class UNetAttentionLayer extends Layer{
 		this.vt.viewOrg();
 		this.xt.viewOrg();
 		this.oi.viewOrg();
-//		temp.clearGPU();
+		temp.clearGPU();
 		if(this.getqLinerLayer().getOutput() != null) {
 			this.getqLinerLayer().getOutput().viewOrg();
 			this.getkLinerLayer().getOutput().viewOrg();
@@ -344,6 +345,10 @@ public class UNetAttentionLayer extends Layer{
 		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
 		
+//		qt.showDM("qt");
+//		kt.showDM("kt");
+//		vt.showDM("vt");
+		
 		scaledDotProductAttention(qt, kt, vt);
 
 		Tensor vaccum = temp;
@@ -363,6 +368,10 @@ public class UNetAttentionLayer extends Layer{
 		this.output.view(batchSize, channel, 1, time);
 		
 		TensorOP.permute(out, this.output, new int[] {0, 3, 2, 1}); //B,HW,C ==> B,C,HW
+		
+		this.output.view(batchSize, channel, height, width);
+		
+//		this.output.showDM("oT");
 		
 		if(residualConnect) {
 			TensorOP.add(this.input, this.output, this.output);
@@ -386,14 +395,13 @@ public class UNetAttentionLayer extends Layer{
 			x = gn.getOutput();
 //			x.showShape();
 		}
-//		x.showDMByOffsetRed(0, 100, "gn");
+//		x.showDM("gn");
 		
 		x = x.view(batchSize, channel, 1, height * width);
 		// B,C,HW ==> B,HW,C
 		TensorOP.permute(x, xt, new int[] {0, 3, 2, 1});
 		xt = xt.view(batchSize * time, 1, 1, channel);
 
-//		xt.showDM();
 		this.getqLinerLayer().forward(xt);
 		this.getkLinerLayer().forward(k);
 		this.getvLinerLayer().forward(v);
@@ -405,15 +413,12 @@ public class UNetAttentionLayer extends Layer{
 		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
+//		this.getqLinerLayer().weight.showDM();
 
-//		qt.showDMByOffsetRed(0, 100, "qt");
-//		kt.showDM("kt");
-//		vt.showDM("vt");
-		
 		scaledDotProductAttention(qt, kt, vt);
-
+		
 		Tensor vaccum = temp;
-//		vaccum.showDMByOffset(0, 100, "vaccum");
+		vaccum.showDM("vaccum");
 		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
 //		oi.showDMByOffset(0, 100, "oi");
 		this.getoLinerLayer().forward(oi);
@@ -430,6 +435,8 @@ public class UNetAttentionLayer extends Layer{
 		this.output.view(batchSize, channel, 1, time);
 		
 		TensorOP.permute(out, this.output, new int[] {0, 3, 2, 1}); //B,HW,C ==> B,C,HW
+		
+		this.output.view(batchSize, channel, height, width);
 		
 		if(residualConnect) {
 			TensorOP.add(this.input, this.output, this.output);
@@ -524,7 +531,7 @@ public class UNetAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 		// B,C,H,W ==> B,HW,C
-//		this.output.view(batchSize, height, width, channel);
+		this.output.view(batchSize, height, width, channel);
 		TensorOP.permute(delta, this.output, new int[] {0, 2, 3, 1});
 		this.output.view(batchSize * time, 1, 1, channel);
 
@@ -534,7 +541,9 @@ public class UNetAttentionLayer extends Layer{
 		}else {
 			this.getoLinerLayer().back(this.output, oi);
 		}
-
+		
+//		oi.showDM("aoDiff");
+		
 		attentionKernel.unpermute_backward(temp, oi, batchSize, time, headNum, dk);
 
 		scaledDotProductAttentionBackward();
@@ -548,8 +557,8 @@ public class UNetAttentionLayer extends Layer{
 		TensorOP.permute(dvt, vt, new int[] {0, 2, 1, 3});
 
 		Tensor queryDelta = qt.view(batchSize * time, 1, 1, headNum * dk);
-		Tensor keyDelta = kt.view(batchSize * kvTime, 1, 1, headNum * dk);
-		Tensor valueDelta = vt.view(batchSize * kvTime, 1, 1, headNum * dk);
+		Tensor keyDelta = kt.view(batchSize * time, 1, 1, headNum * dk);
+		Tensor valueDelta = vt.view(batchSize * time, 1, 1, headNum * dk);
 		
 		this.getqLinerLayer().back(queryDelta);
 		this.getkLinerLayer().back(keyDelta);
@@ -557,6 +566,8 @@ public class UNetAttentionLayer extends Layer{
 		
 		TensorOP.add(this.getqLinerLayer().diff, this.getkLinerLayer().diff, this.getqLinerLayer().diff);
 		TensorOP.add(this.getqLinerLayer().diff, this.getvLinerLayer().diff, this.getqLinerLayer().diff);
+		
+//		this.getqLinerLayer().diff.showDM("qqqqqq");
 		
 		// dxt
 		Tensor dxt = this.getqLinerLayer().diff;
@@ -566,8 +577,8 @@ public class UNetAttentionLayer extends Layer{
 		xt = xt.view(batchSize , channel, 1, time);
 		TensorOP.permute(dxt, xt, new int[] {0, 3, 2, 1});
 		dxt.viewOrg();
-		xt = xt.view(batchSize , channel, height, width);
-		
+		xt = xt.view(batchSize, channel, height, width);
+//		xt.showDM("dxt");
 		if(gn != null) {
 			gn.back(xt);
 			this.diff = gn.diff;
@@ -576,7 +587,7 @@ public class UNetAttentionLayer extends Layer{
 		}
 //		this.diff.showDM("gn");
 		if(residualConnect) {
-			TensorOP.add(this.diff, this.delta, this.diff);
+			TensorOP.add(this.delta, this.diff, this.diff);
 		}
 		
 	}
@@ -639,6 +650,7 @@ public class UNetAttentionLayer extends Layer{
 	public void diff(Tensor kvDiff) {
 		// TODO Auto-generated method stub
 		// B,C,H,W ==> B,HW,C
+		this.output.view(batchSize, height, width, channel);
 		TensorOP.permute(delta, this.output, new int[] {0, 2, 3, 1});
 		this.output.view(batchSize * time, 1, 1, channel);
 
@@ -648,9 +660,11 @@ public class UNetAttentionLayer extends Layer{
 		}else {
 			this.getoLinerLayer().back(this.output, oi);
 		}
-		
-		attentionKernel.unpermute_backward(temp, oi, batchSize, time, headNum, dk);
 
+//		Tensor oi = this.getoLinerLayer().diff;
+//		oi.showDM("oDiff");
+		attentionKernel.unpermute_backward(temp, oi, batchSize, time, headNum, dk);
+		
 		scaledDotProductAttentionBackward();
 		
 		qt.view(this.getqLinerLayer().getOutput().shape());
@@ -673,13 +687,14 @@ public class UNetAttentionLayer extends Layer{
 		
 		// dxt
 		Tensor dxt = this.getqLinerLayer().diff;
+
 		dxt.view(batchSize, time, 1, channel);
 		
 		// B,HW,C ==> B,C,H,W
 		xt = xt.view(batchSize , channel, 1, time);
 		TensorOP.permute(dxt, xt, new int[] {0, 3, 2, 1});
 		dxt.viewOrg();
-		xt = xt.view(batchSize , channel, height, width);
+		xt = xt.view(batchSize, channel, height, width);
 
 		if(gn != null) {
 			gn.back(xt);
@@ -692,7 +707,7 @@ public class UNetAttentionLayer extends Layer{
 		if(residualConnect) {
 			TensorOP.add(this.diff, this.delta, this.diff);
 		}
-
+//		diff.showDM("up-diff");
 	}
 
 	@Override

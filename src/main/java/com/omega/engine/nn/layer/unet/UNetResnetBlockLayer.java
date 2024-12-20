@@ -88,9 +88,12 @@ public class UNetResnetBlockLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		
+		input.showShape();
 		norm.forward(input);
-
+		norm.getOutput().showShape();
+		norm.gamma.showDM();
+		norm.beta.showDM();
+		norm.getOutput().showDM("norm");
 		act.forward(norm.getOutput());
 		
 		conv.forward(act.getOutput());

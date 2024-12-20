@@ -312,7 +312,7 @@ public class SDTest {
 		
 		int maxContextLen = 64;
 		
-		int batchSize = 1;
+		int batchSize = 2;
 
 		float[] mean = new float[] {0.5f, 0.5f,0.5f};
 		float[] std = new float[] {0.5f, 0.5f,0.5f};
@@ -356,16 +356,16 @@ public class SDTest {
 		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
 		
 		int convOutChannels = 128;
-		int unetHeadNum = 16;
+		int unetHeadNum = 8;
 		
-		int[] downChannels = new int[] {32, 48, 64, 96};
-		int[] midChannels = new int[] {96, 64};
+		int[] downChannels = new int[] {32, 48, 64};
+		int[] midChannels = new int[] {64, 48};
 		int numDowns = 1;
 		int numMids = 1;
 		int numUps = 1;
 		
-		boolean[] attns = new boolean[] {true, true, true};
-		boolean[] downSamples = new boolean[] {true, true, true};
+		boolean[] attns = new boolean[] {true, true};
+		boolean[] downSamples = new boolean[] {true, true};
 		
 		int timeSteps = 1000;
 		int tEmbDim = 512;

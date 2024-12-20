@@ -106,7 +106,7 @@ public class UNetMidBlockLayer extends Layer{
 		
 		attns = new ArrayList<UNetAttentionLayer>();
 		for(int i = 0;i<numLayers;i++) {
-			UNetAttentionLayer a = new UNetAttentionLayer(oChannel, numHeads, oChannel, height, width, groups, true, false, true, network);
+			UNetAttentionLayer a = new UNetAttentionLayer(oChannel, numHeads, oChannel, height, width, groups, false, false, true, network);
 			attns.add(a);
 		}
 		
@@ -118,7 +118,7 @@ public class UNetMidBlockLayer extends Layer{
 			}
 			crossAttns = new ArrayList<UNetAttentionLayer>();
 			for(int i = 0;i<numLayers;i++) {
-				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, oChannel, oChannel, numHeads, maxContextLen, oChannel, height, width, groups, true, false, true, network);
+				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, oChannel, oChannel, numHeads, maxContextLen, oChannel, height, width, groups, false, false, true, network);
 				crossAttns.add(a);
 			}
 		}
@@ -129,7 +129,7 @@ public class UNetMidBlockLayer extends Layer{
 			if(i == 0) {
 				ic = channel;
 			}
-			ConvolutionLayer c = new ConvolutionLayer(ic, oChannel, width, height, 1, 1, 0, 1, true, network);
+			ConvolutionLayer c = new ConvolutionLayer(ic, oChannel, width, height, 1, 1, 0, 1, false, network);
 			c.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 			c.paramsInit = ParamsInit.silu;
 			residualInputs.add(c);
@@ -306,7 +306,7 @@ public class UNetMidBlockLayer extends Layer{
 //		System.out.println("index:["+index+"]("+oChannel+")"+this.delta);
 		
 		Tensor d = delta;
-		
+//		d.showDM("mout");
 		for(int i = numLayers - 1;i>=0;i--) {
 			
 			residualInputs.get(i+1).back(d);
@@ -326,15 +326,18 @@ public class UNetMidBlockLayer extends Layer{
 			
 			TensorOP.add(d, residualInputs.get(i+1).diff, d);
 			
+//			d.showDM("mids.crossDelta");
+			
 			if(crossAttn) {
 				crossAttns.get(i).back(d, kvDiff);
 				contextProjs.get(i).back(kvDiff);
 				d = crossAttns.get(i).diff;
+//				d.showDM("crossAttns");
 			}
 			
 			attns.get(i).back(d);
 			d = attns.get(i).diff;
-			
+//			d.showDM("mids.attn");
 		}
 		
 		residualInputs.get(0).back(d);

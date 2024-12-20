@@ -577,7 +577,7 @@ public class Tensor implements Serializable{
 	
 	public void showDM(String label) {
 		syncHost();
-	    System.out.println(label+JsonUtils.toJson(data));
+	    System.out.println(label+"["+number+":"+channel+":"+height+":"+width+"]"+JsonUtils.toJson(data));
 	}
 	
 	public void showDMByNumber(int number) {

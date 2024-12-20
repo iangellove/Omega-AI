@@ -115,7 +115,7 @@ public class UNetDownBlockLayer extends Layer{
 		if(attn) {
 			attns = new ArrayList<UNetAttentionLayer>();
 			for(int i = 0;i<numLayers;i++) {
-				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, numHeads, oChannel, height, width, groups, true, false, true, network);
+				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, numHeads, oChannel, height, width, groups, false, false, true, network);
 				attns.add(a);
 			}
 		}
@@ -128,7 +128,7 @@ public class UNetDownBlockLayer extends Layer{
 			}
 			crossAttns = new ArrayList<UNetAttentionLayer>();
 			for(int i = 0;i<numLayers;i++) {
-				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, oChannel, oChannel, numHeads, maxContextLen, oChannel, height, width, groups, true, false, true, network);
+				UNetAttentionLayer a = new UNetAttentionLayer(oChannel, oChannel, oChannel, numHeads, maxContextLen, oChannel, height, width, groups, false, false, true, network);
 				crossAttns.add(a);
 			}
 		}
@@ -139,14 +139,14 @@ public class UNetDownBlockLayer extends Layer{
 			if(i == 0) {
 				ic = channel;
 			}
-			ConvolutionLayer c = new ConvolutionLayer(ic, oChannel, width, height, 1, 1, 0, 1, true, network);
+			ConvolutionLayer c = new ConvolutionLayer(ic, oChannel, width, height, 1, 1, 0, 1, false, network);
 			c.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 			c.paramsInit = ParamsInit.silu;
 			residualInputs.add(c);
 		}
 		
 		if(downSample) {
-			downSampleConv = new ConvolutionLayer(oChannel, oChannel, width, height, 4, 4, 1, 2, true, network);
+			downSampleConv = new ConvolutionLayer(oChannel, oChannel, width, height, 4, 4, 1, 2, false, network);
 			downSampleConv.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 			downSampleConv.paramsInit = ParamsInit.silu;
 			this.oHeight = downSampleConv.oHeight;
@@ -254,16 +254,17 @@ public class UNetDownBlockLayer extends Layer{
 	public void output(Tensor tembd,Tensor context) {
 		// TODO Auto-generated method stub
 		Tensor x = input;
+		
 		for(int i = 0;i<numLayers;i++) {
 			
 			Tensor res_i = x;
-			
+			System.err.println("----------------");
 			resnetFirst.get(i).forward(x);
 			
 			tEmbLayers.get(i).forward(tembd);
 			
 			Tensor r1 = resnetFirst.get(i).getOutput();
-			
+			r1.showDM("r1");
 			TensorOP.add(r1, tEmbLayers.get(i).getOutput(), t_out[i], r1.height * r1.width);
 			
 			resnetSecond.get(i).forward(t_out[i]);
@@ -273,23 +274,23 @@ public class UNetDownBlockLayer extends Layer{
 			TensorOP.add(resnetSecond.get(i).getOutput(), residualInputs.get(i).getOutput(), res_out[i]);
 			
 			x = res_out[i];
-			
+			x.showDM("attn_in");
 			if(attn) {
 				attns.get(i).forward(x);
 				x = attns.get(i).getOutput();
 			}
-			
+			x.showDM("ax");
 			if(crossAttn) {
 				contextProjs.get(i).forward(context);
 				Tensor cp = contextProjs.get(i).getOutput();
 				crossAttns.get(i).forward(x, cp, cp);
 				x = crossAttns.get(i).getOutput();
 			}
-			
+			x.showDM("cx");
 		}
-		
+		x.showDM("down-x");
 		downSampleConv.forward(x);
-		
+		downSampleConv.getOutput().showDM("downSampleConv-x");
 		this.output = downSampleConv.getOutput();
 	}
 

@@ -43,7 +43,7 @@ public class DiffusionUNetCond extends Network {
 	
 	private boolean[] attns;
 	
-	private int groups = 32;
+	private int groups = 16;
 	
 	private int headNum;
 	
