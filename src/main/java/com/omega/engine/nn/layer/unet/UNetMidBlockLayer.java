@@ -196,8 +196,6 @@ public class UNetMidBlockLayer extends Layer{
 		}
 		if(dt == null || dt.number != this.number) {
 			dt = Tensor.createGPUTensor(dt, this.number, 1, 1, oChannel, true);
-		}else {
-			dt.clearGPU();
 		}
 	}
 
@@ -238,6 +236,55 @@ public class UNetMidBlockLayer extends Layer{
 		this.output = x;
 	}
 	
+	public void output(Tensor tembd) {
+		// TODO Auto-generated method stub
+		
+		Tensor x = input;
+		
+		resnetFirst.get(0).forward(x);
+		
+		tEmbLayers.get(0).forward(tembd);
+		
+		Tensor r1 = resnetFirst.get(0).getOutput();
+		
+		TensorOP.add(r1, tEmbLayers.get(0).getOutput(), t_out[0], r1.height * r1.width);
+
+		resnetSecond.get(0).forward(t_out[0]);
+		
+		residualInputs.get(0).forward(x);
+		
+		TensorOP.add(resnetSecond.get(0).getOutput(), residualInputs.get(0).getOutput(), res_out[0]);
+		
+		x = res_out[0];
+		
+		for(int i = 0;i<numLayers;i++) {
+			
+			attns.get(i).forward(x);
+			x = attns.get(i).getOutput();
+//			x.showDM("mids0["+i+"]");
+
+			resnetFirst.get(i+1).forward(x);
+			
+			tEmbLayers.get(i+1).forward(tembd);
+			
+			Tensor r = resnetFirst.get(i+1).getOutput();
+			
+			TensorOP.add(r, tEmbLayers.get(i+1).getOutput(), t_out[i+1], r.height * r.width);
+			
+			resnetSecond.get(i+1).forward(t_out[i+1]);
+			
+			residualInputs.get(i+1).forward(x);
+			
+			TensorOP.add(resnetSecond.get(i+1).getOutput(), residualInputs.get(i+1).getOutput(), res_out[i+1]);
+			
+			x = res_out[i+1];
+			
+//			x.showDM("mids1["+i+"]");
+		}
+		
+		this.output = x;
+	}
+	
 	public void output(Tensor tembd,Tensor context) {
 		// TODO Auto-generated method stub
 		
@@ -263,7 +310,7 @@ public class UNetMidBlockLayer extends Layer{
 			
 			attns.get(i).forward(x);
 			x = attns.get(i).getOutput();
-			
+//			x.showDM("mids0["+i+"]");
 			if(crossAttn) {
 				contextProjs.get(i).forward(context);
 				Tensor cp = contextProjs.get(i).getOutput();
@@ -275,16 +322,19 @@ public class UNetMidBlockLayer extends Layer{
 			
 			tEmbLayers.get(i+1).forward(tembd);
 			
-			Tensor r= resnetFirst.get(i+1).getOutput();
+			Tensor r = resnetFirst.get(i+1).getOutput();
+			
 			TensorOP.add(r, tEmbLayers.get(i+1).getOutput(), t_out[i+1], r.height * r.width);
 			
 			resnetSecond.get(i+1).forward(t_out[i+1]);
+			
 			residualInputs.get(i+1).forward(x);
 			
 			TensorOP.add(resnetSecond.get(i+1).getOutput(), residualInputs.get(i+1).getOutput(), res_out[i+1]);
 			
 			x = res_out[i+1];
-
+			
+//			x.showDM("mids1["+i+"]");
 		}
 		
 		this.output = x;
@@ -315,6 +365,7 @@ public class UNetMidBlockLayer extends Layer{
 			d = resnetSecond.get(i+1).diff;
 			
 			if(tEmbDim > 0) {
+				dt.clearGPU();
 				TensorOP.sum(d, dt, 2);
 				tEmbLayers.get(i+1).back(dt);
 				TensorOP.add(tDiff, tEmbLayers.get(i+1).diff, tDiff);
@@ -422,6 +473,24 @@ public class UNetMidBlockLayer extends Layer{
 		this.output();
 	}
 	
+	public void forward(Tensor input,Tensor tembd) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init(input);
+		
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+
+		/**
+		 * 计算输出
+		 */
+		this.output(tembd);
+	}
+	
 	public void forward(Tensor input,Tensor tembd,Tensor context) {
 		// TODO Auto-generated method stub
 		/**
@@ -487,6 +556,13 @@ public class UNetMidBlockLayer extends Layer{
 		residualInputs.get(0).update();
 		
 		for(int i = 0;i<numLayers;i++) {
+
+			attns.get(i).update();
+			
+			if(crossAttn) {
+				contextProjs.get(i).update();
+				crossAttns.get(i).update();
+			}
 			
 			resnetFirst.get(i+1).update();
 			
@@ -498,13 +574,6 @@ public class UNetMidBlockLayer extends Layer{
 			resnetSecond.get(i+1).update();
 			
 			residualInputs.get(i+1).update();
-			
-			attns.get(i).update();
-			
-			if(crossAttn) {
-				contextProjs.get(i).update();
-				crossAttns.get(i).update();
-			}
 			
 		}
 

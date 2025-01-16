@@ -5,7 +5,6 @@ import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
-import com.omega.common.utils.PrintUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.layer.EmbeddingIDLayer;
@@ -54,16 +53,16 @@ public class TimeEmbeddingLayer extends Layer{
 		emb = new EmbeddingIDLayer(T, d_model, true, network);
 //		emb.weight = emb.createTimeEMB(T, d_model);
 //		emb.weight.showDM();
-//		emb.weight = emb.getTimeEMB(T, d_model);
+		emb.weight = emb.getTimeEMB(T, d_model);
 		emb.initFactor(T, d_model);
 
 		
-		linear1 = new FullyLayer(d_model, dim, bias, network);
+		linear1 = new FullyLayer(d_model, dim * 4, bias, network);
 //		linear1.weight = new Tensor(1, 1, dim, d_model, MatrixUtils.order(dim * d_model, 0.01f, 0.01f), true);
 		
 		act = new SiLULayer(linear1);
 		
-		linear2 = new FullyLayer(dim, dim, bias, network);
+		linear2 = new FullyLayer(dim * 4, dim, bias, network);
 //		linear2.weight = new Tensor(1, 1, dim, dim, MatrixUtils.order(dim * dim, 0.01f, 0.01f), true);
 		
 	}
@@ -89,9 +88,10 @@ public class TimeEmbeddingLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		input.showDM();
+//		input.showDM();
 //		emb.forward(input);
 		emb.getTimeEmbedding(input);
+		
 		linear1.forward(emb.getOutput());
 //		linear1.getOutput().showDM();
 		act.forward(linear1.getOutput());

@@ -132,8 +132,8 @@ public class Llama3Test {
 			network.learnRate = 1e-4f;
 			network.CLIP_GRAD_NORM = true;
 
-			String model_path = "H:\\model\\llama3-26m-chinese.model";
-			ModelUtils.loadModel(network, model_path);
+//			String model_path = "H:\\model\\llama3-26m-chinese.model";
+//			ModelUtils.loadModel(network, model_path);
 			
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
 			optimizer.trainLlama3_chinese(trainData, 8, true);

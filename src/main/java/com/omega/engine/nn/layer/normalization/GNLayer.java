@@ -170,7 +170,7 @@ public class GNLayer extends NormalizationLayer {
 	public void init(Tensor input) {
 
 		this.number = input.number;
-		System.err.println(bnType);
+
 		if(this.bnType == null) {
 			this.channel = input.channel;
 			this.height = input.height;
@@ -224,11 +224,11 @@ public class GNLayer extends NormalizationLayer {
 	}
 	
 	public void initBack(Tensor diff) {
-		this.diff = diff;
+//		this.diff = diff;
 //		diff.showDMByOffset(0, 100);
-//		if(this.diff == null) {
-//			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true, true);
-//		}
+		if(this.diff == null) {
+			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true, true);
+		}
 		if(this.diffGamma == null) {
 			this.diffGamma = new Tensor(1, 1, 1, numChannel, true);
 			this.diffBeta = new Tensor(1, 1, 1, numChannel, true);
@@ -238,7 +238,8 @@ public class GNLayer extends NormalizationLayer {
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-		kernel.forward(gamma, beta, input, output);
+//		input.showDM("ninx:");
+		kernel.forward3(gamma, beta, input, output);
 //		System.out.println("bn-output:");
 //		output.showDM();
 
@@ -287,7 +288,7 @@ public class GNLayer extends NormalizationLayer {
 //		System.out.println(delta);
 //		long start = System.nanoTime();
 //		System.out.println(index);
-		kernel.backward(input, delta, diff, gamma, diffGamma, diffBeta);
+		kernel.backward3(input, delta, diff, gamma, diffGamma, diffBeta);
 //		diff.showDMByNumber(0);
 //		diff2.showDMByNumber(0);
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
@@ -316,6 +317,7 @@ public class GNLayer extends NormalizationLayer {
 	public void update() {
 		// TODO Auto-generated method stub
 		if(!this.freeze) {
+//			System.err.println(diffGamma);
 			if(accDW != null) {
 				this.accDW.copy(diffGamma);
 				if(hasBias) {
@@ -427,7 +429,7 @@ public class GNLayer extends NormalizationLayer {
 		 * 计算梯度
 		 */
 		this.diff();
-		
+
 		if(this.network.GRADIENT_CHECK) {
 			this.gradientCheck();
 		}

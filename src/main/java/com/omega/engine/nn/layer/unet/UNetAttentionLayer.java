@@ -17,8 +17,7 @@ import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.gpu.AttentionKernel;
-import com.omega.engine.nn.layer.normalization.BNType;
-import com.omega.engine.nn.layer.normalization.GNLayer;
+import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
@@ -56,7 +55,8 @@ public class UNetAttentionLayer extends Layer{
 	
 	private boolean residualConnect = false;
 	
-	public GNLayer gn;
+//	public GNLayer gn;
+	public LNLayer gn;
 	
 	public FullyLayer qLinerLayer;
 	public FullyLayer kLinerLayer;
@@ -222,7 +222,8 @@ public class UNetAttentionLayer extends Layer{
 	public void initLayers() {
 
 		if(groups > 0) {
-			gn = new GNLayer(groups, this, BNType.conv_bn);
+//			gn = new GNLayer(groups, this, BNType.conv_bn);
+			gn = new LNLayer(this);
 		}
 		
 		this.setqLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
@@ -264,8 +265,20 @@ public class UNetAttentionLayer extends Layer{
 	
 	public void init(Tensor input) {
 		// TODO Auto-generated method stub
+
 		this.number = input.number;
 		this.batchSize = this.number;
+		
+		if(this.qt != null) {
+//			JCuda.cudaDeviceSynchronize();
+			this.output.viewOrg();
+			this.qt.viewOrg();
+			this.kt.viewOrg();
+			this.vt.viewOrg();
+			this.xt.viewOrg();
+			this.oi.viewOrg();
+			temp.clearGPU();
+		}
 		
 		if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
 			// [batch_size，time，head_num，d_k]
@@ -283,15 +296,12 @@ public class UNetAttentionLayer extends Layer{
 			this.attn = Tensor.createGPUTensor(this.attn, batchSize, headNum, time, kvTime, true);
 			// [batch_size, len_q, n_heads * dim_v]
 			this.oi = Tensor.createGPUTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
+			
 			this.output = Tensor.createGPUTensor(this.output, batchSize, channel, height, width, true);
+			
+//			this.output.showShape("output");
 		}
-		this.output.viewOrg();
-		this.qt.viewOrg();
-		this.kt.viewOrg();
-		this.vt.viewOrg();
-		this.xt.viewOrg();
-		this.oi.viewOrg();
-		temp.clearGPU();
+
 		if(this.getqLinerLayer().getOutput() != null) {
 			this.getqLinerLayer().getOutput().viewOrg();
 			this.getkLinerLayer().getOutput().viewOrg();
@@ -308,6 +318,11 @@ public class UNetAttentionLayer extends Layer{
 			this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, kvTime, dk, true);
 			this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, kvTime, dk, true);
 			this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, kvTime, true);
+		}else {
+			dattn.viewOrg();
+			dqt.viewOrg();
+			dkt.viewOrg();
+			dvt.viewOrg();
 		}
 	}
 
@@ -379,7 +394,7 @@ public class UNetAttentionLayer extends Layer{
 		
 		x.viewOrg();
 		
-		this.output.viewOrg();
+//		this.output.viewOrg();
 	}
 	
 	public void output(Tensor k,Tensor v) {
@@ -405,11 +420,11 @@ public class UNetAttentionLayer extends Layer{
 		this.getqLinerLayer().forward(xt);
 		this.getkLinerLayer().forward(k);
 		this.getvLinerLayer().forward(v);
-
+		
 		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
 		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, kvTime, headNum, dk);
 		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, kvTime, headNum, dk);
-		
+
 		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(key, kt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(value, vt, new int[] {0, 2, 1, 3});
@@ -418,7 +433,7 @@ public class UNetAttentionLayer extends Layer{
 		scaledDotProductAttention(qt, kt, vt);
 		
 		Tensor vaccum = temp;
-		vaccum.showDM("vaccum");
+//		vaccum.showDM("vaccum");
 		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
 //		oi.showDMByOffset(0, 100, "oi");
 		this.getoLinerLayer().forward(oi);
@@ -529,12 +544,15 @@ public class UNetAttentionLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		
 		// B,C,H,W ==> B,HW,C
 		this.output.view(batchSize, height, width, channel);
+//		output.showShape("output");
+//		output.clearGPU();
 		TensorOP.permute(delta, this.output, new int[] {0, 2, 3, 1});
 		this.output.view(batchSize * time, 1, 1, channel);
-
+		
+//		output.showDMByOffset(0, 100, "output");
+		
 		if(dropout) {
 			dropoutLayer2.back(this.output);
 			this.getoLinerLayer().back(dropoutLayer2.diff, oi);
@@ -542,7 +560,7 @@ public class UNetAttentionLayer extends Layer{
 			this.getoLinerLayer().back(this.output, oi);
 		}
 		
-//		oi.showDM("aoDiff");
+//		oi.showDMByOffset(0, 10, "oi");
 		
 		attentionKernel.unpermute_backward(temp, oi, batchSize, time, headNum, dk);
 
@@ -551,6 +569,10 @@ public class UNetAttentionLayer extends Layer{
 		qt.view(this.getqLinerLayer().getOutput().shape());
 		kt.view(this.getkLinerLayer().getOutput().shape());
 		vt.view(this.getvLinerLayer().getOutput().shape());
+		
+//		dqt.showShape("dqt");
+//		qt.showShape("qt");
+//		dqt.showDMByOffset(0, 10, "dqt");
 		
 		TensorOP.permute(dqt, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(dkt, kt, new int[] {0, 2, 1, 3});

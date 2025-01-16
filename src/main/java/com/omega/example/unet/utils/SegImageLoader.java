@@ -158,6 +158,7 @@ public class SegImageLoader extends RecursiveAction {
 				}else {
 					data = YoloImageUtils.loadImgDataToArray(filePath, normalization);
 				}
+//				System.out.println(filePath+data);
 				System.arraycopy(data, 0, getInput().data, i * getInput().channel * getInput().height * getInput().width, getInput().channel * getInput().height * getInput().width);
 			}
 		}

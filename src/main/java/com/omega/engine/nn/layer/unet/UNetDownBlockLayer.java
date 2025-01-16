@@ -214,8 +214,6 @@ public class UNetDownBlockLayer extends Layer{
 		}
 		if(dt == null || dt.number != this.number) {
 			dt = Tensor.createGPUTensor(dt, this.number, 1, 1, oChannel, true);
-		}else {
-			dt.clearGPU();
 		}
 	}
 
@@ -251,22 +249,24 @@ public class UNetDownBlockLayer extends Layer{
 		this.output = downSampleConv.getOutput();
 	}
 	
-	public void output(Tensor tembd,Tensor context) {
+	public void output(Tensor tembd) {
 		// TODO Auto-generated method stub
 		Tensor x = input;
 		
 		for(int i = 0;i<numLayers;i++) {
 			
 			Tensor res_i = x;
-			System.err.println("----------------");
+//			System.err.println("----------------");
 			resnetFirst.get(i).forward(x);
-			
+//			tembd.showDM();
 			tEmbLayers.get(i).forward(tembd);
 			
 			Tensor r1 = resnetFirst.get(i).getOutput();
-			r1.showDM("r1");
+//			r1.showDM("r1");
+//			tEmbLayers.get(i).linear.weight.showDM("emb-weight");
+//			tEmbLayers.get(i).getOutput().showDM("temb");
 			TensorOP.add(r1, tEmbLayers.get(i).getOutput(), t_out[i], r1.height * r1.width);
-			
+//			t_out[i].showDM("t_out");
 			resnetSecond.get(i).forward(t_out[i]);
 			
 			residualInputs.get(i).forward(res_i);
@@ -274,23 +274,62 @@ public class UNetDownBlockLayer extends Layer{
 			TensorOP.add(resnetSecond.get(i).getOutput(), residualInputs.get(i).getOutput(), res_out[i]);
 			
 			x = res_out[i];
-			x.showDM("attn_in");
+//			x.showDM("attn_in");
 			if(attn) {
 				attns.get(i).forward(x);
 				x = attns.get(i).getOutput();
 			}
-			x.showDM("ax");
+
+//			x.showDM("cx");
+		}
+//		x.showDM("down-x");
+		downSampleConv.forward(x);
+//		downSampleConv.getOutput().showDM("downSampleConv-x");
+		this.output = downSampleConv.getOutput();
+	}
+	
+	public void output(Tensor tembd,Tensor context) {
+		// TODO Auto-generated method stub
+		Tensor x = input;
+		
+		for(int i = 0;i<numLayers;i++) {
+			
+			Tensor res_i = x;
+//			System.err.println("----------------");
+			resnetFirst.get(i).forward(x);
+//			tembd.showDM();
+			tEmbLayers.get(i).forward(tembd);
+			
+			Tensor r1 = resnetFirst.get(i).getOutput();
+//			r1.showDM("r1");
+//			tEmbLayers.get(i).linear.weight.showDM("emb-weight");
+//			tEmbLayers.get(i).getOutput().showDM("temb");
+			TensorOP.add(r1, tEmbLayers.get(i).getOutput(), t_out[i], r1.height * r1.width);
+//			t_out[i].showDM("t_out");
+			resnetSecond.get(i).forward(t_out[i]);
+			
+			residualInputs.get(i).forward(res_i);
+			
+			TensorOP.add(resnetSecond.get(i).getOutput(), residualInputs.get(i).getOutput(), res_out[i]);
+			
+			x = res_out[i];
+//			x.showDM("attn_in");
+			if(attn) {
+				attns.get(i).forward(x);
+				x = attns.get(i).getOutput();
+			}
+//			x.showDM("ax");
 			if(crossAttn) {
 				contextProjs.get(i).forward(context);
 				Tensor cp = contextProjs.get(i).getOutput();
 				crossAttns.get(i).forward(x, cp, cp);
 				x = crossAttns.get(i).getOutput();
 			}
-			x.showDM("cx");
+//			x.showDM("cx");
 		}
-		x.showDM("down-x");
+//		x.showDM("down-x");
 		downSampleConv.forward(x);
-		downSampleConv.getOutput().showDM("downSampleConv-x");
+//		downSampleConv.getOutput().showDM("downSampleConv-x");
 		this.output = downSampleConv.getOutput();
 	}
 
@@ -335,6 +374,7 @@ public class UNetDownBlockLayer extends Layer{
 //			d.showDM("tout");
 			
 			if(tEmbDim > 0) {
+				dt.clearGPU();
 				TensorOP.sum(d, dt, 2);
 				tEmbLayers.get(i).back(dt);
 				TensorOP.add(tDiff, tEmbLayers.get(i).diff, tDiff);
@@ -342,12 +382,14 @@ public class UNetDownBlockLayer extends Layer{
 			
 			resnetFirst.get(i).back(d);
 			
+//			resnetFirst.get(i).conv.diff.showDM("afout");
+			
 			d = resnetFirst.get(i).diff;
 			
 //			d.showDM("resnetFirst");
 //			residualInputs.get(i).diff.showDM("residualInputs");
 			TensorOP.add(d, residualInputs.get(i).diff, d);
-//			d.showDM("d");
+//			d.showDM("d-["+i+"]");
 		}
 		
 		this.diff = d;
@@ -415,6 +457,24 @@ public class UNetDownBlockLayer extends Layer{
 		this.output();
 	}
 	
+	public void forward(Tensor input,Tensor tembd) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init(input);
+		
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+
+		/**
+		 * 计算输出
+		 */
+		this.output(tembd);
+	}
+	
 	public void forward(Tensor input,Tensor tembd,Tensor context) {
 		// TODO Auto-generated method stub
 		/**
@@ -475,7 +535,6 @@ public class UNetDownBlockLayer extends Layer{
 				tEmbLayers.get(i).update();
 			}
 			
-			
 			resnetSecond.get(i).update();
 			
 			residualInputs.get(i).update();
@@ -490,7 +549,11 @@ public class UNetDownBlockLayer extends Layer{
 			}
 			
 		}
-		downSampleConv.update();
+		
+		if(downSample) {
+			downSampleConv.update();
+		}
+		
 	}
 
 	@Override

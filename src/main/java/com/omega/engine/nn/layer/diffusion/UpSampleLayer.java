@@ -43,9 +43,9 @@ public class UpSampleLayer extends Layer{
 	public void initLayers() {
 
 		up = new UPSampleLayer2(channel, height, width, 2, network);
-		
+	
 		conv = new ConvolutionLayer(channel, oChannel, up.oWidth, up.oHeight, kHeight, kWidth, padding, stride, false, this.network);
-
+		
 	}
 
 	@Override

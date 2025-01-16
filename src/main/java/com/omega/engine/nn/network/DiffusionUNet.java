@@ -450,7 +450,7 @@ public class DiffusionUNet extends Network {
 		
 		return this.lossFunction.loss(output, label);
 	}
-
+	
 	@Override
 	public Tensor lossDiff(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub

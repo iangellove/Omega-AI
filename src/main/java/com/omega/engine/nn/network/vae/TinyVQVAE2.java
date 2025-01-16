@@ -103,6 +103,9 @@ public class TinyVQVAE2 extends Network {
 	
 	private Tensor ema_count_n;
 	
+	private Tensor avg_probs;
+	private Tensor avg_probs_log;
+	
 	public TinyVQVAE2(LossType lossType,UpdaterType updater,int z_dims,int latendDim,int num_vq_embeddings,int imageSize,int[] channels,boolean[] attn_resolutions,int num_res_blocks) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.z_dims = z_dims;
@@ -198,7 +201,9 @@ public class TinyVQVAE2 extends Network {
 
 		pre_quant_conv.forward(encoder.getOutput());
 		
-		quantizer();
+		this.ze = pre_quant_conv.getOutput();
+		
+		quantizer(pre_quant_conv.getOutput());
 		
 		post_quant_conv.forward(this.zq);
 		
@@ -222,7 +227,7 @@ public class TinyVQVAE2 extends Network {
 		
 		pre_quant_conv.forward(encoder.getOutput());
 		
-		quantizer();
+		quantizer(pre_quant_conv.getOutput());
 		
 		return zq;
 	}
@@ -236,16 +241,29 @@ public class TinyVQVAE2 extends Network {
 		return decoder.getOutput();
 	}
 	
-	public void quantizer() {
-
-		this.ze = pre_quant_conv.getOutput();
+	public Tensor decodeCode(Tensor codeB) {
+		
+		quantizer(codeB);
+		
+		return decode(this.zq);
+		
+	}
+	
+	public void quantizer(Tensor ze) {
 		
 		if(this.z_flattened == null || this.z_flattened.number != ze.number) {
 			this.z_flattened = Tensor.createGPUTensor(this.z_flattened, ze.number, ze.height, ze.width, this.latendDim, true);
 			this.idx = Tensor.createGPUTensor(this.idx, ze.number * ze.height * ze.width, 1, 1, 1, true);
 			this.zq = Tensor.createGPUTensor(this.zq, ze.number, ze.channel, ze.height, ze.width, true);
+			if(this.RUN_MODEL == RunModel.TRAIN) {
+				this.avg_probs = Tensor.createGPUTensor(this.avg_probs, 1, 1, 1, num_vq_embeddings, true);
+				this.avg_probs_log = Tensor.createGPUTensor(this.avg_probs_log, 1, 1, 1, num_vq_embeddings, true);
+			}
 		}else {
 			z_flattened.viewOrg();
+			if(this.RUN_MODEL == RunModel.TRAIN) {
+				avg_probs.clear();
+			}
 		}
 	
 		TensorOP.permute(ze, z_flattened, new int[] {0, 2, 3, 1});  //B,C,H,W ==> B,H,W,C
@@ -258,7 +276,7 @@ public class TinyVQVAE2 extends Network {
 //		ie.showDMByOffset(0, num_vq_embeddings);
 		
 		vaeKernel.argmin(ie, idx);
-
+		
 		if(embedding.getOutput() != null) {
 			embedding.getOutput().viewOrg();
 		}
@@ -268,6 +286,15 @@ public class TinyVQVAE2 extends Network {
 		Tensor emo = embedding.getOutput().view(new int[] {ze.number, ze.height, ze.width, ze.channel});
 		
 		TensorOP.permute(emo, zq, new int[] {0, 3, 1, 2}); //B*H*W*C ==> B*C*H*W
+		
+		if(this.RUN_MODEL == RunModel.TRAIN) {
+			vaeKernel.mean(idx, avg_probs);
+			TensorOP.add(avg_probs, 1e-6f, avg_probs_log);
+			TensorOP.log(avg_probs_log, avg_probs_log);
+			TensorOP.mul(avg_probs, avg_probs_log, avg_probs);
+			float perplexity =  (float) Math.exp(-MatrixUtils.sum(avg_probs.syncHost()));
+			System.out.println("perplexity:"+perplexity);
+		}
 		
 	}
 	
@@ -474,14 +501,14 @@ public class TinyVQVAE2 extends Network {
 		}
 		
 		Tensor decoerLoss = this.lossFunction.loss(output, label);
-		System.out.println(MatrixOperation.sum(decoerLoss.syncHost()) / output.number);
+		System.out.println("decoderLoss:"+MatrixOperation.sum(decoerLoss.syncHost()) / output.number);
 		embedding.getOutput().viewOrg();
 
 		vaeKernel.MSE_C(embedding.getOutput(), z_flattened, vqLoss, beta);
 		
 //		vaeKernel.MSE_C_SUM(embedding.getOutput(), z_flattened, vqLoss, beta);
 		
-		vqLoss.showDM();
+		vqLoss.showDM(0, "vqLoss");
 
 		return (MatrixOperation.sum(decoerLoss.syncHost()) / output.number + MatrixOperation.sum(vqLoss.syncHost()));
 	}

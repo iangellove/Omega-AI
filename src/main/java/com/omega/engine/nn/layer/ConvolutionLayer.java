@@ -291,11 +291,10 @@ public class ConvolutionLayer extends Layer {
 		if(this.diff == null || this.number != this.diff.number){
 			this.diff = new Tensor(number, channel, height, width, true);
 			if(this.diffW == null) {
-				if(network != null && !freeze) {
-					this.diffB = this.network.createParamterGrad(1, 1, 1, kernelNum, true);
-					this.diffW = this.network.createParamterGrad(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);
-				}else if(!freeze){
-					this.diffB = new Tensor(1, 1, 1, kernelNum, true);
+				if(!freeze) {
+					if(this.hasBias) {
+						this.diffB = new Tensor(1, 1, 1, kernelNum, true);
+					}
 					this.diffW = new Tensor(this.kernelNum,this.channel,this.kHeight,this.kWidth, true);
 				}
 			}
@@ -329,7 +328,7 @@ public class ConvolutionLayer extends Layer {
 //			System.out.println(JsonUtils.toJson(delta.syncHost()));
 //			
 //		}
-		
+
 		if(!freeze) {
 
 			/**
@@ -339,7 +338,7 @@ public class ConvolutionLayer extends Layer {
 			 * im2col(input)T[oh * ow * C * kh * kw]
 			 */
 			kernel.dw(input, delta, diffW);
-			
+
 			/**
 			 * 计算deltaB
 			 */

@@ -77,6 +77,8 @@ public class AttentionKernel extends BaseKernel{
 	
 	private CUfunction softmax_backward_unmask_2_function;
 	
+	private CUfunction softmax_backward_unmask_kv_function;
+	
 	public AttentionKernel() {
 		init();
 	}
@@ -162,6 +164,11 @@ public class AttentionKernel extends BaseKernel{
 			if(softmax_backward_unmask_2_function == null) {
 				softmax_backward_unmask_2_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_autoregressive_unmask_backward_inplace_kernel");
 			}
+			
+			if(softmax_backward_unmask_kv_function == null) {
+				softmax_backward_unmask_kv_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "softmax_kv_unmask_backward_inplace_kernel");
+			}
+			
 			
 			if(scale_function == null) {
 				scale_function = CUDAModules.getLocalFunctionByModule("AttentionKernel.cu", "scale_kernel");
@@ -942,6 +949,41 @@ public class AttentionKernel extends BaseKernel{
 		
 	}
 	
+	public void softmax_kv_unmask_backward(Tensor datt,Tensor att,int B,int T,int T2,int NH,float scale) {
+		
+		try {
+			
+	        /**
+	         * 设置入参
+	         * float* datt, const float* att, int B, int T, int C, float scale
+	         */ 
+			int block_size = 256;
+			softmaxBackwardParameters = Pointer.to(
+	        		Pointer.to(datt.getGpuData()),
+	        		Pointer.to(att.getGpuData()),
+	                Pointer.to(new int[]{B}),
+	                Pointer.to(new int[]{T}),
+	                Pointer.to(new int[]{T2}),
+	                Pointer.to(new float[]{scale})
+	            );
+			
+			int grid_size = get_number_of_blocks(T, 4);
+			int[] grids = new int[] {grid_size, B * NH, 1};
+
+		    checkCUDA(cuLaunchKernel(softmax_backward_unmask_kv_function,
+		    		grids[0],  grids[1], grids[2],      // Grid dimension
+		    		block_size, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            softmaxBackwardParameters, null // Kernel- and extra parameters
+		        ));
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 	public int get_number_of_blocks(int array_size, int block_size)
 	{
 		return array_size / block_size + ((array_size % block_size > 0) ? 1 : 0);
@@ -976,6 +1018,8 @@ public class AttentionKernel extends BaseKernel{
 		float[] x_data = MatrixUtils.order(N * NH * T * T2, 0.1f, 0.1f);
 		
 		Tensor x = new Tensor(N, NH, T, T2, x_data, true);
+		
+		Tensor delta = new Tensor(N, NH, T, T2, x_data, true);
 		
 		Tensor x2 = new Tensor(N, NH, T, T2, x_data, true);
 		
@@ -1042,7 +1086,9 @@ public class AttentionKernel extends BaseKernel{
 		
 		long start5 = System.nanoTime();
 		
-		cudnnKernel.softmax_backward(output2, x, diff);
+		kernel.softmax_kv_unmask_backward(delta, output2, N, T, T2, NH, 1);
+		
+//		cudnnKernel.softmax_backward(output2, x, diff);
 		
 		JCuda.cudaDeviceSynchronize();
 		
@@ -1057,6 +1103,7 @@ public class AttentionKernel extends BaseKernel{
 		System.out.println((System.nanoTime() - start6)/1e6+"ms.");
 		
 		x.showDMByOffset(0, 100);
+		delta.showDMByOffset(0, 100);
 		
 //		int batchSize = 2;
 //		int headNum = 3;

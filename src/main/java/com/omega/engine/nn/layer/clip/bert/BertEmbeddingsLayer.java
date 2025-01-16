@@ -85,7 +85,7 @@ public class BertEmbeddingsLayer extends Layer{
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
 		
-		if(positionIDS == null || positionIDS.number != this.number) {
+		if(positionIDS == null || positionIDS.number != this.number * maxPositionEmbeddingsSize) {
 			float[] data = RandomUtils.orderAndUnsqueeze(maxPositionEmbeddingsSize, this.number, 1.0f, 0.0f);
 			positionIDS = new Tensor(this.number * maxPositionEmbeddingsSize, 1, 1, 1, data, true);
 		}

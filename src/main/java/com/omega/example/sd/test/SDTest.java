@@ -2,11 +2,16 @@ package com.omega.example.sd.test;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
+import com.omega.common.utils.MatrixUtils;
+import com.omega.common.utils.RandomUtils;
+import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.network.ClipText;
+import com.omega.engine.nn.network.DiffusionUNet;
 import com.omega.engine.nn.network.DiffusionUNetCond;
+import com.omega.engine.nn.network.DiffusionUNetCond2;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.vae.TinyVQVAE2;
 import com.omega.engine.optimizer.MBSGDOptimizer;
@@ -32,29 +37,33 @@ public class SDTest {
 
 		int batchSize = 2;
 		int imageSize = 256;
-		int z_dims = 64;
+		int z_dims = 32;
 		int latendDim = 4;
 		
 		int num_vq_embeddings = 512;
 		
 		int num_res_blocks = 2;
 		
-		int[] channels = new int[] {64, 128, 256};
-		boolean[] attn_resolutions = new boolean[] {false, false, false};
+		int[] channels = new int[] {32, 64, 128, 256};
+		boolean[] attn_resolutions = new boolean[] {false, false, false, false};
 		
 		float[] mean = new float[] {0.5f, 0.5f,0.5f};
 		float[] std = new float[] {0.5f, 0.5f,0.5f};
 		
 		String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
 		
-		DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
+		String tokenizerPath = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
+		
+		String labelPath = "H:\\vae_dataset\\pokemon-blip\\data.json";
+		
+		SDImageDataLoader dataLoader = new SDImageDataLoader(tokenizerPath, labelPath, imgDirPath, imageSize, imageSize, 64, batchSize, true, mean, std);
 		
 		TinyVQVAE2 network = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
 		network.CUDNN = true;
 		network.learnRate = 0.001f;
 		network.RUN_MODEL = RunModel.EVAL;
 		
-		String vqvae_model_path = "H:\\model\\vqvae2_256_500.model";
+		String vqvae_model_path = "H:\\model\\vqvae2_256_32_500.model";
 		ModelUtils.loadModel(network, vqvae_model_path);
 		
 		int[] indexs = new int[] {0, 1, 2, 3};
@@ -69,6 +78,25 @@ public class SDTest {
 		
 		Tensor latent = network.encode(input);
 		
+		Tensor a = new Tensor(batchSize, 1, 1, 1, true);
+		Tensor b = new Tensor(batchSize, 1, 1, 1, true);
+		Tensor noise = new Tensor(batchSize, latendDim, 32, 32, true);
+		float beta_1 = 1e-4f;
+		float beta_T = 0.02f;
+		int T = 1000;
+		float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
+		float[] alphas = MatrixOperation.subtraction(1, betas);
+		float[] alphas_bar = MatrixUtils.cumprod(alphas);
+		float[] sqrt_alphas_bar = MatrixOperation.sqrt(alphas_bar);
+		float[] sqrt_one_minus_alphas_bar = MatrixOperation.sqrt(MatrixOperation.subtraction(1, alphas_bar));
+		int[] t_data = new int[] {0, 400};
+		float[] exsa1 = MatrixUtils.gather(sqrt_alphas_bar, t_data);
+		float[] exsa2 = MatrixUtils.gather(sqrt_one_minus_alphas_bar, t_data);
+		a.setData(exsa1);
+		b.setData(exsa2);
+		
+		RandomUtils.gaussianRandom(noise, 0, 1);
+		dataLoader.addNoise(a, b, latent, noise);
 //		latent.showShape();
 		
 //		latent.showDM();
@@ -85,6 +113,22 @@ public class SDTest {
 		 * print image
 		 */
 		MBSGDOptimizer.showImgs("H:\\vae_dataset\\pokemon-blip\\vqvae2\\test256\\", out, "test", mean, std);
+		
+		dataLoader.unNoise(a, b, latent, noise);
+		
+		out = network.decode(latent);
+		
+		out.showShape();
+//		out.showDM();
+		
+		out.syncHost();
+		out.data = MatrixOperation.clampSelf(out.data, -1, 1);
+		
+		/**
+		 * print image
+		 */
+		MBSGDOptimizer.showImgs("H:\\vae_dataset\\pokemon-blip\\vqvae2\\test256\\", out, "test_un", mean, std);
+		
 		
 		indexs = new int[] {4, 5, 6, 7};
 		
@@ -126,8 +170,8 @@ public class SDTest {
 		
 		int num_res_blocks = 2;
 		
-		int[] channels = new int[] {64, 128, 256};
-		boolean[] attn_resolutions = new boolean[] {false, false, false};
+		int[] channels = new int[] {32, 64, 128, 256};
+		boolean[] attn_resolutions = new boolean[] {false, false, false, false};
 		
 		float[] mean = new float[] {0.5f, 0.5f,0.5f};
 		float[] std = new float[] {0.5f, 0.5f,0.5f};
@@ -141,7 +185,7 @@ public class SDTest {
 		network.learnRate = 0.001f;
 		network.RUN_MODEL = RunModel.EVAL;
 		
-		String vqvae_model_path = "H:\\model\\vqvae2_32_256_500.model";
+		String vqvae_model_path = "H:\\model\\vqvae2_32_512.model";
 		ModelUtils.loadModel(network, vqvae_model_path);
 		
 		String tokenizerPath = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
@@ -192,7 +236,7 @@ public class SDTest {
 		
 		Tensor latent = network.encode(input);
 		
-//		latent.showShape();
+		latent.showShape();
 		
 //		latent.showDM();
 		
@@ -239,6 +283,89 @@ public class SDTest {
 		 */
 		MBSGDOptimizer.showImgs("H:\\vae_dataset\\pokemon-blip\\vqvae2\\test256\\", out, "test1", mean, std);
 		
+	}
+	
+	public static void getVQVAE32_scale_factor() {
+
+		int batchSize = 8;
+		int imageSize = 256;
+		int z_dims = 32;
+		int latendDim = 4;
+		
+		int num_vq_embeddings = 512;
+		
+		int num_res_blocks = 2;
+		
+		int[] channels = new int[] {32, 64, 128, 256};
+		boolean[] attn_resolutions = new boolean[] {false, false, false, false};
+		
+		float[] mean = new float[] {0.5f, 0.5f,0.5f};
+		float[] std = new float[] {0.5f, 0.5f,0.5f};
+		
+		String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
+		
+		DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
+		
+		TinyVQVAE2 network = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+		network.CUDNN = true;
+		network.learnRate = 0.001f;
+		network.RUN_MODEL = RunModel.EVAL;
+		
+		String vqvae_model_path = "H:\\model\\vqvae2_256_32_500.model";
+		ModelUtils.loadModel(network, vqvae_model_path);
+		
+		Tensor input = new Tensor(batchSize, 3, imageSize, imageSize, true);
+		
+		int[][] indexs = dataLoader.order();
+		
+		Tensor out = new Tensor(batchSize, latendDim, z_dims, z_dims, true);
+		
+		for(int i = 0;i<indexs.length;i++) {
+			System.err.println(i);
+			dataLoader.loadData(indexs[i], input);
+
+			JCudaDriver.cuCtxSynchronize();
+			
+			Tensor latent = network.encode(input);
+			
+			TensorOP.add(out, latent, out);
+			
+		}
+		
+		System.err.println("finis sum.");
+		
+		Tensor sum = new Tensor(1, 1, 1, 1, true);
+		
+		TensorOP.sum(out, sum, 0);
+		
+		float meanV = sum.syncHost()[0] / out.dataLength / indexs.length;
+		System.err.println(meanV);
+		Tensor onceSum = new Tensor(1, 1, 1, 1, true);
+		
+		float sum_cpu = 0.0f;
+		
+		for(int i = 0;i<indexs.length;i++) {
+			System.err.println(i);
+			dataLoader.loadData(indexs[i], input);
+
+			JCudaDriver.cuCtxSynchronize();
+			
+			Tensor latent = network.encode(input);
+			
+			TensorOP.sub(latent, meanV, latent);
+			
+			TensorOP.pow(latent, 2, latent);
+			
+			TensorOP.sum(latent, onceSum, 0);
+			
+			sum_cpu += onceSum.syncHost()[0];
+		}
+		System.err.println(sum_cpu);
+		System.err.println(sum.syncHost()[0]);
+		System.err.println(sum_cpu / sum.syncHost()[0]);
+		double scale_factor = Math.sqrt(sum_cpu / out.dataLength / indexs.length);
+		
+		System.err.println("scale_factor:" + 1 / scale_factor);
 	}
 	
 	public static void test_clip() {
@@ -312,7 +439,7 @@ public class SDTest {
 		
 		int maxContextLen = 64;
 		
-		int batchSize = 2;
+		int batchSize = 1;
 
 		float[] mean = new float[] {0.5f, 0.5f,0.5f};
 		float[] std = new float[] {0.5f, 0.5f,0.5f};
@@ -370,13 +497,297 @@ public class SDTest {
 		int timeSteps = 1000;
 		int tEmbDim = 512;
 		
-		DiffusionUNetCond unet = new DiffusionUNetCond(LossType.MSE, UpdaterType.adamw, latendDim, z_dims, z_dims, convOutChannels, unetHeadNum, downChannels, midChannels, downSamples, numDowns, numMids, numUps, timeSteps, tEmbDim, textEmbedDim, maxContextLen, attns);
+		int latendSize = 64;
+		
+		DiffusionUNetCond unet = new DiffusionUNetCond(LossType.MSE, UpdaterType.adamw, latendDim, latendSize, latendSize, convOutChannels, unetHeadNum, downChannels, midChannels, downSamples, numDowns, numMids, numUps, timeSteps, tEmbDim, textEmbedDim, maxContextLen, true, attns);
 		unet.CUDNN = true;
 		unet.learnRate = 0.001f;
 		
-		MBSGDOptimizer optimizer = new MBSGDOptimizer(unet, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+		MBSGDOptimizer optimizer = new MBSGDOptimizer(unet, 500, 0.00001f, batchSize, LearnRateUpdate.GD_GECAY, false);
 		
 		optimizer.trainSD(dataLoader, vae, clip);
+		
+	}
+	
+	public static void sd_train_pokem_32() throws Exception {
+		
+		String tokenizerPath = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
+		
+		String labelPath = "H:\\vae_dataset\\pokemon-blip\\data.json";
+		String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
+		
+		boolean horizontalFilp = true;
+		
+		int imgSize = 256;
+		
+		int maxContextLen = 64;
+		
+		int batchSize = 2;
+
+		float[] mean = new float[] {0.5f, 0.5f,0.5f};
+		float[] std = new float[] {0.5f, 0.5f,0.5f};
+		
+		SDImageDataLoader dataLoader = new SDImageDataLoader(tokenizerPath, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
+		
+		int imageSize = 256;
+		int z_dims = 32;
+		int latendDim = 4;
+		
+		int num_vq_embeddings = 512;
+		
+		int num_res_blocks = 2;
+		
+		int[] channels = new int[] {32, 64, 128, 256};
+		boolean[] attn_resolutions = new boolean[] {false, false, false, false};
+		TinyVQVAE2 vae = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+		vae.CUDNN = true;
+		vae.learnRate = 0.001f;
+		vae.RUN_MODEL = RunModel.EVAL;
+		
+		String vae_path = "H:\\model\\vqvae2_32_512.model";
+		ModelUtils.loadModel(vae, vae_path);
+		
+		int time = maxContextLen;
+		int maxPositionEmbeddingsSize = 512;
+		int vocabSize = 21128;
+		int hiddenSize = 768;
+		int typeVocabSize = 2;
+		int headNum = 12;
+		int numHiddenLayers = 12;
+		int intermediateSize = 3072;
+		int textEmbedDim = 512;
+		
+		ClipText clip = new ClipText(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, hiddenSize, textEmbedDim, maxPositionEmbeddingsSize, typeVocabSize, intermediateSize, numHiddenLayers);
+		clip.CUDNN = true;
+		clip.time = time;
+		clip.RUN_MODEL = RunModel.EVAL;
+		
+		String clipWeight = "H:\\model\\clip_cn_vit-b-16.json";
+		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
+		
+		int convOutChannels = 128;
+		int unetHeadNum = 8;
+		
+		int[] downChannels = new int[] {64, 96, 128, 256};
+		int[] midChannels = new int[] {256, 128};
+		int numDowns = 1;
+		int numMids = 1;
+		int numUps = 1;
+		
+		boolean[] attns = new boolean[] {true, true, true};
+		boolean[] downSamples = new boolean[] {true, true, true};
+		
+		int timeSteps = 1000;
+		int tEmbDim = 512;
+		
+		int latendSize = 32;
+		
+		DiffusionUNetCond unet = new DiffusionUNetCond(LossType.MSE, UpdaterType.adamw, latendDim, latendSize, latendSize, convOutChannels, unetHeadNum, downChannels, midChannels, downSamples, numDowns, numMids, numUps, timeSteps, tEmbDim, textEmbedDim, maxContextLen, true, attns);
+		unet.CUDNN = true;
+		unet.learnRate = 0.0001f;
+		
+		MBSGDOptimizer optimizer = new MBSGDOptimizer(unet, 500, 0.00001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+		optimizer.lr_step = new int[] {20,50,80};
+		
+		optimizer.trainSD(dataLoader, vae, clip);
+		
+	}
+	
+	public static void tiny_sd_train_pokem_32() throws Exception {
+		
+		String tokenizerPath = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
+		
+		String labelPath = "H:\\vae_dataset\\pokemon-blip\\data.json";
+		String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
+		
+		boolean horizontalFilp = true;
+		
+		int imgSize = 256;
+		
+		int maxContextLen = 64;
+		
+		int batchSize = 2;
+
+		float[] mean = new float[] {0.5f, 0.5f,0.5f};
+		float[] std = new float[] {0.5f, 0.5f,0.5f};
+		
+		SDImageDataLoader dataLoader = new SDImageDataLoader(tokenizerPath, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
+		
+		int imageSize = 256;
+		int z_dims = 32;
+		int latendDim = 4;
+		
+		int num_vq_embeddings = 512;
+		
+		int num_res_blocks = 2;
+		
+		int[] channels = new int[] {32, 64, 128, 256};
+		boolean[] attn_resolutions = new boolean[] {false, false, false, false};
+		TinyVQVAE2 vae = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+		vae.CUDNN = true;
+		vae.learnRate = 0.001f;
+		vae.RUN_MODEL = RunModel.EVAL;
+		
+		String vae_path = "H:\\model\\vqvae2_32_512.model";
+		ModelUtils.loadModel(vae, vae_path);
+		
+		int time = maxContextLen;
+		int maxPositionEmbeddingsSize = 512;
+		int vocabSize = 21128;
+		int hiddenSize = 768;
+		int typeVocabSize = 2;
+		int headNum = 12;
+		int numHiddenLayers = 12;
+		int intermediateSize = 3072;
+		int textEmbedDim = 512;
+		
+		ClipText clip = new ClipText(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, hiddenSize, textEmbedDim, maxPositionEmbeddingsSize, typeVocabSize, intermediateSize, numHiddenLayers);
+		clip.CUDNN = true;
+		clip.time = time;
+		clip.RUN_MODEL = RunModel.EVAL;
+		
+		String clipWeight = "H:\\model\\clip_cn_vit-b-16.json";
+		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
+
+		int unetHeadNum = 8;
+		int[] downChannels = new int[] {64, 128, 256, 512};
+		int numLayer = 1;
+		int timeSteps = 1000;
+		int tEmbDim = 512;
+		int latendSize = 32;
+		int groupNum = 32;
+		
+		DiffusionUNetCond2 unet = new DiffusionUNetCond2(LossType.MSE, UpdaterType.adamw, latendDim, latendSize, latendSize, downChannels, unetHeadNum, numLayer, timeSteps, tEmbDim, maxContextLen, textEmbedDim, groupNum);
+		unet.CUDNN = true;
+		unet.learnRate = 0.0001f;
+		
+		MBSGDOptimizer optimizer = new MBSGDOptimizer(unet, 500, 0.00001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+		optimizer.lr_step = new int[] {20,50,80};
+		
+		optimizer.trainTinySD(dataLoader, vae, clip);
+		
+	}
+	
+	public static void tiny_ldm_train_pokem_32() throws Exception {
+		
+		String tokenizerPath = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
+		
+		String labelPath = "H:\\vae_dataset\\pokemon-blip\\data.json";
+		String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
+		
+		boolean horizontalFilp = true;
+		
+		int imgSize = 256;
+		
+		int maxContextLen = 64;
+		
+		int batchSize = 4;
+
+		float[] mean = new float[] {0.5f, 0.5f,0.5f};
+		float[] std = new float[] {0.5f, 0.5f,0.5f};
+		
+		SDImageDataLoader dataLoader = new SDImageDataLoader(tokenizerPath, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
+		
+		int imageSize = 256;
+		int z_dims = 32;
+		int latendDim = 4;
+		
+		int num_vq_embeddings = 512;
+		
+		int num_res_blocks = 2;
+		
+		int[] channels = new int[] {32, 64, 128, 256};
+		boolean[] attn_resolutions = new boolean[] {false, false, false, false};
+		TinyVQVAE2 vae = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+		vae.CUDNN = true;
+		vae.learnRate = 0.001f;
+		vae.RUN_MODEL = RunModel.EVAL;
+		
+		String vae_path = "H:\\model\\vqvae2_32_512.model";
+		ModelUtils.loadModel(vae, vae_path);
+		
+		int unetHeadNum = 8;
+		int[] downChannels = new int[] {64, 128, 256, 512};
+		int numLayer = 1;
+		int timeSteps = 1000;
+		int tEmbDim = 512;
+		int latendSize = 32;
+		int groupNum = 32;
+		
+		DiffusionUNetCond2 unet = new DiffusionUNetCond2(LossType.MSE, UpdaterType.adamw, latendDim, latendSize, latendSize, downChannels, unetHeadNum, numLayer, timeSteps, tEmbDim, 0, 0, groupNum);
+		unet.CUDNN = true;
+		unet.learnRate = 0.0001f;
+		
+		MBSGDOptimizer optimizer = new MBSGDOptimizer(unet, 500, 0.00001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+		optimizer.lr_step = new int[] {20,50,80};
+		
+		optimizer.trainTinySD(dataLoader, vae);
+		
+	}
+	
+	public static void sd_train_pokem_32_uncond() throws Exception {
+		
+		String tokenizerPath = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
+		
+		String labelPath = "H:\\vae_dataset\\pokemon-blip\\data.json";
+		String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
+		
+		boolean horizontalFilp = true;
+		
+		int imgSize = 256;
+		
+		int maxContextLen = 64;
+		
+		int batchSize = 4;
+
+		float[] mean = new float[] {0.5f, 0.5f,0.5f};
+		float[] std = new float[] {0.5f, 0.5f,0.5f};
+		
+		SDImageDataLoader dataLoader = new SDImageDataLoader(tokenizerPath, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
+		
+		int imageSize = 256;
+		int z_dims = 32;
+		int latendDim = 4;
+		
+		int num_vq_embeddings = 512;
+		
+		int num_res_blocks = 2;
+		
+		int[] channels = new int[] {32, 64, 128, 256};
+		boolean[] attn_resolutions = new boolean[] {false, false, false, false};
+		TinyVQVAE2 vae = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+		vae.CUDNN = true;
+		vae.learnRate = 0.001f;
+		vae.RUN_MODEL = RunModel.EVAL;
+		
+		String vae_path = "H:\\model\\vqvae2_256_32_500.model";
+		ModelUtils.loadModel(vae, vae_path);
+
+		int convOutChannels = 128;
+		int unetHeadNum = 8;
+		
+		int[] downChannels = new int[] {64, 96, 128, 256};
+		int[] midChannels = new int[] {256, 128};
+		int numDowns = 1;
+		int numMids = 1;
+		int numUps = 1;
+		
+		boolean[] attns = new boolean[] {true, true, true};
+		boolean[] downSamples = new boolean[] {true, true, true};
+		
+		int timeSteps = 1000;
+		int tEmbDim = 512;
+		
+		int latendSize = 32;
+		
+		DiffusionUNetCond unet = new DiffusionUNetCond(LossType.MSE, UpdaterType.adamw, latendDim, latendSize, latendSize, convOutChannels, unetHeadNum, downChannels, midChannels, downSamples, numDowns, numMids, numUps, timeSteps, tEmbDim, attns);
+		unet.CUDNN = true;
+		unet.learnRate = 0.0001f;
+		
+		MBSGDOptimizer optimizer = new MBSGDOptimizer(unet, 500, 0.00001f, batchSize, LearnRateUpdate.SMART_HALF, false);
+		optimizer.lr_step = new int[] {20,50,80};
+		
+		optimizer.trainSD(dataLoader, vae);
 		
 	}
 	
@@ -386,7 +797,17 @@ public class SDTest {
 
 			CUDAModules.initContext();
 			
-			sd_train_pokem();
+//			sd_train_pokem();
+			
+//			sd_train_pokem_32();
+			
+			tiny_sd_train_pokem_32();
+			
+//			tiny_ldm_train_pokem_32();
+			
+//			getVQVAE32_scale_factor();
+			
+//			sd_train_pokem_32_uncond();
 			
 //			test_vqvae();
 			

@@ -172,6 +172,16 @@ __global__ void argmin(float *x,float *y,int batch, int n)
 }
 
 extern "C"
+__global__ void mean_kernel(float *x,float *y,int batch)
+{
+    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i < batch) {
+    	int index = x[i];
+    	y[index] += 1 / batch;
+    }
+}
+
+extern "C"
 __global__ void mse_loss_kernel(const float* output, const float* target, float* loss, float beta, int num_elem){
   int idx = blockIdx.x*blockDim.x + threadIdx.x;
   if(idx==0) *loss=0;

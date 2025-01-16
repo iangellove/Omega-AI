@@ -233,8 +233,6 @@ public class UNetUpBlockLayer extends Layer{
 		}
 		if(dt == null || dt.number != this.number) {
 			dt = Tensor.createGPUTensor(dt, this.number, 1, 1, oChannel, true);
-		}else {
-			dt.clearGPU();
 		}
 	}
 
@@ -278,22 +276,22 @@ public class UNetUpBlockLayer extends Layer{
 		this.output = x;
 	}
 	
-	public void output(Tensor tembd,Tensor context) {
+	public void output(Tensor tembd) {
 		// TODO Auto-generated method stub
 		Tensor x = input;
-		
+
 		if(upSample) {
 			upSampleConv.forward(x);
 			x = upSampleConv.getOutput();
 		}
-//		x.showDMByOffset(0, 100, "up:x");
+//		x.showDM("up:x");
 		cat.forward(x);
 		
 		x = cat.getOutput();
 		
 //		x.showDM("up-cat:");
 		
-//		x.showDMByOffset(0, 100, "cat:x");
+//		x.showDM("cat:x");
 		
 		for(int i = 0;i<numLayers;i++) {
 			
@@ -303,11 +301,76 @@ public class UNetUpBlockLayer extends Layer{
 
 			Tensor r1 = resnetFirst.get(i).getOutput();
 			
+//			resnetFirst.get(i).norm.getOutput().showDM("nr1");
+			
+//			r1.showDMByOffset(0, 100, "r1");
+			
 			tEmbLayers.get(i).forward(tembd);
+			
+//			tEmbLayers.get(i).getOutput().showDMByOffset(0, 100, "temb");
 			
 			TensorOP.add(r1, tEmbLayers.get(i).getOutput(), t_out[i], r1.height * r1.width);
 
-//			t_out[i].showDM("t_out[i]");
+//			t_out[i].showDMByOffset(0, 100, "t_out[i]");
+			
+			resnetSecond.get(i).forward(t_out[i]);
+
+			residualInputs.get(i).forward(res_i);
+			
+			TensorOP.add(resnetSecond.get(i).getOutput(), residualInputs.get(i).getOutput(), res_out[i]);
+			
+			x = res_out[i];
+			
+//			x.showDMByOffset(0, 100, "res_out");
+			
+			if(attn) {
+				attns.get(i).forward(x);
+				x = attns.get(i).getOutput();
+			}
+			
+//			x.showDMByOffset(0, 100, "attn");
+
+		}
+//		x.showDM("up-out");
+		this.output = x;
+	}
+	
+	public void output(Tensor tembd,Tensor context) {
+		// TODO Auto-generated method stub
+		Tensor x = input;
+
+		if(upSample) {
+			upSampleConv.forward(x);
+			x = upSampleConv.getOutput();
+		}
+//		x.showDM("up:x");
+		cat.forward(x);
+		
+		x = cat.getOutput();
+		
+//		x.showDM("up-cat:");
+		
+//		x.showDM("cat:x");
+		
+		for(int i = 0;i<numLayers;i++) {
+			
+			Tensor res_i = x;
+
+			resnetFirst.get(i).forward(x);
+
+			Tensor r1 = resnetFirst.get(i).getOutput();
+			
+//			resnetFirst.get(i).norm.getOutput().showDM("nr1");
+			
+//			r1.showDMByOffset(0, 100, "r1");
+			
+			tEmbLayers.get(i).forward(tembd);
+			
+//			tEmbLayers.get(i).getOutput().showDMByOffset(0, 100, "temb");
+			
+			TensorOP.add(r1, tEmbLayers.get(i).getOutput(), t_out[i], r1.height * r1.width);
+
+//			t_out[i].showDMByOffset(0, 100, "t_out[i]");
 			
 			resnetSecond.get(i).forward(t_out[i]);
 
@@ -337,7 +400,7 @@ public class UNetUpBlockLayer extends Layer{
 //			x.showDMByOffsetRed(0, 100, "crossAttn");
 
 		}
-		
+//		x.showDM("up-out");
 		this.output = x;
 	}
 
@@ -366,8 +429,6 @@ public class UNetUpBlockLayer extends Layer{
 				d = crossAttns.get(i).diff;
 			}
 			
-//			d.showDM("crossAttns");
-			
 			if(attn) {
 				attns.get(i).back(d);
 				d = attns.get(i).diff;
@@ -381,7 +442,10 @@ public class UNetUpBlockLayer extends Layer{
 //			
 			d = resnetSecond.get(i).diff;
 			
+//			d.showDM("n-diff1");
+			
 			if(tEmbDim > 0) {
+				dt.clearGPU();
 				TensorOP.sum(d, dt, 2);
 				tEmbLayers.get(i).back(dt);
 				TensorOP.add(tDiff, tEmbLayers.get(i).diff, tDiff);
@@ -391,9 +455,11 @@ public class UNetUpBlockLayer extends Layer{
 
 			d = resnetFirst.get(i).diff;
 			
+//			d.showDM("n-diff0");
+			
 			TensorOP.add(d, residualInputs.get(i).diff, d);
 			
-//			d.showDM("n-diff");
+//			d.showDM("n-diff2");
 		}
 
 		cat.back(d);
@@ -471,6 +537,24 @@ public class UNetUpBlockLayer extends Layer{
 		this.output();
 	}
 	
+	public void forward(Tensor input,Tensor tembd) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init(input);
+		
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+
+		/**
+		 * 计算输出
+		 */
+		this.output(tembd);
+	}
+	
 	public void forward(Tensor input,Tensor tembd,Tensor context) {
 		// TODO Auto-generated method stub
 		/**
@@ -524,7 +608,9 @@ public class UNetUpBlockLayer extends Layer{
 	public void update() {
 		// TODO Auto-generated method stub
 		
-		upSampleConv.update();
+		if(upSample) {
+			upSampleConv.update();
+		}
 		
 		for(int i = 0;i<numLayers;i++) {
 			

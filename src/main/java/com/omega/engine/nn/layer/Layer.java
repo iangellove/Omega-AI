@@ -14,6 +14,8 @@ import com.omega.engine.updater.Updater;
  */
 public abstract class Layer {
 	
+	public String name;
+	
 	public Network network;
 	
 	public boolean PROPAGATE_DOWN = true;;
@@ -137,6 +139,10 @@ public abstract class Layer {
 	
 	public void setIndex(int index) {
 		this.index = index;
+	}
+	
+	public void setName(String name) {
+		this.name = name;
 	}
 	
 	public LayerInit save() {

@@ -23,6 +23,8 @@ import jcuda.runtime.JCuda;
  */
 public class DiffusionUNetCond extends Network {
 
+	private boolean hasCond;
+	
 	public int inChannel;
 	
 	private int[] downChannels;
@@ -43,7 +45,7 @@ public class DiffusionUNetCond extends Network {
 	
 	private boolean[] attns;
 	
-	private int groups = 16;
+	private int groups = 32;
 	
 	private int headNum;
 	
@@ -61,7 +63,30 @@ public class DiffusionUNetCond extends Network {
 	
 	public int height;
 	
-	public DiffusionUNetCond(LossType lossType,UpdaterType updater,int inChannel,int width,int height,int convOutChannels,int headNum,int[] downChannels,int[] midChannels,boolean[] downSamples,int numDowns,int numMids,int numUps,int timeSteps,int tEmbDim,int textEmbedDim,int maxContextLen,boolean[] attns) {
+	public DiffusionUNetCond(LossType lossType,UpdaterType updater,int inChannel,int width,int height,int convOutChannels,int headNum,int[] downChannels,int[] midChannels,boolean[] downSamples,int numDowns,int numMids,int numUps,int timeSteps,int tEmbDim,boolean[] attns) {
+		this.lossFunction = LossFactory.create(lossType);
+		this.updater = updater;
+		this.inChannel = inChannel;
+		this.width = width;
+		this.height = height;
+		this.convOutChannels = convOutChannels;
+		this.headNum = headNum;
+		this.downChannels = downChannels;
+		this.midChannels = midChannels;
+		this.numDowns = numDowns;
+		this.numMids = numMids;
+		this.numUps = numUps;
+		this.downSamples = downSamples;
+		this.timeSteps = timeSteps;
+		this.tEmbDim = tEmbDim;
+		this.textEmbedDim = 0;
+		this.hasCond = false;
+		this.maxContextLen = 0;
+		this.attns = attns;
+		initLayers();
+	}
+	
+	public DiffusionUNetCond(LossType lossType,UpdaterType updater,int inChannel,int width,int height,int convOutChannels,int headNum,int[] downChannels,int[] midChannels,boolean[] downSamples,int numDowns,int numMids,int numUps,int timeSteps,int tEmbDim,int textEmbedDim,int maxContextLen,boolean hasCond,boolean[] attns) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.updater = updater;
 		this.inChannel = inChannel;
@@ -78,6 +103,7 @@ public class DiffusionUNetCond extends Network {
 		this.timeSteps = timeSteps;
 		this.tEmbDim = tEmbDim;
 		this.textEmbedDim = textEmbedDim;
+		this.hasCond = hasCond;
 		this.maxContextLen = maxContextLen;
 		this.attns = attns;
 		initLayers();
@@ -88,7 +114,7 @@ public class DiffusionUNetCond extends Network {
 		this.inputLayer = new InputLayer(inChannel, height, width);
 		
 		unet = new UNetCond(inChannel, inChannel, height, width, downChannels, midChannels, downSamples, attns, timeSteps, tEmbDim, numDowns, numMids, numUps,
-				groups, headNum, convOutChannels, textEmbedDim, maxContextLen, this);
+				groups, headNum, convOutChannels, textEmbedDim, maxContextLen, hasCond, this);
 		
 		this.addLayer(inputLayer);
 		this.addLayer(unet);
@@ -148,6 +174,17 @@ public class DiffusionUNetCond extends Network {
 		this.setInputData(input);
 		
 		this.unet.forward(input, t, context);
+		
+		return this.unet.getOutput();
+	}
+	
+	public Tensor forward(Tensor input,Tensor t) {
+		/**
+		 * 设置输入数据
+		 */
+		this.setInputData(input);
+		
+		this.unet.forward(input, t);
 		
 		return this.unet.getOutput();
 	}
@@ -223,15 +260,7 @@ public class DiffusionUNetCond extends Network {
 		 */
 		JCuda.cudaMemset(CUDAMemoryManager.workspace.getPointer(), 0, CUDAMemoryManager.workspace.getSize() * Sizeof.FLOAT);
 		
-		if(unet.conv_in.cache_delta != null) {
-			unet.conv_in.cache_delta.clearGPU();
-		}
-		
-		for(int i = 0;i<unet.downs.size();i++) {
-			if(unet.downs.get(i).cache_delta != null) {
-				unet.downs.get(i).cache_delta.clearGPU();
-			}
-		}
+		this.clearCacheDelta();
 		
 		JCuda.cudaDeviceSynchronize();
 	}

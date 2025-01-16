@@ -46,6 +46,7 @@ public class AdamW extends Updater {
 		}
 		
 		kernel.updateW(layer.diffW, layer.weight, layer.network, layer.learnRate);
+
 //		layer.diffW.clearGPU();
 //		
 //		System.out.print(layer.getLayerType().toString()+layer.index+":");

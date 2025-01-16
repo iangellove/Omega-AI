@@ -65,7 +65,7 @@ public class CUDAMemoryManager {
 
 		CUdeviceptr device = new CUdeviceptr();
 		
-		cuMemAlloc(device, size * Sizeof.FLOAT);
+		cuMemAlloc(device, size * (long)Sizeof.FLOAT);
 		
 		cu_deviceptrs.add(device);
 		
@@ -80,7 +80,7 @@ public class CUDAMemoryManager {
 		
 		CUdeviceptr device = new CUdeviceptr();
 //		System.out.println(key+":"+size);
-		cuMemAlloc(device, size * Sizeof.FLOAT);
+		cuMemAlloc(device, size * (long)Sizeof.FLOAT);
 		
 		deviceMap.put(key, device);
 		
@@ -91,7 +91,7 @@ public class CUDAMemoryManager {
 		
 		if(workspace.getSize() < size * Sizeof.FLOAT) {
 			GPUOP.getInstance().free(workspace.getPointer());
-			cudaMalloc(workspace.getPointer(), size * Sizeof.FLOAT);
+			cudaMalloc(workspace.getPointer(), size * (long)Sizeof.FLOAT);
 			workspace.setSize(size * Sizeof.FLOAT);
 		}
 		
@@ -100,18 +100,15 @@ public class CUDAMemoryManager {
 	
 	public static Pointer getPointer(int size) {
 		Pointer p = new Pointer();
-		checkCUDA(cudaMalloc(p, size * Sizeof.FLOAT), p.toString(), size * Sizeof.FLOAT);
+		checkCUDA(cudaMalloc(p, size * (long)Sizeof.FLOAT), p.toString(), size * (long)Sizeof.FLOAT);
 		cu_porints.add(p);
 		return p;
 	}
 	
-	public static Pointer getPointer(int size,int type) {
-
+	public static Pointer getPointer(int size,long type) {
 		Pointer p = new Pointer();
-		cudaMalloc(p, size * type);
-
+		checkCUDA(cudaMalloc(p, size * type));
 		cu_porints.add(p);
-		
 		return p;
 	}
 	
@@ -123,7 +120,7 @@ public class CUDAMemoryManager {
 		
 		Pointer p = new Pointer();
 		
-		cudaMalloc(p, size * Sizeof.FLOAT);
+		cudaMalloc(p, size * (long)Sizeof.FLOAT);
 		
 		pointerMap.put(key, p);
 		

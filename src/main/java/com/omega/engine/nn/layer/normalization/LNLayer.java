@@ -55,6 +55,26 @@ public class LNLayer extends NormalizationLayer {
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	
+	public LNLayer(Layer preLayer,BNType bnType) {
+		this.setPreLayer(preLayer);
+		this.bnType = bnType;
+		this.hasParams = true;
+		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+	}
+	
+	public LNLayer(Layer preLayer,BNType bnType,int channel,int height,int width) {
+		this.setPreLayer(preLayer);
+		this.channel = channel;
+		this.height = height;
+		this.width = width;
+		this.oChannel = this.channel;
+		this.oHeight = this.height;
+		this.oWidth = this.width;
+		this.bnType = bnType;
+		this.hasParams = true;
+		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+	}
+	
 	public LNLayer(Layer preLayer,boolean hasBias) {
 		this.setPreLayer(preLayer);
 		this.hasBias = true;
@@ -153,9 +173,14 @@ public class LNLayer extends NormalizationLayer {
 			this.oHeight = this.height;
 			this.oWidth = this.width;
 			this.setBnType(BNType.fully_bn);
-			this.meanNum = this.channel * this.height * this.width;
 		}
-
+		
+		if(bnType == BNType.fully_bn) {
+			this.meanNum = this.channel * this.height * this.width;
+		}else {
+			this.meanNum = this.height * this.width;
+		}
+		
 		if(kernel == null) {
 			kernel = new LNKernel(width, bnType);
 		}
@@ -179,7 +204,7 @@ public class LNLayer extends NormalizationLayer {
 		}
 		
 		if(this.output == null || this.number != this.output.number) {
-			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+			this.output = input.createLike();
 		}
 		
 	}
@@ -199,6 +224,10 @@ public class LNLayer extends NormalizationLayer {
 	public void initBack(Tensor diff) {
 		if(this.diff == null) {
 			this.diff = new Tensor(diff.number, diff.channel, diff.height, diff.width, true);
+		}
+		if(this.diffGamma == null) {
+			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
+			this.diffBeta = new Tensor(1, 1, 1, meanNum, true);
 		}
 	}
 

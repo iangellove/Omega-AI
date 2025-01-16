@@ -106,6 +106,14 @@ public class MatrixUtils {
 		return temp;
 	}
 	
+	public static float[] one(long size) {
+		float[] temp = new float[(int)size];
+		for(int i = 0;i<size;i++) {
+			temp[i] = 1.0f;
+		}
+		return temp;
+	}
+	
 	/**
 	 * 
 	 * @Title: zero

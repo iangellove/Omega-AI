@@ -61,7 +61,7 @@ public class SoftmaxCudnnKernel extends BaseKernel{
 		
 		init(input.number);
 
-		handle(JCudnn.cudnnSoftmaxForward(CudnnHandleManager.getHandle(), CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_INSTANCE, alpha_P, xDesc, input.getGpuData(), beta_P, yDesc, output.getGpuData()));
+		handle(JCudnn.cudnnSoftmaxForward(CudnnHandleManager.getHandle(), CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_CHANNEL, alpha_P, xDesc, input.getGpuData(), beta_P, yDesc, output.getGpuData()));
 
 	}
 	
@@ -69,13 +69,13 @@ public class SoftmaxCudnnKernel extends BaseKernel{
 		
 		init(number);
 
-		handle(JCudnn.cudnnSoftmaxForward(CudnnHandleManager.getHandle(), CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_INSTANCE, alpha_P, xDesc, input.getGpuData(), beta_P, yDesc, output.getGpuData()));
+		handle(JCudnn.cudnnSoftmaxForward(CudnnHandleManager.getHandle(), CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_CHANNEL, alpha_P, xDesc, input.getGpuData(), beta_P, yDesc, output.getGpuData()));
 
 	}
 	
 	public void softmax_backward(Tensor output,Tensor delta,Tensor diff) {
 
-		handle(JCudnn.cudnnSoftmaxBackward(CudnnHandleManager.getHandle(), CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_INSTANCE, alpha_P, yDesc, output.getGpuData(), diffDesc, delta.getGpuData(), beta_P, xDesc, diff.getGpuData()));
+		handle(JCudnn.cudnnSoftmaxBackward(CudnnHandleManager.getHandle(), CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_CHANNEL, alpha_P, xDesc, output.getGpuData(), diffDesc, delta.getGpuData(), beta_P, yDesc, diff.getGpuData()));
 		
 	}
 	

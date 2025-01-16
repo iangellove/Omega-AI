@@ -1055,3 +1055,16 @@ __global__ void softmax_autoregressive_unmask_backward_inplace_kernel(float* dat
         }
     }
 }
+
+extern "C"
+__global__ void add_mask(int N, int C,int H,int W, float *input, float *mask,float *output)
+{
+    int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(id >= N) return;
+	
+	int b = id / C / H / W;
+    int w = id % W;
+
+	output[id] += mask[b * W + w];
+
+}

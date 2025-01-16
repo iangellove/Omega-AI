@@ -170,3 +170,51 @@ __global__ void replace_channel_backward_kernel(
 
     }
 }
+
+extern "C"
+__global__ void add_mul_kernel(
+    float* input,
+    float* noise,
+    float* output,
+    float* a,
+    float* b,
+    int N, int W
+) {
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < N) {
+       int n = idx / W;
+       output[idx] = a[n] * input[idx] + noise[idx] * b[n];
+    }
+}
+
+extern "C"
+__global__ void un_mul_kernel(
+    float* input,
+    float* noise,
+    float* output,
+    float* a,
+    float* b,
+    int N, int W
+) {
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < N) {
+       int n = idx / W;
+       output[idx] = (input[idx] - noise[idx] * b[n]) / a[n];
+    }
+}
+
+extern "C"
+__global__ void un_mul_grad_kernel(
+    float* delta,
+    float* noise,
+    float* diff,
+    float* a,
+    float* b,
+    int N, int W
+) {
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < N) {
+       int n = idx / W;
+       diff[idx] = - delta[idx] / a[n] * b[n];
+    }
+}

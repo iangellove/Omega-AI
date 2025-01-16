@@ -106,7 +106,7 @@ public class Tensor implements Serializable{
 	}
 	
 	public void copyGPU(Tensor tmp) {
-		JCuda.cudaMemcpy(tmp.getGpuData(), gpuData, this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToDevice);
+		JCuda.cudaMemcpy(tmp.getGpuData(), gpuData, this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToDevice);
 	}
 	
 	public Tensor(int number,int channel,int height,int width) {
@@ -130,7 +130,7 @@ public class Tensor implements Serializable{
 		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
-			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
 		}
 	}
@@ -150,7 +150,7 @@ public class Tensor implements Serializable{
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
 			if(!onlyGPU) {
-				JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+				JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 				JCuda.cudaDeviceSynchronize();
 			}else {
 				this.clearGPU();
@@ -169,7 +169,7 @@ public class Tensor implements Serializable{
 		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
-			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
 		}
 	}
@@ -195,7 +195,7 @@ public class Tensor implements Serializable{
 		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
-			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
 		}
 	}
@@ -212,7 +212,7 @@ public class Tensor implements Serializable{
 		this.setHasGPU(hasGPU);
 		if(hasGPU) {
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
-			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
 		}
 	}
@@ -329,7 +329,7 @@ public class Tensor implements Serializable{
 				CUDAMemoryManager.free(gpuData);
 			}
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
-			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
 		}
 	}
@@ -385,6 +385,10 @@ public class Tensor implements Serializable{
 	
 	public void showShape() {
 		System.out.println(JsonUtils.toJson(shape()));
+	}
+	
+	public void showShape(String label) {
+		System.out.println(label+":"+JsonUtils.toJson(shape()));
 	}
 	
 	public int getNumber() {
@@ -535,12 +539,12 @@ public class Tensor implements Serializable{
 		if(data == null || data.length != this.dataLength) {
 			this.data = new float[this.dataLength];
 		}
-		JCuda.cudaMemcpy(Pointer.to(data), gpuData, this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+		JCuda.cudaMemcpy(Pointer.to(data), gpuData, this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
 		return data;
 	}
 	
 	public void syncHost(float[] tmp) {
-		JCuda.cudaMemcpy(Pointer.to(tmp), gpuData, this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+		JCuda.cudaMemcpy(Pointer.to(tmp), gpuData, this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToHost);
 	}
 	
 	public void hostToDevice() {
@@ -548,7 +552,7 @@ public class Tensor implements Serializable{
 			if(gpuData == null) {
 				gpuData = CUDAMemoryManager.getPointer(dataLength);
 			}
-			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
 		}
 	}
@@ -558,7 +562,7 @@ public class Tensor implements Serializable{
 			if(gpuData == null) {
 				gpuData = CUDAMemoryManager.getPointer(dataLength);
 			}
-			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
+			JCuda.cudaMemcpy(gpuData, Pointer.to(data), this.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			JCuda.cudaDeviceSynchronize();
 		}
 	}
@@ -572,7 +576,12 @@ public class Tensor implements Serializable{
 	
 	public void showDM() {
 		syncHost();
-	    System.out.println(JsonUtils.toJson(data));
+		System.out.println(JsonUtils.toJson(data));
+	}
+	
+	public void showDMAndShape() {
+		syncHost();
+	    System.out.println(JsonUtils.toJson(shape())+":"+JsonUtils.toJson(data));
 	}
 	
 	public void showDM(String label) {
@@ -615,6 +624,11 @@ public class Tensor implements Serializable{
 	    System.out.println(data[index]);
 	}
 	
+	public void showDM(int index,String label) {
+		syncHost();
+	    System.out.println(label+":"+data[index]);
+	}
+	
 	public boolean checkDM() {
 		for(float val:syncHost()) {
 			if(val > 0) {
@@ -634,21 +648,21 @@ public class Tensor implements Serializable{
 	
 	public void clearGPU(cudaStream_t stream) {
 		
-		checkCUDA(JCuda.cudaMemsetAsync(gpuData, 0, this.dataLength * Sizeof.FLOAT, stream));
+		checkCUDA(JCuda.cudaMemsetAsync(gpuData, 0, this.getDataLength() * (long)Sizeof.FLOAT, stream));
 		
 //		checkCUDA(JCuda.cudaMemset(gpuData, 0, this.dataLength * Sizeof.FLOAT));
 	}
 	
 	public void clearGPU() {
 		if(gpuData!=null) {
-			checkCUDA(JCuda.cudaMemset(gpuData, 0, this.dataLength * Sizeof.FLOAT));
+			checkCUDA(JCuda.cudaMemset(gpuData, 0, this.getDataLength() * (long)Sizeof.FLOAT));
 //			JCuda.cudaDeviceSynchronize();
 		}
 	}
 	
 	public void valueGPU(int val) {
 		if(gpuData!=null) {
-			checkCUDA(JCuda.cudaMemset(gpuData, val, this.dataLength * Sizeof.FLOAT));
+			checkCUDA(JCuda.cudaMemset(gpuData, val, this.getDataLength() * (long)Sizeof.FLOAT));
 			JCuda.cudaDeviceSynchronize();
 		}
 	}
@@ -958,6 +972,14 @@ public class Tensor implements Serializable{
 		}
 		if(isHasGPU()) {
 			hostToDevice();
+		}
+	}
+	
+	public boolean checkShape(Tensor y) {
+		if(this.number == y.number && this.channel == y.channel && this.height == y.height && this.width == y.width) {
+			return true;
+		}else {
+			return false;
 		}
 	}
 	

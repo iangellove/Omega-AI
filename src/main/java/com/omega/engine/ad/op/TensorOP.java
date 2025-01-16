@@ -642,6 +642,26 @@ public class TensorOP {
 		
 	}
 	
+	public static void cat(Tensor a,Tensor b,Tensor c) {
+		
+		if(a.isHasGPU()) {
+			OPKernel.getInstance().cat_gpu(a, b, c);
+		}else {
+//			c.data = MatrixOperation.add(a.data, b.data);
+		}
+		
+	}
+	
+	public static void cat_back(Tensor c,Tensor a,Tensor b) {
+		
+		if(a.isHasGPU()) {
+			OPKernel.getInstance().cat_back_gpu(c, a, b);
+		}else {
+//			c.data = MatrixOperation.add(a.data, b.data);
+		}
+		
+	}
+	
 	public static void onehot(Tensor a,Tensor b) {
 		
 		if(a.isHasGPU()) {

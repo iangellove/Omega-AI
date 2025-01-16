@@ -296,6 +296,9 @@ public class RandomUtils {
 	}
 	
 	public static void gaussianRandom(Tensor output,float mean,float std){
+		if(output.data == null) {
+			output.data = new float[output.dataLength];
+		}
 		for(int i = 0;i<output.dataLength;i++) {
 			output.data[i] = (float)(getInstance().nextGaussian() * std + mean);
 		}

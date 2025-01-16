@@ -10,12 +10,14 @@ import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.GlobalNormKernel;
 import com.omega.engine.loss.LossFunction;
 import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.layer.RouteLayer;
 import com.omega.engine.nn.layer.normalization.NormalizationLayer;
 import com.omega.engine.nn.model.NetworkInit;
 import com.omega.engine.updater.UpdaterFactory;
 import com.omega.engine.updater.UpdaterType;
 
 import jcuda.Pointer;
+import jcuda.runtime.JCuda;
 
 /**
  * base network
@@ -119,6 +121,8 @@ public abstract class Network {
 	public abstract NetworkType getNetworkType();
 	
 	public abstract void clearGrad();
+	
+	public List<RouteLayer> routeLayers;
 	
 	public Tensor createParamterGrad(int number,int channel,int height,int width,boolean hasGPU) {
 		Tensor pGrad = new Tensor(number, channel, height, width, hasGPU);
@@ -443,6 +447,20 @@ public abstract class Network {
 				}
 			}
 		}
+	}
+	
+	public void addRouteLayer(RouteLayer layer) {
+		if(routeLayers == null) {
+			routeLayers = new ArrayList<RouteLayer>();
+		}
+		routeLayers.add(layer);
+	}
+	
+	public void clearCacheDelta() {
+		for(RouteLayer rl:routeLayers) {
+			rl.clearCacheDelta();
+		}
+		JCuda.cudaDeviceSynchronize();
 	}
 	
 }

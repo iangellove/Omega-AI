@@ -25,13 +25,18 @@ public class RouteLayer extends Layer{
 		Layer first = layers[0];
 		this.oHeight = first.oHeight;
 		this.oWidth = first.oWidth;
+		String names = "[";
 		for(Layer layer:layers) {
 			if(layer.oHeight != this.oHeight || layer.oWidth != this.oWidth) {
 				throw new RuntimeException("input size must be all same in the route layer.["+layer.oHeight+":"+this.oHeight+"]");
 			}
 			this.network = layer.network;
 			this.oChannel += layer.oChannel;
+			names += layer.name + ",";
 		}
+		names += "]";
+		System.out.println(names);
+		this.network.addRouteLayer(this);
 	}
 	
 	public RouteLayer(Layer[] layers,int groups,int groupId) {
@@ -90,6 +95,7 @@ public class RouteLayer extends Layer{
 		int offset = 0;
 		for(int l = 0;l<layers.length;l++) {
 			Tensor input = layers[l].output;
+//			input.showDM("l"+l);
 			int part_input_size = input.getOnceSize() / groups;
 			for(int n = 0;n<this.number;n++) {
 				kernel.copy_gpu(input, this.output, part_input_size, n * input.getOnceSize() + part_input_size * groupId, 1, offset + n * output.getOnceSize(), 1);
@@ -344,5 +350,13 @@ public class RouteLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 	}
-
+	
+	public void clearCacheDelta() {
+		for(Layer layer:layers) {
+			if(layer.cache_delta != null) {
+				layer.cache_delta.clearGPU();
+			}
+		}
+	}
+	
 }

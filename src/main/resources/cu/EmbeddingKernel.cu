@@ -11,22 +11,6 @@ __device__ __forceinline__ void VectorizedAtomicAddPerBlock(
 }
 
 extern "C"
-__global__ void embedding_kernel(int B,int N,int C,float *X,float *W,float *Y)
-{
-    int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
-    if(i < B){
-    	int index = X[i];
-    	for(int w = 0;w<N;w++){
-    		if(index == w){
-    			for(int c = 0;c<C;c++){
-    				Y[i * C + c] = W[w * C + c];
-    			}
-    		}
-    	}
-    }
-}
-
-extern "C"
 __global__ void EmbeddingFW(float *output,
                             const float *table,
                             const float *ids,
@@ -37,7 +21,7 @@ __global__ void EmbeddingFW(float *output,
   int idy = blockIdx.x + threadIdx.y * gridDim.x;
 
   while (idy < K) {
-    auto id = static_cast<int>(ids[idy]);
+    auto id = static_cast<int64_t>(ids[idy]);
     
     float *out = output + idy * D;
     const float *tab = table + id * D;
@@ -127,4 +111,21 @@ __global__ void embedding_backward_kernel(float* input, float* indices, float* g
 	      idx++;
 	    } while (idx < numel && input[idx] == input[idx - 1]);
 	  }
+}
+
+
+extern "C"
+__global__ void get_time_embedding(float* input, float* factor, float* output, int N,int dim)
+{
+	int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+	if(id < N){
+		int B = id / dim;
+		int idx_dim = id % dim;
+		float idx = input[B];
+		float temb = idx / factor[idx_dim];
+		float sin = sinf(temb);
+		float cos = cosf(temb);
+		output[B * 2 * dim + idx_dim] = sin;
+		output[B * 2 * dim + dim + idx_dim] = cos;
+	}
 }

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.PrintUtils;
@@ -263,7 +262,7 @@ public class EmbeddingIDLayer extends Layer{
 		 */
 		this.setInput(input);
 		
-		kernel.get_time_embedding(input, factor, output, oWidth / 2);
+		kernel.get_time_embedding(input, factor, this.output, oWidth / 2);
 	}
 	
 	@Override

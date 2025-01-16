@@ -175,6 +175,7 @@ extern "C"
 __global__ void add_mul_kernel(
     float* input,
     float* noise,
+    float* output,
     float* a,
     float* b,
     int N, int W
@@ -182,6 +183,38 @@ __global__ void add_mul_kernel(
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     if (idx < N) {
        int n = idx / W;
-       input[idx] = a[n] * input[idx] + noise[idx] * b[n];
+       output[idx] = a[n] * input[idx] + noise[idx] * b[n];
+    }
+}
+
+extern "C"
+__global__ void un_mul_kernel(
+    float* input,
+    float* noise,
+    float* output,
+    float* a,
+    float* b,
+    int N, int W
+) {
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < N) {
+       int n = idx / W;
+       output[idx] = (input[idx] - noise[idx] * b[n]) / a[n];
+    }
+}
+
+extern "C"
+__global__ void un_mul_grad_kernel(
+    float* delta,
+    float* noise,
+    float* diff,
+    float* a,
+    float* b,
+    int N, int W
+) {
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < N) {
+       int n = idx / W;
+       diff[idx] = - delta[idx] / a[n] * b[n];
     }
 }

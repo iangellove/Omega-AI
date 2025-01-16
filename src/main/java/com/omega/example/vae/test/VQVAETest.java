@@ -462,9 +462,75 @@ public class VQVAETest {
 //			String save_model_path = "H:\\model\\vqvae2_128_500.model";
 //			ModelUtils.loadModel(network, save_model_path);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 2, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
 //			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
 			optimizer.trainTinyVQVAE2_lpips_patchGANDisc(dataLoader, lpips, discriminator, 1500);
+
+			String save_model_path = "H:\\model\\vqvae2_128_500.model";
+//			ModelUtils.saveModel(network, save_model_path);
+//			
+			ModelUtils.loadModel(network, save_model_path);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	
+	}
+	
+	public static void tiny_vqvae2_lpips_gandisc_32() {
+
+		try {
+			
+			int batchSize = 4;
+			int imageSize = 128;
+			int z_dims = 32;
+			int latendDim = 4;
+			
+			int num_vq_embeddings = 512;
+			
+			int num_res_blocks = 1;
+			
+			int[] channels = new int[] {32, 64, 128, 256};
+			boolean[] attn_resolutions = new boolean[] {false, false, false, false};
+			
+			float[] mean = new float[] {0.5f, 0.5f,0.5f};
+			float[] std = new float[] {0.5f, 0.5f,0.5f};
+			
+//			String imgDirPath = "I:\\dataset\\LHQ256\\lhq_256\\";
+
+			String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset128\\";
+			
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
+			
+			TinyVQVAE2 network = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+			network.CUDNN = true;
+			network.learnRate = 0.001f;
+			
+			LPIPS lpips = new LPIPS(LossType.MSE, UpdaterType.adamw, imageSize);
+			
+			String lpipsWeight = "H:\\model\\lpips.json";
+			LPIPSTest.loadLPIPSWeight(LagJsonReader.readJsonFileSmallWeight(lpipsWeight), lpips, false);
+			lpips.CUDNN = true;
+			
+			int[] convChannels = new int[] {3, 32, 64, 128, 256, 1};
+			int[] kernels = new int[] {4, 4, 4, 4, 4};
+			int[] strides = new int[] {2, 2, 2, 2, 1};
+			int[] paddings = new int[] {1, 1, 1, 1, 1};
+			
+			PatchGANDiscriminator discriminator = new PatchGANDiscriminator(LossType.MSE, UpdaterType.adamw, imageSize, convChannels, kernels, strides, paddings);
+			discriminator.CUDNN = true;
+			discriminator.learnRate = 0.001f;
+
+//			String clipWeight = "H:\\model\\tiny_vqvae.json";
+//			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
+			
+//			String save_model_path = "H:\\model\\vqvae2_128_500.model";
+//			ModelUtils.loadModel(network, save_model_path);
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 2, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+//			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
+			optimizer.trainTinyVQVAE2_lpips_patchGANDisc(dataLoader, lpips, discriminator, 150000);
 
 //			String save_model_path = "H:\\model\\vqvae2_128_500.model";
 //			ModelUtils.saveModel(network, save_model_path);
@@ -520,7 +586,7 @@ public class VQVAETest {
 //			String clipWeight = "H:\\model\\tiny_vqvae.json";
 //			loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), network, true);
 			
-			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 500, 0.00001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 //			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
 			optimizer.trainTinyVQVAE_lpips_patchGANDisc(dataLoader, lpips, discriminator, 1500);
 
@@ -553,7 +619,9 @@ public class VQVAETest {
 			
 //			tiny_vqvae_lpips_gandisc();
 			
-			tiny_vqvae2_lpips_gandisc();
+//			tiny_vqvae2_lpips_gandisc();
+			
+			tiny_vqvae2_lpips_gandisc_32();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

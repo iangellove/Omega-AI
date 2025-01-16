@@ -34,6 +34,8 @@ public class VAEKernel extends BaseKernel{
 	
 	private CUfunction argmin_function;
 	
+	private CUfunction mean_function;
+	
 	private CUfunction mse_loss_function;
 	
 	private CUfunction mse_loss_only_c_function;
@@ -119,6 +121,12 @@ public class VAEKernel extends BaseKernel{
 				
 			}
 			
+			if(mean_function == null) {
+				
+				mean_function = CUDAModules.getLocalFunctionByModule("VAE.cu", "mean_kernel");
+				
+			}
+
 			if(mse_loss_function == null) {
 				
 				mse_loss_function = CUDAModules.getLocalFunctionByModule("VAE.cu", "mse_loss_kernel");
@@ -411,6 +419,34 @@ public class VAEKernel extends BaseKernel{
 	            );
 			
 			cuLaunchKernel(argmin_function,
+					this.CAFFE_GET_BLOCKS(x.number),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            forwardKernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void mean(Tensor x,Tensor y) {
+		
+		try {
+
+			/**
+	         * 设置入参
+	         * float *x,float *y,int batch
+	         */ 
+			forwardKernelParameters = Pointer.to(
+					Pointer.to(x.getGpuData()),
+					Pointer.to(y.getGpuData()),
+					Pointer.to(new int[] {x.number})
+	            );
+			
+			cuLaunchKernel(mean_function,
 					this.CAFFE_GET_BLOCKS(x.number),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream

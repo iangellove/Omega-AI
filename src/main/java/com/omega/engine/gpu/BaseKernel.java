@@ -40,6 +40,10 @@ public class BaseKernel {
 	
 	private CUfunction addMul_function;
 	
+	private CUfunction unMul_function;
+	
+	private CUfunction unMul_grad_function;
+	
 	public BaseKernel() {
 		
 		copy_gpu_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "copy_kernel");
@@ -61,6 +65,10 @@ public class BaseKernel {
 		replace_channel_backward_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "replace_channel_backward_kernel");
 		
 		addMul_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "add_mul_kernel");
+		
+		unMul_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "un_mul_kernel");
+		
+		unMul_grad_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "un_mul_grad_kernel");
 		
 	}
 	
@@ -551,7 +559,7 @@ public class BaseKernel {
 		
 	}
 	
-	public void add_mul(Tensor a,Tensor b,Tensor input,Tensor noise) {
+	public void add_mul(Tensor a,Tensor b,Tensor input,Tensor noise,Tensor output) {
 		
 		try {
 			
@@ -565,6 +573,7 @@ public class BaseKernel {
 			Pointer kernelParameter = Pointer.to(
 	        		Pointer.to(input.getGpuData()),
 	        		Pointer.to(noise.getGpuData()),
+	        		Pointer.to(output.getGpuData()),
 	        		Pointer.to(a.getGpuData()),
 	                Pointer.to(b.getGpuData()),
 	                Pointer.to(new int[]{input.dataLength}),
@@ -573,6 +582,76 @@ public class BaseKernel {
 			
 	        cuLaunchKernel(addMul_function,
 	        		CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void un_mul(Tensor a,Tensor b,Tensor input,Tensor noise,Tensor output) {
+		
+		try {
+			
+			if(unMul_function == null) {
+				unMul_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "un_mul_kernel");
+			}
+			
+			/**
+			 * float* input,float* noise,float* a,float* b,int N, int W
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(input.getGpuData()),
+	        		Pointer.to(noise.getGpuData()),
+	        		Pointer.to(output.getGpuData()),
+	        		Pointer.to(a.getGpuData()),
+	                Pointer.to(b.getGpuData()),
+	                Pointer.to(new int[]{input.dataLength}),
+	                Pointer.to(new int[]{input.getOnceSize()})
+	            );
+			
+	        cuLaunchKernel(unMul_function,
+	        		CAFFE_GET_BLOCKS(input.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            kernelParameter, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void un_mul_grad(Tensor a,Tensor b,Tensor delta,Tensor noise,Tensor diff) {
+		
+		try {
+			
+			if(unMul_grad_function == null) {
+				unMul_grad_function = CUDAModules.getLocalFunctionByModule("BaseKernel.cu", "un_mul_grad_kernel");
+			}
+			
+			/**
+			 * float* input,float* noise,float* a,float* b,int N, int W
+			 */
+			Pointer kernelParameter = Pointer.to(
+	        		Pointer.to(delta.getGpuData()),
+	        		Pointer.to(noise.getGpuData()),
+	        		Pointer.to(diff.getGpuData()),
+	        		Pointer.to(a.getGpuData()),
+	                Pointer.to(b.getGpuData()),
+	                Pointer.to(new int[]{delta.dataLength}),
+	                Pointer.to(new int[]{delta.getOnceSize()})
+	            );
+			
+	        cuLaunchKernel(unMul_grad_function,
+	        		CAFFE_GET_BLOCKS(delta.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
 		            kernelParameter, null // Kernel- and extra parameters

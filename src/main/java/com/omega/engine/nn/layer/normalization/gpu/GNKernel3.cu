@@ -98,7 +98,7 @@ __global__ void GroupNormKernel(const int row_dim, const int col_dim, const int 
     float var = 0;
     float count = 0;
     const float *block_addr = x + row * col_dim;
-     extern __shared__ float share_mem[];
+    extern __shared__ float share_mem[];
 
     ThreadReduce(col_dim, block_addr, &mean, &var, &count);
     WarpReduce(&mean, &var, &count);

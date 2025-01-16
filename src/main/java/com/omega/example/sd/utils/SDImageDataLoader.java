@@ -214,6 +214,52 @@ public class SDImageDataLoader extends BaseDataLoader{
 
 	}
 	
+	public void loadData(int[] indexs, Tensor input, Tensor label,Tensor mask,Tensor noise,String[] labels) {
+		// TODO Auto-generated method stub
+		/**
+		 * 加载input数据
+		 */
+		if(mean != null) {
+			SegImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false, true, mean , std);
+		}else {
+			SegImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false, true);
+		}
+		
+		loadLabels(indexs, label, mask, labels);
+		
+		RandomUtils.gaussianRandom(noise, 0, 1);
+		
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+		
+		label.hostToDevice();
+		
+		mask.hostToDevice();
+
+	}
+	
+	public void loadData_uncond(int[] indexs, Tensor input, Tensor noise) {
+		// TODO Auto-generated method stub
+		/**
+		 * 加载input数据
+		 */
+		if(mean != null) {
+			SegImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false, true, mean , std);
+		}else {
+			SegImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false, true);
+		}
+		
+		RandomUtils.gaussianRandom(noise, 0, 1);
+		
+		/**
+		 * copy data to gpu.
+		 */
+		input.hostToDevice();
+
+	}
+	
 	public void loadLabel(int[] indexs, Tensor label,Tensor mask) {
 		// TODO Auto-generated method stub
 
@@ -235,7 +281,47 @@ public class SDImageDataLoader extends BaseDataLoader{
 			kernel = new BaseKernel();
 		}
 		
-		kernel.add_mul(a, b, input, noise);
+		kernel.add_mul(a, b, input, noise, input);
+		
+	}
+	
+	public void addNoise(Tensor a,Tensor b,Tensor input, Tensor noise,Tensor output) {
+
+		if(kernel == null) {
+			kernel = new BaseKernel();
+		}
+		
+		kernel.add_mul(a, b, input, noise, output);
+		
+	}
+	
+	public void unMulGrad(Tensor a,Tensor b,Tensor delta, Tensor noise,Tensor diff) {
+
+		if(kernel == null) {
+			kernel = new BaseKernel();
+		}
+		
+		kernel.un_mul_grad(a, b, delta, noise, diff);
+		
+	}
+	
+	public void unNoise(Tensor a,Tensor b,Tensor input, Tensor noise) {
+
+		if(kernel == null) {
+			kernel = new BaseKernel();
+		}
+		
+		kernel.un_mul(a, b, input, noise, input);
+		
+	}
+	
+	public void unNoise(Tensor a,Tensor b,Tensor input, Tensor noise,Tensor output) {
+
+		if(kernel == null) {
+			kernel = new BaseKernel();
+		}
+		
+		kernel.un_mul(a, b, input, noise, output);
 		
 	}
 	
@@ -275,6 +361,31 @@ public class SDImageDataLoader extends BaseDataLoader{
 			}
 		}
 //		System.out.println(JsonUtils.toJson(label.data));
+	}
+	
+	public void loadLabels(int[] indexs,Tensor label,Tensor mask,String[] labels) {
+		for(int i = 0;i<indexs.length;i++) {
+			int idx = indexs[i];
+			String text = datas.get(idx).get("zh").toString();
+			labels[i] = text;
+//			System.out.println(text);
+			int[] ids = tokenizer.encode(text);
+			int[] ids_n = new int[ids.length + 2];
+			System.arraycopy(ids, 0, ids_n, 1, ids.length);
+			ids_n[0] = tokenizer.sos;
+			ids_n[ids_n.length - 1] = tokenizer.eos;
+			for(int j = 0;j<maxContextLen;j++) {
+				if(j<ids_n.length) {
+					label.data[i * maxContextLen + j] = ids_n[j];
+					mask.data[i * maxContextLen + j] = 0;
+				}else {
+					label.data[i * maxContextLen + j] = 0;
+					mask.data[i * maxContextLen + j] = -10000.0f;
+				}
+			}
+		}
+//		System.out.println(JsonUtils.toJson(label.data));
+//		System.out.println(JsonUtils.toJson(mask.data));
 	}
 	
 	public void loadData(int[] indexs,float[] a,float[] b, Tensor input, Tensor noise) {

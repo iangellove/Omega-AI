@@ -2328,13 +2328,13 @@ public class OPKernel extends BaseKernel implements Serializable{
 			int[] strides_in = getStrides(x.shape());
 			int[] strides_out = getStrides(y.shape());
 			
-			Pointer permutes_p = CUDAMemoryManager.getPointer(permutes.length);
+			Pointer permutes_p = CUDAMemoryManager.getPointer(permutes.length, Sizeof.INT);
 			JCuda.cudaMemcpy(permutes_p, Pointer.to(permutes), permutes.length * Sizeof.INT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			
-			Pointer sip = CUDAMemoryManager.getPointer(permutes.length);
+			Pointer sip = CUDAMemoryManager.getPointer(permutes.length, Sizeof.INT);
 			JCuda.cudaMemcpy(sip, Pointer.to(strides_in), permutes.length * Sizeof.INT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			
-			Pointer sop = CUDAMemoryManager.getPointer(permutes.length);
+			Pointer sop = CUDAMemoryManager.getPointer(permutes.length, Sizeof.INT);
 			JCuda.cudaMemcpy(sop, Pointer.to(strides_out), permutes.length * Sizeof.INT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			
 			/**
@@ -2375,13 +2375,13 @@ public class OPKernel extends BaseKernel implements Serializable{
 			int[] strides_in = getStrides(x.shape());
 			int[] strides_out = getStrides(y.shape());
 			
-			Pointer permutes_p = CUDAMemoryManager.getPointer(permutes.length);
+			Pointer permutes_p = CUDAMemoryManager.getPointer(permutes.length, Sizeof.INT);
 			JCuda.cudaMemcpy(permutes_p, Pointer.to(permutes), permutes.length * Sizeof.INT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			
-			Pointer sip = CUDAMemoryManager.getPointer(permutes.length);
+			Pointer sip = CUDAMemoryManager.getPointer(permutes.length, Sizeof.INT);
 			JCuda.cudaMemcpy(sip, Pointer.to(strides_in), permutes.length * Sizeof.INT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			
-			Pointer sop = CUDAMemoryManager.getPointer(permutes.length);
+			Pointer sop = CUDAMemoryManager.getPointer(permutes.length, Sizeof.INT);
 			JCuda.cudaMemcpy(sop, Pointer.to(strides_out), permutes.length * Sizeof.INT, cudaMemcpyKind.cudaMemcpyHostToDevice);
 			
 			/**
@@ -2560,6 +2560,51 @@ public class OPKernel extends BaseKernel implements Serializable{
 		            0, null,               // Shared memory size and stream
 		            kernelParameter, null // Kernel- and extra parameters
 		        ));
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void cat_gpu(Tensor a, Tensor b, Tensor c) {
+		// TODO Auto-generated method stub
+		try {
+
+			int offset = 0;
+			int part_input_size = a.getOnceSize() / 1;
+			for(int n = 0;n<a.number;n++) {
+				kernel.copy_gpu(a, c, part_input_size, n * a.getOnceSize() + part_input_size * 0, 1, offset + n * c.getOnceSize(), 1);
+			}
+			offset += part_input_size;
+			
+			part_input_size = b.getOnceSize() / 1;
+			for(int n = 0;n<a.number;n++) {
+				kernel.copy_gpu(b, c, part_input_size, n * b.getOnceSize() + part_input_size * 0, 1, offset + n * c.getOnceSize(), 1);
+			}
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
+	public void cat_back_gpu(Tensor c, Tensor a, Tensor b) {
+		// TODO Auto-generated method stub
+		try {
+
+			int offset = 0;
+
+			int part_input_size = a.getOnceSize() / 1;
+			for(int n = 0;n<c.number;n++) {
+				kernel.axpy_gpu(c, a, part_input_size, 1, offset + n * c.getOnceSize(), 1, n * a.getOnceSize() + part_input_size * 0, 1);
+			}
+			offset += part_input_size;
+			
+			part_input_size = b.getOnceSize() / 1;
+			for(int n = 0;n<c.number;n++) {
+				kernel.axpy_gpu(c, b, part_input_size, 1, offset + n * c.getOnceSize(), 1, n * b.getOnceSize() + part_input_size * 0, 1);
+			}
 			
 		} catch (Exception e) {
 			// TODO: handle exception
