@@ -1,5 +1,7 @@
 package com.omega.engine.nn.layer.diffusion.unet;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -239,12 +241,13 @@ public class UNetCond2 extends Layer{
 		t_embd.forward(time);
 		
 		conv_in.forward(input);
-		
+	
 		Tensor x = conv_in.getOutput();
 		
 		Tensor t_x = t_embd.getOutput();
 //		t_x.showDM("in---t");
-
+//		x.showDM("x");
+		
 		for(int i = 0;i<downs.size();i++) {
 			downs.get(i).forward(x, t_x, context);
 			x = downs.get(i).getOutput();
@@ -276,6 +279,7 @@ public class UNetCond2 extends Layer{
 		conv_final.forward(act.getOutput());
 		
 		this.output = conv_final.getOutput();
+//		this.output.showDM("out");
 	}
 
 	@Override
@@ -791,6 +795,59 @@ public class UNetCond2 extends Layer{
 			tf.clearCacheDelta();	
 
 		}
+		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		t_embd.saveModel(outputStream);
+		
+		conv_in.saveModel(outputStream);
+		
+		for(int i = 0;i<downs.size();i++) {
+			downs.get(i).saveModel(outputStream);
+		}
+		
+		down_res.saveModel(outputStream);
+		
+		mids.saveModel(outputStream);
+		
+		up_res.saveModel(outputStream);
+		
+		for(int i = 0;i<ups.size();i++) {
+			ups.get(i).saveModel(outputStream);
+		}
+		
+		conv_out.saveModel(outputStream);
+		
+		norm.saveModel(outputStream);
+		conv_final.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		t_embd.loadModel(inputStream);
+		
+		conv_in.loadModel(inputStream);
+		
+		for(int i = 0;i<downs.size();i++) {
+			downs.get(i).loadModel(inputStream);
+		}
+		
+		down_res.loadModel(inputStream);
+		
+		mids.loadModel(inputStream);
+		
+		up_res.loadModel(inputStream);
+		
+		for(int i = 0;i<ups.size();i++) {
+			ups.get(i).loadModel(inputStream);
+		}
+		
+		conv_out.loadModel(inputStream);
+		
+		norm.loadModel(inputStream);
+		conv_final.loadModel(inputStream);
 		
 	}
 	

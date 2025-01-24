@@ -1,5 +1,7 @@
 package com.omega.engine.nn.layer.diffusion.unet;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
@@ -294,29 +296,23 @@ public class UNetMidBlock extends Layer{
 				System.out.println(key);
 			}
 		}
-//		
-//		network.gn_feature.gamma = ClipModelUtils.loadData(network.gn_feature.gamma, weightMap, 1, "groupnorm_feature.weight");
-//		network.gn_feature.beta = ClipModelUtils.loadData(network.gn_feature.beta, weightMap, 1, "groupnorm_feature.bias");
-//		
-//		ClipModelUtils.loadData(network.conv_feature.weight, weightMap, "conv_feature.weight");
-//		ClipModelUtils.loadData(network.conv_feature.bias, weightMap, "conv_feature.bias");
-//		
-//		ClipModelUtils.loadData(network.temb.linear.weight, weightMap, "linear_time.weight");
-//		ClipModelUtils.loadData(network.temb.linear.bias, weightMap, "linear_time.bias");
-//		
-//		network.gn_merged.gamma = ClipModelUtils.loadData(network.gn_merged.gamma, weightMap, 1, "groupnorm_merged.weight");
-//		network.gn_merged.beta = ClipModelUtils.loadData(network.gn_merged.beta, weightMap, 1, "groupnorm_merged.bias");
-//		
-//		ClipModelUtils.loadData(network.conv_merged.weight, weightMap, "conv_merged.weight");
-//		ClipModelUtils.loadData(network.conv_merged.bias, weightMap, "conv_merged.bias");
-//		
-//		network.residual_layer.weight = ClipModelUtils.loadData(network.residual_layer.weight, weightMap, 4, "residual_layer.weight");
-//		ClipModelUtils.loadData(network.residual_layer.bias, weightMap, "residual_layer.bias");
-		
+
 	}
 	
 	public static void main(String[] args) {
 		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		res_head.saveModel(outputStream);
+		attns.saveModel(outputStream);
+		res_fail.saveModel(outputStream);
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		res_head.loadModel(inputStream);
+		attns.loadModel(inputStream);
+		res_fail.loadModel(inputStream);
 	}
 	
 }

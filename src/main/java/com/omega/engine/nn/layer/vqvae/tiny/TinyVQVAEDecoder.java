@@ -77,7 +77,7 @@ public class TinyVQVAEDecoder extends Layer {
 	    	ih = res.oHeight;
 	    	iw = res.oWidth;
 	    }
-		VQVAEAttentionLayer attn = new VQVAEAttentionLayer(channels[channels.length - 1], headNum, ih, iw, groups, true, true, network);
+		VQVAEAttentionLayer2 attn = new VQVAEAttentionLayer2(channels[channels.length - 1], headNum, ih, iw, groups, false, network);
 		up.add(attn);
     	for(int i = 0;i<num_res_blocks;i++) {
 			VQVAEResidual res = new VQVAEResidual(channels[channels.length - 1], channels[channels.length - 1], ih, iw, this.groups, network);
@@ -100,7 +100,7 @@ public class TinyVQVAEDecoder extends Layer {
 		    }
 		    
 		    if(attn_resolutions[i]) {
-		    	VQVAEAttentionLayer rattn = new VQVAEAttentionLayer(c_out, headNum, ih, iw, groups, true, true, network);
+		    	VQVAEAttentionLayer2 rattn = new VQVAEAttentionLayer2(c_out, headNum, ih, iw, groups, false, network);
 		    	up.add(rattn);
 		    }
 		    

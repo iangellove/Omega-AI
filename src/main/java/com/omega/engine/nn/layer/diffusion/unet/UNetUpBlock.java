@@ -1,18 +1,16 @@
 package com.omega.engine.nn.layer.diffusion.unet;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Map;
 import java.util.Stack;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.RandomUtils;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.RouteLayer;
 import com.omega.engine.nn.layer.diffusion.UpSampleLayer;
 import com.omega.engine.nn.network.Network;
-import com.omega.engine.nn.network.RunModel;
-import com.omega.engine.nn.network.Transformer;
-import com.omega.engine.updater.UpdaterType;
 
 /**
  * UNetUpBlock
@@ -389,84 +387,30 @@ public class UNetUpBlock extends Layer{
 				System.out.println(key);
 			}
 		}
-//		
-//		network.gn_feature.gamma = ClipModelUtils.loadData(network.gn_feature.gamma, weightMap, 1, "groupnorm_feature.weight");
-//		network.gn_feature.beta = ClipModelUtils.loadData(network.gn_feature.beta, weightMap, 1, "groupnorm_feature.bias");
-//		
-//		ClipModelUtils.loadData(network.conv_feature.weight, weightMap, "conv_feature.weight");
-//		ClipModelUtils.loadData(network.conv_feature.bias, weightMap, "conv_feature.bias");
-//		
-//		ClipModelUtils.loadData(network.temb.linear.weight, weightMap, "linear_time.weight");
-//		ClipModelUtils.loadData(network.temb.linear.bias, weightMap, "linear_time.bias");
-//		
-//		network.gn_merged.gamma = ClipModelUtils.loadData(network.gn_merged.gamma, weightMap, 1, "groupnorm_merged.weight");
-//		network.gn_merged.beta = ClipModelUtils.loadData(network.gn_merged.beta, weightMap, 1, "groupnorm_merged.bias");
-//		
-//		ClipModelUtils.loadData(network.conv_merged.weight, weightMap, "conv_merged.weight");
-//		ClipModelUtils.loadData(network.conv_merged.bias, weightMap, "conv_merged.bias");
-//		
-//		network.residual_layer.weight = ClipModelUtils.loadData(network.residual_layer.weight, weightMap, 4, "residual_layer.weight");
-//		ClipModelUtils.loadData(network.residual_layer.bias, weightMap, "residual_layer.bias");
-		
+
 	}
 	
 	public static void main(String[] args) {
 		
-		int batchSize = 2;
-		int channel = 64;
-		int height = 32;
-		int width = 32;
-		
-		int oChannel = 128;
-		
-		int timeDim = 64;
-
-		Transformer tf = new Transformer();
-		tf.updater = UpdaterType.adamw;
-		tf.CUDNN = true;
-		tf.learnRate = 0.001f;
-		tf.RUN_MODEL = RunModel.TRAIN;
-		tf.number = batchSize;
-		
-		float[] data = RandomUtils.order(batchSize * channel * height * width, 0.1f, 0.1f);
-
-		Tensor input = new Tensor(batchSize , channel, height, width, data, true);
-		
-		float[] tdata = RandomUtils.order(batchSize * timeDim, 0.1f, 0.1f);
-		Tensor time = new Tensor(batchSize , 1, 1, timeDim, tdata, true);
-		
-		float[] delta_data = RandomUtils.order(batchSize * oChannel * height * width, 0.01f, 0.01f);
-		
-		Tensor delta = new Tensor(batchSize , oChannel, height, width, delta_data, true);
-
-		Tensor timeDiff = new Tensor(batchSize , 1, 1, timeDim, true);
-		
-//		UNetDownBlock block = new UNetDownBlock(channel, oChannel, height, width, timeDim, 32, tf);
-//		
-//		String weight = "H:\\model\\resnet_block.json";
-//		loadWeight(LagJsonReader.readJsonFileSmallWeight(weight), block, true);
-//		
-//		for(int i = 0;i<10;i++) {
-////			input.showDM();
-//			tf.train_time++;
-//			block.forward(input, time);
-//			
-//			block.getOutput().showShape();
-//			
-//			block.getOutput().showDM();
-//			
-//			block.back(delta, timeDiff);
-////			delta.showDM();
-//			block.diff.showDM();
-//			timeDiff.showDM();
-////			block.gn.diffGamma.showDM("dgamma");
-////			block.gn.diffBeta.showDM("dbeta");
-//			block.update();
-////			block.gn.gamma.showDM("gamma");
-////			block.gn.beta.showDM("beta");
-////			delta.copyData(tmp);
-//		}
-		
 	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		up.saveModel(outputStream);
+
+		for(int i = 0;i<numLayer;i++) {
+			res[i].saveModel(outputStream);
+			attns[i].saveModel(outputStream);
+		}
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		up.loadModel(inputStream);
+
+		for(int i = 0;i<numLayer;i++) {
+			res[i].loadModel(inputStream);
+			attns[i].loadModel(inputStream);
+		}
+	}
+	
 	
 }

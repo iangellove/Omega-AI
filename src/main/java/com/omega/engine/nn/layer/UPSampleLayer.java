@@ -67,7 +67,25 @@ public class UPSampleLayer extends Layer {
 		}
 		
 	}
+	
+	public void init(Tensor input) {
+		// TODO Auto-generated method stub
+		this.number = input.number;
+		if(this.output == null || this.output.number != number) {
+//			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+		}
 
+		if(kernel == null) {
+			kernel = new UpSampleKernel(this.stride, 1.0f);
+		}
+		
+		if(baseKernel == null) {
+			baseKernel = new BaseKernel();
+		}
+		
+	}
+	
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
@@ -141,16 +159,16 @@ public class UPSampleLayer extends Layer {
 	}
 
 	@Override
-	public void forward(Tensor inpnut) {
+	public void forward(Tensor input) {
 		// TODO Auto-generated method stub
 		/**
 		 * 参数初始化
 		 */
-		this.init();
+		this.init(input);
 		/**
 		 * 设置输入
 		 */
-		this.setInput(inpnut);
+		this.setInput(input);
 		/**
 		 * 计算输出
 		 */

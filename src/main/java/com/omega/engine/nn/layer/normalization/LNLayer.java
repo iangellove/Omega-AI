@@ -72,6 +72,11 @@ public class LNLayer extends NormalizationLayer {
 		this.oWidth = this.width;
 		this.bnType = bnType;
 		this.hasParams = true;
+		if(bnType == BNType.conv_bn) {
+			this.meanNum = this.height * this.width;
+		}else {
+			this.meanNum = this.channel * this.height * this.width;
+		}
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	

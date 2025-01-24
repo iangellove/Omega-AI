@@ -1,5 +1,7 @@
 package com.omega.engine.nn.layer.diffusion.unet;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Map;
 import java.util.Stack;
 
@@ -454,6 +456,28 @@ public class UNetDownBlock extends Layer{
 ////			block.gn.beta.showDM("beta");
 ////			delta.copyData(tmp);
 //		}
+		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		for(int i = 0;i<numLayer;i++) {
+			res[i].saveModel(outputStream);
+			attns[i].saveModel(outputStream);
+		}
+		
+		down.saveModel(outputStream);
+		
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+
+		for(int i = 0;i<numLayer;i++) {
+			res[i].loadModel(inputStream);
+			attns[i].loadModel(inputStream);
+		}
+		
+		down.loadModel(inputStream);
 		
 	}
 	

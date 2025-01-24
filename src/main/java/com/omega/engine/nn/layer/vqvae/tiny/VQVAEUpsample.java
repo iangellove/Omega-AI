@@ -7,10 +7,8 @@ import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.ParamsInit;
 import com.omega.engine.nn.layer.UPSampleLayer;
 import com.omega.engine.nn.network.Network;
-import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * VQVAEUpsample
@@ -41,8 +39,6 @@ public class VQVAEUpsample extends Layer {
 		up = new UPSampleLayer(channel, height, width, 2, network);
 		
 		conv = new ConvolutionLayer(channel, oChannel, up.oWidth, up.oHeight, 3, 3, 1, 1, true, this.network);
-		conv.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
-		conv.paramsInit = ParamsInit.silu;
 
 	}
 
@@ -67,7 +63,7 @@ public class VQVAEUpsample extends Layer {
 		// TODO Auto-generated method stub
 		
 		up.forward(this.input);
-		
+
 		conv.forward(up.getOutput());
 		
 		this.output = conv.getOutput();

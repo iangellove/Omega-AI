@@ -74,6 +74,11 @@ public class GNLayer extends NormalizationLayer {
 		this.bnType = bnType;
 		this.groupNum = groupNum;
 		this.hasParams = false;
+		if(bnType == BNType.conv_bn) {
+			this.numChannel = this.channel;
+		}else {
+			this.numChannel = this.height * this.width;
+		}
 		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
 	}
 	

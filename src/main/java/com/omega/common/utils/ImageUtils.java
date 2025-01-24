@@ -676,6 +676,7 @@ public class ImageUtils {
 		try {
 			bi = ImageIO.read(file);
 		} catch (Exception e) {
+			System.err.println("error file:"+file.getName());
 			e.printStackTrace();
 		}
 		int width = bi.getWidth();

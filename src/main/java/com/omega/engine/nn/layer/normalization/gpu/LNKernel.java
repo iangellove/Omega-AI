@@ -1106,12 +1106,12 @@ public class LNKernel extends BaseKernel{
     
     public static void main(String[] args) {
     	
-    	int N = 10;
+    	int N = 1024;
     	int T = 1;
-    	int W = 3;
+    	int W = 128;
     	
-//    	float[] data = RandomUtils.gaussianRandom(N * T * W, 0.5f);
-    	float[] data = RandomUtils.order(N * T * W, 0.1f, 0.1f);
+    	float[] data = RandomUtils.gaussianRandom(N * T * W, 0.5f);
+//    	float[] data = RandomUtils.order(N * T * W, 0.1f, 0.1f);
     	
 //    	float[] gammaData = RandomUtils.order(W, 0.1f, 0.1f);
 //    	float[] betaData = RandomUtils.order(W, 0.1f, 0.0f);
@@ -1129,8 +1129,8 @@ public class LNKernel extends BaseKernel{
 //    	Tensor output = new Tensor(N, T, 1, W, true);
 //    	Tensor output2 = new Tensor(N, T, 1, W, true);
 //    	
-    	Tensor delta = new Tensor(N * T, 1, 1, W, MatrixUtils.order(N * T * W, 0.1f, 0.1f), true);
-//    	Tensor delta = new Tensor(N * T, 1, 1, W, RandomUtils.gaussianRandom(N * T * W, 0.5f), true);
+//    	Tensor delta = new Tensor(N * T, 1, 1, W, MatrixUtils.order(N * T * W, 0.1f, 0.1f), true);
+    	Tensor delta = new Tensor(N * T, 1, 1, W, RandomUtils.gaussianRandom(N * T * W, 0.5f), true);
 //    	
 //    	LNKernel kernel = new LNKernel(W, BNType.fully_bn);
 //
@@ -1198,7 +1198,7 @@ public class LNKernel extends BaseKernel{
 //    	output3.showDM();
     	
     	Transformer tf = new Transformer();
-//		tf.number = N * T;
+		tf.number = N * T;
     	
     	LNLayer ln = new LNLayer(tf, true);
     	

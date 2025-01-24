@@ -40,7 +40,7 @@ public class NormalizeKernel implements Serializable{
 	private CUfunction l2_norm_1dim_backward_function2;
 	
 //	private CUfunction norm_grad_function;
-	
+
 	public NormalizeKernel() {
 		
 		norm_function = CUDAModules.getLocalFunctionByModule("NormalizeKernel.cu", "norm");
@@ -264,7 +264,7 @@ public class NormalizeKernel implements Serializable{
     	int H = 2;
     	int W = 2;
     	
-    	float[] data = RandomUtils.order(N * C * H * W, 1f, 1f);
+    	float[] data = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
     	
     	Tensor input = new Tensor(N, C, H, W, data, true);
     	
@@ -274,22 +274,33 @@ public class NormalizeKernel implements Serializable{
     	
     	NormalizeKernel kernel = new NormalizeKernel();
     	
-    	kernel.l2norm1Dim(input, output);
-    	
+//    	kernel.l2norm1Dim(input, output);
+//    	
+//    	input.showDM();
+//    	
+//    	output.showDM();
+//    	
+    	float[] data2 = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
+//    	float[] data2 = MatrixUtils.one(N * C * H * W);
+    	Tensor delta = new Tensor(N, C, H, W, data2, true);
+//    	
+////    	kernel.l2norm1Dim_back(input, output, delta, dx);
+//    	
+//    	kernel.l2norm1Dim_back2(input, delta, dx);
+//    	
+//    	dx.showDM();
+    	input.view(N * C * H, 1, 1, W);
+    	output.view(N * C * H, 1, 1, W);
+    	kernel.l2norm(input, output);
     	input.showDM();
-    	
     	output.showDM();
     	
-//    	float[] data2 = RandomUtils.order(N * C * H * W, 0.1f, 0.1f);
-    	float[] data2 = MatrixUtils.one(N * C * H * W);
-    	Tensor delta = new Tensor(N, C, H, W, data2, true);
-    	
-//    	kernel.l2norm1Dim_back(input, output, delta, dx);
-    	
-    	kernel.l2norm1Dim_back2(input, delta, dx);
-    	
+    	input.view(N * C * H, 1, 1, W);
+    	output.view(N * C * H, 1, 1, W);
+    	delta.view(N * C * H, 1, 1, W);
+    	dx.view(N * C * H, 1, 1, W);
+    	kernel.l2norm_back(input, output, delta, dx);
     	dx.showDM();
-    	
 //    	Tensor output2 = new Tensor(N, C, 1, 1, true);
 //    	
 //    	TensorOP.mean2Dim(input, output2);

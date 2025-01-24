@@ -1,5 +1,7 @@
 package com.omega.engine.nn.layer.diffusion.unet;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
@@ -18,8 +20,6 @@ import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.example.clip.utils.ClipModelUtils;
 import com.omega.example.transformer.utils.LagJsonReader;
-
-import jcuda.runtime.JCuda;
 
 /**
  * UNetResidualBlock
@@ -431,6 +431,37 @@ public class UNetResidualBlock extends Layer{
 //			block.gn.gamma.showDM("gamma");
 //			block.gn.beta.showDM("beta");
 //			delta.copyData(tmp);
+		}
+		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		gn_feature.saveModel(outputStream);
+		conv_feature.saveModel(outputStream);
+		
+		temb.saveModel(outputStream);
+
+		gn_merged.saveModel(outputStream);
+		conv_merged.saveModel(outputStream);
+		
+		if(residual_layer != null) {
+			residual_layer.saveModel(outputStream);
+		}
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		gn_feature.loadModel(inputStream);
+		conv_feature.loadModel(inputStream);
+		
+		temb.loadModel(inputStream);
+
+		gn_merged.loadModel(inputStream);
+		conv_merged.loadModel(inputStream);
+		
+		if(residual_layer != null) {
+			residual_layer.loadModel(inputStream);
 		}
 		
 	}

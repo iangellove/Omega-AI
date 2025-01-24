@@ -65,19 +65,14 @@ __global__ void l2norm_backward_kernel(int N, float *x,float *out,float *delta, 
     int b = index;
     int f;
     float sum = 0;
-    float dsum = 0;
     for(f = 0; f < filters; ++f){
         int index = b*filters + f;
         sum += powf(x[index], 2);
-        dsum += out[index] * delta[index];
     }
-    sum = sqrtf(sum);
-    printf("bc:%d,norm:%f",index,sum);
-    if(sum == 0) sum = 1;
-    //printf("%f\n", sum);
+    float s = sqrtf(sum);
     for(f = 0; f < filters; ++f){
         int index = b*filters + f;
-        dx[index] = (delta[index] - (out[index] * dsum)) / sum;
+    	dx[index] = delta[index] / s + (-1.0f * powf(sum, -0.5) * x[index]);
     }
 }
 

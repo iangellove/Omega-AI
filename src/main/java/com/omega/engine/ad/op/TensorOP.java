@@ -3,6 +3,7 @@ package com.omega.engine.ad.op;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
+import com.omega.engine.ad.op.gpu.NormalizeKernel;
 import com.omega.engine.ad.op.gpu.OPKernel;
 import com.omega.engine.gpu.GPUOP;
 
@@ -696,6 +697,33 @@ public class TensorOP {
 		
 		OPKernel.getInstance().copy_gpu(a, b);
 		
+	}
+	
+	public static void normalize(Tensor x,Tensor y,int dim) {
+		int N = x.number;
+		int C = x.channel;
+		int H = x.height;
+		int W = x.width;
+		if(dim == 0) {
+			x.view(N * C * H * W, 1, 1, 1);
+			y.view(N * C * H * W, 1, 1, 1);
+		}else if(dim == 1) {
+			x.view(N, 1, 1, C * H * W);
+			y.view(N, 1, 1, C * H * W);
+		}else if(dim == 2) {
+			x.view(N * C, 1, 1, H * W);
+			y.view(N * C, 1, 1, H * W);
+		}else if(dim == 3) {
+			x.view(N * C * H, 1, 1, W);
+			y.view(N * C * H, 1, 1, W);
+		}else{
+			throw new RuntimeException("dim must be 0 to 3");
+		}
+		
+		NormalizeKernel.getInstance().l2norm(x, y);
+		
+		x.view(N, C, H, W);
+		y.view(N, C, H, W);
 	}
 	
 }

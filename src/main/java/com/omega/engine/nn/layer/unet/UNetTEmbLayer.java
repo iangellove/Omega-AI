@@ -1,5 +1,8 @@
 package com.omega.engine.nn.layer.unet;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 import com.omega.common.data.Tensor;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
@@ -192,5 +195,17 @@ public class UNetTEmbLayer extends Layer{
 		// TODO Auto-generated method stub
 		linear.accGrad(scale);
 	}
-
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		
+		linear.saveModel(outputStream);
+		
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		linear.loadModel(inputStream);
+		
+	}
+	
 }

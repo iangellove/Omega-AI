@@ -113,7 +113,7 @@ public class VQVAEAttentionLayer extends Layer{
 	public void initLayers() {
 
 		if(groups > 0) {
-			gn = new GNLayer(groups, this, BNType.conv_bn);
+			gn = new GNLayer(groups, channel, height, width, BNType.conv_bn, this);
 		}
 		
 		this.setqLinerLayer(new FullyLayer(embedDim, embedDim, bias, this.network));
@@ -153,6 +153,14 @@ public class VQVAEAttentionLayer extends Layer{
 			softmaxKernel = new SoftmaxCudnnKernel(time, 1, 1);
 		}
 		
+		if(this.qt != null) {
+			this.qt.viewOrg();
+			this.kt.viewOrg();
+			this.vt.viewOrg();
+			this.xt.viewOrg();
+			this.oi.viewOrg();
+		}
+		
 		if(network.RUN_MODEL == RunModel.EVAL) {
 			// [batch_size，time，head_num，d_k]
 			this.xt = CUDAMemoryManager.getCache("attn-xt", batchSize, time, 1, channel);
@@ -170,7 +178,7 @@ public class VQVAEAttentionLayer extends Layer{
 			// [batch_size, len_q, n_heads * dim_v]
 			this.oi = CUDAMemoryManager.getCache("attn-oi", batchSize * time, 1, 1, embedDim);
 		}else {
-			if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
+			if(this.qt == null || this.qt.number != this.batchSize) {
 				// [batch_size，time，head_num，d_k]
 				this.xt = Tensor.createGPUTensor(this.xt, batchSize, time, 1, channel, true);
 				this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
@@ -193,10 +201,7 @@ public class VQVAEAttentionLayer extends Layer{
 		if(this.output != null){
 			this.output.viewOrg();
 		}
-		this.qt.viewOrg();
-		this.kt.viewOrg();
-		this.vt.viewOrg();
-		this.xt.viewOrg();
+
 		if(this.getqLinerLayer().getOutput() != null) {
 			this.getqLinerLayer().getOutput().viewOrg();
 			this.getkLinerLayer().getOutput().viewOrg();
@@ -208,18 +213,12 @@ public class VQVAEAttentionLayer extends Layer{
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-//		if(this.dattn == null){
-//		this.dqt = Tensor.createGPUTensor(this.dqt, batchSize, headNum, time, dk, true);
-//		this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, time, dk, true);
-//		this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, time, dk, true);
-//		this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
-//	}
 		if(this.dattn == null){
 			this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
 		}
 		this.dqt = this.getqLinerLayer().getOutput().view(batchSize, headNum, time, dk);
-		this.dkt = this.getqLinerLayer().getOutput().view(batchSize, headNum, time, dk);
-		this.dvt = this.getqLinerLayer().getOutput().view(batchSize, headNum, time, dk);
+		this.dkt = this.getkLinerLayer().getOutput().view(batchSize, headNum, time, dk);
+		this.dvt = this.getvLinerLayer().getOutput().view(batchSize, headNum, time, dk);
 	}
 
 	@Override
@@ -424,7 +423,9 @@ public class VQVAEAttentionLayer extends Layer{
 		TensorOP.permute(dqt, qt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(dkt, kt, new int[] {0, 2, 1, 3});
 		TensorOP.permute(dvt, vt, new int[] {0, 2, 1, 3});
-
+		
+//		qt.showDMByOffset(0, 10, "qt");
+		
 		Tensor queryDelta = qt.view(batchSize * time, 1, 1, headNum * dk);
 		Tensor keyDelta = kt.view(batchSize * time, 1, 1, headNum * dk);
 		Tensor valueDelta = vt.view(batchSize * time, 1, 1, headNum * dk);

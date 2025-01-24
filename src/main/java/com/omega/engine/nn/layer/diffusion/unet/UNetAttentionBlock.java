@@ -1,5 +1,7 @@
 package com.omega.engine.nn.layer.diffusion.unet;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
@@ -197,11 +199,15 @@ public class UNetAttentionBlock extends Layer{
 		//[b, c, h, w] --> [b, h*w, c]
 		TensorOP.permute(conv_in.getOutput(), xt, new int[] {0, 2, 3, 1});
 		xt.view(number * time, 1, 1, channel);
-
+//		xt.showDM("xt");
+//		ln1.gamma.showDM("ln1.gamma");
+//		ln1.beta.showDM("ln1.beta");
 		ln1.forward(xt);
+//		ln1.getOutput().showDM("ln1");
 		attn.forward(ln1.getOutput());
+//		attn.getOutput().showDM("attn");
 		TensorOP.add(attn.getOutput(), xt, x1);
-
+//		x1.showDM("x1");
 		ln2.forward(x1);
 		
 		cross_attn.forward(ln2.getOutput(), context);
@@ -539,6 +545,43 @@ public class UNetAttentionBlock extends Layer{
 			block.gn.beta.showDM("beta");
 //			delta.copyData(tmp);
 		}
+		
+	}
+	
+	public void saveModel(RandomAccessFile outputStream) throws IOException {
+		gn.saveModel(outputStream);
+		conv_in.saveModel(outputStream);
+		ln1.saveModel(outputStream);
+		attn.saveModel(outputStream);
+		if(cross_attn != null) {
+			ln2.saveModel(outputStream);
+			cross_attn.saveModel(outputStream);
+		}
+		ln3.saveModel(outputStream);
+		
+		geglu1.saveModel(outputStream);
+		geglu2.saveModel(outputStream);
+		
+		conv_out.saveModel(outputStream);
+		
+	}
+	
+	public void loadModel(RandomAccessFile inputStream) throws IOException {
+		
+		gn.loadModel(inputStream);
+		conv_in.loadModel(inputStream);
+		ln1.loadModel(inputStream);
+		attn.loadModel(inputStream);
+		if(cross_attn != null) {
+			ln2.loadModel(inputStream);
+			cross_attn.loadModel(inputStream);
+		}
+		ln3.loadModel(inputStream);
+		
+		geglu1.loadModel(inputStream);
+		geglu2.loadModel(inputStream);
+		
+		conv_out.loadModel(inputStream);
 		
 	}
 	

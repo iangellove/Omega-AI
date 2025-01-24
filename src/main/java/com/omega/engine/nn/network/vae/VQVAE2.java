@@ -15,13 +15,11 @@ import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.EmbeddingIDLayer;
 import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.ParamsInit;
-import com.omega.engine.nn.layer.vqvae.tiny.TinyVQVAEDecoder;
-import com.omega.engine.nn.layer.vqvae.tiny.TinyVQVAEEncoder;
+import com.omega.engine.nn.layer.vqvae.tiny.TinyVQVAEDecoder2;
+import com.omega.engine.nn.layer.vqvae.tiny.TinyVQVAEEncoder2;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.NetworkType;
 import com.omega.engine.nn.network.RunModel;
-import com.omega.engine.updater.UpdaterFactory;
 import com.omega.engine.updater.UpdaterType;
 
 import jcuda.jcublas.cublasOperation;
@@ -31,7 +29,7 @@ import jcuda.jcublas.cublasOperation;
  * @author Administrator
  *
  */
-public class TinyVQVAE2 extends Network {
+public class VQVAE2 extends Network {
 	
 	public float beta = 0.25f;
 	
@@ -51,15 +49,15 @@ public class TinyVQVAE2 extends Network {
 	
 	public int imageSize;
 	
-	private int[] channels;
+	private int[] ch_mult;
 	
-	private boolean[] attn_resolutions;
+	private int ch;
 	
 	private InputLayer inputLayer;
 	
-	public TinyVQVAEEncoder encoder;
+	public TinyVQVAEEncoder2 encoder;
 	
-	public TinyVQVAEDecoder decoder;
+	public TinyVQVAEDecoder2 decoder;
 	
 	public ConvolutionLayer pre_quant_conv;
 	
@@ -103,39 +101,35 @@ public class TinyVQVAE2 extends Network {
 	
 	private Tensor ema_count_n;
 	
-	private Tensor avg_probs;
-	private Tensor avg_probs_log;
+//	private Tensor avg_probs;
+//	private Tensor avg_probs_log;
 	
-	public TinyVQVAE2(LossType lossType,UpdaterType updater,int z_dims,int latendDim,int num_vq_embeddings,int imageSize,int[] channels,boolean[] attn_resolutions,int num_res_blocks) {
+	public VQVAE2(LossType lossType,UpdaterType updater,int z_dims,int latendDim,int num_vq_embeddings,int imageSize,int[] ch_mult,int ch,int num_res_blocks) {
 		this.lossFunction = LossFactory.create(lossType);
 		this.z_dims = z_dims;
 		this.latendDim = latendDim;
 		this.num_vq_embeddings = num_vq_embeddings;
 		this.imageSize = imageSize;
-		this.channels = channels;
+		this.ch_mult = ch_mult;
 		this.num_res_blocks = num_res_blocks;
-		this.attn_resolutions = attn_resolutions;
+		this.ch = ch;
 		this.updater = updater;
 		initLayers();
 	}
 	
 	public void initLayers() {
 		this.inputLayer = new InputLayer(3, imageSize, imageSize);
-		this.encoder = new TinyVQVAEEncoder(3, z_dims, imageSize, imageSize, num_res_blocks, groups, headNum, channels, attn_resolutions, this);
+		this.encoder = new TinyVQVAEEncoder2(3, z_dims, imageSize, imageSize, num_res_blocks, groups, headNum, ch_mult, ch, this);
 		
 		pre_quant_conv = new ConvolutionLayer(z_dims, latendDim, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
-		pre_quant_conv.setUpdater(UpdaterFactory.create(this.updater, this.updaterParams));
-		pre_quant_conv.paramsInit = ParamsInit.silu;
 		
 		embedding = new EmbeddingIDLayer(num_vq_embeddings, latendDim, true, this);
 		float initrange = 1.0f / num_vq_embeddings;
 		embedding.weight = new Tensor(1, 1, num_vq_embeddings, latendDim, RandomUtils.uniform(num_vq_embeddings * latendDim, -initrange, initrange), true);
 		
 		post_quant_conv = new ConvolutionLayer(latendDim, z_dims, encoder.oWidth, encoder.oHeight, 1, 1, 0, 1, true, this);
-		post_quant_conv.setUpdater(UpdaterFactory.create(this.updater, this.updaterParams));
-		post_quant_conv.paramsInit = ParamsInit.silu;
 		
-		this.decoder = new TinyVQVAEDecoder(z_dims, 3, encoder.oHeight, encoder.oWidth, num_res_blocks, groups, headNum, channels, attn_resolutions, this);
+		this.decoder = new TinyVQVAEDecoder2(z_dims, 3, encoder.oHeight, encoder.oWidth, num_res_blocks, groups, headNum, ch_mult, ch, this);
 		this.addLayer(inputLayer);
 		this.addLayer(encoder);
 		this.addLayer(pre_quant_conv);
@@ -205,8 +199,6 @@ public class TinyVQVAE2 extends Network {
 		
 		this.ze = pre_quant_conv.getOutput();
 		
-//		this.ze.showDMByOffset(0, 10, "ze");
-		
 		quantizer(pre_quant_conv.getOutput());
 		
 		post_quant_conv.forward(this.zq);
@@ -263,17 +255,17 @@ public class TinyVQVAE2 extends Network {
 			this.z_flattened = Tensor.createGPUTensor(this.z_flattened, ze.number, ze.height, ze.width, this.latendDim, true);
 			this.idx = Tensor.createGPUTensor(this.idx, ze.number * ze.height * ze.width, 1, 1, 1, true);
 			this.zq = Tensor.createGPUTensor(this.zq, ze.number, ze.channel, ze.height, ze.width, true);
-			if(this.RUN_MODEL == RunModel.TRAIN) {
-				this.avg_probs = Tensor.createGPUTensor(this.avg_probs, 1, 1, 1, num_vq_embeddings, true);
-				this.avg_probs_log = Tensor.createGPUTensor(this.avg_probs_log, 1, 1, 1, num_vq_embeddings, true);
-			}
+//			if(this.RUN_MODEL == RunModel.TRAIN) {
+//				this.avg_probs = Tensor.createGPUTensor(this.avg_probs, 1, 1, 1, num_vq_embeddings, true);
+//				this.avg_probs_log = Tensor.createGPUTensor(this.avg_probs_log, 1, 1, 1, num_vq_embeddings, true);
+//			}
 		}else {
 			z_flattened.viewOrg();
-			if(this.RUN_MODEL == RunModel.TRAIN) {
-				avg_probs.clear();
-			}
+//			if(this.RUN_MODEL == RunModel.TRAIN) {
+//				avg_probs.clear();
+//			}
 		}
-	
+//		ze.showDMByOffsetRed(0, 10, "ze");
 		TensorOP.permute(ze, z_flattened, new int[] {0, 2, 3, 1});  //B,C,H,W ==> B,H,W,C
 
 		z_flattened = z_flattened.view(ze.number * ze.height * ze.width, 1, 1, this.latendDim);
@@ -321,9 +313,9 @@ public class TinyVQVAE2 extends Network {
 			ec.clearGPU();
 		}
 //		long start1 = System.nanoTime();
-
+//		z_flattened.showDM("1111");
 		TensorOP.sum_pow(z_flattened, zc, 2, 1);
-		
+//		zc.showDM("222");
 		TensorOP.sum_pow(embedding.weight.view(num_vq_embeddings, 1, 1, latendDim), ec, 2, 1);
 
 		TensorOP.broadcast(zc, ie, 1);

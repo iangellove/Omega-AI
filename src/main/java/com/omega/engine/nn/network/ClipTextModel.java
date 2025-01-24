@@ -4,83 +4,52 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.loss.LossFactory;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.InputLayer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.SoftmaxWithCrossEntropyLayer;
-import com.omega.engine.nn.layer.diffusion.unet.UNetCond2;
-import com.omega.engine.nn.network.utils.ModelUtils;
+import com.omega.engine.nn.layer.clip.CLIPTextTransformer;
 import com.omega.engine.updater.UpdaterType;
 
-import jcuda.Sizeof;
-import jcuda.runtime.JCuda;
-
-/**
- * Duffsion-UNet
- * @author Administrator
- *
- */
-public class DiffusionUNetCond2 extends Network {
-
-	public int inChannel;
+public class ClipTextModel extends Network {
 	
-	private int[] downChannels;
+	public int embedDim;
 	
-	private int numLayer;
+	public int vocabSize;
 	
-	private int timeSteps;
+	public int headNum = 8;
 	
-	private int tEmbDim;
+	public int maxPositionEmbeddingsSize;
 	
-	private int groupNum = 32;
+	public int n_layers = 1;
 	
-	private int headNum;
-	
-	private int textEmbedDim;
-	
-	public int maxContextLen;
-
 	private InputLayer inputLayer;
 	
-	private UNetCond2 unet;
-
-	public int width;
+	public CLIPTextTransformer clip;
 	
-	public int height;
+	private Tensor output;
 	
-	public DiffusionUNetCond2(LossType lossType,UpdaterType updater,int inChannel,int width,int height,int[] downChannels,int headNum,int numLayer,int timeSteps,int tEmbDim,int maxContextLen,int textEmbedDim,int groupNum) {
+	public ClipTextModel(LossType lossType,UpdaterType updater,int headNum,int time,int vocabSize,int embedDim,int maxPositionEmbeddingsSize,int n_layers) {
 		this.lossFunction = LossFactory.create(lossType);
+		this.vocabSize = vocabSize;
+		this.embedDim = embedDim;
+		this.maxPositionEmbeddingsSize = maxPositionEmbeddingsSize;
+		this.n_layers = n_layers;
 		this.updater = updater;
-		this.inChannel = inChannel;
-		this.width = width;
-		this.height = height;
 		this.headNum = headNum;
-		this.downChannels = downChannels;
-		this.numLayer = numLayer;
-		this.timeSteps = timeSteps;
-		this.tEmbDim = tEmbDim;
-		this.textEmbedDim = textEmbedDim;
-		this.maxContextLen = maxContextLen;
-		this.groupNum = groupNum;
-		initLayers();
-	}
-	
-	public void initLayers() {
-		
-		this.inputLayer = new InputLayer(inChannel, height, width);
-		
-		unet = new UNetCond2(inChannel, height, width, downChannels, headNum, tEmbDim, timeSteps, maxContextLen, textEmbedDim, numLayer, groupNum, this);
-		
+		this.time = time;
+		this.inputLayer = new InputLayer(1, 1, vocabSize);
+		this.clip = new CLIPTextTransformer(vocabSize, maxPositionEmbeddingsSize, n_layers, headNum, time, embedDim, true, false, this);
 		this.addLayer(inputLayer);
-		this.addLayer(unet);
+		this.addLayer(clip);
+
 	}
 	
 	@Override
 	public void init() throws Exception {
 		// TODO Auto-generated method stub
-		if(layerList.size() <= 1) {
+		if(layerList.size() <= 0) {
 			throw new Exception("layer size must greater than 2.");
 		}
 		
@@ -88,7 +57,7 @@ public class DiffusionUNetCond2 extends Network {
 		this.setChannel(layerList.get(0).channel);
 		this.setHeight(layerList.get(0).height);
 		this.setWidth(layerList.get(0).width);
-	
+		
 		this.oChannel = this.getLastLayer().oChannel;
 		this.oHeight = this.getLastLayer().oHeight;
 		this.oWidth = this.getLastLayer().oWidth;
@@ -108,67 +77,43 @@ public class DiffusionUNetCond2 extends Network {
 	@Override
 	public NetworkType getNetworkType() {
 		// TODO Auto-generated method stub
-		return NetworkType.DUFFSION_UNET_COND;
+		return NetworkType.CLIP_TEXT;
 	}
 
 	@Override
 	public Tensor predict(Tensor input) {
 		// TODO Auto-generated method stub
 		this.RUN_MODEL = RunModel.TEST;
-		this.forward(input);
-		return this.getOutput();
+		return this.forward(input);
 	}
-	
+
 	@Override
 	public Tensor forward(Tensor input) {
-		return null;
-	}
-	
-	public Tensor forward(Tensor input,Tensor t) {
+		// TODO Auto-generated method stub
+
 		/**
 		 * 设置输入数据
 		 */
 		this.setInputData(input);
+
+		inputLayer.forward();
 		
-		this.unet.forward(input, t);
+		clip.forward(input);
 		
-		return this.unet.getOutput();
-	}
-	
-	public Tensor forward(Tensor input,Tensor t,Tensor context) {
-		/**
-		 * 设置输入数据
-		 */
-		this.setInputData(input);
+		this.output = clip.getOutput();
 		
-		this.unet.forward(input, t, context);
-		
-		return this.unet.getOutput();
-	}
-	
-	public void initBack() {
-						
+		return this.output;
 	}
 	
 	@Override
 	public void back(Tensor lossDiff) {
 		// TODO Auto-generated method stub
-//		lossDiff.showDMByNumber(0);
-		
-		initBack();
-		
-		/**
-		 * 设置误差
-		 * 将误差值输入到最后一层
-		 */
-//		lossDiff.showDMByOffset(0, 100, "lossDiff");
-		
-		this.setLossDiff(lossDiff);
-//		lossDiff.showDM("lossDiff");
-		this.unet.back(lossDiff);
-		
-//		this.unet.diff.showDMByOffset(0, 100, "unet.diff");
-		
+
+	}
+	
+	public void back(Tensor cos,Tensor sin,Tensor lossDiff) {
+		// TODO Auto-generated method stub
+
 	}
 
 	@Override
@@ -194,32 +139,15 @@ public class DiffusionUNetCond2 extends Network {
 	@Override
 	public Tensor lossDiff(Tensor output, Tensor label) {
 		// TODO Auto-generated method stub
-		this.clearGrad();
 		Tensor t = this.lossFunction.diff(output, label);
 //		PrintUtils.printImage(t.data);
 		return t;
-	}
-	
-	public void update() {
-		
-		this.train_time += 1;
-
-		this.unet.update();
-		
 	}
 
 	@Override
 	public void clearGrad() {
 		// TODO Auto-generated method stub
 		
-		/**
-		 * forward
-		 */
-		JCuda.cudaMemset(CUDAMemoryManager.workspace.getPointer(), 0, CUDAMemoryManager.workspace.getSize() * Sizeof.FLOAT);
-		
-		this.clearCacheDelta();
-		
-		JCuda.cudaDeviceSynchronize();
 	}
 
 	@Override
@@ -231,7 +159,6 @@ public class DiffusionUNetCond2 extends Network {
 	@Override
 	public Tensor lossDiff(Tensor output, Tensor label, Tensor diff) {
 		// TODO Auto-generated method stub
-		this.clearGrad();
 		return this.lossFunction.diff(output, label, diff);
 	}
 	
@@ -246,13 +173,11 @@ public class DiffusionUNetCond2 extends Network {
 	}
 	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
-		unet.saveModel(outputStream);
-		System.out.println("tail save success...");
+
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-		unet.loadModel(inputStream);
-		System.out.println("tail load success...");
+		
 	}
-	
+
 }

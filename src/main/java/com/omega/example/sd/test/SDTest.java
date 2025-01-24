@@ -1,5 +1,7 @@
 package com.omega.example.sd.test;
 
+import java.util.Scanner;
+
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
@@ -9,7 +11,6 @@ import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.network.ClipText;
-import com.omega.engine.nn.network.DiffusionUNet;
 import com.omega.engine.nn.network.DiffusionUNetCond;
 import com.omega.engine.nn.network.DiffusionUNetCond2;
 import com.omega.engine.nn.network.RunModel;
@@ -20,6 +21,7 @@ import com.omega.engine.updater.UpdaterType;
 import com.omega.example.clip.utils.ClipModelUtils;
 import com.omega.example.diffusion.utils.DiffusionImageDataLoader;
 import com.omega.example.sd.utils.SDImageDataLoader;
+import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 import com.omega.example.transformer.utils.LagJsonReader;
 import com.omega.example.transformer.utils.ModelUtils;
 
@@ -666,6 +668,116 @@ public class SDTest {
 		
 		optimizer.trainTinySD(dataLoader, vae, clip);
 		
+//		String save_model_path = "H:\\model\\vqvae2_128_500.model";
+//		ModelUtils.saveModel(unet, save_model_path);
+		
+	}
+	
+	public static void tiny_sd_test_pokem_32() throws Exception {
+		
+		String tokenizerPath = "H:\\clip\\CLIP\\clip_cn\\vocab.txt";
+		
+		BertTokenizer tokenizer = new BertTokenizer(tokenizerPath, true, true);
+
+		int maxContextLen = 64;
+
+		int imageSize = 256;
+		int z_dims = 32;
+		int latendDim = 4;
+		
+		int num_vq_embeddings = 512;
+		
+		int num_res_blocks = 2;
+		
+		int[] channels = new int[] {32, 64, 128, 256};
+		boolean[] attn_resolutions = new boolean[] {false, false, false, false};
+		TinyVQVAE2 vae = new TinyVQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, channels, attn_resolutions, num_res_blocks);
+		vae.CUDNN = true;
+		vae.learnRate = 0.001f;
+		vae.RUN_MODEL = RunModel.EVAL;
+		
+		String vae_path = "H:\\model\\vqvae2_32_512.model";
+		ModelUtils.loadModel(vae, vae_path);
+		
+		int time = maxContextLen;
+		int maxPositionEmbeddingsSize = 512;
+		int vocabSize = 21128;
+		int hiddenSize = 768;
+		int typeVocabSize = 2;
+		int headNum = 12;
+		int numHiddenLayers = 12;
+		int intermediateSize = 3072;
+		int textEmbedDim = 512;
+		
+		ClipText clip = new ClipText(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, hiddenSize, textEmbedDim, maxPositionEmbeddingsSize, typeVocabSize, intermediateSize, numHiddenLayers);
+		clip.CUDNN = true;
+		clip.time = time;
+		clip.RUN_MODEL = RunModel.EVAL;
+		
+		String clipWeight = "H:\\model\\clip_cn_vit-b-16.json";
+		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
+
+		int unetHeadNum = 8;
+		int[] downChannels = new int[] {64, 128, 256, 512};
+		int numLayer = 2;
+		int timeSteps = 1000;
+		int tEmbDim = 512;
+		int latendSize = 32;
+		int groupNum = 32;
+		
+		int batchSize = 1;
+		
+		DiffusionUNetCond2 unet = new DiffusionUNetCond2(LossType.MSE, UpdaterType.adamw, latendDim, latendSize, latendSize, downChannels, unetHeadNum, numLayer, timeSteps, tEmbDim, maxContextLen, textEmbedDim, groupNum);
+		unet.RUN_MODEL = RunModel.TEST;
+		unet.CUDNN = true;
+		unet.number = batchSize;
+		
+		String model_path = "H:\\model\\pm_sd_1000.model";
+		ModelUtils.loadModel(unet, model_path);
+		
+		Scanner scanner = new Scanner(System.in);
+		
+		Tensor latent = new Tensor(batchSize, latendDim, latendSize, latendSize, true);
+		Tensor t = new Tensor(batchSize, 1, 1, 1, true);
+		Tensor label = new Tensor(batchSize * unet.maxContextLen, 1, 1, 1, true);
+		Tensor mask = new Tensor(batchSize, 1, 1, unet.maxContextLen, true);
+
+		while (true) {
+			System.out.println("请输入中文:");
+			String input_txt = scanner.nextLine();
+			if(input_txt.equals("exit")){
+				break;
+			}
+			input_txt = input_txt.toLowerCase();
+			
+			loadLabels(input_txt, label, mask, tokenizer, unet.maxContextLen);
+			
+			Tensor condInput = clip.forward(label, mask);
+//			condInput.showDM("condInput");
+			String[] labels = new String[] {input_txt, input_txt};
+			MBSGDOptimizer.testSD(input_txt, latent, t, condInput, unet, vae, labels);
+		}
+		scanner.close();
+
+	}
+	
+	public static void loadLabels(String text,Tensor label,Tensor mask,BertTokenizer tokenizer,int maxContextLen) {
+		int[] ids = tokenizer.encode(text);
+		int[] ids_n = new int[ids.length + 2];
+		System.arraycopy(ids, 0, ids_n, 1, ids.length);
+		ids_n[0] = tokenizer.sos;
+		ids_n[ids_n.length - 1] = tokenizer.eos;
+		for(int j = 0;j<maxContextLen;j++) {
+			if(j<ids_n.length) {
+				label.data[j] = ids_n[j];
+				mask.data[j] = 0;
+			}else {
+				label.data[j] = 0;
+				mask.data[j] = -10000.0f;
+			}
+		}
+		mask.hostToDevice();
+		label.hostToDevice();
 	}
 	
 	public static void tiny_ldm_train_pokem_32() throws Exception {
@@ -801,7 +913,9 @@ public class SDTest {
 			
 //			sd_train_pokem_32();
 			
-			tiny_sd_train_pokem_32();
+//			tiny_sd_train_pokem_32();
+			
+			tiny_sd_test_pokem_32();
 			
 //			tiny_ldm_train_pokem_32();
 			

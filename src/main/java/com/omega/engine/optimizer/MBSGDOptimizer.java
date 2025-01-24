@@ -31,6 +31,7 @@ import com.omega.engine.nn.network.vae.TinyVAE;
 import com.omega.engine.nn.network.vae.TinyVQVAE;
 import com.omega.engine.nn.network.vae.TinyVQVAE2;
 import com.omega.engine.nn.network.vae.VQVAE;
+import com.omega.engine.nn.network.vae.VQVAE2;
 import com.omega.engine.nn.network.vqgan.LPIPS;
 import com.omega.engine.nn.network.vqgan.PatchGANDiscriminator;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
@@ -38,6 +39,7 @@ import com.omega.example.diffusion.utils.DiffusionImageDataLoader;
 import com.omega.example.rnn.data.OneHotDataLoader;
 import com.omega.example.rnn.data.RNNDataLoader;
 import com.omega.example.sd.utils.SDImageDataLoader;
+import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.yolo.data.BaseDataLoader;
 import com.omega.example.yolo.data.DetectionDataLoader;
 import com.omega.example.yolo.utils.YoloLabelUtils;
@@ -2202,7 +2204,7 @@ public class MBSGDOptimizer extends Optimizer {
 		xt.hostToDevice();
 	}
 	
-	public void sample_prev_timestep(DiffusionUNetCond2 network,SDImageDataLoader trainingData,TinyVQVAE2 vae,Tensor condInput,Tensor xt,Tensor t,Tensor x0,int timestep,float[] a,float[] b,float[] betas,float[] alphas,float[] alphas_bar) {
+	public static void sample_prev_timestep(DiffusionUNetCond2 network,Tensor condInput,Tensor xt,Tensor t,Tensor x0,int timestep,float[] a,float[] b,float[] betas,float[] alphas,float[] alphas_bar) {
 		
 		for(int i = 0;i<xt.number;i++) {
 			t.data[i] = timestep;
@@ -2218,15 +2220,7 @@ public class MBSGDOptimizer extends Optimizer {
 		}
 		
 		noisePred.syncHost();
-		
-//		if(x0 != null) {
-//
-//			trainingData.unNoise(a, b, xt, noisePred, x0);
-//			
-//			TensorOP.clamp(x0, -1, 1, x0);
-//
-//		}
-		
+
 		JCuda.cudaDeviceSynchronize();
 		
 		if(timestep > 0) {
@@ -3748,8 +3742,13 @@ public class MBSGDOptimizer extends Optimizer {
 					/**
 					 * print image
 					 */
-					showImgs("H:\\vae_dataset\\pokemon-blip\\test128\\", output, i + "", trainingData.mean, trainingData.std);
+					showImgs("/omega/test/vqvae/anime/", output, i + "", trainingData.mean, trainingData.std);
 					
+				}
+				
+				if(i > 0 && i % 10 == 0) {
+					String save_model_path = "/omega/models/anime_vqvae2_256_"+i+".model";
+					ModelUtils.saveModel(network, save_model_path);
 				}
 				
 			}
@@ -3764,6 +3763,322 @@ public class MBSGDOptimizer extends Optimizer {
 		}
 
 	}
+	
+	public void trainTinyVQVAE2_lpips_nogan(DiffusionImageDataLoader trainingData,LPIPS lpips) {
+		// TODO Auto-generated method stub
+
+		try {
+			
+			float perceptual_weight = 1;
+			
+			CUDAModules.initCUDAFunctions();
+
+			TinyVQVAE2 network = (TinyVQVAE2) this.network;
+			
+			this.dataSize = trainingData.number;
+
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
+			
+			Tensor lpipLoss = new Tensor(1, 1, 1, 1, true);
+			
+			Tensor lpipsLossDiff = new Tensor(batchSize, 1, 1, 1, MatrixUtils.val(batchSize, 1.0f/batchSize), true);
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = trainingData.shuffle();
+//				int[][] indexs = trainingData.order();
+
+				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				float train_loss = 0.0f;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+
+					long start = System.nanoTime();
+
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					trainingData.loadData(indexs[it], input);
+					
+					JCudaDriver.cuCtxSynchronize();
+
+					/**
+					 * forward
+					 */
+					Tensor output = network.forward(input);
+					
+					Tensor lpipsOutput = lpips.forward(output, input);
+
+					/**
+					 * current time error
+					 */
+					TensorOP.mean(lpipsOutput, 0, lpipLoss);
+
+					/**
+					 * loss
+					 */
+					float loss = network.totalLoss(output, input);
+
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, input);
+					
+					lpips.back(lpipsLossDiff);
+					
+					TensorOP.add(this.lossDiff, lpips.lpips.diff, this.lossDiff);
+					
+					/**
+					 * back
+					 */
+					network.back(this.lossDiff);
+//					System.out.println(JsonUtils.toJson(this.loss.syncHost()));
+					/**
+					 * update
+					 */
+					network.update();
+					
+					JCudaDriver.cuCtxSynchronize();
+					
+					/**
+					 * current time error
+					 */
+					float ploss = lpipLoss.syncHost()[0];
+					System.out.println("ploss:"+ploss);
+					this.currentError = loss + perceptual_weight * ploss;
+
+					train_loss += this.currentError;
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+					
+					this.batchIndex++;
+					
+					/**
+					 * update learning rate
+					 */
+					this.updateLR(this.lr_step);
+					updateLRDynamic(i * trainingData.count_it + it, this.trainTime * trainingData.count_it, 1e-6f);
+					
+				}
+				
+				System.out.println("training["+this.trainIndex+"] train loss:{"+train_loss/indexs.length+"} ");
+				
+				/**
+				 * update learning rate
+				 */
+//				this.updateLR(this.lr_step);
+				
+				if(i % 1 == 0) {
+
+					/**
+					 * showImage
+					 */
+					this.network.RUN_MODEL = RunModel.TEST;
+					
+					Tensor output = network.forward(input);
+					output.syncHost();
+					output.data = MatrixOperation.clampSelf(output.data, -1, 1);
+					
+					/**
+					 * print image
+					 */
+					showImgs("/omega/test/vqvae/anime/", output, i + "", trainingData.mean, trainingData.std);
+					
+				}
+				
+				if(i > 0 && i % 10 == 0) {
+					String save_model_path = "/omega/models/anime_vqvae2_256_"+i+".model";
+					ModelUtils.saveModel(network, save_model_path);
+				}
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void trainVQVAE2_lpips_nogan(DiffusionImageDataLoader trainingData,LPIPS lpips) {
+		// TODO Auto-generated method stub
+
+		try {
+			
+			float perceptual_weight = 1;
+			
+			CUDAModules.initCUDAFunctions();
+
+			VQVAE2 network = (VQVAE2) this.network;
+			
+			this.dataSize = trainingData.number;
+
+			if(isWarmUp()) {
+				this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f/burnIn * 1.0f, power));
+			}
+
+			Tensor input = new Tensor(batchSize, this.network.getChannel(), this.network.getHeight(), this.network.getWidth(), true);
+			
+			Tensor lpipLoss = new Tensor(1, 1, 1, 1, true);
+			
+			Tensor lpipsLossDiff = new Tensor(batchSize, 1, 1, 1, MatrixUtils.val(batchSize, 1.0f/batchSize), true);
+			
+			for(int i = 0;i<this.trainTime;i++) {
+				
+				if(this.trainIndex >= this.minTrainTime) {
+					break;
+				}
+
+				this.trainIndex = i + 1;
+				
+				int[][] indexs = trainingData.shuffle();
+//				int[][] indexs = trainingData.order();
+
+				this.network.RUN_MODEL = RunModel.TRAIN;
+				
+				float train_loss = 0.0f;
+				
+				/**
+				 * 遍历整个训练集
+				 */
+				for(int it = 0;it<indexs.length;it++) {
+
+					long start = System.nanoTime();
+
+					if(Math.abs(this.currentError) <= this.error) {
+						break;
+					}
+					
+					trainingData.loadData(indexs[it], input);
+					
+					JCudaDriver.cuCtxSynchronize();
+
+					/**
+					 * forward
+					 */
+					Tensor output = network.forward(input);
+					
+					Tensor lpipsOutput = lpips.forward(output, input);
+
+					/**
+					 * current time error
+					 */
+					TensorOP.mean(lpipsOutput, 0, lpipLoss);
+
+					/**
+					 * loss
+					 */
+					float loss = network.totalLoss(output, input);
+
+					/**
+					 * loss diff
+					 */
+					this.lossDiff = network.lossDiff(output, input);
+					
+					lpips.back(lpipsLossDiff);
+//					lossDiff.showDMByOffsetRed(0, 100, "lossDiff");
+					TensorOP.add(this.lossDiff, lpips.lpips.diff, this.lossDiff);
+//					lossDiff.showDMByOffsetRed(0, 100, "lossDiff2");
+					/**
+					 * back
+					 */
+					network.back(this.lossDiff);
+//					System.out.println(JsonUtils.toJson(this.loss.syncHost()));
+					/**
+					 * update
+					 */
+					network.update();
+					
+					JCudaDriver.cuCtxSynchronize();
+					
+					/**
+					 * current time error
+					 */
+					float ploss = lpipLoss.syncHost()[0];
+					System.out.println("ploss:"+ploss);
+					this.currentError = loss + perceptual_weight * ploss;
+
+					train_loss += this.currentError;
+					
+					String msg = "training["+this.trainIndex+"]{"+it+"} (lr:"+this.network.learnRate+") train_loss:" + this.currentError + " [costTime:"+(System.nanoTime() - start)/1e6+"ms.]";
+					
+					System.out.println(msg);
+					
+					this.batchIndex++;
+					
+					/**
+					 * update learning rate
+					 */
+					this.updateLR(this.lr_step);
+					updateLRDynamic(i * trainingData.count_it + it, this.trainTime * trainingData.count_it, 1e-6f);
+					
+				}
+				
+				System.out.println("training["+this.trainIndex+"] train loss:{"+train_loss/indexs.length+"} ");
+				
+				/**
+				 * update learning rate
+				 */
+//				this.updateLR(this.lr_step);
+				
+				if(i % 1 == 0) {
+
+					/**
+					 * showImage
+					 */
+					this.network.RUN_MODEL = RunModel.TEST;
+					
+					Tensor output = network.forward(input);
+					output.syncHost();
+					output.data = MatrixOperation.clampSelf(output.data, -1, 1);
+					
+					/**
+					 * print image
+					 */
+//					showImgs("/omega/test/vqvae/anime/", output, i + "", trainingData.mean, trainingData.std);
+					showImgs("H:\\vae_dataset\\pokemon-blip\\test256\\", output, i + "", trainingData.mean, trainingData.std);
+					
+				}
+				
+//				if(i > 0 && i % 10 == 0) {
+//					String save_model_path = "/omega/models/anime_vqvae2_256_"+i+".model";
+//					ModelUtils.saveModel(network, save_model_path);
+//				}
+				
+			}
+			
+			/**
+			 * 停止训练
+			 */
+			System.out.println("training finish. ["+this.trainIndex+"] finalError:"+this.currentError);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
+
 
 	public void trainTinyVQVAE_lpips_patchGANDisc(DiffusionImageDataLoader trainingData,LPIPS lpips,PatchGANDiscriminator disc,int discStepStart) {
 		// TODO Auto-generated method stub
@@ -4425,8 +4740,6 @@ public class MBSGDOptimizer extends Optimizer {
 			
 			String[] labels = new String[batchSize];
 			
-			Tensor context = null;
-			
 			float beta_1 = 0.00085f;
 			float beta_T = 0.012f;
 			int T = 1000;
@@ -4577,13 +4890,18 @@ public class MBSGDOptimizer extends Optimizer {
 					System.out.println("start create test images.");
 //					testGaussianDiffusion(i + "_" + it, 200, input, noise);
 					//String it,Tensor noiseInput,Tensor t,Tensor condInput,Tensor input,DiffusionUNetCond network,TinyVQVAE2 vae,SDImageDataLoader trainingData
-					testSD(i + "", latend, t, condInput, network, vae, trainingData, labels);
+					testSD(i + "", latend, t, condInput, network, vae, labels);
 //					testSD_DDPM(i + "", latend, t, context, network, vae, trainingData, labels);
 //					testSD(i + "", 200, latend, t, context, input, network, vae, labels);
 					System.out.println("finish create.");
 //					testGaussianDiffusion(x_t, t, T, beta_1, beta_T, testParams, trainingData.mean, trainingData.std);
 					network.RUN_MODEL = RunModel.TRAIN;
 //					this.network.learnRate = this.network.learnRate * 0.1f;
+				}
+				
+				if(i > 0 && i % 500 == 0) {
+					String save_model_path = "/omega/models/pm_sd_"+i+".model";
+					ModelUtils.saveModel(network, save_model_path);
 				}
 				
 				System.out.println("training["+this.trainIndex+"] train loss:{"+train_loss/indexs.length+"} ");
@@ -4786,7 +5104,7 @@ public class MBSGDOptimizer extends Optimizer {
 					System.out.println("start create test images.");
 //					testGaussianDiffusion(i + "_" + it, 200, input, noise);
 					//String it,Tensor noiseInput,Tensor t,Tensor condInput,Tensor input,DiffusionUNetCond network,TinyVQVAE2 vae,SDImageDataLoader trainingData
-					testSD(i + "", latend, t, null, network, vae, trainingData, null);
+					testSD(i + "", latend, t, null, network, vae, null);
 //					testSD_DDPM(i + "", latend, t, context, network, vae, trainingData, labels);
 //					testSD(i + "", 200, latend, t, context, input, network, vae, labels);
 					System.out.println("finish create.");
@@ -5391,7 +5709,7 @@ public class MBSGDOptimizer extends Optimizer {
 		
 	}
 	
-	public void testSD(String it,Tensor noiseInput,Tensor t,Tensor condInput,DiffusionUNetCond2 network,TinyVQVAE2 vae,SDImageDataLoader trainingData,String[] labels) {
+	public static void testSD(String it,Tensor noiseInput,Tensor t,Tensor condInput,DiffusionUNetCond2 network,TinyVQVAE2 vae,String[] labels) {
 		
 		try {
 			
@@ -5404,6 +5722,8 @@ public class MBSGDOptimizer extends Optimizer {
 			float[] std = new float[] {0.5f, 0.5f, 0.5f};
 			
 			RandomUtils.gaussianRandom(noiseInput, 0, 1);
+//			noiseInput.data = RandomUtils.val(noiseInput.dataLength, 1.0f);
+//			noiseInput.hostToDevice();
 			
 			float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
 			float[] alphas = MatrixOperation.subtraction(1, betas);
@@ -5415,7 +5735,7 @@ public class MBSGDOptimizer extends Optimizer {
 			
 			for(int ts = T - 1;ts>=0;ts--) {
 				
-				sample_prev_timestep(network, trainingData, vae, condInput, xt, t, null, ts, sqrt_alphas_bar, sqrt_one_minus_alphas_bar, betas, alphas, alphas_bar);
+				sample_prev_timestep(network, condInput, xt, t, null, ts, sqrt_alphas_bar, sqrt_one_minus_alphas_bar, betas, alphas, alphas_bar);
 				
 			}
 			
@@ -5424,13 +5744,13 @@ public class MBSGDOptimizer extends Optimizer {
 			TensorOP.mul(xt, 1/scale_factor, xt);
 			
 //			Tensor result = vae.decodeCode(xt);
-
+//			xt.showDM("xt");
 			Tensor result = vae.decode(xt);
 			
 			JCuda.cudaDeviceSynchronize();
 			
 			result.data = MatrixOperation.clampSelf(result.syncHost(), -1, 1);
-			System.err.println("in");
+//			System.err.println("in");
 			/**
 			 * print image
 			 */
