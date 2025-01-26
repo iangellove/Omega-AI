@@ -2,8 +2,11 @@
 
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <cuda_fp16.h>
 
 #define GELU_SCALING_FACTOR sqrtf(2.0f / M_PI)
+#define SQRT_1_2  0.70710678118654757274f  // sqrt(1/2)
+
 
 extern "C"
 __global__ void relu_forward(float *x, float *output, int n)
@@ -208,6 +211,15 @@ __global__ void gelu_forward(float *x, float *out, int N) {
 }
 
 extern "C"
+__global__ void gelu_old_forward(float *x, float *out, int N) {
+    int idx = threadIdx.x + blockIdx.x*blockDim.x;
+    if(idx < N) {
+    	float xi = x[idx];
+    	out[idx] = xi * 0.5f * (1.0f + erff(xi * SQRT_1_2));
+    }
+}
+
+extern "C"
 __global__ void gelu_backward(float* dinp, const float* inp, const float* dout, int N) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < N) {
@@ -219,5 +231,15 @@ __global__ void gelu_backward(float* dinp, const float* inp, const float* dout, 
         float sech_out = 1.0f / (coshf_out * coshf_out);
         float local_grad = 0.5f * (1.0f + tanh_out) + x * 0.5f * sech_out * GELU_SCALING_FACTOR * (1.0f + 3.0f * 0.044715f * x * x);
         dinp[i] = (float)(local_grad * (float)dout[i]);
+    }
+}
+
+extern "C"
+__global__ void gelu_old_half_forward(float *x, float *out, int N) {
+    int idx = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(idx < N) {
+    	float val = x[idx];
+    	float v = __float2half(erff(val * 0.707106781f));
+    	out[idx] = val * 0.5 * (1 + v);
     }
 }

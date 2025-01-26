@@ -7,9 +7,18 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.nn.layer.clip.bert.BertLayer;
 import com.omega.engine.nn.network.ClipText;
+import com.omega.engine.nn.network.ClipTextModel;
 import com.omega.engine.nn.network.ClipVision;
 
 public class ClipModelUtils {
+	
+	public static void loadWeight(Map<String, Object> weightMap, ClipTextModel network, boolean showLayers) {
+		if(showLayers) {
+			for(String key:weightMap.keySet()) {
+				System.out.println(key);
+			}
+		}
+	}
 	
 	public static void loadWeight(Map<String, Object> weightMap, ClipVision network, boolean showLayers) {
 		if(showLayers) {

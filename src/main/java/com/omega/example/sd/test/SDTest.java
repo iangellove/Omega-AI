@@ -3,6 +3,7 @@ package com.omega.example.sd.test;
 import java.util.Scanner;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
@@ -11,6 +12,7 @@ import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.network.ClipText;
+import com.omega.engine.nn.network.ClipTextModel;
 import com.omega.engine.nn.network.DiffusionUNetCond;
 import com.omega.engine.nn.network.DiffusionUNetCond2;
 import com.omega.engine.nn.network.RunModel;
@@ -21,9 +23,12 @@ import com.omega.engine.updater.UpdaterType;
 import com.omega.example.clip.utils.ClipModelUtils;
 import com.omega.example.diffusion.utils.DiffusionImageDataLoader;
 import com.omega.example.sd.utils.SDImageDataLoader;
+import com.omega.example.sd.utils.SDImageDataLoaderEN;
 import com.omega.example.transformer.tokenizer.bertTokenizer.BertTokenizer;
 import com.omega.example.transformer.utils.LagJsonReader;
 import com.omega.example.transformer.utils.ModelUtils;
+import com.omega.example.transformer.utils.bpe.BPETokenizer3;
+import com.omega.example.transformer.utils.bpe.BPETokenizerEN;
 
 import jcuda.driver.JCudaDriver;
 import jcuda.runtime.JCuda;
@@ -425,6 +430,64 @@ public class SDTest {
 //			output.showDM();
 		}
 		output.showDM();
+		
+	}
+	
+	public static void test_clip_text() {
+		
+		String labelPath = "H:\\vae_dataset\\pokemon-blip\\data.json";
+		String imgDirPath = "H:\\vae_dataset\\pokemon-blip\\dataset256\\";
+		
+		boolean horizontalFilp = true;
+		
+		int imgSize = 256;
+		
+		int maxContextLen = 77;
+		
+		int batchSize = 4;
+
+		float[] mean = new float[] {0.5f, 0.5f,0.5f};
+		float[] std = new float[] {0.5f, 0.5f,0.5f};
+		
+		String vocabPath = "H:\\model\\bpe_tokenizer\\vocab.json";
+		String mergesPath = "H:\\model\\bpe_tokenizer\\merges.txt";
+		BPETokenizerEN bpe = new BPETokenizerEN(vocabPath, mergesPath, 49406, 49407);
+		
+//		SDImageDataLoaderEN dataLoader = new SDImageDataLoaderEN(bpe, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
+		
+		int time = maxContextLen;
+		int maxPositionEmbeddingsSize = 512;
+		int vocabSize = 49408;
+		int headNum = 8;
+		int n_layers = 12;
+		int textEmbedDim = 512;
+		
+		ClipTextModel clip = new ClipTextModel(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, textEmbedDim, maxPositionEmbeddingsSize, n_layers);
+		
+		clip.CUDNN = true;
+		clip.time = time;
+		clip.RUN_MODEL = RunModel.EVAL;
+		
+		String clipWeight = "H:\\model\\clip-vit-base-patch32.json";
+		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
+		
+//		int[] indexs = new int[] {0, 1, 2, 3};
+//		
+//		Tensor label = new Tensor(batchSize * maxContextLen, 1, 1, 1, true);
+//		
+//		Tensor mask = new Tensor(batchSize , 1, 1, maxContextLen, true);
+//		
+//		dataLoader.loadLabel(indexs, label, mask);
+//		Tensor output = null;
+//		for(int i = 0;i < 100;i++) {
+//			long start = System.nanoTime();
+//			output = clip.forward(label, mask);
+//			JCuda.cudaDeviceSynchronize();
+//			System.err.println((System.nanoTime() - start)/1e6+"ms.");
+//			output.showShape();
+////			output.showDM();
+//		}
+//		output.showDM();
 		
 	}
 	
@@ -915,7 +978,7 @@ public class SDTest {
 			
 //			tiny_sd_train_pokem_32();
 			
-			tiny_sd_test_pokem_32();
+//			tiny_sd_test_pokem_32();
 			
 //			tiny_ldm_train_pokem_32();
 			
@@ -928,6 +991,8 @@ public class SDTest {
 //			test_vqvae32();
 			
 //			test_clip();
+			
+			test_clip_text();
 			
 		} catch (Exception e) {
 			// TODO: handle exception
