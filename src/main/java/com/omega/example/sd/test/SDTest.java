@@ -453,17 +453,16 @@ public class SDTest {
 		String mergesPath = "H:\\model\\bpe_tokenizer\\merges.txt";
 		BPETokenizerEN bpe = new BPETokenizerEN(vocabPath, mergesPath, 49406, 49407);
 		
-//		SDImageDataLoaderEN dataLoader = new SDImageDataLoaderEN(bpe, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
+		SDImageDataLoaderEN dataLoader = new SDImageDataLoaderEN(bpe, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
 		
 		int time = maxContextLen;
-		int maxPositionEmbeddingsSize = 512;
+		int maxPositionEmbeddingsSize = 77;
 		int vocabSize = 49408;
 		int headNum = 8;
 		int n_layers = 12;
 		int textEmbedDim = 512;
 		
 		ClipTextModel clip = new ClipTextModel(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, textEmbedDim, maxPositionEmbeddingsSize, n_layers);
-		
 		clip.CUDNN = true;
 		clip.time = time;
 		clip.RUN_MODEL = RunModel.EVAL;
@@ -471,24 +470,26 @@ public class SDTest {
 		String clipWeight = "H:\\model\\clip-vit-base-patch32.json";
 		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
 		
-//		int[] indexs = new int[] {0, 1, 2, 3};
-//		
-//		Tensor label = new Tensor(batchSize * maxContextLen, 1, 1, 1, true);
-//		
-//		Tensor mask = new Tensor(batchSize , 1, 1, maxContextLen, true);
-//		
-//		dataLoader.loadLabel(indexs, label, mask);
-//		Tensor output = null;
-//		for(int i = 0;i < 100;i++) {
-//			long start = System.nanoTime();
-//			output = clip.forward(label, mask);
-//			JCuda.cudaDeviceSynchronize();
-//			System.err.println((System.nanoTime() - start)/1e6+"ms.");
-//			output.showShape();
-////			output.showDM();
-//		}
-//		output.showDM();
+		String txt = "sharp focus on the cats eyes.";
 		
+		int[] ids = bpe.encodeInt(txt, 77);
+		
+		Tensor label = new Tensor(maxContextLen, 1, 1, 1, true);
+		
+		for(int j = 0;j<maxContextLen;j++) {
+			if(j<ids.length) {
+				label.data[j] = ids[j];
+			}else {
+				label.data[j] = 0;
+			}
+		}
+		
+		label.hostToDevice();
+		
+		Tensor output = clip.forward(label);
+		
+		output.showDM("output");
+
 	}
 	
 	public static void sd_train_pokem() throws Exception {

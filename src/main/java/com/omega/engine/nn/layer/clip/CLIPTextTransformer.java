@@ -88,7 +88,7 @@ public class CLIPTextTransformer extends Layer{
 		encoders = new ArrayList<CLIPEncoderLayer>();
 		
 		for(int i = 0;i<n_layers;i++) {
-			CLIPEncoderLayer encoder = new CLIPEncoderLayer(headNum, time, embedDim, intermediateSize, bias, false, network);
+			CLIPEncoderLayer encoder = new CLIPEncoderLayer(headNum, time, embedDim, intermediateSize, bias, false, true, network);
 			getEncoders().add(encoder);
 		}
 		

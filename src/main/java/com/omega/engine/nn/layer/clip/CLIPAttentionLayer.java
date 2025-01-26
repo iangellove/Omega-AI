@@ -12,6 +12,7 @@ import com.omega.common.utils.RandomUtils;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.GPUOP;
+import com.omega.engine.gpu.cudnn.SoftmaxCudnnKernel;
 import com.omega.engine.nn.layer.DropoutLayer;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
@@ -53,6 +54,8 @@ public class CLIPAttentionLayer extends Layer{
 	
 	private AttentionKernel attentionKernel;
 	
+	private SoftmaxCudnnKernel softmaxKernel;
+	
 	private Tensor qt;
 	private Tensor kt;
 	private Tensor vt;
@@ -67,7 +70,11 @@ public class CLIPAttentionLayer extends Layer{
 	
 	private boolean dropout = false;
 	
-	public CLIPAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout) {
+	private boolean mask;
+	
+	private Tensor attnMask;
+	
+	public CLIPAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout,boolean mask) {
 		this.bias = bias;
 		this.time = time;
 		this.embedDim = embedDim;
@@ -81,10 +88,11 @@ public class CLIPAttentionLayer extends Layer{
 		this.oHeight = 1;
 		this.oWidth = embedDim;
 		this.dropout = dropout;
+		this.mask = mask;
 		this.initLayers();
 	}
 	
-	public CLIPAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout,Network network) {
+	public CLIPAttentionLayer(int embedDim,int headNum,int time,boolean bias,boolean dropout,boolean mask,Network network) {
 		this.bias = bias;
 		this.network = network;
 		if(this.updater == null) {
@@ -102,6 +110,7 @@ public class CLIPAttentionLayer extends Layer{
 		this.oHeight = 1;
 		this.oWidth = embedDim;
 		this.dropout = dropout;
+		this.mask = mask;
 		this.initLayers();
 	}
 	
@@ -159,12 +168,20 @@ public class CLIPAttentionLayer extends Layer{
 	
 	public void init(Tensor input) {
 		// TODO Auto-generated method stub
-
 		this.number = input.number;
-		this.time = this.network.time;
 		this.batchSize = this.number / this.time;
-
-		if(this.qt == null || this.qt.number != this.batchSize || this.qt.height != this.time) {
+		
+		if(network.CUDNN && softmaxKernel == null) {
+			softmaxKernel = new SoftmaxCudnnKernel(time, 1, 1);
+		}
+		
+		if(this.qt != null) {
+			this.qt.viewOrg();
+			this.kt.viewOrg();
+			this.vt.viewOrg();
+		}
+		
+		if(this.qt == null || this.qt.number != this.batchSize) {
 			// [batch_size，time，head_num，d_k]
 			this.qt = Tensor.createGPUTensor(this.qt, batchSize, headNum, time, dk, true);
 			this.kt = Tensor.createGPUTensor(this.kt, batchSize, headNum, time, dk, true);
@@ -181,14 +198,36 @@ public class CLIPAttentionLayer extends Layer{
 			this.oi = Tensor.createGPUTensor(this.oi, batchSize * time, 1, 1, embedDim, true);
 		}
 		
-		this.qt.viewOrg();
-		this.kt.viewOrg();
-		this.vt.viewOrg();
 		if(this.getqLinerLayer().getOutput() != null) {
 			this.getqLinerLayer().getOutput().viewOrg();
 			this.getkLinerLayer().getOutput().viewOrg();
 			this.getvLinerLayer().getOutput().viewOrg();
 		}
+		
+		if(mask && (attnMask == null || attnMask.number != batchSize)) {
+			attnMask = Tensor.createGPUTensor(attnMask, batchSize, headNum, time, time, true);
+			createMask();
+		}
+	}
+	
+	public void createMask() {
+		float max = -3.40282347e+38f;
+		attnMask.data = new float[attnMask.getDataLength()];
+		for(int b = 0;b<batchSize;b++) {
+			for(int h = 0;h<headNum;h++) {
+				for(int t1 = 0;t1<time;t1++) {
+					for(int t2 = 0;t2<time;t2++) {
+						if(t2<=t1) {
+							attnMask.data[b * headNum * time * time + h * time * time + t1 * time + t2] = 0;
+						}else {
+							attnMask.data[b * headNum * time * time + h * time * time + t1 * time + t2] = max;
+						}
+					}
+				}
+			}
+		}
+		attnMask.hostToDevice();
+//		attnMask.showDM("attnMask");
 	}
 	
 	@Override
@@ -216,7 +255,7 @@ public class CLIPAttentionLayer extends Layer{
 		Tensor query = this.getqLinerLayer().getOutput().view(batchSize, time, headNum, dk);
 		Tensor key = this.getkLinerLayer().getOutput().view(batchSize, time, headNum, dk);
 		Tensor value = this.getvLinerLayer().getOutput().view(batchSize, time, headNum, dk);
-		
+
 		TensorOP.mul(query, d_k, query);
 
 		TensorOP.permute(query, qt, new int[] {0, 2, 1, 3});
@@ -244,15 +283,20 @@ public class CLIPAttentionLayer extends Layer{
 	
 	public void scaledDotProductAttention(Tensor query,Tensor key,Tensor value) {
 
-//		float d_k = (float) (1.0f / Math.sqrt(dk));
-		
-		float d_k = 1.0f;
-		
 		Tensor preatt = temp;
 		
 		GPUOP.getInstance().bmmEX(CUBLAS_OP_T, CUBLAS_OP_N, time, time, dk, 1.0f, key.getGpuData(), dk, time * dk, query.getGpuData(), dk, time * dk, 0.0f, preatt.getGpuData(), time, time * time, batchSize * headNum);
 
-		attentionKernel.softmax_unmask_test_forward(preatt, attn, batchSize, headNum, time, d_k);
+		if(mask) {
+			TensorOP.add(preatt, attnMask, preatt);
+		}
+		
+		if(network.CUDNN) {
+			softmaxKernel.softmax(preatt, attn, batchSize * headNum * time);
+		}else {
+			float d_k = 1.0f;
+			attentionKernel.softmax_unmask_test_forward(preatt, attn, batchSize, headNum, time, d_k);
+		}
 		
 		Tensor tmp = attn;
 		
@@ -419,7 +463,7 @@ public class CLIPAttentionLayer extends Layer{
 		
 		Tensor delta = new Tensor(batchSize * time, 1, 1, embedDim, delta_data, true);
 		
-		CLIPAttentionLayer mal = new CLIPAttentionLayer(embedDim, headNum, time, false, false, tf);
+		CLIPAttentionLayer mal = new CLIPAttentionLayer(embedDim, headNum, time, false, false, false, tf);
 		
 		Tensor[] cs = RoPEKernel.getCosAndSin(time, embedDim, headNum);
 		
