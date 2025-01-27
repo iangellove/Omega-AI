@@ -744,8 +744,8 @@ public class VQVAETest {
 //			optimizer.lr_step = new int[] {50, 100, 150, 200, 250, 300, 350, 400, 450};
 			optimizer.trainVQVAE2_lpips_nogan(dataLoader, lpips);
 
-//			String save_model_path = "/omega/models/anime_vqvae2_256.model";
-//			ModelUtils.saveModel(network, save_model_path);
+			String save_model_path = "/omega/models/anime_vqvae2_256.model";
+			ModelUtils.saveModel(network, save_model_path);
 //			
 //			ModelUtils.loadModel(network, save_model_path);
 			

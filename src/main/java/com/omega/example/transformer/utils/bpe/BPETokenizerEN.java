@@ -246,7 +246,6 @@ public class BPETokenizerEN extends Tokenizer{
 	public int[] encodeInt(String txt,int maxLen){
 		Matcher m = pattern.matcher(txt);
 		List<String> list = new ArrayList<String>();
-
 		while (m.find()) {
 			list.add(m.group());
 		}
@@ -257,6 +256,13 @@ public class BPETokenizerEN extends Tokenizer{
 		idxs[0] = sos;
 		for(int i = 1;i<maxLen;i++) {
 			if(i - 1 < bbpeTokens.length) {
+				if(vocab.get(bbpeTokens[i - 1]) == null) {
+					System.err.println(i - 1);
+					System.err.println(txt);
+					System.err.println(JsonUtils.toJson(bbpeTokens));
+					System.err.println(bbpeTokens[i - 1]);
+					System.err.println(vocab.get(bbpeTokens[i - 1]));
+				}
 				idxs[i] = vocab.get(bbpeTokens[i - 1]).intValue();
 			}else {
 				idxs[i] = eos;

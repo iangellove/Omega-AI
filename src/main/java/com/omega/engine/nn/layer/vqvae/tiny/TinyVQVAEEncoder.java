@@ -324,8 +324,8 @@ public class TinyVQVAEEncoder extends Layer {
 				VQVAEResidual r = (VQVAEResidual) l;
 				r.saveModel(outputStream);
 			}
-			if(l instanceof VQVAEAttentionLayer) {
-				VQVAEAttentionLayer a = (VQVAEAttentionLayer) l;
+			if(l instanceof VQVAEAttentionLayer2) {
+				VQVAEAttentionLayer2 a = (VQVAEAttentionLayer2) l;
 				a.saveModel(outputStream);
 			}
 			if(l instanceof ConvolutionLayer) {
@@ -349,8 +349,8 @@ public class TinyVQVAEEncoder extends Layer {
 				VQVAEResidual r = (VQVAEResidual) l;
 				r.loadModel(inputStream);
 			}
-			if(l instanceof VQVAEAttentionLayer) {
-				VQVAEAttentionLayer a = (VQVAEAttentionLayer) l;
+			if(l instanceof VQVAEAttentionLayer2) {
+				VQVAEAttentionLayer2 a = (VQVAEAttentionLayer2) l;
 				a.loadModel(inputStream);
 			}
 			if(l instanceof ConvolutionLayer) {

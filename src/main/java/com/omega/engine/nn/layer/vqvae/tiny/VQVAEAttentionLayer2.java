@@ -6,12 +6,13 @@ import java.io.RandomAccessFile;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.ad.op.TensorOP;
+import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.diffusion.unet.UNetSelfAttentionLayer;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.nn.network.Network;
+import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Transformer;
 import com.omega.engine.updater.UpdaterFactory;
 
@@ -39,8 +40,7 @@ public class VQVAEAttentionLayer2 extends Layer{
 	private boolean bias = false;
 
 	public GNLayer gn;
-	
-//	public UNetSelfAttentionLayer attn;
+
 	public TinySelfAttentionLayer attn;
 	
 	private int batchSize = 1;
@@ -77,8 +77,7 @@ public class VQVAEAttentionLayer2 extends Layer{
 		}
 		
 		attn = new TinySelfAttentionLayer(embedDim, headNum, time, bias, network);
-//		attn = new UNetSelfAttentionLayer(embedDim, headNum, time, bias, false, network);
-		
+
 	}
 	
 	@Override
@@ -95,9 +94,17 @@ public class VQVAEAttentionLayer2 extends Layer{
 			xt.viewOrg();
 			output.viewOrg();
 		}
-		if(this.xt == null || this.xt.number != this.batchSize) {
-			this.xt = Tensor.createGPUTensor(this.xt, batchSize , time, 1, channel, true);
-			this.output = Tensor.createGPUTensor(this.output, batchSize, channel, height, width, true);
+		if(network.RUN_MODEL == RunModel.EVAL) {
+			// [batch_size，time，head_num，d_k]
+			this.xt = CUDAMemoryManager.getCache("attn-xt", batchSize, time, 1, channel);
+			if(this.output == null || output.number != batchSize) {
+				this.output = Tensor.createGPUTensor(this.output, batchSize, channel, height, width, true);
+			}
+		}else {
+			if(this.xt == null || this.xt.number != this.batchSize) {
+				this.xt = Tensor.createGPUTensor(this.xt, batchSize , time, 1, channel, true);
+				this.output = Tensor.createGPUTensor(this.output, batchSize, channel, height, width, true);
+			}
 		}
 	}
 	

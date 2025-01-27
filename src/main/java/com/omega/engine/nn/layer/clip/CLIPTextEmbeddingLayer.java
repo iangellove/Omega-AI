@@ -94,10 +94,10 @@ public class CLIPTextEmbeddingLayer extends Layer{
 		// TODO Auto-generated method stub
 
 		this.getTokenEmbedding().forward(this.input);
-		
+
 		this.positionEmbedding.forward(positionIDS);
 		
-		TensorOP.addAxis(getTokenEmbedding().getOutput(), positionEmbedding.getOutput(), getTokenEmbedding().getOutput(), getTokenEmbedding().getOutput().getOnceSize());
+		TensorOP.addAxis(getTokenEmbedding().getOutput(), positionEmbedding.getOutput(), getTokenEmbedding().getOutput(), positionEmbedding.getOutput().getDataLength());
 		
 		this.output = getTokenEmbedding().getOutput();
 		

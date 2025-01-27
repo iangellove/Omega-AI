@@ -180,7 +180,7 @@ public class SDImageDataLoaderEN extends BaseDataLoader{
 
 	}
 	
-	public void loadData(int[] indexs, Tensor input, Tensor label,Tensor mask,Tensor noise) {
+	public void loadData(int[] indexs, Tensor input, Tensor label,Tensor noise) {
 		// TODO Auto-generated method stub
 		/**
 		 * 加载input数据
@@ -191,7 +191,7 @@ public class SDImageDataLoaderEN extends BaseDataLoader{
 			SegImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false, true);
 		}
 		
-		loadLabels(indexs, label, mask);
+		loadLabels(indexs, label);
 		
 		RandomUtils.gaussianRandom(noise, 0, 1);
 		
@@ -201,12 +201,10 @@ public class SDImageDataLoaderEN extends BaseDataLoader{
 		input.hostToDevice();
 		
 		label.hostToDevice();
-		
-		mask.hostToDevice();
 
 	}
 	
-	public void loadData(int[] indexs, Tensor input, Tensor label,Tensor mask,Tensor noise,String[] labels) {
+	public void loadData(int[] indexs, Tensor input, Tensor label,Tensor noise,String[] labels) {
 		// TODO Auto-generated method stub
 		/**
 		 * 加载input数据
@@ -217,7 +215,7 @@ public class SDImageDataLoaderEN extends BaseDataLoader{
 			SegImageLoader.load(imgDirPath, extName, idxSet, indexs, input.number, input, false, true);
 		}
 		
-		loadLabels(indexs, label, mask, labels);
+		loadLabels(indexs, label, labels);
 		
 		RandomUtils.gaussianRandom(noise, 0, 1);
 		
@@ -227,8 +225,6 @@ public class SDImageDataLoaderEN extends BaseDataLoader{
 		input.hostToDevice();
 		
 		label.hostToDevice();
-		
-		mask.hostToDevice();
 
 	}
 	
@@ -252,18 +248,16 @@ public class SDImageDataLoaderEN extends BaseDataLoader{
 
 	}
 	
-	public void loadLabel(int[] indexs, Tensor label,Tensor mask) {
+	public void loadLabel(int[] indexs, Tensor label) {
 		// TODO Auto-generated method stub
 
-		loadLabels(indexs, label, mask);
+		loadLabels(indexs, label);
 		
 		/**
 		 * copy data to gpu.
 		 */
 
 		label.hostToDevice();
-		
-		mask.hostToDevice();
 
 	}
 	
@@ -321,8 +315,8 @@ public class SDImageDataLoaderEN extends BaseDataLoader{
 		for(int i = 0;i<indexs.length;i++) {
 			int idx = indexs[i];
 			String text = datas.get(idx).get("en").toString();
-			int[] ids = tokenizer.encodeInt(text);
-			for(int j = 0;i<maxContextLen;j++) {
+			int[] ids = tokenizer.encodeInt(text, maxContextLen);
+			for(int j = 0;j<maxContextLen;j++) {
 				if(j<ids.length) {
 					label.data[i * maxContextLen + j] = ids[j];
 				}else {
@@ -332,23 +326,17 @@ public class SDImageDataLoaderEN extends BaseDataLoader{
 		}
 	}
 	
-	public void loadLabels(int[] indexs,Tensor label,Tensor mask) {
+	public void loadLabels(int[] indexs,Tensor label,String[] labels) {
 		for(int i = 0;i<indexs.length;i++) {
 			int idx = indexs[i];
 			String text = datas.get(idx).get("en").toString();
 //			System.out.println(text);
-			int[] ids = tokenizer.encodeInt(text);
-			int[] ids_n = new int[ids.length + 2];
-			System.arraycopy(ids, 0, ids_n, 1, ids.length);
-			ids_n[0] = tokenizer.sos;
-			ids_n[ids_n.length - 1] = tokenizer.eos;
+			int[] ids = tokenizer.encodeInt(text, maxContextLen);
 			for(int j = 0;j<maxContextLen;j++) {
-				if(j<ids_n.length) {
-					label.data[i * maxContextLen + j] = ids_n[j];
-					mask.data[i * maxContextLen + j] = 0;
+				if(j<ids.length) {
+					label.data[i * maxContextLen + j] = ids[j];
 				}else {
 					label.data[i * maxContextLen + j] = 0;
-					mask.data[i * maxContextLen + j] = -10000.0f;
 				}
 			}
 		}

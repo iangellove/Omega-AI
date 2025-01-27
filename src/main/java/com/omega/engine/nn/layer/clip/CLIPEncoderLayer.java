@@ -29,6 +29,8 @@ public class CLIPEncoderLayer extends Layer{
 	
 	private boolean bias = false;
 	
+	private boolean mask;
+	
 	private CLIPAttentionLayer attn;
 	
 	private LNLayer norm1;
@@ -46,7 +48,7 @@ public class CLIPEncoderLayer extends Layer{
 	
 	private Tensor tmp2;
 	
-	public CLIPEncoderLayer(int headNum,int time,int embedDim,int intermediateSize,boolean bias,boolean dropout) {
+	public CLIPEncoderLayer(int headNum,int time,int embedDim,int intermediateSize,boolean bias,boolean dropout,boolean mask) {
 		this.headNum = headNum;
 		this.time = time;
 		this.intermediateSize = intermediateSize;
@@ -55,10 +57,11 @@ public class CLIPEncoderLayer extends Layer{
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
+		this.mask = mask;
 		this.initLayers();
 	}
 	
-	public CLIPEncoderLayer(int headNum,int time,int embedDim,int intermediateSize,boolean bias,boolean dropout,Network network) {
+	public CLIPEncoderLayer(int headNum,int time,int embedDim,int intermediateSize,boolean bias,boolean dropout,boolean mask,Network network) {
 		this.headNum = headNum;
 		this.network = network;
 		if(this.updater == null) {
@@ -71,6 +74,7 @@ public class CLIPEncoderLayer extends Layer{
 		this.oChannel = 1;
 		this.oHeight = 1;
 		this.oWidth = embedDim;
+		this.mask = mask;
 		this.initLayers();
 	}
 	
@@ -78,7 +82,7 @@ public class CLIPEncoderLayer extends Layer{
 
 		norm1 = new LNLayer(this);
 		
-		attn = new CLIPAttentionLayer(embedDim, headNum, time, bias, false, network);
+		attn = new CLIPAttentionLayer(embedDim, headNum, time, bias, false, mask, network);
 
 		norm2 = new LNLayer(attn);
 		
