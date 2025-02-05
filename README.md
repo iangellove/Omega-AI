@@ -9,6 +9,8 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 
 [https://gitee.com/iangellove/omega-ai](https://gitee.com/iangellove/omega-ai)
 
+[https://github.com/iangellove/Omega-AI](https://github.com/iangellove/Omega-AI)
+
 ## 依赖
 由于omega-engine-v4-gpu加入了jcuda支持，所以omega-engine-v4-gpu需要安装与jcuda版本对应的cuda，如果您的机器安装的CUDA版本是11.7.x，那么对应omega-engine需要引入的jcuda 11.7.0版本。
 
