@@ -181,7 +181,7 @@ public class GNKernel extends BaseKernel{
 			int group_size = input.channel / G;
 			int n_blocks  = input.number * G;
 			int block_size = Math.max(Math.min(512, img_size * group_size), 32);
-			System.err.println(check);
+		
 			if(!check) {
 				initKernel();
 			}
@@ -282,7 +282,7 @@ public class GNKernel extends BaseKernel{
 		try {
 			
 			boolean check = checkBatch(input);
-			
+
 			if(!check) {
 				initKernel();
 			}

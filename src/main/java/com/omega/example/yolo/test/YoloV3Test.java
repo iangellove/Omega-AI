@@ -476,7 +476,7 @@ public class YoloV3Test {
 			String testPath = "H:\\voc\\mask\\data\\resized\\vail";
 			String testLabelPath = "H:\\voc\\mask\\data\\resized\\vail_label.txt";
 			
-			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
+//			String weightPath = "H:\\voc\\yolo-weights\\yolov3-tiny.conv.15";
 			
 			DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.txt, im_w, im_h, class_num, batchSize, DataType.yolov3);
 			
@@ -490,7 +490,7 @@ public class YoloV3Test {
 
 			ModelLoader.loadConfigToModel(netWork, cfg_path);
 			
-			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
+//			DarknetLoader.loadWeight(netWork, weightPath, 14, true);
 			
 			MBSGDOptimizer optimizer = new MBSGDOptimizer(netWork, 300, 0.001f, batchSize, LearnRateUpdate.SMART_HALF, false);
 			
@@ -860,9 +860,9 @@ public class YoloV3Test {
 //			y.yolov3_show();
 //			y.yolov3_show2();
 //			y.createMaskTrainTestDataSet();
-//			y.yolov3_tiny_mask();
+			y.yolov3_tiny_mask();
 //			y.yolov3_tiny_helmet();
-			y.yolov3_tiny_yz();
+//			y.yolov3_tiny_yz();
 //			y.yolov3_tiny_voc();
 //			y.yolov3_tiny_sm();
 		} catch (Exception e) {

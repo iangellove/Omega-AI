@@ -132,7 +132,7 @@ public class FullyLayer extends Layer{
 		initKernel();
 		this.number = input.number;
 		if(this.output == null || this.number != this.output.number){
-			this.output = Tensor.createGPUTensor(this.output, number, oChannel, oHeight, oWidth, true);
+			this.output = Tensor.createGPUTensor(this.output, this.number, oChannel, oHeight, oWidth, true);
 		}
 	}
 	

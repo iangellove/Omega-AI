@@ -46,6 +46,8 @@ public class BPETokenizerEN extends Tokenizer{
 	
 	private Pattern pattern;  
 	
+	private String pat = "<\\|startoftext\\|>|<\\|endoftext\\|>|'s|'t|'re|'ve|'m|'ll|'d|[\\p{L}]+|[\\p{N}]|[^\\s\\p{L}\\p{N}]+";
+	
 	public BPETokenizerEN(String vocabPath,String mergesPath) {
 		System.out.println("init bpe tokenizer.");
 		this.unicodeMap = unicodeMap();
@@ -55,7 +57,7 @@ public class BPETokenizerEN extends Tokenizer{
 		for(String key:vocab.keySet()) {
 			decoder.put(vocab.get(key).intValue(), key);
 		}
-		pattern = Pattern.compile("<\\|startoftext\\|>|<\\|endoftext\\|>|'s|'t|'re|'ve|'m|'ll|'d|[\\p{L}]+|[\\p{N}]|[^\\s\\p{L}\\p{N}]+");
+		pattern = Pattern.compile(pat);
 	}
 	
 	public BPETokenizerEN(String vocabPath,String mergesPath,int sos,int eos) {
@@ -69,7 +71,7 @@ public class BPETokenizerEN extends Tokenizer{
 		for(String key:vocab.keySet()) {
 			decoder.put(vocab.get(key).intValue(), key);
 		}
-		pattern = Pattern.compile("<\\|startoftext\\|>|<\\|endoftext\\|>|'s|'t|'re|'ve|'m|'ll|'d|[\\p{L}]+|[\\p{N}]|[^\\s\\p{L}\\p{N}]+");
+		pattern = Pattern.compile(pat);
 	}
 	
 	public static String jb2pb(int b) {
@@ -244,6 +246,7 @@ public class BPETokenizerEN extends Tokenizer{
 	}
 	
 	public int[] encodeInt(String txt,int maxLen){
+		txt = txt.toLowerCase();
 		Matcher m = pattern.matcher(txt);
 		List<String> list = new ArrayList<String>();
 		while (m.find()) {
@@ -251,18 +254,19 @@ public class BPETokenizerEN extends Tokenizer{
 		}
 
 		String[] bbpeTokens = bbpe(list, merges);
-
+//		System.err.println(list.size());
 		int[] idxs = new int[maxLen];
 		idxs[0] = sos;
 		for(int i = 1;i<maxLen;i++) {
 			if(i - 1 < bbpeTokens.length) {
-				if(vocab.get(bbpeTokens[i - 1]) == null) {
-					System.err.println(i - 1);
-					System.err.println(txt);
-					System.err.println(JsonUtils.toJson(bbpeTokens));
-					System.err.println(bbpeTokens[i - 1]);
-					System.err.println(vocab.get(bbpeTokens[i - 1]));
-				}
+//				if(vocab.get(bbpeTokens[i - 1]) == null) {
+//					System.err.println(bbpeTokens.length);
+//					System.err.println(i - 1);
+//					System.err.println(txt);
+//					System.err.println(JsonUtils.toJson(bbpeTokens));
+//					System.err.println(bbpeTokens[i - 1]);
+//					System.err.println(vocab.get(bbpeTokens[i - 1]));
+//				}
 				idxs[i] = vocab.get(bbpeTokens[i - 1]).intValue();
 			}else {
 				idxs[i] = eos;
@@ -274,6 +278,7 @@ public class BPETokenizerEN extends Tokenizer{
 	public String[] bbpe(List<String> txts, Map<String[],Integer> merges) {
 		List<String> list = new ArrayList<String>();
 		for(String txt:txts) {
+			txt = unicodeToken(encode(txt, "utf-8"), unicodeMap);
 			String[] chars = txt.split("");
 			chars[chars.length - 1] = chars[chars.length - 1] + w;
 			for(String v:chars) {
@@ -439,7 +444,7 @@ public class BPETokenizerEN extends Tokenizer{
 			
 			BPETokenizerEN bpe = new BPETokenizerEN(vocabPath, mergesPath, 49406, 49407);
 			
-			String txt = "sharp focus on the cats eyes.";
+			String txt = "tiktok live stream banner, selling mens fashion clothing, casual style, whiteboard animation, brand named 大风车, clean lines, simple shapes, vibrant color palette, dynamic text, playful animation, high resolution, sharp focus, energetic atmosphere.";
 			
 			int[] ids = bpe.encodeInt(txt, 77);
 			

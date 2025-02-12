@@ -92,9 +92,11 @@ public class CLIPTextEmbeddingLayer extends Layer{
 	@Override
 	public void output() {
 		// TODO Auto-generated method stub
-
+//		this.input.showDMByOffsetRed(0, 76, "TokenEmbedding.input");
 		this.getTokenEmbedding().forward(this.input);
-
+		
+//		getTokenEmbedding().getOutput().showDMByOffsetRed(0, 100, "getTokenEmbedding().getOutput()");
+		
 		this.positionEmbedding.forward(positionIDS);
 		
 		TensorOP.addAxis(getTokenEmbedding().getOutput(), positionEmbedding.getOutput(), getTokenEmbedding().getOutput(), positionEmbedding.getOutput().getDataLength());

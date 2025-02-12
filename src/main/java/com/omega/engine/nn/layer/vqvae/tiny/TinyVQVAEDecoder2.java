@@ -132,11 +132,13 @@ public class TinyVQVAEDecoder2 extends Layer {
 		convIn.forward(this.input);
 
 		Tensor x = convIn.getOutput();
-		
+
 		for(int i = 0;i<up.size();i++) {
 			Layer l = up.get(i);
 			l.forward(x);
 			x = l.getOutput();
+//			System.err.println(l);
+//			x.showDMByOffsetRed(0, 100, "x"+i);
 		}
 
 		convNormOut.forward(x);

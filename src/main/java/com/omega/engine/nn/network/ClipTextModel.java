@@ -97,7 +97,7 @@ public class ClipTextModel extends Network {
 		this.setInputData(input);
 
 		inputLayer.forward();
-		
+//		input.showDMByOffsetRed(0, 76, "c-in");
 		clip.forward(input);
 		
 		this.output = clip.getOutput();

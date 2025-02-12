@@ -142,8 +142,9 @@ public class VQVAEResidual extends Layer {
 	public void output_eval() {
 		// TODO Auto-generated method stub
 		
-		Tensor norm1_out = CUDAMemoryManager.getCache("VQVAEResidual_norm1_cache", input.number, input.channel, input.height, input.width);
-		norm1.forward(this.input, norm1_out);
+		Tensor norm_out = CUDAMemoryManager.getCache("VQVAEResidual_norm1_cache", input.number, input.channel, input.height, input.width);
+
+		norm1.forward(this.input, norm_out);
 		a1.forward(norm1.getOutput(), norm1.getOutput());
 		conv1.forward(a1.getOutput(), cache);
 		

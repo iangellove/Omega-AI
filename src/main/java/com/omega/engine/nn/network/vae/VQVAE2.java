@@ -230,9 +230,7 @@ public class VQVAE2 extends Network {
 	
 	public Tensor decode(Tensor latent) {
 		
-		if(this.input == null) {
-			this.setInputData(latent);
-		}
+		this.setInputData(latent);
 		
 		post_quant_conv.forward(latent);
 		

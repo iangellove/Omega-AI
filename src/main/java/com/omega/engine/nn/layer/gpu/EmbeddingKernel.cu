@@ -22,7 +22,7 @@ __global__ void EmbeddingFW(float *output,
 
   while (idy < K) {
     auto id = static_cast<int64_t>(ids[idy]);
-    
+    //printf("o:%d=%lld,", idy, id);
     float *out = output + idy * D;
     const float *tab = table + id * D;
     for (int i = idx; i < D; i += blockDim.x) {
@@ -128,4 +128,29 @@ __global__ void get_time_embedding(float* input, float* factor, float* output, i
 		output[B * 2 * dim + idx_dim] = sin;
 		output[B * 2 * dim + dim + idx_dim] = cos;
 	}
+}
+
+extern "C"
+__global__ void embedding_forward_kernel(
+    const uint32_t n_elements,
+    const uint32_t stride,
+    const uint32_t n_dim,
+    const float* __restrict__ params,
+    const float* __restrict__ indices,
+    float* __restrict__ output
+) {
+    const uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= n_elements) {
+        return;
+    }
+
+    //const uint32_t vocab_idx = indices[idx];
+	auto vocab_idx = static_cast<int64_t>(indices[idx]);
+
+    const float* embedding = params + vocab_idx * n_dim;
+    float* out = output + idx * n_dim;
+    for (uint32_t i = 0; i < n_dim; ++i) {
+        out[i] = embedding[i];
+    }
+    out += stride;
 }

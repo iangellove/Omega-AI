@@ -330,6 +330,7 @@ public class SDImageDataLoaderEN extends BaseDataLoader{
 		for(int i = 0;i<indexs.length;i++) {
 			int idx = indexs[i];
 			String text = datas.get(idx).get("en").toString();
+			labels[i] = text;
 //			System.out.println(text);
 			int[] ids = tokenizer.encodeInt(text, maxContextLen);
 			for(int j = 0;j<maxContextLen;j++) {

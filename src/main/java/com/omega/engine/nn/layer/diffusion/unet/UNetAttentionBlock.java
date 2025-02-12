@@ -115,26 +115,27 @@ public class UNetAttentionBlock extends Layer{
 	public void init(Tensor input) {
 		// TODO Auto-generated method stub
 		this.number = input.number;
-		if(this.xt == null || this.xt.number != this.number) {
-			this.xt = Tensor.createGPUTensor(this.xt, number, height, width, channel, true);
-		}else {
-			xt.viewOrg();
-		}
 		
-		if(this.x1 == null || this.x1.number != this.number) {
-			this.x1 = Tensor.createGPUTensor(this.x1, number * time, 1, 1, channel, true);
-			this.x2 = Tensor.createGPUTensor(this.x2, number * time, 1, 1, channel, true);
-			this.x3 = Tensor.createGPUTensor(this.x3, number * time, 1, 1, channel, true);
-		}else {
+		if(xt != null) {
+			xt.viewOrg();
 			x1.viewOrg();
 			x2.viewOrg();
 			x3.viewOrg();
+			tmp.viewOrg();
+		}
+		
+		if(this.xt == null || this.xt.number != this.number) {
+			this.xt = Tensor.createGPUTensor(this.xt, number, height, width, channel, true);
+		}
+		
+		if(this.x1 == null || this.x1.number != this.number * time) {
+			this.x1 = Tensor.createGPUTensor(this.x1, number * time, 1, 1, channel, true);
+			this.x2 = Tensor.createGPUTensor(this.x2, number * time, 1, 1, channel, true);
+			this.x3 = Tensor.createGPUTensor(this.x3, number * time, 1, 1, channel, true);
 		}
 
 		if(this.tmp == null || this.tmp.number != this.number) {
 			this.tmp = Tensor.createGPUTensor(this.tmp, number, height, width, channel, true);
-		}else {
-			tmp.viewOrg();
 		}
 		
 		if(this.output == null || this.output.number != this.number) {
@@ -204,19 +205,22 @@ public class UNetAttentionBlock extends Layer{
 //		ln1.beta.showDM("ln1.beta");
 		ln1.forward(xt);
 //		ln1.getOutput().showDM("ln1");
+//		System.out.println("attn---->in");
 		attn.forward(ln1.getOutput());
 //		attn.getOutput().showDM("attn");
 		TensorOP.add(attn.getOutput(), xt, x1);
 //		x1.showDM("x1");
 		ln2.forward(x1);
-		
+//		System.out.println("cross_attn---->in");
 		cross_attn.forward(ln2.getOutput(), context);
 //		cross_attn.getOutput().showDMByOffsetRed(10 * x2.width * x2.height, x2.width * x2.height, "cross_attn.getOutput()");
 		TensorOP.add(cross_attn.getOutput(), x1, x2);
 
 		ln3.forward(x2);
+//		System.out.println("geglu1---->in");
 		geglu1.forward(ln3.getOutput());
 		gelu.forward(geglu1.getOutput());
+//		System.out.println("geglu2---->in");
 		geglu2.forward(gelu.getOutput());
 		TensorOP.add(geglu2.getOutput(), x2, x3);
 

@@ -2432,7 +2432,11 @@ public class MBSGDOptimizer extends Optimizer {
 		if(labels != null) {
 			for(int b = 0;b<input.number;b++) {
 				float[] once = input.getByNumber(b);
-				utils.createRGBImage(outputPath + it+ "_["+labels[b]+"]" + b + ".png", "png", ImageUtils.color2rgb2(once, input.channel, input.height, input.width, true, mean, std), input.height, input.width, null, null);
+				String title = labels[b];
+				if(title.length() > 30) {
+					title = title.substring(0, 30);
+				}
+				utils.createRGBImage(outputPath + it+ "_["+title+"]" + b + ".png", "png", ImageUtils.color2rgb2(once, input.channel, input.height, input.width, true, mean, std), input.height, input.width, null, null);
 			}
 		}else {
 			for(int b = 0;b<input.number;b++) {
@@ -5225,6 +5229,7 @@ public class MBSGDOptimizer extends Optimizer {
 					 */
 //					input.showShape();
 					latend = vae.encode(input);
+					JCudaDriver.cuCtxSynchronize();
 					latend.showShape();
 					TensorOP.mul(latend, scale_factor, latend);
 					
@@ -5232,7 +5237,7 @@ public class MBSGDOptimizer extends Optimizer {
 					 * get context embd
 					 */
 					condInput = clip.forward(label);
-
+					JCudaDriver.cuCtxSynchronize();
 //					latend.showDMByOffset(0, 100, "before latend");
 					
 					/**
@@ -5292,7 +5297,7 @@ public class MBSGDOptimizer extends Optimizer {
 					
 				}
 
-				if(i % 20 == 0) {
+				if(i % 10 == 0) {
 					network.RUN_MODEL = RunModel.TEST;
 					System.out.println("start create test images.");
 //					testGaussianDiffusion(i + "_" + it, 200, input, noise);
@@ -5306,7 +5311,7 @@ public class MBSGDOptimizer extends Optimizer {
 //					this.network.learnRate = this.network.learnRate * 0.1f;
 				}
 				
-				if(i > 0 && i % 500 == 0) {
+				if(i > 0 && i % 20 == 0) {
 					String save_model_path = "/omega/models/anime_sd_"+i+".model";
 					ModelUtils.saveModel(network, save_model_path);
 				}
@@ -6007,6 +6012,54 @@ public class MBSGDOptimizer extends Optimizer {
 			 * print image
 			 */
 			showImgs("/omega/test/sd/", result, it, mean, std, labels);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static void testSD(String it,Tensor noiseInput,Tensor t,Tensor condInput,DiffusionUNetCond2 network,VQVAE2 vae,String[] labels,String outputPath) {
+		
+		try {
+			
+			float beta_1 = 0.00085f;
+			float beta_T = 0.012f;
+			int T = 1000;
+
+			float scale_factor = 0.18215f;
+			float[] mean = new float[] {0.5f, 0.5f, 0.5f};
+			float[] std = new float[] {0.5f, 0.5f, 0.5f};
+			
+			RandomUtils.gaussianRandom(noiseInput, 0, 1);
+
+			float[] betas = MatrixUtils.linspace(beta_1, beta_T, T);
+			float[] alphas = MatrixOperation.subtraction(1, betas);
+			float[] alphas_bar = MatrixUtils.cumprod(alphas);
+			float[] sqrt_alphas_bar = MatrixOperation.sqrt(alphas_bar);
+			float[] sqrt_one_minus_alphas_bar = MatrixOperation.sqrt(MatrixOperation.subtraction(1, alphas_bar));
+			
+			Tensor xt = noiseInput;
+			
+			for(int ts = T - 1;ts>=0;ts--) {
+				
+				sample_prev_timestep(network, condInput, xt, t, null, ts, sqrt_alphas_bar, sqrt_one_minus_alphas_bar, betas, alphas, alphas_bar);
+				
+			}
+			
+			TensorOP.mul(xt, 1.0f/scale_factor, xt);
+				
+			Tensor result = vae.decode(xt);
+			
+			JCuda.cudaDeviceSynchronize();
+
+			result.data = MatrixOperation.clampSelf(result.syncHost(), -1, 1);
+
+			/**
+			 * print image
+			 */
+			showImgs(outputPath, result, it, mean, std, labels);
 
 		} catch (Exception e) {
 			// TODO: handle exception

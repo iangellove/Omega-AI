@@ -173,6 +173,10 @@ public class UNetCrossAttentionLayer extends Layer{
 			this.kt.viewOrg();
 			this.vt.viewOrg();
 			this.oi.viewOrg();
+			this.qLinerLayer.getOutput().viewOrg();
+			this.kLinerLayer.getOutput().viewOrg();
+			this.vLinerLayer.getOutput().viewOrg();
+			this.oLinerLayer.getOutput().viewOrg();
 		}
 		
 		if(this.qt == null || this.qt.number != this.batchSize) {
@@ -236,7 +240,6 @@ public class UNetCrossAttentionLayer extends Layer{
 
 		Tensor vaccum = temp;
 		attentionKernel.unpermute(vaccum, oi, batchSize, time, headNum, dk);
-//		oi.valueGPU(1);
 		this.getoLinerLayer().forward(oi);
 //		oLinerLayer.weight.showDM("olw");
 //		oLinerLayer.bias.showDM("olb");

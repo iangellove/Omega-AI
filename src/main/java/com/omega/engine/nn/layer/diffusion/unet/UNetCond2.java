@@ -247,16 +247,18 @@ public class UNetCond2 extends Layer{
 		Tensor t_x = t_embd.getOutput();
 //		t_x.showDM("in---t");
 //		x.showDM("x");
-		
+//		System.err.println("start");
 		for(int i = 0;i<downs.size();i++) {
 			downs.get(i).forward(x, t_x, context);
 			x = downs.get(i).getOutput();
 //			x.showDM("donwx:"+i);
 		}
+//		System.err.println("down");
 //		x.showDM("donwx");
 		down_res.forward(x, t_x);
 		
 		mids.forward(down_res.getOutput(), t_x, context);
+//		System.err.println("mids");
 //		mids.getOutput().showDM("mids");
 		cat_res.forward();
 		up_res.forward(cat_res.getOutput(), t_x);
@@ -266,7 +268,7 @@ public class UNetCond2 extends Layer{
 			x = cats.get(i).getOutput();
 			ups.get(i).forward(x, t_x, context);
 		}
-		
+//		System.err.println("up");
 		cat_out.forward();
 		
 //		cat_out.getOutput().showDM("up-out");

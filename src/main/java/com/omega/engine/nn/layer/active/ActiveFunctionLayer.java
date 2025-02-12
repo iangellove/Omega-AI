@@ -54,6 +54,7 @@ public abstract class ActiveFunctionLayer extends Layer {
 		}
 		
 		if(output == null || number != output.number || input.channel != this.output.channel) {
+//			System.out.println("atc--->");
 			this.output = Tensor.createGPUTensor(this.output, number, input.channel, input.height, input.width, true);
 		}
 

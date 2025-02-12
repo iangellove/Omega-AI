@@ -281,6 +281,7 @@ public class Tensor implements Serializable{
 			t.resize(number, channel, height, width, true);
 			t.orgShape = new int[] {number, channel, height, width};
 		}
+//		System.err.println("in-create");
 		return t;
 	}
 	
@@ -314,6 +315,7 @@ public class Tensor implements Serializable{
 				CUDAMemoryManager.free(gpuData);
 			}
 			gpuData = CUDAMemoryManager.getPointer(dataLength);
+			JCuda.cudaDeviceSynchronize();
 		}
 	}
 	

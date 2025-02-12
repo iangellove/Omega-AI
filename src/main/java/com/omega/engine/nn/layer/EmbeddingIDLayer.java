@@ -113,15 +113,9 @@ public class EmbeddingIDLayer extends Layer{
 	public void output() {
 		
 		// TODO Auto-generated method stub
-		
-		if(this.input != null) {
-			
-//			input.showDM();
-			
+//		if(this.input != null) {
 			kernel.forward(input, this.weight, output);
-			
-//			output.showDM();
-		}
+//		}
 		
 	}
 	

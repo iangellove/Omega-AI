@@ -36,16 +36,18 @@ public class CUDAMemoryManager {
 		Tensor c = null;
 		if(caches.containsKey(key)) {
 			c = caches.get(key);
-//			System.err.println(c.gpuLength+":["+N+":"+C+":"+H+":"+W+"]");
+//			System.err.println("["+key+"]"+c.gpuLength+":["+N+":"+C+":"+H+":"+W+"]:"+N * C * H * W);
 			if(c.gpuLength < N * C * H * W) {
 				c = Tensor.createGPUTensor(c, N, C, H, W, true);
 			}else {
 				c = c.viewOrg(N, C, H, W);
 			}
 		}else {
+//			System.err.println("["+key+"]:"+N * C * H * W);
 			c = Tensor.createGPUTensor(c, N, C, H, W, true);
 			caches.put(key, c);
 		}
+//		JCuda.cudaDeviceSynchronize();
 		return c;
 	}
 	
