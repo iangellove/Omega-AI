@@ -232,7 +232,7 @@ sft_train_loss = 1.6f //微调训练最终训练集损失在1.6左右
 |   cute fluffy panda, anime, ghibli style, pastel colors, soft shadows, detailed fur, vibrant eyes, fantasy setting, digital art  | ![输入图片说明](images/cute%20fluffy%20panda,%20anime,%20ghibli%20style,%20pastel%20colors,%20soft%20shadows,%20detailed%20fur,%20vibrant%20eyes,%20fantasy%20setting,%20digital%20art,%203d,%20by%20kazuo%20oga_%5Bcute%20fluffy%20panda,%20anime,%20ghib%5D0.png)    | a epic city,3d,detailed._[a epic city,3d,detailed.    |  ![输入图片说明](images/a%20epic%20city,3d,detailed._%5Ba%20epic%20city,3d,detailed.%5D0.png)   |
 
 #### 训练过程与模型参数
-##### 1.下载数据集：https://huggingface.co/datasets/Rapidata/open-image-preferences-v1-more-results
+##### 1.下载数据集：open-image-preferences-v1-more-results
 
 ##### 2.训练VQ-VAE [训练脚本](#VQVAE)
 ```java
