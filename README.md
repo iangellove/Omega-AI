@@ -14,9 +14,6 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 ## 依赖
 由于omega-engine-v4-gpu加入了jcuda支持，所以omega-engine-v4-gpu需要安装与jcuda版本对应的cuda，如果您的机器安装的CUDA版本是11.7.x，那么对应omega-engine需要引入的jcuda 11.7.0版本。
 
-## JAVA从零训练大模型教学系列
-[基于llama3实现轻量级大模型](https://blog.csdn.net/u013283304/article/details/143056814?utm_source%20=%20uc_fansmsg)
-
 ## 快速开始
 ##### 1.检查当前CUDA版本
 ```txt
@@ -218,6 +215,55 @@ sft_train_loss = 1.6f //微调训练最终训练集损失在1.6左右
 ![输入图片说明](images/diffusion_11(2)_anime.gif)
 ![输入图片说明](images/diffusion_11_anime.gif)
 ![输入图片说明](images/diffusion_5_anime.gif)
+
+#### [基于stable diffusion模型实现文生图](#StableDiffusion文生图)
+#### VQ-VAE演示图
+| 原图 | VQ-VAE | 原图 | VQ-VAE |
+|----|--------|----|--------|
+|  ![输入图片说明](images/7975.png)  |    ![输入图片说明](images/vqvae_2.png)    |   ![输入图片说明](images/v7771.png)  |  ![输入图片说明](images/vqvae_5.png)  |
+|  ![输入图片说明](images/v3960.png)  |    ![输入图片说明](images/vqvae_0.png)    |   ![输入图片说明](images/v3801.png)  |  ![输入图片说明](images/vqvae_1.png)  |
+
+
+#### 文生图演示图
+| 文本1 | 图片1 | 文本2 | 图片2 |
+|-----|-----|-----|-----|
+|   a highly detailed anime landscape,big tree on the water, epic sky,golden grass,detailed.  |  ![输入图片说明](images/a%20highly%20detailed%20anime%20landscape,big%20tree%20on%20the%20water,%20epic%20sky,golden%20grass,detailed._%5Ba%20highly%20detailed%20anime%20landsc%5D0.png)   |   3d art of a golden tree in the river，with intricate flora and flowing water，detailed.  |   ![输入图片说明](images/3d%20art%20of%20a%20golden%20tree%20in%20the%20river%EF%BC%8Cwith%20intricate%20flora%20and%20flowing%20water%EF%BC%8Cdetailed._%5B3d%20art%20of%20a%20golden%20tree%20in%20the%5D0.png)  |
+|   a vibrant anime mountain lands  |   ![输入图片说明](images/a%20vibrant%20anime%20mountain%20lands_%5Ba%20vibrant%20anime%20mountain%20lands%5D0.png)  |  a dark warrior in epic armor stands among glowing crimson leaves in a mystical forest.   |   ![输入图片说明](images/a%20dark%20warrior%20in%20epic%20armor%20stands%20among%20glowing%20crimson%20leaves%20in%20a%20mystical%20forest._%5Ba%20dark%20warrior%20in%20epic%20armor%20s%5D0.png)  |
+|   cute fluffy panda, anime, ghibli style, pastel colors, soft shadows, detailed fur, vibrant eyes, fantasy setting, digital art  | ![输入图片说明](images/cute%20fluffy%20panda,%20anime,%20ghibli%20style,%20pastel%20colors,%20soft%20shadows,%20detailed%20fur,%20vibrant%20eyes,%20fantasy%20setting,%20digital%20art,%203d,%20by%20kazuo%20oga_%5Bcute%20fluffy%20panda,%20anime,%20ghib%5D0.png)    | a epic city,3d,detailed._[a epic city,3d,detailed.    |  ![输入图片说明](images/a%20epic%20city,3d,detailed._%5Ba%20epic%20city,3d,detailed.%5D0.png)   |
+
+#### 训练过程与模型参数
+##### 1.下载数据集：https://huggingface.co/datasets/Rapidata/open-image-preferences-v1-more-results
+
+##### 2.训练VQ-VAE [训练脚本](#VQVAE)
+```java
+//VQ-VAE模型参数 
+z_dims=128 //编码层输出通道数与解码层输入通道数
+latendDim=4 //隐空间通道数
+num_vq_embeddings=512 //vq码表嵌入向量维度
+num_res_blocks=2 //每个resblock层数
+ch_mult=1,2,2,4 //通道递增倍数
+ch=128  //通道数基数,每个编码或解码模型通道数=ch_mult[i] * ch
+```
+##### 3.加载CLIP模型：clip-vit-base-patch32
+```java
+//clip-vit-base-patch32模型参数 
+maxContextLen=77 //最大支持文本token长度
+vocabSize=49408  //词表总数据
+headNum=8  //多头注意力头数
+n_layers=12  //CLIPEncoder编码层层数
+textEmbedDim=512  //文本嵌入向量维度
+```
+##### 4.训练Unet [训练脚本](#StableDiffusion文生图)
+```java
+//DiffusionUNetCond2模型参数
+unetHeadNum=8 //多头注意力头数
+downChannels=128,256,512,768  //网络通道数
+numLayer=2 //每个resblock层数
+timeSteps=1000 //时间序列总数
+tEmbDim=512  //时间序列嵌入向量维度
+latendSize=32  //隐空间维度
+groupNum=32  //group_norm分组数
+```
 
 
 ##  功能介绍
@@ -1418,6 +1464,111 @@ public static void duffsion_anime() {
 		}
 	}
 ``` 
+
+#### VQVAE
+```java
+public static void anime_vqvae2_lpips_gandisc_32_nogan2() {
+
+		try {
+			int batchSize = 4;
+			int imageSize = 256;
+			int z_dims = 128;
+			int latendDim = 4;
+			int num_vq_embeddings = 512;
+			int num_res_blocks = 2;
+			int[] ch_mult = new int[] {1, 2, 2, 4};
+			int ch = 128;
+			
+			float[] mean = new float[] {0.5f, 0.5f, 0.5f};
+			float[] std = new float[] {0.5f, 0.5f, 0.5f};
+			String imgDirPath = "I:\\dataset\\sd-anime\\anime_op\\256\\";
+			DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
+			
+			VQVAE2 network = new VQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, ch_mult, ch, num_res_blocks);
+			network.CUDNN = true;
+			network.learnRate = 0.001f;
+			
+			LPIPS lpips = new LPIPS(LossType.MSE, UpdaterType.adamw, imageSize);
+			String lpipsWeight = "H:\\model\\lpips.json";
+			LPIPSTest.loadLPIPSWeight(LagJsonReader.readJsonFileSmallWeight(lpipsWeight), lpips, false);
+			lpips.CUDNN = true;
+			
+			MBSGDOptimizer optimizer = new MBSGDOptimizer(network, 200, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+			optimizer.trainVQVAE2_lpips_nogan(dataLoader, lpips);
+
+			String save_model_path = "/omega/models/anime_vqvae2_256.model";
+			ModelUtils.saveModel(network, save_model_path);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	
+	}
+```
+
+#### StableDiffusion文生图
+```java
+public static void tiny_sd_train_anime_32() throws Exception {
+		String labelPath = "I:\\dataset\\sd-anime\\anime_op\\data.json";
+		String imgDirPath = "I:\\dataset\\sd-anime\\anime_op\\256\\";
+		boolean horizontalFilp = true;
+		int imgSize = 256;
+		int maxContextLen = 77;
+		int batchSize = 8;
+
+		float[] mean = new float[] {0.5f, 0.5f,0.5f};
+		float[] std = new float[] {0.5f, 0.5f,0.5f};
+		
+		String vocabPath = "H:\\model\\bpe_tokenizer\\vocab.json";
+		String mergesPath = "H:\\model\\bpe_tokenizer\\merges.txt";
+		BPETokenizerEN bpe = new BPETokenizerEN(vocabPath, mergesPath, 49406, 49407);
+		SDImageDataLoaderEN dataLoader = new SDImageDataLoaderEN(bpe, labelPath, imgDirPath, imgSize, imgSize, maxContextLen, batchSize, horizontalFilp, mean, std);
+		
+		int time = maxContextLen;
+		int maxPositionEmbeddingsSize = 77;
+		int vocabSize = 49408;
+		int headNum = 8;
+		int n_layers = 12;
+		int textEmbedDim = 512;
+		ClipTextModel clip = new ClipTextModel(LossType.MSE, UpdaterType.adamw, headNum, time, vocabSize, textEmbedDim, maxPositionEmbeddingsSize, n_layers);
+		clip.CUDNN = true;
+		clip.time = time;
+		clip.RUN_MODEL = RunModel.EVAL;
+		String clipWeight = "H:\\model\\clip-vit-base-patch32.json";
+		ClipModelUtils.loadWeight(LagJsonReader.readJsonFileSmallWeight(clipWeight), clip, true);
+		
+		int z_dims = 128;
+		int latendDim = 4;
+		int num_vq_embeddings = 512;
+		int num_res_blocks = 2;
+		int[] ch_mult = new int[] {1, 2, 2, 4};
+		int ch = 128;
+		VQVAE2 vae = new VQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imgSize, ch_mult, ch, num_res_blocks);
+		vae.CUDNN = true;
+		vae.learnRate = 0.001f;
+		vae.RUN_MODEL = RunModel.EVAL;
+		String vaeModel = "anime_vqvae2_256.model";
+		ModelUtils.loadModel(vae, vaeModel);
+		
+		int unetHeadNum = 8;
+		int[] downChannels = new int[] {128, 256, 512, 768};
+		int numLayer = 2;
+		int timeSteps = 1000;
+		int tEmbDim = 512;
+		int latendSize = 32;
+		int groupNum = 32;
+		DiffusionUNetCond2 unet = new DiffusionUNetCond2(LossType.MSE, UpdaterType.adamw, latendDim, latendSize, latendSize, downChannels, unetHeadNum, numLayer, timeSteps, tEmbDim, maxContextLen, textEmbedDim, groupNum);
+		unet.CUDNN = true;
+		unet.learnRate = 0.0001f;
+		
+		MBSGDOptimizer optimizer = new MBSGDOptimizer(unet, 500, 0.00001f, batchSize, LearnRateUpdate.CONSTANT, false);
+		optimizer.trainTinySD_Anime(dataLoader, vae, clip);
+		
+		String save_model_path = "/omega/models/sd_anime256.model";
+		ModelUtils.saveModel(unet, save_model_path);
+	}
+```
 
 
 ## 版本依赖包
