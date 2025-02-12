@@ -207,7 +207,7 @@ sft_train_loss = 1.6f //微调训练最终训练集损失在1.6左右
 
 
 ### Diffusion model 扩散模型系列
-#### [基于diffusion扩散模型实现生成动漫头像图片](#Stable Diffusion 文生图)
+#### [基于diffusion扩散模型实现生成动漫头像图片](#diffusion-动漫头像生成)
 #### 训练过程演示图
 ![输入图片说明](images/diffusion_anime-min.gif)
 #### 50次循环训练后反向去噪生成过程图
@@ -216,7 +216,7 @@ sft_train_loss = 1.6f //微调训练最终训练集损失在1.6左右
 ![输入图片说明](images/diffusion_11_anime.gif)
 ![输入图片说明](images/diffusion_5_anime.gif)
 
-#### [基于stable diffusion模型实现文生图](#diffusion-动漫头像生成)
+#### [基于stable diffusion模型实现文生图](#StableDiffusion文生图)
 #### VQ-VAE演示图
 | 原图 | VQ-VAE | 原图 | VQ-VAE |
 |----|--------|----|--------|
