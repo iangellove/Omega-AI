@@ -344,4 +344,11 @@ public class CrossEntropyLossIdx extends LossFunction {
 		return diff;
 	}
 
+	@Override
+	public Tensor diff(Tensor x, Tensor label, int igonre, int count) {
+		// TODO Auto-generated method stub
+		crossEntropyKernel.backwardIDX2(probs, label, diff, igonre, count);
+		return diff;
+	}
+
 }

@@ -705,5 +705,11 @@ public class SentencePieceTokenizer extends Tokenizer{
 		// TODO Auto-generated method stub
 		return "<pad>";
 	}
+
+	@Override
+	public int[] encodeInt(String txt, int maxLen) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 	
 }

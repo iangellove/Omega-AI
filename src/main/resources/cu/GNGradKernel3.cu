@@ -1,8 +1,8 @@
-
 #include <cuda_runtime.h>
 
-constexpr int NUM_PER_THREAD_REDUCE = 4;
-constexpr int WARP_SIZE = 32;
+#define NUM_PER_THREAD_REDUCE 4
+#define WARP_SIZE 32
+
 
 inline __device__ float my_pow(float a, double b) {
   return pow(a, static_cast<float>(b));
@@ -54,8 +54,8 @@ inline __device__ void DsAndDbThreadReduce(const int col, const int row_dim, con
       }
 
       int pos = col * row_dim + row;
-      dscale[0] += static_cast<float>(dy[pos]) * static_cast<float>(x[pos]);
-      dbias[0] += static_cast<float>(dy[pos]);
+      dscale[0] += dy[pos] * x[pos];
+      dbias[0] += dy[pos];
     }
   }
 }
@@ -85,7 +85,7 @@ inline __device__ void GammaAndBetaThreadReduce(const int col, const int batch, 
 
       int idx1 = row * num_channel + col;
       int idx2 = idx1 * num_groups / num_channel;
-      dg[0] += (dscale[idx1] - dbias[idx1] * static_cast<float>(mean[idx2])) * static_cast<float>(rstd[idx2]);
+      dg[0] += (dscale[idx1] - dbias[idx1] * mean[idx2]) * rstd[idx2];
       db[0] += dbias[idx1];
     }
   }
@@ -119,8 +119,8 @@ inline __device__ void InputThreadReduce(const int row, const int col_dim, const
 
       int pos = row * col_dim + col;
       int gamma_offset = (pos / HxW) % num_channel;
-      float v1 = static_cast<float>(dy[pos] * gamma[gamma_offset]);
-      float v2 = static_cast<float>(x[pos]) - static_cast<float>(mean[row]);
+      float v1 = dy[pos] * gamma[gamma_offset];
+      float v2 = x[pos] - mean[row];
 
       sum1[0] += v1 * v2;
       sum2[0] += v1;
@@ -164,15 +164,15 @@ inline __device__ void InputBlockReduce(const int col_dim, float *sum1, float *s
 inline __device__ void InputProp(const int row, const int col_dim, const int num_channel, const int HxW, const float *dy,
                                  const float *x, const float *mean, const float *rstd, const float *gamma, float *dx,
                                  const float *share_mem) {
-  float v3 = static_cast<float>(rstd[row]);
+  float v3 = rstd[row];
   float v4 = share_mem[0] * (2.0 / col_dim);
   float v5 = (-1.0 * v3 * share_mem[1] + (1.0 / col_dim) * share_mem[0] * share_mem[2]) * (1.0 / col_dim);
   for (int col = threadIdx.x; col < col_dim; col += blockDim.x) {
     int pos = (row * col_dim + col);
     int gamma_offset = (pos / HxW) % num_channel;
-    float v1 = static_cast<float>(dy[pos] * gamma[gamma_offset]);
-    float v2 = static_cast<float>(x[pos]) - static_cast<float>(mean[row]);
-    dx[pos] = v1 * v3 + v4 * v2 + v5;
+    float v1 = dy[pos] * gamma[gamma_offset];
+    float v2 = x[pos] - mean[row];
+    dx[pos] = (float)(v1 * v3 + v4 * v2 + v5);
   }
 }
 
@@ -183,11 +183,16 @@ __global__ void InputPropKernel(const int row_dim, const int col_dim, const int 
     float sum1 = 0;
     float sum2 = 0;
     float sum3 = 0;
+   
     extern __shared__ float share_mem[];
     InputThreadReduce(row, col_dim, num_channel, HxW, &sum1, &sum2, &sum3, dy, x, mean, rstd, gamma);
+    //printf("a1dy:%f",dy[0]);
     InputWarpReduce(&sum1, &sum2, &sum3);
+    //printf("a2dy:%f",dy[0]);
     InputBlockReduce(col_dim, &sum1, &sum2, &sum3, share_mem);
+    //printf("a3dy:%f",dy[0]);
     InputProp(row, col_dim, num_channel, HxW, dy, x, mean, rstd, gamma, dx, share_mem);
+ 
   }
 }
 

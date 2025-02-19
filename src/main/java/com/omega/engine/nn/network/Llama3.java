@@ -251,6 +251,11 @@ public class Llama3 extends Network {
 		return this.lossFunction.diff(output, label, igonre);
 	}
 	
+	public Tensor lossDiff(Tensor output, Tensor label,int igonre,int count) {
+		// TODO Auto-generated method stub
+		return this.lossFunction.diff(output, label, igonre);
+	}
+	
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
 		getDecoder().saveModel(outputStream);
 		getFullyLayer().saveModel(outputStream);

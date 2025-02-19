@@ -345,7 +345,7 @@ public class LlamaCausalSelfAttention2Layer extends LlamaAttentionLayer{
 		}else {
 			attentionKernel.softmax_forward(preatt, attn, batchSize, headNum, time, d_k);
 		}
-
+		
 		Tensor tmp = attn;
 		
 		if(dropout) {

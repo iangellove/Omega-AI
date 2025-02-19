@@ -1266,7 +1266,7 @@ public class SDTest {
 		unet.learnRate = 0.0001f;
 		unet.RUN_MODEL = RunModel.TEST;
 		
-		String model_path = "H:\\model\\anime_sd_420.model";
+		String model_path = "H:\\model\\sd_anime256.model";
 		ModelUtils.loadModel(unet, model_path);
 		
 		Scanner scanner = new Scanner(System.in);

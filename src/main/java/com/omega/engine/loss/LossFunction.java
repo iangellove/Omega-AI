@@ -27,6 +27,8 @@ public abstract class LossFunction {
 	
 	public abstract Tensor diff(Tensor x, Tensor label,int igonre);
 	
+	public abstract Tensor diff(Tensor x, Tensor label,int igonre,int count);
+	
 	public abstract Tensor diff(Tensor x, Tensor label, Tensor diff);
 	
 	public abstract Tensor[] diff(Tensor[] x, Tensor label);

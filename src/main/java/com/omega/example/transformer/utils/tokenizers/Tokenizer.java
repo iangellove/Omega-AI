@@ -12,6 +12,8 @@ public abstract class Tokenizer {
 	
 	public abstract int[] encodeInt(String txt);
 	
+	public abstract int[] encodeInt(String txt,int maxLen);
+	
 	public abstract int sos();
 	
 	public abstract int eos();

@@ -13,6 +13,7 @@ import com.omega.engine.gpu.CUDAModules;
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUfunction;
+import jcuda.runtime.JCuda;
 import jcuda.runtime.cudaError;
 
 /**
@@ -481,6 +482,41 @@ public class CrossEntropyKernel extends BaseKernel {
                 Pointer.to(label.getGpuData()),
                 Pointer.to(new int[] {igonre}),
                 Pointer.to(new int[] {N}),
+                Pointer.to(new int[] {prods.width})
+            );
+		
+		this.N = prods.number;
+
+		int grid_size = this.N;
+		
+		cuLaunchKernel(cross_softmax_back_function,
+				grid_size,  1, 1,      // Grid dimension
+	            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+	            0, null,               // Shared memory size and stream
+	            crossSoftmaxBackwardParameters, null // Kernel- and extra parameters
+	        );
+		
+//		backwardCPU(prods, label, igonre);
+		
+	}
+	
+	public void backwardIDX2(Tensor prods,Tensor label,Tensor output,int igonre,int count) {
+		
+		int N = prods.number;
+		
+		if(igonre > -1){
+			N = N - MatrixUtils.countOccurrences(label.data, igonre);
+		}
+		
+		/**
+		 * float* out, const float* inp, const float* label, int igone, int N, int C
+		 */
+		crossSoftmaxBackwardParameters = Pointer.to(
+				Pointer.to(output.getGpuData()),
+                Pointer.to(prods.getGpuData()),
+                Pointer.to(label.getGpuData()),
+                Pointer.to(new int[] {igonre}),
+                Pointer.to(new int[] {count}),
                 Pointer.to(new int[] {prods.width})
             );
 		

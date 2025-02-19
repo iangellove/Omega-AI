@@ -210,6 +210,23 @@ public class BPETokenizer3 extends Tokenizer{
 		return idxs;
 	}
 	
+	public int[] encodeInt(String txt,int maxLen){
+		String unicodeToken = unicodeToken(encode(txt, "utf-8"), unicodeMap);
+
+		String[] bbpeTokens = bbpe(unicodeToken, merges);
+
+		int[] idxs = new int[maxLen];
+		
+		for(int i = 0;i<maxLen;i++) {
+			if(i < bbpeTokens.length) {
+				idxs[i] = vocab.get(bbpeTokens[i]).intValue();
+			}else {
+				idxs[i] = this.pad;
+			}
+		}
+		return idxs;
+	}
+	
 	public String[] bbpe(String unicodeToken, Map<String[],Integer> merges) {
 		String[] chars = unicodeToken.split("");
 		chars = mergeSP(chars);
@@ -377,6 +394,10 @@ public class BPETokenizer3 extends Tokenizer{
 			String decodeTxt = bpe.decode(ids);
 			
 			System.out.println(decodeTxt);
+			
+			String txt2 = "<s>请问你在哪里？fsdfsdfsdfsdfdsfsd</s>";
+			System.out.println(JsonUtils.toJson(bpe.encodeInt(txt2, 512)));
+			
 			
 		} catch (Exception e) {
 			// TODO: handle exception

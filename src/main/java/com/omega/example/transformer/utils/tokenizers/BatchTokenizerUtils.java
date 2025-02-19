@@ -44,7 +44,7 @@ public class BatchTokenizerUtils {
 			int i = 1;
 			while ((line = bufferedReader.readLine()) != null) {
 		    	once = JsonUtils.gson.fromJson(line, HashMap.class);
-		    	
+		    	System.err.println(line);
 		    	String txt = once.get("text");
 		    	
 		    	if(txt.length() <= 512) {
@@ -396,15 +396,28 @@ public class BatchTokenizerUtils {
 //		
 //		System.out.println(txt);
 		
-		String tokenizerPath = "H:\\transformer_dataset\\tokenizer.model";
+//		String tokenizerPath = "H:\\transformer_dataset\\tokenizer.model";
 //		String binPath = "H:\\transformer_dataset\\monkey_idx_64793_vocab.bin";
 //		
 //		encodeMonkeyDatasetBySentencePiece2Bin(dataPath, binPath, tokenizerPath, BinDataType.unint32);
 		
-		String txtPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.txt";
-		String outputPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.bin";
+//		String txtPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.txt";
+//		String outputPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.bin";
+//		
+//		pretrainTXT2Bin(txtPath, outputPath, tokenizerPath, BinDataType.unint32);
 		
-		pretrainTXT2Bin(txtPath, outputPath, tokenizerPath, BinDataType.unint32);
+		String dataPath = "I:\\dataset\\sft_512.jsonl";
+		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.txt";
+		
+		String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
+		String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt"; 
+		
+		encodeMonkeyDatasetByBPE(dataPath, outputPath, vocabPath, mergesPath);
+		
+//		String txtPath = "H:\\transformer_dataset\\pretrain_hq_6400.txt";
+//		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.bin";
+//		
+//		txt2bin(txtPath, outputPath, 1, 2);
 		
 	}
 	

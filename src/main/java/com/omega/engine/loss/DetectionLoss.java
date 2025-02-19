@@ -69,4 +69,10 @@ public class DetectionLoss extends LossFunction {
 		return null;
 	}
 
+	@Override
+	public Tensor diff(Tensor x, Tensor label, int igonre, int count) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }
