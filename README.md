@@ -7,7 +7,7 @@
 Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经网络，实现训练或测试模型，支持多线程运算，框架目前支持BP神经网络、卷积神经网络、循环神经网络、vgg16、resnet、yolo、lstm、transformer、gpt、llama、diffusion、stable diffusion等模型的构建，目前引擎最新版本支持CUDA和CUDNN两种GPU加速方式，关于GPU加速的环境配置与jcuda版本jar包的对应依赖，引擎中所实现的模型和算法除了使用cuda和cudnn相关依赖包之外均不使用任何api和第三方依赖包。欢迎添加QQ群([119593195]())进行技术讨论和交流，别忘了给Omega-AI项目点个star，项目需要你们的支持。
 ## 源码地址：
 
-[https://gitee.com/iangellove/omega-ai](https://gitee.com/iangellove/omega-ai)
+[https://gitee.com/dromara/omega-ai](https://gitee.com/dromara/omega-ai)
 
 [https://github.com/iangellove/Omega-AI](https://github.com/iangellove/Omega-AI)
 
